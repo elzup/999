@@ -34,7 +34,7 @@ describe('decode', () => {
   it('3桁数字を分割候補に展開', () => {
     const results = decode('901')
     const split111 = results.find(
-      (r) => r.parts.length === 3 && r.parts.join(',') === '9,0,1',
+      (r) => r.parts.length === 3 && r.parts.join(',') === '9,0,1'
     )
     expect(split111).toBeDefined()
     expect(split111.kanaOptions[0]).toContain('き')
@@ -45,7 +45,7 @@ describe('decode', () => {
   it('2桁+1桁の分割も含む', () => {
     const results = decode('989')
     const split21 = results.find(
-      (r) => r.parts.length === 2 && r.parts[0] === '98',
+      (r) => r.parts.length === 2 && r.parts[0] === '98'
     )
     expect(split21).toBeDefined()
     expect(split21.kanaOptions[0]).toContain('きゃ')

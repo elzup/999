@@ -1,4 +1,9 @@
-const { SINGLE_DIGIT, DOUBLE_DIGIT, normalizeDakuten, kataToHira } = require('./table')
+const {
+  SINGLE_DIGIT,
+  DOUBLE_DIGIT,
+  normalizeDakuten,
+  kataToHira,
+} = require('./table')
 
 function lookup(token) {
   if (DOUBLE_DIGIT[token] !== undefined) return DOUBLE_DIGIT[token]

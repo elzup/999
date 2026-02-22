@@ -8,7 +8,7 @@ describe('generateCoverage', () => {
     const uncovered = coverage.gojuon.filter((e) => !e.covered)
     console.log(
       '五十音 未対応:',
-      uncovered.map((e) => e.kana).join(', ') || 'なし',
+      uncovered.map((e) => e.kana).join(', ') || 'なし'
     )
     expect(coverage.gojuon.filter((e) => e.covered).length).toBeGreaterThan(40)
   })
@@ -17,7 +17,7 @@ describe('generateCoverage', () => {
     const uncovered = coverage.dakuon.filter((e) => !e.covered)
     console.log(
       '濁音 未対応:',
-      uncovered.map((e) => `${e.kana}(→${e.note})`).join(', ') || 'なし',
+      uncovered.map((e) => `${e.kana}(→${e.note})`).join(', ') || 'なし'
     )
   })
 
@@ -27,7 +27,7 @@ describe('generateCoverage', () => {
     console.log('拗音 対応:', covered.map((e) => e.note).join(', '))
     console.log(
       '拗音 未対応:',
-      uncovered.map((e) => e.kana).join(', ') || 'なし',
+      uncovered.map((e) => e.kana).join(', ') || 'なし'
     )
   })
 
@@ -39,7 +39,7 @@ describe('generateCoverage', () => {
   it('サマリーを出力', () => {
     const { summary } = coverage
     console.log(
-      `\nカバレッジ: ${summary.covered}/${summary.total} (${summary.rate}%)`,
+      `\nカバレッジ: ${summary.covered}/${summary.total} (${summary.rate}%)`
     )
     expect(summary.rate).toBeGreaterThan(90)
   })

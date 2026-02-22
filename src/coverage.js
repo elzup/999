@@ -1,23 +1,79 @@
-const { SINGLE_DIGIT, DOUBLE_DIGIT, normalizeDakuten, kataToHira } = require('./table')
+const {
+  SINGLE_DIGIT,
+  DOUBLE_DIGIT,
+  normalizeDakuten,
+  kataToHira,
+} = require('./table')
 
 const GOJUON = [
-  'あ', 'い', 'う', 'え', 'お',
-  'か', 'き', 'く', 'け', 'こ',
-  'さ', 'し', 'す', 'せ', 'そ',
-  'た', 'ち', 'つ', 'て', 'と',
-  'な', 'に', 'ぬ', 'ね', 'の',
-  'は', 'ひ', 'ふ', 'へ', 'ほ',
-  'ま', 'み', 'む', 'め', 'も',
-  'や', 'ゆ', 'よ',
-  'ら', 'り', 'る', 'れ', 'ろ',
-  'わ', 'を',
+  'あ',
+  'い',
+  'う',
+  'え',
+  'お',
+  'か',
+  'き',
+  'く',
+  'け',
+  'こ',
+  'さ',
+  'し',
+  'す',
+  'せ',
+  'そ',
+  'た',
+  'ち',
+  'つ',
+  'て',
+  'と',
+  'な',
+  'に',
+  'ぬ',
+  'ね',
+  'の',
+  'は',
+  'ひ',
+  'ふ',
+  'へ',
+  'ほ',
+  'ま',
+  'み',
+  'む',
+  'め',
+  'も',
+  'や',
+  'ゆ',
+  'よ',
+  'ら',
+  'り',
+  'る',
+  'れ',
+  'ろ',
+  'わ',
+  'を',
 ]
 
 const DAKUON = [
-  'が', 'ぎ', 'ぐ', 'げ', 'ご',
-  'ざ', 'じ', 'ず', 'ぜ', 'ぞ',
-  'だ', 'ぢ', 'づ', 'で', 'ど',
-  'ば', 'び', 'ぶ', 'べ', 'ぼ',
+  'が',
+  'ぎ',
+  'ぐ',
+  'げ',
+  'ご',
+  'ざ',
+  'じ',
+  'ず',
+  'ぜ',
+  'ぞ',
+  'だ',
+  'ぢ',
+  'づ',
+  'で',
+  'ど',
+  'ば',
+  'び',
+  'ぶ',
+  'べ',
+  'ぼ',
 ]
 
 const HANDAKUON = ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ']
@@ -53,7 +109,11 @@ function checkKana(kana, note) {
     kana,
     covered: value !== null,
     value,
-    note: note ? note(kana, value) : (value !== null ? `${kana}→${value}` : '未対応'),
+    note: note
+      ? note(kana, value)
+      : value !== null
+      ? `${kana}→${value}`
+      : '未対応',
   }
 }
 
@@ -83,7 +143,7 @@ function generateCoverage() {
   })
 
   const youon = YOUON_BASE.flatMap((base) =>
-    YOUON_SUFFIXES.map((suffix) => checkKana(base + suffix, null)),
+    YOUON_SUFFIXES.map((suffix) => checkKana(base + suffix, null))
   )
 
   const exceptions = JA_JU_JO.map((k) => {
@@ -92,7 +152,8 @@ function generateCoverage() {
       kana: k,
       covered: value !== null,
       value,
-      note: value !== null ? `${k}→${value} (濁音例外: リャ行と同じ)` : '未対応',
+      note:
+        value !== null ? `${k}→${value} (濁音例外: リャ行と同じ)` : '未対応',
     }
   })
 
