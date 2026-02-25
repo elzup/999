@@ -150,6 +150,33 @@ const DAKUTEN_MAP = {
 
 const DAKUTEN_YOUON_EXCEPTIONS = { ジャ: 'ジャ', ジュ: 'ジュ', ジョ: 'ジョ' }
 
+/** 1桁かなのティア */
+const SINGLE_TIER = {
+  れ: 'core',
+  い: 'core',
+  に: 'core',
+  さ: 'core',
+  し: 'core',
+  こ: 'core',
+  ろ: 'core',
+  な: 'core',
+  は: 'core',
+  き: 'core',
+  お: 'sub',
+  ひ: 'sub',
+  ふ: 'sub',
+  み: 'sub',
+  よ: 'sub',
+  ら: 'sub',
+  る: 'sub',
+  う: 'sub',
+  や: 'sub',
+  く: 'sub',
+  あ: 'bad',
+  か: 'bad',
+  を: 'bad',
+}
+
 /** カタカナ→ひらがな (基本50音) */
 const KATA_TO_HIRA = {}
 for (let i = 0x30a1; i <= 0x30f6; i++) {
@@ -180,6 +207,7 @@ function buildReverseTable() {
 module.exports = {
   SINGLE_DIGIT,
   DOUBLE_DIGIT,
+  SINGLE_TIER,
   normalizeDakuten,
   kataToHira,
   buildReverseTable,
