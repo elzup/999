@@ -3,43 +3,43 @@
 exports[`decodeRanked > 154 の候補一覧 1`] = `
 [
   {
-    "score": 6,
-    "word": "いこし",
-  },
-  {
-    "score": 3,
-    "word": "いこよ",
-  },
-  {
-    "score": 3,
-    "word": "いらし",
-  },
-  {
-    "score": 3,
-    "word": "ひこし",
-  },
-  {
-    "score": 3,
+    "score": 40,
     "word": "いふぉ",
   },
   {
-    "score": 0,
-    "word": "いらよ",
-  },
-  {
-    "score": 0,
-    "word": "ひこよ",
-  },
-  {
-    "score": 0,
-    "word": "ひらし",
-  },
-  {
-    "score": 0,
+    "score": 38,
     "word": "ひふぉ",
   },
   {
-    "score": -3,
+    "score": 30,
+    "word": "いこし",
+  },
+  {
+    "score": 28,
+    "word": "いこよ",
+  },
+  {
+    "score": 28,
+    "word": "いらし",
+  },
+  {
+    "score": 28,
+    "word": "ひこし",
+  },
+  {
+    "score": 26,
+    "word": "いらよ",
+  },
+  {
+    "score": 26,
+    "word": "ひこよ",
+  },
+  {
+    "score": 26,
+    "word": "ひらし",
+  },
+  {
+    "score": 24,
     "word": "ひらよ",
   },
 ]
@@ -48,67 +48,67 @@ exports[`decodeRanked > 154 の候補一覧 1`] = `
 exports[`decodeRanked > 629 の候補一覧 1`] = `
 [
   {
-    "score": 6,
-    "word": "ろにき",
-  },
-  {
-    "score": 3,
-    "word": "ろにく",
-  },
-  {
-    "score": 3,
-    "word": "ろふき",
-  },
-  {
-    "score": 3,
-    "word": "るにき",
-  },
-  {
-    "score": 3,
+    "score": 40,
     "word": "ろつぇ",
   },
   {
-    "score": 3,
+    "score": 40,
     "word": "ろちぇ",
   },
   {
-    "score": 2,
-    "word": "ろにか",
-  },
-  {
-    "score": 0,
-    "word": "ろふく",
-  },
-  {
-    "score": 0,
-    "word": "るにく",
-  },
-  {
-    "score": 0,
-    "word": "るふき",
-  },
-  {
-    "score": 0,
+    "score": 38,
     "word": "るつぇ",
   },
   {
-    "score": 0,
+    "score": 38,
     "word": "るちぇ",
   },
   {
-    "score": -1,
+    "score": 30,
+    "word": "ろにき",
+  },
+  {
+    "score": 28,
+    "word": "ろにく",
+  },
+  {
+    "score": 28,
+    "word": "ろふき",
+  },
+  {
+    "score": 28,
+    "word": "るにき",
+  },
+  {
+    "score": 26,
+    "word": "ろにか",
+  },
+  {
+    "score": 26,
+    "word": "ろふく",
+  },
+  {
+    "score": 26,
+    "word": "るにく",
+  },
+  {
+    "score": 26,
+    "word": "るふき",
+  },
+  {
+    "score": 24,
     "word": "ろふか",
   },
   {
-    "score": -1,
+    "score": 24,
     "word": "るにか",
   },
   {
-    "score": -3,
+    "score": 24,
     "word": "るふく",
   },
   {
-    "score": -4,
+    "score": 22,
     "word": "るふか",
   },
 ]
@@ -117,75 +117,75 @@ exports[`decodeRanked > 629 の候補一覧 1`] = `
 exports[`decodeRanked > 784 の候補一覧 1`] = `
 [
   {
-    "score": 6,
-    "word": "なはし",
-  },
-  {
-    "score": 3,
-    "word": "なはよ",
-  },
-  {
-    "score": 3,
-    "word": "なやし",
-  },
-  {
-    "score": 3,
-    "word": "うはし",
-  },
-  {
-    "score": 3,
+    "score": 40,
     "word": "うぁし",
   },
   {
-    "score": 3,
+    "score": 40,
     "word": "にゃし",
   },
   {
-    "score": 3,
+    "score": 40,
     "word": "なーし",
   },
   {
-    "score": 2,
-    "word": "なあし",
-  },
-  {
-    "score": 0,
-    "word": "なやよ",
-  },
-  {
-    "score": 0,
-    "word": "うはよ",
-  },
-  {
-    "score": 0,
-    "word": "うやし",
-  },
-  {
-    "score": 0,
+    "score": 38,
     "word": "うぁよ",
   },
   {
-    "score": 0,
+    "score": 38,
     "word": "にゃよ",
   },
   {
-    "score": 0,
+    "score": 38,
     "word": "なーよ",
   },
   {
-    "score": -1,
+    "score": 30,
+    "word": "なはし",
+  },
+  {
+    "score": 28,
+    "word": "なはよ",
+  },
+  {
+    "score": 28,
+    "word": "なやし",
+  },
+  {
+    "score": 28,
+    "word": "うはし",
+  },
+  {
+    "score": 26,
+    "word": "なやよ",
+  },
+  {
+    "score": 26,
+    "word": "なあし",
+  },
+  {
+    "score": 26,
+    "word": "うはよ",
+  },
+  {
+    "score": 26,
+    "word": "うやし",
+  },
+  {
+    "score": 24,
     "word": "なあよ",
   },
   {
-    "score": -1,
-    "word": "うあし",
-  },
-  {
-    "score": -3,
+    "score": 24,
     "word": "うやよ",
   },
   {
-    "score": -4,
+    "score": 24,
+    "word": "うあし",
+  },
+  {
+    "score": 22,
     "word": "うあよ",
   },
 ]

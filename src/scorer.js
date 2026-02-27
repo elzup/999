@@ -1,14 +1,14 @@
 import { encode } from './encoder.js'
 import { SINGLE_TIER, normalizeDakuten, kataToHira } from './table.js'
 
-/** スコア重み（デフォルト） */
+/** スコア重み */
 export const WEIGHTS = {
-  core: 2,
-  sub: -1,
-  bad: -2,
-  double: 1,
-  overflowPerDigit: -3,
-  underflowPerDigit: -3,
+  core: 10,
+  sub: 8,
+  bad: 6,
+  double: 30,
+  halfOverflow: 4,
+  overflowPerChar: -10,
 }
 
 /** 1桁かなのティアを取得（濁音・カタカナも正規化して判定） */
@@ -26,8 +26,23 @@ export function getTier(kana) {
 export function score(input, targetDigits = 3) {
   const { digits, tokens } = encode(input)
 
+  let pos = 0
   const details = tokens.map((t) => {
-    const isDouble = t.value.length >= 2
+    const digitLen = t.value.length
+    const startPos = pos
+    const endPos = pos + digitLen - 1
+    pos += digitLen
+
+    const isDouble = digitLen >= 2
+    const fullyIn = endPos < targetDigits
+    const fullyOut = startPos >= targetDigits
+
+    if (fullyOut) {
+      return { ...t, type: 'overflow', tier: null, score: WEIGHTS.overflowPerChar }
+    }
+    if (!fullyIn && isDouble) {
+      return { ...t, type: 'halfOverflow', tier: null, score: WEIGHTS.halfOverflow }
+    }
     if (isDouble) {
       return { ...t, type: 'double', tier: null, score: WEIGHTS.double }
     }
@@ -35,23 +50,11 @@ export function score(input, targetDigits = 3) {
     return { ...t, type: 'single', tier, score: WEIGHTS[tier] ?? 0 }
   })
 
-  const tokenScore = details.reduce((sum, d) => sum + d.score, 0)
-
-  const diff = digits.length - targetDigits
-  const overflow = Math.max(0, diff)
-  const underflow = Math.max(0, -diff)
-  let digitPenalty = 0
-  if (overflow > 0) digitPenalty += overflow * WEIGHTS.overflowPerDigit
-  if (underflow > 0) digitPenalty += underflow * WEIGHTS.underflowPerDigit
-
   return {
     input,
     digits,
     digitCount: digits.length,
     tokens: details,
-    overflow,
-    underflow,
-    digitPenalty,
-    score: tokenScore + digitPenalty,
+    score: details.reduce((sum, d) => sum + d.score, 0),
   }
 }
