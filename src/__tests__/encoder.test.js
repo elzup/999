@@ -51,6 +51,19 @@ describe('encode', () => {
     expect(encode('ん').digits).toBe('0')
   })
 
+  it('long_digit: ん付き・長音', () => {
+    expect(encode('さん').digits).toBe('36')
+    expect(encode('きん').digits).toBe('90')
+    expect(encode('きー').digits).toBe('91')
+    expect(encode('かい').digits).toBe('91')
+  })
+
+  it('long_digit: ん付きは2文字マッチ優先', () => {
+    // さん → 36 (long_digit), not さ(3)+ん(0)=30
+    const result = encode('さん')
+    expect(result.tokens).toEqual([{ kana: 'さん', value: '36' }])
+  })
+
   it('unknown kana throws', () => {
     expect(() => encode('え')).toThrow('Unknown kana')
   })

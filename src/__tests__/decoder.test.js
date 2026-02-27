@@ -81,4 +81,10 @@ describe('decodeRanked', () => {
     const kirei = results.find((r) => r.word === 'きれい')
     expect(kirei).toBeDefined()
   })
+
+  it.each(['154', '629', '784'])('%s の候補一覧', (digits) => {
+    const results = decodeRanked(digits)
+    const summary = results.map(({ word, score }) => ({ word, score }))
+    expect(summary).toMatchSnapshot()
+  })
 })

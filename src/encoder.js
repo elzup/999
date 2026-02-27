@@ -1,18 +1,22 @@
 import {
   SINGLE_DIGIT,
   DOUBLE_DIGIT,
+  LONG_DIGIT,
   normalizeDakuten,
   kataToHira,
 } from './table.js'
 
 function lookup(token) {
   if (DOUBLE_DIGIT[token] !== undefined) return DOUBLE_DIGIT[token]
+  if (LONG_DIGIT[token] !== undefined) return LONG_DIGIT[token]
 
   const normalized = normalizeDakuten(token)
   if (DOUBLE_DIGIT[normalized] !== undefined) return DOUBLE_DIGIT[normalized]
+  if (LONG_DIGIT[normalized] !== undefined) return LONG_DIGIT[normalized]
 
   const hira = [...normalized].map(kataToHira).join('')
   if (DOUBLE_DIGIT[hira] !== undefined) return DOUBLE_DIGIT[hira]
+  if (LONG_DIGIT[hira] !== undefined) return LONG_DIGIT[hira]
 
   if (token.length === 1) {
     const ch = kataToHira(normalizeDakuten(token))

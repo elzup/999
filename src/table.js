@@ -118,6 +118,7 @@ const { singleDigit, singleTier } = parseSingleDigitTsv(
 export const SINGLE_DIGIT = singleDigit
 export const SINGLE_TIER = singleTier
 export const DOUBLE_DIGIT = parseDoubleDigitTsv(loadTsv('double_digit.tsv'))
+export const LONG_DIGIT = parseDoubleDigitTsv(loadTsv('long_digit.tsv'))
 
 // ---------------------------------------------------------------------------
 // Dakuten normalization (code-defined, not data)
@@ -179,8 +180,13 @@ export function buildReverseTable() {
     {}
   )
 
-  return Object.entries(DOUBLE_DIGIT).reduce(
+  const fromDouble = Object.entries(DOUBLE_DIGIT).reduce(
     (acc, [kana, digits]) => addEntry(acc, digits, kana),
     fromSingle
+  )
+
+  return Object.entries(LONG_DIGIT).reduce(
+    (acc, [kana, digits]) => addEntry(acc, digits, kana),
+    fromDouble
   )
 }
