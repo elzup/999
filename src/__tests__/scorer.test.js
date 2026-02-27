@@ -5,7 +5,7 @@ describe('getTier', () => {
   it('core かな', () => {
     expect(getTier('さ')).toBe('core')
     expect(getTier('き')).toBe('core')
-    expect(getTier('れ')).toBe('core')
+    expect(getTier('ん')).toBe('core')
   })
 
   it('sub かな', () => {
@@ -17,6 +17,7 @@ describe('getTier', () => {
   it('bad かな', () => {
     expect(getTier('か')).toBe('bad')
     expect(getTier('あ')).toBe('bad')
+    expect(getTier('れ')).toBe('bad')
   })
 
   it('濁音は清音のティアを返す', () => {
@@ -36,15 +37,15 @@ describe('getTier', () => {
 })
 
 describe('score', () => {
-  it('きれい: 全 core 3桁 → 高スコア', () => {
+  it('きれい: core + bad + core, 3桁', () => {
     const result = score('きれい')
     expect(result.digits).toBe('901')
     expect(result.digitCount).toBe(3)
     expect(result.overflow).toBe(0)
     expect(result.underflow).toBe(0)
     expect(result.digitPenalty).toBe(0)
-    // き(core +2) + れ(core +2) + い(core +2) = 6
-    expect(result.score).toBe(6)
+    // き(core +2) + れ(bad -2) + い(core +2) = 2
+    expect(result.score).toBe(2)
   })
 
   it('さとう: core + double + sub, 4桁 → はみ出し減点', () => {

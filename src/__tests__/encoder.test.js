@@ -47,8 +47,12 @@ describe('encode', () => {
     expect(encode('ジョ').digits).toBe('64')
   })
 
+  it('ん → 0 (core)', () => {
+    expect(encode('ん').digits).toBe('0')
+  })
+
   it('unknown kana throws', () => {
-    expect(() => encode('ん')).toThrow('Unknown kana')
+    expect(() => encode('え')).toThrow('Unknown kana')
   })
 })
 
