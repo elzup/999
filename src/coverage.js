@@ -5,6 +5,7 @@ import {
   kataToHira,
 } from './table.js'
 
+// prettier-ignore
 const GOJUON = [
   'あ', 'い', 'う', 'え', 'お',
   'か', 'き', 'く', 'け', 'こ',
@@ -18,6 +19,7 @@ const GOJUON = [
   'わ', 'を',
 ]
 
+// prettier-ignore
 const DAKUON = [
   'が', 'ぎ', 'ぐ', 'げ', 'ご',
   'ざ', 'じ', 'ず', 'ぜ', 'ぞ',
@@ -25,8 +27,10 @@ const DAKUON = [
   'ば', 'び', 'ぶ', 'べ', 'ぼ',
 ]
 
+// prettier-ignore
 const HANDAKUON = ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ']
 
+// prettier-ignore
 const YOUON_BASE = ['き', 'し', 'ち', 'に', 'ひ', 'み', 'り']
 const YOUON_SUFFIXES = ['ゃ', 'ゅ', 'ょ']
 
