@@ -11,8 +11,8 @@ describe('getKanaForDigit', () => {
   it('2桁の逆引き', () => {
     expect(getKanaForDigit('00')).toContain('ま')
     expect(getKanaForDigit('98')).toContain('きゃ')
-    expect(getKanaForDigit('64')).toContain('リョ')
-    expect(getKanaForDigit('64')).toContain('ジョ')
+    expect(getKanaForDigit('64')).toContain('りょ')
+    expect(getKanaForDigit('64')).toContain('じょ')
   })
 
   it('存在しない数字は空配列', () => {
