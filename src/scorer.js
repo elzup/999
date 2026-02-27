@@ -1,8 +1,8 @@
-const { encode } = require('./encoder')
-const { SINGLE_TIER, normalizeDakuten, kataToHira } = require('./table')
+import { encode } from './encoder.js'
+import { SINGLE_TIER, normalizeDakuten, kataToHira } from './table.js'
 
 /** スコア重み（デフォルト） */
-const WEIGHTS = {
+export const WEIGHTS = {
   core: 2,
   sub: -1,
   bad: -2,
@@ -12,7 +12,7 @@ const WEIGHTS = {
 }
 
 /** 1桁かなのティアを取得（濁音・カタカナも正規化して判定） */
-function getTier(kana) {
+export function getTier(kana) {
   const normalized = kataToHira(normalizeDakuten(kana))
   return SINGLE_TIER[normalized] ?? null
 }
@@ -23,7 +23,7 @@ function getTier(kana) {
  * @param {number} targetDigits 目標桁数（デフォルト: 3）
  * @returns スコア詳細
  */
-function score(input, targetDigits = 3) {
+export function score(input, targetDigits = 3) {
   const { digits, tokens } = encode(input)
 
   const details = tokens.map((t) => {
@@ -55,5 +55,3 @@ function score(input, targetDigits = 3) {
     score: tokenScore + digitPenalty,
   }
 }
-
-module.exports = { score, getTier, WEIGHTS }

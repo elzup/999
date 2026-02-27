@@ -1,5 +1,5 @@
 /** 1桁: かな → 数字 */
-const SINGLE_DIGIT = {
+export const SINGLE_DIGIT = {
   // core
   れ: 0,
   い: 1,
@@ -29,7 +29,7 @@ const SINGLE_DIGIT = {
 }
 
 /** 2桁: かな → 数字文字列 */
-const DOUBLE_DIGIT = {
+export const DOUBLE_DIGIT = {
   ま: '00',
   と: '10',
   ティ: '12',
@@ -151,7 +151,7 @@ const DAKUTEN_MAP = {
 const DAKUTEN_YOUON_EXCEPTIONS = { ジャ: 'ジャ', ジュ: 'ジュ', ジョ: 'ジョ' }
 
 /** 1桁かなのティア */
-const SINGLE_TIER = {
+export const SINGLE_TIER = {
   れ: 'core',
   い: 'core',
   に: 'core',
@@ -178,37 +178,35 @@ const SINGLE_TIER = {
 }
 
 /** カタカナ→ひらがな (基本50音) */
-const KATA_TO_HIRA = {}
-for (let i = 0x30a1; i <= 0x30f6; i++) {
-  KATA_TO_HIRA[String.fromCharCode(i)] = String.fromCharCode(i - 0x60)
-}
+const KATA_TO_HIRA = Object.fromEntries(
+  Array.from({ length: 0x30f6 - 0x30a1 + 1 }, (_, i) => {
+    const code = 0x30a1 + i
+    return [String.fromCharCode(code), String.fromCharCode(code - 0x60)]
+  })
+)
 
-function normalizeDakuten(token) {
+export function normalizeDakuten(token) {
   if (DAKUTEN_YOUON_EXCEPTIONS[token]) return token
   return [...token].map((ch) => DAKUTEN_MAP[ch] ?? ch).join('')
 }
 
-function kataToHira(ch) {
+export function kataToHira(ch) {
   return KATA_TO_HIRA[ch] ?? ch
 }
 
-function buildReverseTable() {
-  const rev = {}
-  for (const [kana, digit] of Object.entries(SINGLE_DIGIT)) {
-    const key = String(digit)
-    rev[key] = [...(rev[key] ?? []), kana]
-  }
-  for (const [kana, digits] of Object.entries(DOUBLE_DIGIT)) {
-    rev[digits] = [...(rev[digits] ?? []), kana]
-  }
-  return rev
-}
+export function buildReverseTable() {
+  const addEntry = (acc, key, kana) => ({
+    ...acc,
+    [key]: [...(acc[key] ?? []), kana],
+  })
 
-module.exports = {
-  SINGLE_DIGIT,
-  DOUBLE_DIGIT,
-  SINGLE_TIER,
-  normalizeDakuten,
-  kataToHira,
-  buildReverseTable,
+  const fromSingle = Object.entries(SINGLE_DIGIT).reduce(
+    (acc, [kana, digit]) => addEntry(acc, String(digit), kana),
+    {}
+  )
+
+  return Object.entries(DOUBLE_DIGIT).reduce(
+    (acc, [kana, digits]) => addEntry(acc, digits, kana),
+    fromSingle
+  )
 }

@@ -1,9 +1,9 @@
-const {
+import {
   SINGLE_DIGIT,
   DOUBLE_DIGIT,
   normalizeDakuten,
   kataToHira,
-} = require('./table')
+} from './table.js'
 
 function lookup(token) {
   if (DOUBLE_DIGIT[token] !== undefined) return DOUBLE_DIGIT[token]
@@ -23,7 +23,7 @@ function lookup(token) {
 }
 
 /** かな文字列 → { digits, tokens } */
-function encode(input) {
+export function encode(input) {
   const tokens = []
   let i = 0
 
@@ -51,13 +51,11 @@ function encode(input) {
   return { digits, tokens }
 }
 
-function countDigits(input) {
+export function countDigits(input) {
   return encode(input).digits.length
 }
 
-function isThreeDigits(input) {
+export function isThreeDigits(input) {
   const { digits } = encode(input)
   return digits.length === 3 && digits[0] !== '0'
 }
-
-module.exports = { encode, countDigits, isThreeDigits }

@@ -1,42 +1,42 @@
-const { buildReverseTable } = require('./table')
+import { buildReverseTable } from './table.js'
 
 const reverseTable = buildReverseTable()
 
-function getKanaForDigit(digit) {
+export function getKanaForDigit(digit) {
   return reverseTable[digit] ?? []
 }
 
-function getReverseTable() {
+export function getReverseTable() {
   return reverseTable
 }
 
 /** 数字列を1桁/2桁の全分割パターンに展開 */
-function decode(digits) {
-  const results = []
-
+export function decode(digits) {
   function dfs(pos, parts, kanaOptions) {
     if (pos === digits.length) {
-      results.push({ parts: [...parts], kanaOptions: [...kanaOptions] })
-      return
+      return [{ parts, kanaOptions }]
     }
+
+    const results = []
 
     const one = digits[pos]
     const oneKana = reverseTable[one]
-    if (oneKana && oneKana.length > 0) {
-      dfs(pos + 1, [...parts, one], [...kanaOptions, oneKana])
+    if (oneKana?.length > 0) {
+      results.push(...dfs(pos + 1, [...parts, one], [...kanaOptions, oneKana]))
     }
 
     if (pos + 1 < digits.length) {
       const two = digits.slice(pos, pos + 2)
       const twoKana = reverseTable[two]
-      if (twoKana && twoKana.length > 0) {
-        dfs(pos + 2, [...parts, two], [...kanaOptions, twoKana])
+      if (twoKana?.length > 0) {
+        results.push(
+          ...dfs(pos + 2, [...parts, two], [...kanaOptions, twoKana])
+        )
       }
     }
+
+    return results
   }
 
-  dfs(0, [], [])
-  return results
+  return dfs(0, [], [])
 }
-
-module.exports = { getKanaForDigit, getReverseTable, decode }

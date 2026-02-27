@@ -1,79 +1,28 @@
-const {
+import {
   SINGLE_DIGIT,
   DOUBLE_DIGIT,
   normalizeDakuten,
   kataToHira,
-} = require('./table')
+} from './table.js'
 
 const GOJUON = [
-  'あ',
-  'い',
-  'う',
-  'え',
-  'お',
-  'か',
-  'き',
-  'く',
-  'け',
-  'こ',
-  'さ',
-  'し',
-  'す',
-  'せ',
-  'そ',
-  'た',
-  'ち',
-  'つ',
-  'て',
-  'と',
-  'な',
-  'に',
-  'ぬ',
-  'ね',
-  'の',
-  'は',
-  'ひ',
-  'ふ',
-  'へ',
-  'ほ',
-  'ま',
-  'み',
-  'む',
-  'め',
-  'も',
-  'や',
-  'ゆ',
-  'よ',
-  'ら',
-  'り',
-  'る',
-  'れ',
-  'ろ',
-  'わ',
-  'を',
+  'あ', 'い', 'う', 'え', 'お',
+  'か', 'き', 'く', 'け', 'こ',
+  'さ', 'し', 'す', 'せ', 'そ',
+  'た', 'ち', 'つ', 'て', 'と',
+  'な', 'に', 'ぬ', 'ね', 'の',
+  'は', 'ひ', 'ふ', 'へ', 'ほ',
+  'ま', 'み', 'む', 'め', 'も',
+  'や', 'ゆ', 'よ',
+  'ら', 'り', 'る', 'れ', 'ろ',
+  'わ', 'を',
 ]
 
 const DAKUON = [
-  'が',
-  'ぎ',
-  'ぐ',
-  'げ',
-  'ご',
-  'ざ',
-  'じ',
-  'ず',
-  'ぜ',
-  'ぞ',
-  'だ',
-  'ぢ',
-  'づ',
-  'で',
-  'ど',
-  'ば',
-  'び',
-  'ぶ',
-  'べ',
-  'ぼ',
+  'が', 'ぎ', 'ぐ', 'げ', 'ご',
+  'ざ', 'じ', 'ず', 'ぜ', 'ぞ',
+  'だ', 'ぢ', 'づ', 'で', 'ど',
+  'ば', 'び', 'ぶ', 'べ', 'ぼ',
 ]
 
 const HANDAKUON = ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ']
@@ -103,47 +52,34 @@ function lookupValue(kana) {
   return null
 }
 
-function checkKana(kana, note) {
+function checkKana(kana) {
   const value = lookupValue(kana)
   return {
     kana,
     covered: value !== null,
     value,
-    note: note
-      ? note(kana, value)
-      : value !== null
-      ? `${kana}→${value}`
-      : '未対応',
+    note: value !== null ? `${kana}→${value}` : '未対応',
   }
 }
 
-function generateCoverage() {
-  const gojuon = GOJUON.map((k) => checkKana(k, null))
+function checkDakutenKana(kana) {
+  const seion = normalizeDakuten(kana)
+  const value = lookupValue(seion)
+  return {
+    kana,
+    covered: value !== null,
+    value,
+    note: value !== null ? `${kana}→${seion}→${value}` : '未対応',
+  }
+}
 
-  const dakuon = DAKUON.map((k) => {
-    const seion = normalizeDakuten(k)
-    const value = lookupValue(seion)
-    return {
-      kana: k,
-      covered: value !== null,
-      value,
-      note: value !== null ? `${k}→${seion}→${value}` : '未対応',
-    }
-  })
-
-  const handakuon = HANDAKUON.map((k) => {
-    const seion = normalizeDakuten(k)
-    const value = lookupValue(seion)
-    return {
-      kana: k,
-      covered: value !== null,
-      value,
-      note: value !== null ? `${k}→${seion}→${value}` : '未対応',
-    }
-  })
+export function generateCoverage() {
+  const gojuon = GOJUON.map(checkKana)
+  const dakuon = DAKUON.map(checkDakutenKana)
+  const handakuon = HANDAKUON.map(checkDakutenKana)
 
   const youon = YOUON_BASE.flatMap((base) =>
-    YOUON_SUFFIXES.map((suffix) => checkKana(base + suffix, null))
+    YOUON_SUFFIXES.map((suffix) => checkKana(base + suffix))
   )
 
   const exceptions = JA_JU_JO.map((k) => {
@@ -170,5 +106,3 @@ function generateCoverage() {
     summary: { total, covered, rate: Math.round((covered / total) * 100) },
   }
 }
-
-module.exports = { generateCoverage }
