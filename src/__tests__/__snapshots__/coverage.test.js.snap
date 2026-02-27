@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateCoverage > サマリー 1`] = `
+{
+  "covered": 92,
+  "rate": 98,
+  "total": 94,
+}
+`;
+
+exports[`generateCoverage > 未対応かな一覧 1`] = `
+[
+  "え",
+  "を",
+]
+`;
