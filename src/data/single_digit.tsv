@@ -1,27 +1,4 @@
-# かな	数字	ティア
-# core (五十音順)
-い	1	core
-き	9	core
-こ	5	core
-さ	3	core
-し	4	core
-な	7	core
-に	2	core
-は	8	core
-れ	0	core
-ろ	6	core
-# sub (五十音順)
-う	7	sub
-お	0	sub
-く	9	sub
-ひ	1	sub
-ふ	2	sub
-み	3	sub
-よ	4	sub
-ら	5	sub
-る	6	sub
-や	8	sub
-# bad
-あ	8	bad
-か	9	bad
-を	0	bad
+tier	0	1	2	3	4	5	6	7	8	9
+core	れ	い	に	さ	し	こ	ろ	な	は	き
+sub	お	ひ	ふ	み	よ	ら	る	う	や	く
+bad	を								あ	か

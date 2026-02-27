@@ -48,17 +48,28 @@ function assertKanaLength(kana, row, col) {
 function parseSingleDigitTsv(tsv) {
   const singleDigit = {}
   const singleTier = {}
+  const lines = tsv
+    .split('\n')
+    .filter((l) => l.trim() !== '' && !l.startsWith('#'))
 
-  for (const line of tsv.split('\n')) {
-    if (line.startsWith('#') || line.trim() === '') continue
-    const [kana, digitStr, tier] = line.split('\t')
+  const header = lines[0].split('\t')
+  const cols = header.slice(1).map((v) => assertDigit(v, 'column header'))
 
-    assertSingleKana(kana)
-    const digit = assertDigit(digitStr, `kana "${kana}"`)
-    assertTier(tier, kana)
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split('\t')
+    const tier = cells[0].trim()
+    assertTier(tier, `row ${i}`)
 
-    singleDigit[kana] = digit
-    singleTier[kana] = tier
+    for (let j = 1; j < cells.length; j++) {
+      const kana = cells[j]?.trim()
+      if (!kana) continue
+
+      assertSingleKana(kana)
+      const digit = cols[j - 1]
+
+      singleDigit[kana] = digit
+      singleTier[kana] = tier
+    }
   }
 
   return { singleDigit, singleTier }
