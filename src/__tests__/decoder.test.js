@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { decode, getKanaForDigit, getReverseTable } from '../decoder.js'
+import {
+  decode,
+  decodeRanked,
+  getKanaForDigit,
+  getReverseTable,
+} from '../decoder.js'
 
 describe('getKanaForDigit', () => {
   it('1桁の逆引き', () => {
@@ -49,5 +54,31 @@ describe('decode', () => {
     )
     expect(split21).toBeDefined()
     expect(split21.kanaOptions[0]).toContain('きゃ')
+  })
+})
+
+describe('decodeRanked', () => {
+  it('スコア降順で候補を返す', () => {
+    const results = decodeRanked('901')
+    expect(results.length).toBeGreaterThan(1)
+
+    for (let i = 1; i < results.length; i++) {
+      expect(results[i - 1].score).toBeGreaterThanOrEqual(results[i].score)
+    }
+  })
+
+  it('各候補に word, score, details を含む', () => {
+    const results = decodeRanked('901')
+    const first = results[0]
+    expect(first).toHaveProperty('word')
+    expect(first).toHaveProperty('score')
+    expect(first).toHaveProperty('details')
+    expect(first.details).toHaveProperty('digits', '901')
+  })
+
+  it('きれい が 901 の候補に含まれる', () => {
+    const results = decodeRanked('901')
+    const kirei = results.find((r) => r.word === 'きれい')
+    expect(kirei).toBeDefined()
   })
 })
