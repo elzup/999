@@ -7,8 +7,14 @@ export const WEIGHTS = {
   sub: 8,
   bad: 6,
   double: 30,
+  sokuon: 20,
   halfOverflow: 4,
   overflowPerChar: -10,
+  youon4Omission: -5,
+}
+
+function isSokuon(kana) {
+  return kana === 'っ' || kana === 'ッ'
 }
 
 /** 1桁かなのティアを取得（濁音・カタカナも正規化して判定） */
@@ -24,7 +30,7 @@ export function getTier(kana) {
  * @returns スコア詳細
  */
 export function score(input, targetDigits = 3) {
-  const { digits, tokens } = encode(input)
+  const { digits, tokens, youon4 } = encode(input)
 
   let pos = 0
   const details = tokens.map((t) => {
@@ -40,6 +46,9 @@ export function score(input, targetDigits = 3) {
     if (fullyOut) {
       return { ...t, type: 'overflow', tier: null, score: WEIGHTS.overflowPerChar }
     }
+    if (isSokuon(t.kana)) {
+      return { ...t, type: 'sokuon', tier: null, score: WEIGHTS.sokuon }
+    }
     if (!fullyIn && isDouble) {
       return { ...t, type: 'halfOverflow', tier: null, score: WEIGHTS.halfOverflow }
     }
@@ -50,11 +59,15 @@ export function score(input, targetDigits = 3) {
     return { ...t, type: 'single', tier, score: WEIGHTS[tier] ?? 0 }
   })
 
+  const tokenScore = details.reduce((sum, d) => sum + d.score, 0)
+  const youon4Penalty = youon4 ? WEIGHTS.youon4Omission : 0
+
   return {
     input,
     digits,
     digitCount: digits.length,
     tokens: details,
-    score: details.reduce((sum, d) => sum + d.score, 0),
+    youon4,
+    score: tokenScore + youon4Penalty,
   }
 }

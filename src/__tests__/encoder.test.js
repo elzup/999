@@ -10,6 +10,7 @@ describe('encode', () => {
         { kana: 'れ', value: '0' },
         { kana: 'い', value: '1' },
       ],
+      youon4: false,
     })
   })
 
@@ -20,6 +21,7 @@ describe('encode', () => {
         { kana: 'ま', value: '00' },
         { kana: 'ち', value: '22' },
       ],
+      youon4: false,
     })
   })
 
@@ -30,6 +32,7 @@ describe('encode', () => {
         { kana: 'きゃ', value: '98' },
         { kana: 'く', value: '9' },
       ],
+      youon4: false,
     })
   })
 
@@ -62,6 +65,40 @@ describe('encode', () => {
     // さん → 36 (long_digit), not さ(3)+ん(0)=30
     const result = encode('さん')
     expect(result.tokens).toEqual([{ kana: 'さん', value: '36' }])
+  })
+
+  it('促音: 後続文字の数字を繰り返す', () => {
+    expect(encode('はっぴ').digits).toBe('811')
+    expect(encode('はっぴ').tokens).toEqual([
+      { kana: 'は', value: '8' },
+      { kana: 'っ', value: '1' },
+      { kana: 'ぴ', value: '1' },
+    ])
+  })
+
+  it('促音: 後続が2桁かなの場合', () => {
+    // カット: カ(9) + ッ(10) + ト(10)
+    expect(encode('カット').digits).toBe('91010')
+  })
+
+  it('促音: 末尾の促音はエラー', () => {
+    expect(() => encode('かっ')).toThrow('促音')
+  })
+
+  it('拗音4: う/んを省略して3桁', () => {
+    // じょんき → じょ(64) + き(9) = 649, ん省略
+    expect(encode('じょんき').digits).toBe('649')
+    expect(encode('じょんき').youon4).toBe(true)
+    // きゅうし → きゅ(97) + し(4) = 974, う省略
+    expect(encode('きゅうし').digits).toBe('974')
+    expect(encode('きゅうし').youon4).toBe(true)
+  })
+
+  it('拗音4: 4文字でない場合は通常エンコード', () => {
+    // 3文字 → youon4 不適用
+    expect(encode('きゅう').youon4).toBe(false)
+    // 5文字以上 → youon4 不適用
+    expect(encode('きれい').youon4).toBe(false)
   })
 
   it('unknown kana throws', () => {

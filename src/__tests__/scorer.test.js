@@ -86,6 +86,41 @@ describe('score', () => {
     ])
   })
 
+  it('はっぴ: core + sokuon + sub, 3桁', () => {
+    const result = score('はっぴ')
+    expect(result.digits).toBe('811')
+    expect(result.digitCount).toBe(3)
+    // は(core 10) + っ(sokuon 20) + ぴ(sub 8) = 38
+    expect(result.score).toBe(38)
+    expect(result.tokens[1].type).toBe('sokuon')
+  })
+
+  it('カット: bad + sokuon + overflow, 5桁', () => {
+    const result = score('カット')
+    expect(result.digits).toBe('91010')
+    expect(result.digitCount).toBe(5)
+    // カ(bad 6) + ッ(sokuon 20) + ト(overflow -10)
+    expect(result.score).toBe(16)
+  })
+
+  it('じょんき: 拗音4ルール, double + core + 省略(-5)', () => {
+    const result = score('じょんき')
+    expect(result.digits).toBe('649')
+    expect(result.digitCount).toBe(3)
+    expect(result.youon4).toBe(true)
+    // じょ(double 30) + き(core 10) + youon4省略(-5) = 35
+    expect(result.score).toBe(35)
+  })
+
+  it('きゅうし: 拗音4ルール, double + core + 省略(-5)', () => {
+    const result = score('きゅうし')
+    expect(result.digits).toBe('974')
+    expect(result.digitCount).toBe(3)
+    expect(result.youon4).toBe(true)
+    // きゅ(double 30) + し(core 10) + youon4省略(-5) = 35
+    expect(result.score).toBe(35)
+  })
+
   it('targetDigits を変更可能', () => {
     const result = score('きれい', 4)
     // 3桁だが target=4 → い は pos 2 で fullyIn

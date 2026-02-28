@@ -6,6 +6,45 @@ import {
   kataToHira,
 } from './table.js'
 
+function isSokuon(ch) {
+  return ch === 'っ' || ch === 'ッ'
+}
+
+// prettier-ignore
+const SMALL_YYO = ['ゃ', 'ゅ', 'ょ', 'ャ', 'ュ', 'ョ']
+
+/** 拗音4ルール: ○(ゃ|ゅ|ょ)(う|ん)○ → う/んを省略して3桁にする */
+function detectYouon4(input) {
+  const chars = [...input]
+  if (chars.length !== 4) return null
+  if (!SMALL_YYO.includes(chars[1])) return null
+  const mid = kataToHira(chars[2])
+  if (mid !== 'う' && mid !== 'ん') return null
+  const youon = chars[0] + chars[1]
+  const youonVal = lookup(youon)
+  if (youonVal === undefined) return null
+  const lastVal = lookup(chars[3])
+  if (lastVal === undefined) return null
+  return {
+    tokens: [
+      { kana: youon, value: youonVal },
+      { kana: chars[3], value: lastVal },
+    ],
+    digits: youonVal + lastVal,
+  }
+}
+
+/** 位置 pos から次トークンの value を先読みする */
+function peekNextValue(input, pos) {
+  if (pos >= input.length) return undefined
+  if (pos + 1 < input.length) {
+    const two = input.slice(pos, pos + 2)
+    const val = lookup(two)
+    if (val !== undefined) return val
+  }
+  return lookup(input[pos])
+}
+
 function lookup(token) {
   if (DOUBLE_DIGIT[token] !== undefined) return DOUBLE_DIGIT[token]
   if (LONG_DIGIT[token] !== undefined) return LONG_DIGIT[token]
@@ -26,12 +65,25 @@ function lookup(token) {
   return undefined
 }
 
-/** かな文字列 → { digits, tokens } */
+/** かな文字列 → { digits, tokens, youon4 } */
 export function encode(input) {
+  const y4 = detectYouon4(input)
+  if (y4) return { ...y4, youon4: true }
+
   const tokens = []
   let i = 0
 
   while (i < input.length) {
+    if (isSokuon(input[i])) {
+      const nextVal = peekNextValue(input, i + 1)
+      if (nextVal === undefined) {
+        throw new Error(`促音 at position ${i} has no following kana`)
+      }
+      tokens.push({ kana: input[i], value: nextVal })
+      i += 1
+      continue
+    }
+
     if (i + 1 < input.length) {
       const two = input.slice(i, i + 2)
       const val = lookup(two)
@@ -52,7 +104,7 @@ export function encode(input) {
   }
 
   const digits = tokens.map((t) => t.value).join('')
-  return { digits, tokens }
+  return { digits, tokens, youon4: false }
 }
 
 export function countDigits(input) {
