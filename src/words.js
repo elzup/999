@@ -10,8 +10,8 @@ import {
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
 
-export function loadWords() {
-  const text = readFileSync(join(dataDir, 'words.tsv'), 'utf-8')
+export function loadWords(filename = 'words.tsv') {
+  const text = readFileSync(join(dataDir, filename), 'utf-8')
   const lines = text.split('\n').filter((l) => l.trim() !== '')
   const header = lines[0].split('\t')
 
@@ -52,6 +52,27 @@ export function normalizeForCompare(str) {
   const noDakuten = normalizeDakuten(hira)
   const noSmall = normalizeSmallVowel(noDakuten)
   return noSmall.replace(/[・ー]/g, '')
+}
+
+/** カンマ区切りの項目数を数える (空文字は0) */
+export function countItems(str) {
+  if (!str) return 0
+  return str.split(',').filter((s) => s.trim() !== '').length
+}
+
+const CATEGORY_WEIGHTS = { hito: 8, mono: 10, gainen: 4 }
+
+/** 人/物/概念 のカテゴリスコアを計算 */
+export function categoryScore(entry) {
+  const hitoCnt = countItems(entry.hito)
+  const monoCnt = countItems(entry.mono)
+  const gainenCnt = countItems(entry.gainen)
+  const catScore =
+    hitoCnt * CATEGORY_WEIGHTS.hito +
+    monoCnt * CATEGORY_WEIGHTS.mono +
+    gainenCnt * CATEGORY_WEIGHTS.gainen
+
+  return { hitoCnt, monoCnt, gainenCnt, catScore }
 }
 
 export function scoreEntry(entry) {

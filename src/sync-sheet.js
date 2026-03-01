@@ -49,6 +49,9 @@ function parseTsv(tsv) {
   const { index } = parseHeader(lines[0])
 
   const numIdx = index['num'] ?? 0
+  const hitoIdx = index['人']
+  const monoIdx = index['物']
+  const gainenIdx = index['概念']
   const w1Idx = index['w1']
   const w1kIdx = index['w1k']
   const w2Idx = index['w2']
@@ -64,21 +67,25 @@ function parseTsv(tsv) {
     const num = cols[numIdx]?.trim()
     if (!num || !/^\d{3}$/.test(num)) continue
 
+    const hito = cols[hitoIdx]?.trim() || ''
+    const mono = cols[monoIdx]?.trim() || ''
+    const gainen = cols[gainenIdx]?.trim() || ''
     const w1 = cols[w1Idx]?.trim() || ''
     const w1k = cols[w1kIdx]?.trim() || ''
     const w2 = cols[w2Idx]?.trim() || ''
     const w2k = cols[w2kIdx]?.trim() || ''
 
-    entries.push({ num, w1, w1k, w2, w2k })
+    entries.push({ num, hito, mono, gainen, w1, w1k, w2, w2k })
   }
 
   return entries
 }
 
 function toTsv(entries) {
-  const header = 'num\tw1\tw1k\tw2\tw2k'
+  const header = 'num\thito\tmono\tgainen\tw1\tw1k\tw2\tw2k'
   const rows = entries.map(
-    (e) => `${e.num}\t${e.w1}\t${e.w1k}\t${e.w2}\t${e.w2k}`
+    (e) =>
+      `${e.num}\t${e.hito}\t${e.mono}\t${e.gainen}\t${e.w1}\t${e.w1k}\t${e.w2}\t${e.w2k}`
   )
   return [header, ...rows].join('\n') + '\n'
 }
