@@ -9,7 +9,8 @@
     "score": "node src/score-words.js",
     "check:kana": "node src/check-kana.js",
     "check:digits": "node src/check-digits.js",
-    "check:errors": "node src/check-errors.js"
+    "check:errors": "node src/check-errors.js",
+    "viz": "node src/generate-viz.js"
   },
   "devDependencies": {
     "vitest": "^3.0.0"
