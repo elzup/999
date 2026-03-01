@@ -36,4 +36,4 @@ nr test        # テスト実行
 
 ## Docs
 
-- [LLM プロンプト](docs/llm-prompt.md) - LLM 用の桁数判定プロンプト
+- [かな数字対応表](docs/kana-number-table.md) - 対応表・桁数判定ルール・スコア計算
