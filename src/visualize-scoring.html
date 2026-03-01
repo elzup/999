@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>999 Scoring Rules Visualization</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background: #0f1117;
+    color: #e0e0e0;
+    padding: 24px;
+  }
+  h1 { font-size: 24px; margin-bottom: 8px; color: #fff; }
+  h2 { font-size: 18px; margin: 24px 0 12px; color: #ccc; }
+  .subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
+
+  /* Weights */
+  .weights {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+  }
+  .weight-card {
+    background: #1a1d27; border-radius: 8px; padding: 8px 14px;
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 80px;
+  }
+  .weight-card .label { font-size: 11px; color: #888; margin-bottom: 2px; }
+  .weight-card .value { font-size: 20px; font-weight: bold; }
+  .weight-card .value.positive { color: #4ade80; }
+  .weight-card .value.negative { color: #f87171; }
+
+  /* Single digit table */
+  .single-table { border-collapse: collapse; margin-bottom: 16px; }
+  .single-table th, .single-table td {
+    width: 40px; height: 36px; text-align: center; font-size: 14px;
+    border: 1px solid #2a2d37;
+  }
+  .single-table th { background: #1a1d27; color: #888; font-size: 12px; }
+  .single-table .tier-label { text-align: right; padding-right: 8px; font-size: 12px; color: #888; width: 50px; }
+  .tier-core { background: #166534; color: #4ade80; }
+  .tier-sub { background: #854d0e; color: #fbbf24; }
+  .tier-bad { background: #7f1d1d; color: #f87171; }
+
+  /* Grid tables */
+  .grid-container { overflow-x: auto; margin-bottom: 16px; }
+  .digit-grid { border-collapse: collapse; }
+  .digit-grid th, .digit-grid td {
+    min-width: 80px; height: 32px; text-align: center; font-size: 12px;
+    border: 1px solid #2a2d37; padding: 2px 4px;
+  }
+  .digit-grid th { background: #1a1d27; color: #888; font-size: 12px; position: sticky; top: 0; }
+  .digit-grid .row-header { background: #1a1d27; color: #888; font-weight: bold; width: 36px; min-width: 36px; }
+  .digit-grid .has-entry { background: #1e3a2f; color: #6ee7b7; }
+  .digit-grid .has-long { background: #1e2d3a; color: #7dd3fc; }
+  .digit-grid .has-both { background: #2d1e3a; color: #c4b5fd; }
+  .digit-grid .empty { background: #15171e; color: #333; }
+
+  /* XY × Z heatmap */
+  .heatmap-section { margin-top: 32px; }
+  .heatmap-wrap { overflow-x: auto; }
+  .heatmap { border-collapse: collapse; }
+  .heatmap th {
+    width: 40px; height: 28px; text-align: center; font-size: 11px;
+    border: 1px solid #2a2d37; background: #1a1d27; color: #888;
+    position: sticky; top: 0; z-index: 2;
+  }
+  .heatmap .corner { position: sticky; left: 0; z-index: 3; }
+  .heatmap .row-header {
+    background: #1a1d27; color: #888; font-weight: bold; font-size: 11px;
+    width: 36px; min-width: 36px; text-align: center;
+    position: sticky; left: 0; z-index: 1;
+    border: 1px solid #2a2d37;
+  }
+  .heatmap .x-separator { border-top: 2px solid #444; }
+  .heatmap td {
+    width: 40px; height: 28px; text-align: center; font-size: 10px;
+    border: 1px solid #1a1d27; cursor: default; position: relative;
+  }
+  /* Score levels */
+  .score-0 { background: #1a1d22; color: #555; }
+  .score-1 { background: #1a2e1f; color: #6ee7b7; }
+  .score-2 { background: #1f3d24; color: #86efac; }
+  .score-3 { background: #26592e; color: #bbf7d0; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin: 12px 0; font-size: 13px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch {
+    width: 18px; height: 18px; border-radius: 3px; border: 1px solid #333;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    display: none; position: fixed; background: #1a1d27; color: #e0e0e0;
+    border: 1px solid #444; border-radius: 6px; padding: 10px 14px;
+    font-size: 13px; z-index: 100; pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); max-width: 320px;
+  }
+  .tooltip .tt-num { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 4px; }
+  .tooltip .tt-row { margin: 2px 0; }
+  .tooltip .tt-label { color: #888; }
+  .tooltip .tt-kana { color: #fbbf24; }
+  .tooltip .tt-score { font-weight: bold; }
+
+  .section-row { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+</style>
+</head>
+<body>
+
+<h1>999 Scoring Rules</h1>
+<p class="subtitle">かな→3桁数字 エンコードのスコアリングルール可視化</p>
+
+<h2>Scoring Weights</h2>
+<div class="weights" id="weights"></div>
+
+<div class="section-row">
+  <div>
+    <h2>Single Digit (1桁)</h2>
+    <table class="single-table" id="single-table"></table>
+  </div>
+</div>
+
+<div class="section-row">
+  <div>
+    <h2>Double Digit (2桁)</h2>
+    <div class="grid-container"><table class="digit-grid" id="double-grid"></table></div>
+  </div>
+  <div>
+    <h2>Long Digit (長音等)</h2>
+    <div class="grid-container"><table class="digit-grid" id="long-grid"></table></div>
+  </div>
+</div>
+
+<div class="heatmap-section">
+  <h2>XY(行) × Z(列) Score Potential</h2>
+  <p class="subtitle">各3桁数字 XYZ のスコアポテンシャル（最良分解時）</p>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch score-3"></div><span>Both [XY]+[YZ] doubles (max flexibility)</span></div>
+    <div class="legend-item"><div class="legend-swatch score-2"></div><span>[XY] double available</span></div>
+    <div class="legend-item"><div class="legend-swatch score-1"></div><span>[YZ] double available</span></div>
+    <div class="legend-item"><div class="legend-swatch score-0"></div><span>All singles only</span></div>
+  </div>
+  <div class="heatmap-wrap"><table class="heatmap" id="heatmap"></table></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ── Data ──
+const WEIGHTS = {
+  core: 10, sub: 8, bad: 6,
+  double: 30, sokuon: 20,
+  halfOverflow: 4, overflowPerChar: -10, youon4Omission: -5,
+}
+
+const SINGLE = {
+  core: { 0:'ん', 1:'い', 2:'に', 3:'さ', 4:'し', 5:'こ', 6:'ろ', 7:'な', 8:'は', 9:'き' },
+  sub:  { 0:'お', 1:'ひ', 2:'ふ', 3:'み', 4:'よ', 5:'ら', 6:'る', 7:'う', 8:'や', 9:'く' },
+  bad:  { 0:'れ', 8:'あ', 9:'か' },
+}
+
+const DOUBLE = {
+  '00':'ま',
+  '10':'と', '12':'てぃ', '14':'ひょ', '17':'ひゅ/とぅ', '18':'ひゃ/いぇ',
+  '21':'ふぃ', '22':'ち', '23':'つ', '24':'ちょ', '27':'ちゅ', '28':'ちゃ/つぁ', '29':'つぇ/ちぇ',
+  '33':'す', '34':'みょ', '35':'そ', '37':'みゅ', '38':'みゃ', '39':'せ',
+  '43':'ゆ', '44':'しょ', '47':'しゅ', '48':'しゃ', '49':'しぇ',
+  '54':'ふぉ', '55':'た', '57':'てゅ', '58':'ふぁ', '59':'て/ふぇ',
+  '61':'り', '63':'む', '64':'りょ/じょ', '65':'も', '67':'りゅ/じゅ', '68':'りゃ/じゃ', '69':'め',
+  '71':'うぃ/ゔぃ', '73':'ぬ', '74':'にょ/うぉ', '75':'の', '77':'にゅ', '78':'うぁ/にゃ', '79':'ね/うぇ',
+  '85':'ほ', '88':'わ', '89':'へ',
+  '94':'きょ', '97':'きゅ', '98':'きゃ', '99':'け',
+}
+
+const LONG = {
+  '10':'いん', '11':'いー/ひー',
+  '20':'にん', '21':'にー', '26':'ふん', '27':'ふー',
+  '30':'みん', '31':'みー', '36':'さん', '37':'すー', '38':'さー',
+  '40':'しん/よー', '41':'しー', '46':'よん', '47':'ゆー',
+  '50':'こん/こー', '59':'らー',
+  '60':'ろん/るん/ろー', '67':'るー',
+  '70':'なん', '76':'うん', '78':'なー',
+  '80':'はん', '86':'やん', '88':'はー/やー',
+  '90':'きん', '91':'かい/きー', '96':'かん', '97':'くー', '98':'かー',
+}
+
+function hasDouble(xy) { return DOUBLE[xy] !== undefined || LONG[xy] !== undefined }
+
+function getKanaForXY(xy) {
+  const parts = []
+  if (DOUBLE[xy]) parts.push({ src: 'double', kana: DOUBLE[xy] })
+  if (LONG[xy]) parts.push({ src: 'long', kana: LONG[xy] })
+  return parts
+}
+
+function bestTierForDigit(d) {
+  if (SINGLE.core[d] !== undefined) return 'core'
+  if (SINGLE.sub[d] !== undefined) return 'sub'
+  if (SINGLE.bad[d] !== undefined) return 'bad'
+  return null
+}
+
+function bestSingleScore(d) {
+  const tier = bestTierForDigit(d)
+  return tier ? WEIGHTS[tier] : 0
+}
+
+// ── Render Weights ──
+const weightsEl = document.getElementById('weights')
+for (const [k, v] of Object.entries(WEIGHTS)) {
+  const card = document.createElement('div')
+  card.className = 'weight-card'
+  card.innerHTML = `<span class="label">${k}</span><span class="value ${v >= 0 ? 'positive' : 'negative'}">${v >= 0 ? '+' : ''}${v}</span>`
+  weightsEl.appendChild(card)
+}
+
+// ── Render Single Digit Table ──
+const singleEl = document.getElementById('single-table')
+{
+  let html = '<tr><th></th>'
+  for (let d = 0; d <= 9; d++) html += `<th>${d}</th>`
+  html += '</tr>'
+  for (const tier of ['core', 'sub', 'bad']) {
+    html += `<tr><td class="tier-label">${tier} (${WEIGHTS[tier]})</td>`
+    for (let d = 0; d <= 9; d++) {
+      const k = SINGLE[tier][d]
+      html += k
+        ? `<td class="tier-${tier}">${k}</td>`
+        : `<td class="empty"></td>`
+    }
+    html += '</tr>'
+  }
+  singleEl.innerHTML = html
+}
+
+// ── Render Double/Long Grids ──
+function renderDigitGrid(el, data) {
+  let html = '<tr><th></th>'
+  for (let c = 0; c <= 9; c++) html += `<th>${c}</th>`
+  html += '</tr>'
+  for (let r = 0; r <= 9; r++) {
+    html += `<tr><td class="row-header">${r}</td>`
+    for (let c = 0; c <= 9; c++) {
+      const key = `${r}${c}`
+      const val = data[key]
+      html += val
+        ? `<td class="has-entry" title="${key}: ${val}">${val}</td>`
+        : `<td class="empty">-</td>`
+    }
+    html += '</tr>'
+  }
+  el.innerHTML = html
+}
+renderDigitGrid(document.getElementById('double-grid'), DOUBLE)
+renderDigitGrid(document.getElementById('long-grid'), LONG)
+
+// ── Render XY × Z Heatmap ──
+const heatmapEl = document.getElementById('heatmap')
+{
+  let html = '<tr><th class="corner">XY\\Z</th>'
+  for (let z = 0; z <= 9; z++) html += `<th>${z}</th>`
+  html += '</tr>'
+
+  for (let x = 0; x <= 9; x++) {
+    for (let y = 0; y <= 9; y++) {
+      const xy = `${x}${y}`
+      const sep = y === 0 ? ' x-separator' : ''
+      html += `<tr><td class="row-header${sep}">${xy}</td>`
+      for (let z = 0; z <= 9; z++) {
+        const yz = `${y}${z}`
+        const hasXY = hasDouble(xy)
+        const hasYZ = hasDouble(yz)
+        let level = 0
+        if (hasXY && hasYZ) level = 3
+        else if (hasXY) level = 2
+        else if (hasYZ) level = 1
+
+        const num = `${x}${y}${z}`
+        html += `<td class="score-${level}${sep}" data-num="${num}" data-xy="${xy}" data-yz="${yz}" data-x="${x}" data-y="${y}" data-z="${z}">${num}</td>`
+      }
+      html += '</tr>'
+    }
+  }
+  heatmapEl.innerHTML = html
+}
+
+// ── Tooltip ──
+const tooltip = document.getElementById('tooltip')
+heatmapEl.addEventListener('mousemove', (e) => {
+  const td = e.target.closest('td[data-num]')
+  if (!td) { tooltip.style.display = 'none'; return }
+
+  const { num, xy, yz, x, y, z } = td.dataset
+  const xyKana = getKanaForXY(xy)
+  const yzKana = getKanaForXY(yz)
+
+  const singleX = Object.entries(SINGLE).filter(([,v]) => v[x] !== undefined).map(([t,v]) => `${v[x]}(${t})`).join(' ')
+  const singleY = Object.entries(SINGLE).filter(([,v]) => v[y] !== undefined).map(([t,v]) => `${v[y]}(${t})`).join(' ')
+  const singleZ = Object.entries(SINGLE).filter(([,v]) => v[z] !== undefined).map(([t,v]) => `${v[z]}(${t})`).join(' ')
+
+  const allSingleScore = bestSingleScore(x) + bestSingleScore(y) + bestSingleScore(z)
+
+  let rows = `<div class="tt-num">${num}</div>`
+
+  // [XY][Z] decomposition
+  if (xyKana.length > 0) {
+    const kanaStr = xyKana.map(k => k.kana).join(', ')
+    const score = WEIGHTS.double + bestSingleScore(z)
+    rows += `<div class="tt-row"><span class="tt-label">[${xy}][${z}]:</span> <span class="tt-kana">${kanaStr}</span> + ${singleZ.split(' ')[0]} = <span class="tt-score" style="color:#4ade80">${score}</span></div>`
+  }
+
+  // [X][YZ] decomposition
+  if (yzKana.length > 0) {
+    const kanaStr = yzKana.map(k => k.kana).join(', ')
+    const score = bestSingleScore(x) + WEIGHTS.double
+    rows += `<div class="tt-row"><span class="tt-label">[${x}][${yz}]:</span> ${singleX.split(' ')[0]} + <span class="tt-kana">${kanaStr}</span> = <span class="tt-score" style="color:#4ade80">${score}</span></div>`
+  }
+
+  // [X][Y][Z] decomposition
+  rows += `<div class="tt-row"><span class="tt-label">[${x}][${y}][${z}]:</span> ${singleX.split(' ')[0]} + ${singleY.split(' ')[0]} + ${singleZ.split(' ')[0]} = <span class="tt-score">${allSingleScore}</span></div>`
+
+  tooltip.innerHTML = rows
+  tooltip.style.display = 'block'
+  tooltip.style.left = (e.clientX + 16) + 'px'
+  tooltip.style.top = (e.clientY + 16) + 'px'
+
+  // Keep tooltip in viewport
+  const rect = tooltip.getBoundingClientRect()
+  if (rect.right > window.innerWidth) tooltip.style.left = (e.clientX - rect.width - 8) + 'px'
+  if (rect.bottom > window.innerHeight) tooltip.style.top = (e.clientY - rect.height - 8) + 'px'
+})
+
+heatmapEl.addEventListener('mouseleave', () => { tooltip.style.display = 'none' })
+</script>
+</body>
+</html>
