@@ -4,6 +4,7 @@ import {
   LONG_DIGIT,
   normalizeDakuten,
   kataToHira,
+  normalizeSmallVowel,
 } from './table.js'
 
 function isSokuon(ch) {
@@ -57,8 +58,14 @@ function lookup(token) {
   if (DOUBLE_DIGIT[hira] !== undefined) return DOUBLE_DIGIT[hira]
   if (LONG_DIGIT[hira] !== undefined) return LONG_DIGIT[hira]
 
+  const small = normalizeSmallVowel(hira)
+  if (small !== hira) {
+    if (DOUBLE_DIGIT[small] !== undefined) return DOUBLE_DIGIT[small]
+    if (LONG_DIGIT[small] !== undefined) return LONG_DIGIT[small]
+  }
+
   if (token.length === 1) {
-    const ch = kataToHira(normalizeDakuten(token))
+    const ch = normalizeSmallVowel(kataToHira(normalizeDakuten(token)))
     if (SINGLE_DIGIT[ch] !== undefined) return String(SINGLE_DIGIT[ch])
   }
 

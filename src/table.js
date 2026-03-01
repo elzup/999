@@ -140,6 +140,8 @@ const DAKUTEN_MAP = {
   バ:'は', ビ:'ひ', ブ:'ふ', ベ:'へ', ボ:'ほ',
   // カタカナ半濁音
   パ:'は', ピ:'ひ', プ:'ふ', ペ:'へ', ポ:'ほ',
+  // ヴ行
+  ゔ:'う', ヴ:'う',
 }
 
 // prettier-ignore
@@ -167,6 +169,16 @@ export function normalizeDakuten(token) {
 
 export function kataToHira(ch) {
   return KATA_TO_HIRA[ch] ?? ch
+}
+
+// prettier-ignore
+const SMALL_VOWEL_MAP = {
+  ぁ:'あ', ぃ:'い', ぅ:'う', ぇ:'え', ぉ:'お',
+}
+
+/** 小文字母音かなを正規化 (ぃ→い 等) */
+export function normalizeSmallVowel(token) {
+  return [...token].map((ch) => SMALL_VOWEL_MAP[kataToHira(ch)] ?? ch).join('')
 }
 
 export function buildReverseTable() {
