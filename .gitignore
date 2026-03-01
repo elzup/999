@@ -1,2 +1,4 @@
 node_modules
 dist
+src/data/words.tsv
+src/data/words.json
