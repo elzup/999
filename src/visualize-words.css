@@ -186,15 +186,19 @@
     border: 1px solid #2a2d37; background: #1a1d27; color: #888;
   }
   .kana-grid td {
-    width: 44px; height: 38px; text-align: center; font-size: 12px;
-    border: 1px solid #222; cursor: default; line-height: 1.1; padding: 2px;
+    width: 54px; min-height: 38px; text-align: center; font-size: 12px;
+    border: 1px solid #222; cursor: default; line-height: 1.2; padding: 2px 3px;
   }
-  .kana-grid .kc { display: block; font-size: 14px; font-weight: bold; }
-  .kana-grid .kn { display: block; font-size: 9px; }
+  .kana-grid .kc { display: inline; font-size: 14px; font-weight: bold; }
+  .kana-grid .kn { display: inline; font-size: 9px; margin-left: 1px; }
+  .kana-grid .ku-youon { font-size: 11px; opacity: 0.75; margin-top: 1px; }
+  .kana-grid .ku-youon .kc { font-size: 11px; }
+  .kana-grid .ku-youon .kn { font-size: 8px; }
   .kana-grid .rl {
     background: #1a1d27; color: #888; font-weight: bold; font-size: 11px;
     text-align: center; width: 36px; min-width: 36px;
   }
+  .kana-grid .kg-sep td { border-top: 2px solid #444; }
   .ku0 { background: #1a1d22; color: #333; }
   .ku1 { background: #1a2218; color: #6b8a5e; }
   .ku2 { background: #1f2e1a; color: #8ab87a; }

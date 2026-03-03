@@ -4,12 +4,16 @@ const html = htm.bind(React.createElement)
 
 // ─── Helpers ────────────────────────────────────────────
 
+function hasWord(d) {
+  return d.w1k || d.w2k
+}
+
 function compCount(d) {
   let n = 0
   if (d.hito) n++
   if (d.mono) n++
   if (d.gainen) n++
-  if (d.w1k) n++
+  if (hasWord(d)) n++
   return n
 }
 
@@ -40,7 +44,7 @@ const modeClassMap = {
 const modeLabelMap = {
   completion: (d) => (compCount(d) === 0 ? '' : d.num),
   category: (d) => (d.catScore > 0 ? d.num : ''),
-  encode: (d) => (d.w1k || d.w2k ? d.num : ''),
+  encode: (d) => (hasWord(d) ? d.num : ''),
 }
 
 const LEGENDS = {
@@ -147,60 +151,64 @@ const summaryResolvers = {
 
 // ─── Kana data ──────────────────────────────────────────
 
-const VOWELS = ['あ', 'い', 'う', 'え', 'お']
-const SEION = [
-  { l: 'あ', k: ['あ', 'い', 'う', 'え', 'お'] },
-  { l: 'か', k: ['か', 'き', 'く', 'け', 'こ'] },
-  { l: 'さ', k: ['さ', 'し', 'す', 'せ', 'そ'] },
-  { l: 'た', k: ['た', 'ち', 'つ', 'て', 'と'] },
-  { l: 'な', k: ['な', 'に', 'ぬ', 'ね', 'の'] },
-  { l: 'は', k: ['は', 'ひ', 'ふ', 'へ', 'ほ'] },
-  { l: 'ま', k: ['ま', 'み', 'む', 'め', 'も'] },
-  { l: 'や', k: ['や', null, 'ゆ', null, 'よ'] },
-  { l: 'ら', k: ['ら', 'り', 'る', 'れ', 'ろ'] },
-  { l: 'わ', k: ['わ', null, null, null, 'を'] },
-  { l: 'ん', k: ['ん'] },
-]
-const DAKUON = [
-  { l: 'が', k: ['が', 'ぎ', 'ぐ', 'げ', 'ご'] },
-  { l: 'ざ', k: ['ざ', 'じ', 'ず', 'ぜ', 'ぞ'] },
-  { l: 'だ', k: ['だ', 'ぢ', 'づ', 'で', 'ど'] },
-  { l: 'ば', k: ['ば', 'び', 'ぶ', 'べ', 'ぼ'] },
-  { l: 'ぱ', k: ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'] },
-]
-const YOUON_H = ['ゃ', 'ゅ', 'ょ']
-const YOUON = [
-  { l: 'き', k: ['きゃ', 'きゅ', 'きょ'] },
-  { l: 'し', k: ['しゃ', 'しゅ', 'しょ'] },
-  { l: 'ち', k: ['ちゃ', 'ちゅ', 'ちょ'] },
-  { l: 'に', k: ['にゃ', 'にゅ', 'にょ'] },
-  { l: 'ひ', k: ['ひゃ', 'ひゅ', 'ひょ'] },
-  { l: 'み', k: ['みゃ', 'みゅ', 'みょ'] },
-  { l: 'り', k: ['りゃ', 'りゅ', 'りょ'] },
-  { l: 'じ', k: ['じゃ', 'じゅ', 'じょ'] },
+const COL_HEADERS = ['あ/ゃ', 'い', 'う/ゅ', 'え', 'お/ょ']
+const YOUON_COL = { 0: 0, 2: 1, 4: 2 }
+
+const KANA_GROUPS = [
+  { rows: [{ l: 'あ', k: ['あ', 'い', 'う', 'え', 'お'] }] },
+  { rows: [
+    { l: 'か', k: ['か', 'き', 'く', 'け', 'こ'], y: ['きゃ', 'きゅ', 'きょ'] },
+    { l: 'が', k: ['が', 'ぎ', 'ぐ', 'げ', 'ご'] },
+  ]},
+  { rows: [
+    { l: 'さ', k: ['さ', 'し', 'す', 'せ', 'そ'], y: ['しゃ', 'しゅ', 'しょ'] },
+    { l: 'ざ', k: ['ざ', 'じ', 'ず', 'ぜ', 'ぞ'], y: ['じゃ', 'じゅ', 'じょ'] },
+  ]},
+  { rows: [
+    { l: 'た', k: ['た', 'ち', 'つ', 'て', 'と'], y: ['ちゃ', 'ちゅ', 'ちょ'] },
+    { l: 'だ', k: ['だ', 'ぢ', 'づ', 'で', 'ど'] },
+  ]},
+  { rows: [
+    { l: 'な', k: ['な', 'に', 'ぬ', 'ね', 'の'], y: ['にゃ', 'にゅ', 'にょ'] },
+  ]},
+  { rows: [
+    { l: 'は', k: ['は', 'ひ', 'ふ', 'へ', 'ほ'], y: ['ひゃ', 'ひゅ', 'ひょ'] },
+    { l: 'ば', k: ['ば', 'び', 'ぶ', 'べ', 'ぼ'] },
+    { l: 'ぱ', k: ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'] },
+  ]},
+  { rows: [
+    { l: 'ま', k: ['ま', 'み', 'む', 'め', 'も'], y: ['みゃ', 'みゅ', 'みょ'] },
+  ]},
+  { rows: [{ l: 'や', k: ['や', null, 'ゆ', null, 'よ'] }] },
+  { rows: [
+    { l: 'ら', k: ['ら', 'り', 'る', 'れ', 'ろ'], y: ['りゃ', 'りゅ', 'りょ'] },
+  ]},
+  { rows: [{ l: 'わ', k: ['わ', null, null, null, 'を'] }] },
+  { rows: [
+    { l: 'ん', k: ['ん'] },
+    { l: 'っ', k: ['っ'] },
+  ]},
 ]
 
 const SHOWN_KANA = new Set()
-;[SEION, DAKUON, YOUON].forEach((grp) =>
-  grp.forEach((r) =>
-    r.k.forEach((k) => {
-      if (k) SHOWN_KANA.add(k)
-    })
-  )
+KANA_GROUPS.forEach((g) =>
+  g.rows.forEach((r) => {
+    r.k.forEach((k) => { if (k) SHOWN_KANA.add(k) })
+    if (r.y) r.y.forEach((k) => { if (k) SHOWN_KANA.add(k) })
+  })
 )
-SHOWN_KANA.add('っ')
 
 // ─── Components ─────────────────────────────────────────
 
 function SummaryCards({ stats }) {
-  const { total, hasHito, hasMono, hasGainen, hasW1k, hasAll, totalCatScore, avgEnc, encErrors } = stats
+  const { total, hasHito, hasMono, hasGainen, hasWordCount, hasAll, totalCatScore, avgEnc, encErrors } = stats
   const pct = (n) => ((n / total) * 100).toFixed(1) + '%'
   const cards = [
     { label: 'Total', value: total, cls: '' },
     { label: '人', value: hasHito, sub: pct(hasHito), cls: 'blue' },
     { label: '物', value: hasMono, sub: pct(hasMono), cls: 'green' },
     { label: '概念', value: hasGainen, sub: pct(hasGainen), cls: 'yellow' },
-    { label: 'w1k', value: hasW1k, sub: pct(hasW1k), cls: 'green' },
+    { label: 'Word', value: hasWordCount, sub: pct(hasWordCount), cls: 'green' },
     { label: 'All filled', value: hasAll, sub: pct(hasAll), cls: 'green' },
     { label: 'Cat Score', value: totalCatScore, cls: 'yellow' },
     { label: 'Enc Avg', value: avgEnc, cls: 'green' },
@@ -222,12 +230,12 @@ function SummaryCards({ stats }) {
 }
 
 function ProgressBars({ stats }) {
-  const { total, hasHito, hasMono, hasGainen, hasW1k, hasAll } = stats
+  const { total, hasHito, hasMono, hasGainen, hasWordCount, hasAll } = stats
   const items = [
     { label: '人', count: hasHito, cls: 'hito' },
     { label: '物', count: hasMono, cls: 'mono' },
     { label: '概念', count: hasGainen, cls: 'gainen' },
-    { label: 'w1k', count: hasW1k, cls: 'w1k' },
+    { label: 'Word', count: hasWordCount, cls: 'w1k' },
     { label: 'All', count: hasAll, cls: 'all' },
   ]
   return html`
@@ -466,38 +474,15 @@ function KanaUsage({ ruleStats }) {
     return 'ku5'
   }
 
-  function KanaTd({ k }) {
-    if (!k) return html`<td className="ku0"></td>`
-    const c = ku[k] || 0
+  function KanaCell({ base, youon }) {
+    if (!base && !youon) return html`<td className="ku0"></td>`
+    const bc = base ? (ku[base] || 0) : 0
+    const yc = youon ? (ku[youon] || 0) : 0
     return html`
-      <td className=${getCls(c)}>
-        <span className="kc">${k}</span><span className="kn">${c}</span>
+      <td className=${getCls(Math.max(bc, yc))}>
+        ${base && html`<div><span className="kc">${base}</span><span className="kn">${bc}</span></div>`}
+        ${youon && html`<div className="ku-youon"><span className="kc">${youon}</span><span className="kn">${yc}</span></div>`}
       </td>
-    `
-  }
-
-  function KanaGrid({ title, cols, rows }) {
-    return html`
-      <div>
-        <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>${title}</h3>
-        <table className="kana-grid">
-          <tr>
-            <th className="rl"></th>
-            ${cols.map((c) => html`<th key=${c}>${c}</th>`)}
-          </tr>
-          ${rows.map(
-            (row) => html`
-              <tr key=${row.l}>
-                <td className="rl">${row.l}</td>
-                ${row.k.map((k, j) => html`<${KanaTd} key=${j} k=${k} />`)}
-                ${Array.from({ length: Math.max(0, cols.length - row.k.length) }, (_, j) =>
-                  html`<td key=${'p' + j} className="ku0"></td>`
-                )}
-              </tr>
-            `
-          )}
-        </table>
-      </div>
     `
   }
 
@@ -507,34 +492,43 @@ function KanaUsage({ ruleStats }) {
 
   return html`
     <div>
-      <div className="kana-grids">
-        <${KanaGrid} title="清音" cols=${VOWELS} rows=${SEION} />
-        <${KanaGrid} title="濁音・半濁音" cols=${VOWELS} rows=${DAKUON} />
-        <${KanaGrid} title="拗音" cols=${YOUON_H} rows=${YOUON} />
-      </div>
-      <div className="kana-grids" style=${{ marginTop: '8px' }}>
-        <div>
-          <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>促音</h3>
-          <div className=${'ku-badge ' + getCls(ku['っ'] || 0)}>
-            っ<span className="kn">${ku['っ'] || 0}</span>
+      <table className="kana-grid">
+        <tr>
+          <th className="rl"></th>
+          ${COL_HEADERS.map((h) => html`<th key=${h}>${h}</th>`)}
+        </tr>
+        ${KANA_GROUPS.flatMap((g, gi) =>
+          g.rows.map((row, ri) => {
+            const sep = ri === 0 && gi > 0 ? ' kg-sep' : ''
+            return html`
+              <tr key=${row.l} className=${sep}>
+                <td className="rl">${row.l}</td>
+                ${Array.from({ length: 5 }, (_, ci) => {
+                  const base = row.k[ci] || null
+                  const yi = YOUON_COL[ci]
+                  const youon = yi !== undefined && row.y ? (row.y[yi] || null) : null
+                  return html`<${KanaCell} key=${ci} base=${base} youon=${youon} />`
+                })}
+              </tr>
+            `
+          })
+        )}
+      </table>
+      ${others.length > 0 &&
+      html`
+        <div style=${{ marginTop: '12px' }}>
+          <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>その他</h3>
+          <div className="ku-others">
+            ${others.map(
+              (k) => html`
+                <div key=${k} className=${'ku-chip ' + getCls(ku[k] || 0)}>
+                  <span className="kc">${k}</span><span className="kn">${ku[k] || 0}</span>
+                </div>
+              `
+            )}
           </div>
         </div>
-        ${others.length > 0 &&
-        html`
-          <div>
-            <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>その他</h3>
-            <div className="ku-others">
-              ${others.map(
-                (k) => html`
-                  <div key=${k} className=${'ku-chip ' + getCls(ku[k] || 0)}>
-                    <span className="kc">${k}</span><span className="kn">${ku[k] || 0}</span>
-                  </div>
-                `
-              )}
-            </div>
-          </div>
-        `}
-      </div>
+      `}
     </div>
   `
 }
@@ -651,16 +645,19 @@ function App() {
     const hasHito = data.filter((d) => d.hito).length
     const hasMono = data.filter((d) => d.mono).length
     const hasGainen = data.filter((d) => d.gainen).length
-    const hasW1k = data.filter((d) => d.w1k).length
-    const hasAll = data.filter((d) => d.hito && d.mono && d.gainen && d.w1k).length
+    const hasWordCount = data.filter((d) => hasWord(d)).length
+    const hasAll = data.filter((d) => d.hito && d.mono && d.gainen && hasWord(d)).length
     const totalCatScore = data.reduce((s, d) => s + d.catScore, 0)
-    const validScores = data.filter((d) => d.w1Score !== null && !d.w1Error)
+    const scored = data.map((d) => bestScore(d)).filter((s) => s !== null)
     const avgEnc =
-      validScores.length > 0
-        ? (validScores.reduce((s, d) => s + d.w1Score, 0) / validScores.length).toFixed(1)
+      scored.length > 0
+        ? (scored.reduce((a, b) => a + b, 0) / scored.length).toFixed(1)
         : '-'
-    const encErrors = data.filter((d) => d.w1Error).length
-    return { total, hasHito, hasMono, hasGainen, hasW1k, hasAll, totalCatScore, avgEnc, encErrors }
+    const encErrors = data.filter(
+      (d) => (d.w1k && d.w1Error && !d.w2k) || (d.w2k && d.w2Error && !d.w1k) ||
+             (d.w1k && d.w1Error && d.w2k && d.w2Error)
+    ).length
+    return { total, hasHito, hasMono, hasGainen, hasWordCount, hasAll, totalCatScore, avgEnc, encErrors }
   }, [data])
 
   const handleMouseMove = useCallback(
@@ -708,12 +705,12 @@ function App() {
       <${Legend} items=${SUMMARY_LEGENDS[mode]} />
       <${SummaryHeatmapTable} byNum=${byNum} mode=${mode} sumMode=${sumMode} />
 
-      <h2>Rule Usage (w1k 採用済み)</h2>
-      <p className="subtitle">各数字の採用済み w1k エンコードにおけるルール使用率</p>
+      <h2>Rule Usage (採用済み word)</h2>
+      <p className="subtitle">各数字の採用済みエンコードにおけるルール使用率</p>
       <${RuleCharts} ruleStats=${ruleStats} />
 
-      <h2>Kana Usage (w1k)</h2>
-      <p className="subtitle">w1k エンコードで使用されている各かなの出現回数</p>
+      <h2>Kana Usage</h2>
+      <p className="subtitle">採用済みエンコードで使用されている各かなの出現回数</p>
       <${KanaUsage} ruleStats=${ruleStats} />
 
       ${tooltip && html`<${Tooltip} d=${tooltip.d} x=${tooltip.x} y=${tooltip.y} />`}
