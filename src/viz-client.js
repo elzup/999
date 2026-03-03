@@ -1,550 +1,351 @@
-;(async () => {
-  const params = new URLSearchParams(location.search)
-  const dataFile = params.get('data') || './visualize-words.data.json'
+/* global React, ReactDOM, htm */
+const { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect, memo } = React
+const html = htm.bind(React.createElement)
 
-  const res = await fetch(dataFile)
-  if (!res.ok) {
-    document.body.innerHTML =
-      '<h1 style="color:#f87171">Failed to load ' + dataFile + '</h1>'
-    return
-  }
+// ─── Helpers ────────────────────────────────────────────
 
-  const { data: DATA, ruleStats: RULE_STATS } = await res.json()
+function compCount(d) {
+  let n = 0
+  if (d.hito) n++
+  if (d.mono) n++
+  if (d.gainen) n++
+  if (d.w1k) n++
+  return n
+}
 
-  // Index by num
-  const byNum = {}
-  for (const d of DATA) byNum[d.num] = d
+const modeClassMap = {
+  completion: (d) => 'comp-' + compCount(d),
+  category: (d) => {
+    const s = d.catScore
+    if (s === 0) return 'cat-0'
+    if (s <= 10) return 'cat-1'
+    if (s <= 20) return 'cat-2'
+    if (s <= 30) return 'cat-3'
+    if (s <= 50) return 'cat-4'
+    return 'cat-5'
+  },
+  encode: (d) => {
+    if (!d.w1k) return 'enc-none'
+    if (d.w1Error) return 'enc-err'
+    const s = d.w1Score
+    if (s < 20) return 'enc-low'
+    if (s < 30) return 'enc-mid'
+    if (s < 40) return 'enc-high'
+    return 'enc-max'
+  },
+}
 
-  // --- Helpers ---
-  function compCount(d) {
-    let n = 0
-    if (d.hito) n++
-    if (d.mono) n++
-    if (d.gainen) n++
-    if (d.w1k) n++
-    return n
-  }
+const modeLabelMap = {
+  completion: (d) => (compCount(d) === 0 ? '' : d.num),
+  category: (d) => (d.catScore > 0 ? d.num : ''),
+  encode: (d) => (d.w1k ? d.num : ''),
+}
 
-  // --- Summary ---
-  const summaryEl = document.getElementById('summary')
-  const total = DATA.length
-  const hasHito = DATA.filter((d) => d.hito).length
-  const hasMono = DATA.filter((d) => d.mono).length
-  const hasGainen = DATA.filter((d) => d.gainen).length
-  const hasW1k = DATA.filter((d) => d.w1k).length
-  const hasAll = DATA.filter(
-    (d) => d.hito && d.mono && d.gainen && d.w1k
-  ).length
+const LEGENDS = {
+  completion: [
+    { cls: 'comp-4', label: '4/4 ALL' },
+    { cls: 'comp-3', label: '3/4' },
+    { cls: 'comp-2', label: '2/4' },
+    { cls: 'comp-1', label: '1/4' },
+    { cls: 'comp-0', label: '0/4' },
+  ],
+  category: [
+    { cls: 'cat-5', label: '51+' },
+    { cls: 'cat-4', label: '31-50' },
+    { cls: 'cat-3', label: '21-30' },
+    { cls: 'cat-2', label: '11-20' },
+    { cls: 'cat-1', label: '1-10' },
+    { cls: 'cat-0', label: '0' },
+  ],
+  encode: [
+    { cls: 'enc-max', label: '40+ (max)' },
+    { cls: 'enc-high', label: '30-39' },
+    { cls: 'enc-mid', label: '20-29' },
+    { cls: 'enc-low', label: '<20' },
+    { cls: 'enc-err', label: 'Error' },
+    { cls: 'enc-none', label: 'No w1k' },
+  ],
+}
 
-  const totalCatScore = DATA.reduce((s, d) => s + d.catScore, 0)
-  const validScores = DATA.filter((d) => d.w1Score !== null && !d.w1Error)
-  const avgEnc =
-    validScores.length > 0
-      ? (
-          validScores.reduce((s, d) => s + d.w1Score, 0) / validScores.length
-        ).toFixed(1)
-      : '-'
-  const encErrors = DATA.filter((d) => d.w1Error).length
+const SUMMARY_LEGENDS = {
+  completion: [
+    { cls: 'sg-5', label: '10/10' },
+    { cls: 'sg-4', label: '8-9' },
+    { cls: 'sg-3', label: '6-7' },
+    { cls: 'sg-2', label: '4-5' },
+    { cls: 'sg-1', label: '1-3' },
+    { cls: 'sg-0', label: '0' },
+  ],
+  category: [
+    { cls: 'sg-5', label: '351+' },
+    { cls: 'sg-4', label: '201-350' },
+    { cls: 'sg-3', label: '101-200' },
+    { cls: 'sg-2', label: '51-100' },
+    { cls: 'sg-1', label: '1-50' },
+    { cls: 'sg-0', label: '0' },
+  ],
+  encode: [
+    { cls: 'sg-5', label: '35+' },
+    { cls: 'sg-4', label: '30-34' },
+    { cls: 'sg-3', label: '25-29' },
+    { cls: 'sg-2', label: '15-24' },
+    { cls: 'sg-1', label: '<15' },
+    { cls: 'sg-0', label: 'None' },
+  ],
+}
 
+function bestScore(d) {
+  const scores = []
+  if (d.w1Score !== null && !d.w1Error) scores.push(d.w1Score)
+  if (d.w2Score !== null && !d.w2Error) scores.push(d.w2Score)
+  return scores.length > 0 ? Math.max(...scores) : null
+}
+
+const summaryResolvers = {
+  completion: (items) => {
+    const filled = items.filter((d) => compCount(d) === 4).length
+    return {
+      label: filled > 0 ? '' + filled : '',
+      cls: 'sg-' + Math.min(Math.floor(filled / 2), 5),
+    }
+  },
+  category: (items) => {
+    const t = items.reduce((s, d) => s + d.catScore, 0)
+    const cls =
+      t === 0
+        ? 'sg-0'
+        : t <= 50
+          ? 'sg-1'
+          : t <= 100
+            ? 'sg-2'
+            : t <= 200
+              ? 'sg-3'
+              : t <= 350
+                ? 'sg-4'
+                : 'sg-5'
+    return { label: t > 0 ? '' + t : '', cls }
+  },
+  encode: (items) => {
+    const scored = items.map((d) => bestScore(d)).filter((s) => s !== null)
+    if (scored.length === 0) return { label: '', cls: 'sg-0' }
+    const avg = scored.reduce((a, b) => a + b, 0) / scored.length
+    const cls =
+      avg < 15
+        ? 'sg-1'
+        : avg < 25
+          ? 'sg-2'
+          : avg < 30
+            ? 'sg-3'
+            : avg < 35
+              ? 'sg-4'
+              : 'sg-5'
+    return { label: avg.toFixed(0), cls }
+  },
+}
+
+// ─── Kana data ──────────────────────────────────────────
+
+const VOWELS = ['あ', 'い', 'う', 'え', 'お']
+const SEION = [
+  { l: 'あ', k: ['あ', 'い', 'う', 'え', 'お'] },
+  { l: 'か', k: ['か', 'き', 'く', 'け', 'こ'] },
+  { l: 'さ', k: ['さ', 'し', 'す', 'せ', 'そ'] },
+  { l: 'た', k: ['た', 'ち', 'つ', 'て', 'と'] },
+  { l: 'な', k: ['な', 'に', 'ぬ', 'ね', 'の'] },
+  { l: 'は', k: ['は', 'ひ', 'ふ', 'へ', 'ほ'] },
+  { l: 'ま', k: ['ま', 'み', 'む', 'め', 'も'] },
+  { l: 'や', k: ['や', null, 'ゆ', null, 'よ'] },
+  { l: 'ら', k: ['ら', 'り', 'る', 'れ', 'ろ'] },
+  { l: 'わ', k: ['わ', null, null, null, 'を'] },
+  { l: 'ん', k: ['ん'] },
+]
+const DAKUON = [
+  { l: 'が', k: ['が', 'ぎ', 'ぐ', 'げ', 'ご'] },
+  { l: 'ざ', k: ['ざ', 'じ', 'ず', 'ぜ', 'ぞ'] },
+  { l: 'だ', k: ['だ', 'ぢ', 'づ', 'で', 'ど'] },
+  { l: 'ば', k: ['ば', 'び', 'ぶ', 'べ', 'ぼ'] },
+  { l: 'ぱ', k: ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'] },
+]
+const YOUON_H = ['ゃ', 'ゅ', 'ょ']
+const YOUON = [
+  { l: 'き', k: ['きゃ', 'きゅ', 'きょ'] },
+  { l: 'し', k: ['しゃ', 'しゅ', 'しょ'] },
+  { l: 'ち', k: ['ちゃ', 'ちゅ', 'ちょ'] },
+  { l: 'に', k: ['にゃ', 'にゅ', 'にょ'] },
+  { l: 'ひ', k: ['ひゃ', 'ひゅ', 'ひょ'] },
+  { l: 'み', k: ['みゃ', 'みゅ', 'みょ'] },
+  { l: 'り', k: ['りゃ', 'りゅ', 'りょ'] },
+  { l: 'じ', k: ['じゃ', 'じゅ', 'じょ'] },
+]
+
+const SHOWN_KANA = new Set()
+;[SEION, DAKUON, YOUON].forEach((grp) =>
+  grp.forEach((r) =>
+    r.k.forEach((k) => {
+      if (k) SHOWN_KANA.add(k)
+    })
+  )
+)
+SHOWN_KANA.add('っ')
+
+// ─── Components ─────────────────────────────────────────
+
+function SummaryCards({ stats }) {
+  const { total, hasHito, hasMono, hasGainen, hasW1k, hasAll, totalCatScore, avgEnc, encErrors } = stats
+  const pct = (n) => ((n / total) * 100).toFixed(1) + '%'
   const cards = [
     { label: 'Total', value: total, cls: '' },
-    {
-      label: '人',
-      value: hasHito,
-      sub: ((hasHito / total) * 100).toFixed(1) + '%',
-      cls: 'blue',
-    },
-    {
-      label: '物',
-      value: hasMono,
-      sub: ((hasMono / total) * 100).toFixed(1) + '%',
-      cls: 'green',
-    },
-    {
-      label: '概念',
-      value: hasGainen,
-      sub: ((hasGainen / total) * 100).toFixed(1) + '%',
-      cls: 'yellow',
-    },
-    {
-      label: 'w1k',
-      value: hasW1k,
-      sub: ((hasW1k / total) * 100).toFixed(1) + '%',
-      cls: 'green',
-    },
-    {
-      label: 'All filled',
-      value: hasAll,
-      sub: ((hasAll / total) * 100).toFixed(1) + '%',
-      cls: 'green',
-    },
+    { label: '人', value: hasHito, sub: pct(hasHito), cls: 'blue' },
+    { label: '物', value: hasMono, sub: pct(hasMono), cls: 'green' },
+    { label: '概念', value: hasGainen, sub: pct(hasGainen), cls: 'yellow' },
+    { label: 'w1k', value: hasW1k, sub: pct(hasW1k), cls: 'green' },
+    { label: 'All filled', value: hasAll, sub: pct(hasAll), cls: 'green' },
     { label: 'Cat Score', value: totalCatScore, cls: 'yellow' },
     { label: 'Enc Avg', value: avgEnc, cls: 'green' },
-    {
-      label: 'Enc Errors',
-      value: encErrors,
-      cls: encErrors > 0 ? 'red' : 'green',
-    },
+    { label: 'Enc Errors', value: encErrors, cls: encErrors > 0 ? 'red' : 'green' },
   ]
+  return html`
+    <div className="summary">
+      ${cards.map(
+        (c) => html`
+          <div className="summary-card" key=${c.label}>
+            <div className="label">${c.label}</div>
+            <div className=${'value ' + c.cls}>${c.value}</div>
+            ${c.sub && html`<div className="sub">${c.sub}</div>`}
+          </div>
+        `
+      )}
+    </div>
+  `
+}
 
-  summaryEl.innerHTML = cards
-    .map(
-      (c) =>
-        `<div class="summary-card">
-    <div class="label">${c.label}</div>
-    <div class="value ${c.cls}">${c.value}</div>
-    ${c.sub ? '<div class="sub">' + c.sub + '</div>' : ''}
-  </div>`
-    )
-    .join('')
-
-  // --- Progress bars ---
-  const progressEl = document.getElementById('progress')
-  const progItems = [
+function ProgressBars({ stats }) {
+  const { total, hasHito, hasMono, hasGainen, hasW1k, hasAll } = stats
+  const items = [
     { label: '人', count: hasHito, cls: 'hito' },
     { label: '物', count: hasMono, cls: 'mono' },
     { label: '概念', count: hasGainen, cls: 'gainen' },
     { label: 'w1k', count: hasW1k, cls: 'w1k' },
     { label: 'All', count: hasAll, cls: 'all' },
   ]
+  return html`
+    <div className="progress-section">
+      ${items.map((p) => {
+        const pct = ((p.count / total) * 100).toFixed(1)
+        return html`
+          <div className="prog-row" key=${p.label}>
+            <span className="prog-label">${p.label}</span>
+            <div className="prog-bar-bg">
+              <div className=${'prog-bar ' + p.cls} style=${{ width: pct + '%' }}>
+                ${pct > 8 ? p.count : ''}
+              </div>
+            </div>
+            <span className="prog-count">${p.count} / ${total}</span>
+          </div>
+        `
+      })}
+    </div>
+  `
+}
 
-  progressEl.innerHTML = progItems
-    .map((p) => {
-      const pct = ((p.count / total) * 100).toFixed(1)
-      return `<div class="prog-row">
-      <span class="prog-label">${p.label}</span>
-      <div class="prog-bar-bg">
-        <div class="prog-bar ${p.cls}" style="width:${pct}%">${pct > 8 ? p.count : ''}</div>
-      </div>
-      <span class="prog-count">${p.count} / ${total}</span>
-    </div>`
-    })
-    .join('')
+function ModeSwitcher({ mode, onChange }) {
+  return html`
+    <div className="mode-switcher">
+      <input type="radio" name="mode" id="mode-comp" value="completion"
+        checked=${mode === 'completion'} onChange=${() => onChange('completion')} />
+      <label htmlFor="mode-comp">Completion</label>
+      <input type="radio" name="mode" id="mode-cat" value="category"
+        checked=${mode === 'category'} onChange=${() => onChange('category')} />
+      <label htmlFor="mode-cat">Category Score</label>
+      <input type="radio" name="mode" id="mode-enc" value="encode"
+        checked=${mode === 'encode'} onChange=${() => onChange('encode')} />
+      <label htmlFor="mode-enc">Encode Score</label>
+    </div>
+  `
+}
 
-  // --- Heatmap ---
-  const heatmapEl = document.getElementById('heatmap')
-  const legendEl = document.getElementById('heatmap-legend')
+function Legend({ items }) {
+  return html`
+    <div className="legend">
+      ${items.map(
+        (it) => html`
+          <div className="legend-item" key=${it.cls}>
+            <div className=${'legend-swatch ' + it.cls}></div>
+            <span>${it.label}</span>
+          </div>
+        `
+      )}
+    </div>
+  `
+}
 
-  const modeClassMap = {
-    completion: (d) => 'comp-' + compCount(d),
-    category: (d) => {
-      const s = d.catScore
-      if (s === 0) return 'cat-0'
-      if (s <= 10) return 'cat-1'
-      if (s <= 20) return 'cat-2'
-      if (s <= 30) return 'cat-3'
-      if (s <= 50) return 'cat-4'
-      return 'cat-5'
-    },
-    encode: (d) => {
-      if (!d.w1k) return 'enc-none'
-      if (d.w1Error) return 'enc-err'
-      const s = d.w1Score
-      if (s < 20) return 'enc-low'
-      if (s < 30) return 'enc-mid'
-      if (s < 40) return 'enc-high'
-      return 'enc-max'
-    },
-  }
+const MainHeatmap = memo(function MainHeatmap({ byNum, mode, onMouseMove, onMouseLeave }) {
+  const resolver = modeClassMap[mode]
+  const labelFn = modeLabelMap[mode]
+  return html`
+    <div className="heatmap-wrap">
+      <table className="heatmap" onMouseMove=${onMouseMove} onMouseLeave=${onMouseLeave}>
+        <tr>
+          <th className="corner">YZ\\X</th>
+          ${Array.from({ length: 10 }, (_, z) => html`<th key=${z}>${z}</th>`)}
+        </tr>
+        ${Array.from({ length: 100 }, (_, i) => {
+          const x = Math.floor(i / 10)
+          const y = i % 10
+          const sep = y === 0 ? ' x-separator' : ''
+          return html`
+            <tr key=${'' + x + y}>
+              <td className=${'row-header' + sep}>${'' + x + y}</td>
+              ${Array.from({ length: 10 }, (_, z) => {
+                const num = '' + x + y + z
+                const d = byNum[num]
+                if (!d) return html`<td key=${z} className=${'comp-0' + sep}>${num}</td>`
+                return html`<td key=${z} className=${resolver(d) + sep} data-num=${num}>${labelFn(d) || num}</td>`
+              })}
+            </tr>
+          `
+        })}
+      </table>
+    </div>
+  `
+})
 
-  const modeLabelMap = {
-    completion: (d) => {
-      const c = compCount(d)
-      return c === 0 ? '' : d.num
-    },
-    category: (d) => (d.catScore > 0 ? d.num : ''),
-    encode: (d) => (d.w1k ? d.num : ''),
-  }
-
-  const modeLegends = {
-    completion: [
-      { cls: 'comp-4', label: '4/4 ALL' },
-      { cls: 'comp-3', label: '3/4' },
-      { cls: 'comp-2', label: '2/4' },
-      { cls: 'comp-1', label: '1/4' },
-      { cls: 'comp-0', label: '0/4' },
-    ],
-    category: [
-      { cls: 'cat-5', label: '51+' },
-      { cls: 'cat-4', label: '31-50' },
-      { cls: 'cat-3', label: '21-30' },
-      { cls: 'cat-2', label: '11-20' },
-      { cls: 'cat-1', label: '1-10' },
-      { cls: 'cat-0', label: '0' },
-    ],
-    encode: [
-      { cls: 'enc-max', label: '40+ (max)' },
-      { cls: 'enc-high', label: '30-39' },
-      { cls: 'enc-mid', label: '20-29' },
-      { cls: 'enc-low', label: '<20' },
-      { cls: 'enc-err', label: 'Error' },
-      { cls: 'enc-none', label: 'No w1k' },
-    ],
-  }
-
-  let currentMode = 'completion'
-
-  function buildHeatmap() {
-    let html = '<tr><th class="corner">YZ\\X</th>'
-    for (let z = 0; z <= 9; z++) html += '<th>' + z + '</th>'
-    html += '</tr>'
-
-    const resolver = modeClassMap[currentMode]
-    const labelFn = modeLabelMap[currentMode]
-
-    for (let x = 0; x <= 9; x++) {
-      for (let y = 0; y <= 9; y++) {
-        const sep = y === 0 ? ' x-separator' : ''
-        const xyLabel = '' + x + y
-        html +=
-          '<tr><td class="row-header' + sep + '">' + xyLabel + '</td>'
-        for (let z = 0; z <= 9; z++) {
-          const num = '' + x + y + z
-          const d = byNum[num]
-          if (!d) {
-            html +=
-              '<td class="comp-0' + sep + '">' + num + '</td>'
-            continue
-          }
-          const cls = resolver(d)
-          const label = labelFn(d)
-          html +=
-            '<td class="' +
-            cls +
-            sep +
-            '" data-num="' +
-            num +
-            '">' +
-            (label || num) +
-            '</td>'
-        }
-        html += '</tr>'
-      }
-    }
-    heatmapEl.innerHTML = html
-  }
-
-  function updateLegend() {
-    const items = modeLegends[currentMode]
-    legendEl.innerHTML = items
-      .map(
-        (it) =>
-          '<div class="legend-item"><div class="legend-swatch ' +
-          it.cls +
-          '"></div><span>' +
-          it.label +
-          '</span></div>'
-      )
-      .join('')
-  }
-
-  buildHeatmap()
-  updateLegend()
-
-  // --- Summary 10x10 Heatmap ---
-  const summaryHeatmapEl = document.getElementById('summary-heatmap')
-  const summaryLegendEl = document.getElementById('summary-heatmap-legend')
-
+const SummaryHeatmapTable = memo(function SummaryHeatmapTable({ byNum, mode }) {
+  const resolver = summaryResolvers[mode]
   function xyGroup(x, y) {
     const items = []
     for (let z = 0; z <= 9; z++) {
-      const num = '' + x + y + z
-      const d = byNum[num]
+      const d = byNum['' + x + y + z]
       if (d) items.push(d)
     }
     return items
   }
+  return html`
+    <div className="heatmap-wrap">
+      <table className="heatmap summary-heatmap">
+        <tr>
+          <th className="corner">X\\Y</th>
+          ${Array.from({ length: 10 }, (_, y) => html`<th key=${y}>${y}</th>`)}
+        </tr>
+        ${Array.from({ length: 10 }, (_, x) => html`
+          <tr key=${x}>
+            <td className="row-header">${x}</td>
+            ${Array.from({ length: 10 }, (_, y) => {
+              const r = resolver(xyGroup(x, y))
+              return html`<td key=${y} className=${r.cls} data-xy=${'' + x + y}>${r.label}</td>`
+            })}
+          </tr>
+        `)}
+      </table>
+    </div>
+  `
+})
 
-  function bestScore(d) {
-    const scores = []
-    if (d.w1Score !== null && !d.w1Error) scores.push(d.w1Score)
-    if (d.w2Score !== null && !d.w2Error) scores.push(d.w2Score)
-    return scores.length > 0 ? Math.max(...scores) : null
-  }
-
-  const summaryResolvers = {
-    completion: (items) => {
-      const filled = items.filter((d) => compCount(d) === 4).length
-      return {
-        value: filled,
-        label: filled > 0 ? filled + '' : '',
-        cls: 'sg-' + Math.min(Math.floor(filled / 2), 5),
-      }
-    },
-    category: (items) => {
-      const total = items.reduce((s, d) => s + d.catScore, 0)
-      const cls =
-        total === 0
-          ? 'sg-0'
-          : total <= 50
-            ? 'sg-1'
-            : total <= 100
-              ? 'sg-2'
-              : total <= 200
-                ? 'sg-3'
-                : total <= 350
-                  ? 'sg-4'
-                  : 'sg-5'
-      return { value: total, label: total > 0 ? total + '' : '', cls }
-    },
-    encode: (items) => {
-      const scored = items
-        .map((d) => bestScore(d))
-        .filter((s) => s !== null)
-      if (scored.length === 0)
-        return { value: 0, label: '', cls: 'sg-0' }
-      const avg = scored.reduce((a, b) => a + b, 0) / scored.length
-      const cls =
-        avg < 15
-          ? 'sg-1'
-          : avg < 25
-            ? 'sg-2'
-            : avg < 30
-              ? 'sg-3'
-              : avg < 35
-                ? 'sg-4'
-                : 'sg-5'
-      return { value: avg, label: avg.toFixed(0), cls }
-    },
-  }
-
-  const summaryLegends = {
-    completion: [
-      { cls: 'sg-5', label: '10/10' },
-      { cls: 'sg-4', label: '8-9' },
-      { cls: 'sg-3', label: '6-7' },
-      { cls: 'sg-2', label: '4-5' },
-      { cls: 'sg-1', label: '1-3' },
-      { cls: 'sg-0', label: '0' },
-    ],
-    category: [
-      { cls: 'sg-5', label: '351+' },
-      { cls: 'sg-4', label: '201-350' },
-      { cls: 'sg-3', label: '101-200' },
-      { cls: 'sg-2', label: '51-100' },
-      { cls: 'sg-1', label: '1-50' },
-      { cls: 'sg-0', label: '0' },
-    ],
-    encode: [
-      { cls: 'sg-5', label: '35+' },
-      { cls: 'sg-4', label: '30-34' },
-      { cls: 'sg-3', label: '25-29' },
-      { cls: 'sg-2', label: '15-24' },
-      { cls: 'sg-1', label: '<15' },
-      { cls: 'sg-0', label: 'None' },
-    ],
-  }
-
-  function buildSummaryHeatmap() {
-    const resolver = summaryResolvers[currentMode]
-    let html = '<tr><th class="corner">X\\Y</th>'
-    for (let y = 0; y <= 9; y++) html += '<th>' + y + '</th>'
-    html += '</tr>'
-
-    for (let x = 0; x <= 9; x++) {
-      html += '<tr><td class="row-header">' + x + '</td>'
-      for (let y = 0; y <= 9; y++) {
-        const items = xyGroup(x, y)
-        const r = resolver(items)
-        const xy = '' + x + y
-        html +=
-          '<td class="' +
-          r.cls +
-          '" data-xy="' +
-          xy +
-          '">' +
-          r.label +
-          '</td>'
-      }
-      html += '</tr>'
-    }
-    summaryHeatmapEl.innerHTML = html
-  }
-
-  function updateSummaryLegend() {
-    const items = summaryLegends[currentMode]
-    summaryLegendEl.innerHTML = items
-      .map(
-        (it) =>
-          '<div class="legend-item"><div class="legend-swatch ' +
-          it.cls +
-          '"></div><span>' +
-          it.label +
-          '</span></div>'
-      )
-      .join('')
-  }
-
-  buildSummaryHeatmap()
-  updateSummaryLegend()
-
-  document.querySelectorAll('input[name="mode"]').forEach((radio) => {
-    radio.addEventListener('change', (e) => {
-      currentMode = e.target.value
-      buildHeatmap()
-      updateLegend()
-      buildSummaryHeatmap()
-      updateSummaryLegend()
-    })
-  })
-
-  // --- Tooltip ---
-  const tooltip = document.getElementById('tooltip')
-
-  heatmapEl.addEventListener('mousemove', (e) => {
-    const td = e.target.closest('td[data-num]')
-    if (!td) {
-      tooltip.style.display = 'none'
-      return
-    }
-
-    const num = td.dataset.num
-    const d = byNum[num]
-    if (!d) {
-      tooltip.style.display = 'none'
-      return
-    }
-
-    let rows = '<div class="tt-num">' + num + '</div>'
-
-    if (d.hito)
-      rows +=
-        '<div class="tt-row"><span class="tt-label">人: </span><span class="tt-val">' +
-        d.hito +
-        '</span> <span class="tt-label">(' +
-        d.hitoCnt +
-        '\u00d78=' +
-        d.hitoCnt * 8 +
-        ')</span></div>'
-    if (d.mono)
-      rows +=
-        '<div class="tt-row"><span class="tt-label">物: </span><span class="tt-val">' +
-        d.mono +
-        '</span> <span class="tt-label">(' +
-        d.monoCnt +
-        '\u00d710=' +
-        d.monoCnt * 10 +
-        ')</span></div>'
-    if (d.gainen)
-      rows +=
-        '<div class="tt-row"><span class="tt-label">概念: </span><span class="tt-val">' +
-        d.gainen +
-        '</span> <span class="tt-label">(' +
-        d.gainenCnt +
-        '\u00d74=' +
-        d.gainenCnt * 4 +
-        ')</span></div>'
-    rows +=
-      '<div class="tt-row"><span class="tt-label">Cat Score: </span><span class="tt-score tt-green">' +
-      d.catScore +
-      '</span></div>'
-
-    if (d.w1) {
-      const scoreStr = d.w1Error
-        ? '<span class="tt-red">ERROR</span>'
-        : d.w1Score !== null
-          ? '<span class="tt-green">' + d.w1Score + '</span>'
-          : '<span class="tt-gray">-</span>'
-      rows +=
-        '<div class="tt-row"><span class="tt-label">w1: </span><span class="tt-val">' +
-        d.w1 +
-        '</span></div>'
-      if (d.w1k) {
-        rows +=
-          '<div class="tt-row"><span class="tt-label">w1k: </span><span class="tt-kana">' +
-          d.w1k +
-          '</span> \u2192 ' +
-          scoreStr
-        if (d.w1Pattern)
-          rows +=
-            ' <span class="tt-label">[' + d.w1Pattern + ']</span>'
-        rows += '</div>'
-      }
-    }
-    if (d.w2) {
-      const scoreStr = d.w2Error
-        ? '<span class="tt-red">ERROR</span>'
-        : d.w2Score !== null
-          ? '<span class="tt-green">' + d.w2Score + '</span>'
-          : '<span class="tt-gray">-</span>'
-      rows +=
-        '<div class="tt-row"><span class="tt-label">w2: </span><span class="tt-val">' +
-        d.w2 +
-        '</span></div>'
-      if (d.w2k)
-        rows +=
-          '<div class="tt-row"><span class="tt-label">w2k: </span><span class="tt-kana">' +
-          d.w2k +
-          '</span> \u2192 ' +
-          scoreStr +
-          '</div>'
-    }
-
-    tooltip.innerHTML = rows
-    tooltip.style.display = 'block'
-    tooltip.style.left = e.clientX + 16 + 'px'
-    tooltip.style.top = e.clientY + 16 + 'px'
-
-    const rect = tooltip.getBoundingClientRect()
-    if (rect.right > window.innerWidth)
-      tooltip.style.left = e.clientX - rect.width - 8 + 'px'
-    if (rect.bottom > window.innerHeight)
-      tooltip.style.top = e.clientY - rect.height - 8 + 'px'
-  })
-
-  heatmapEl.addEventListener('mouseleave', () => {
-    tooltip.style.display = 'none'
-  })
-
-  // --- Rule Usage Charts ---
-  const patChartEl = document.getElementById('pattern-chart')
-  const tokChartEl = document.getElementById('token-chart')
-  const scored = RULE_STATS.scoredCount || 1
-
-  const patEntries = Object.entries(RULE_STATS.patterns).sort(
-    (a, b) => b[1] - a[1]
-  )
+function RuleCharts({ ruleStats }) {
+  const scored = ruleStats.scoredCount || 1
+  const patEntries = Object.entries(ruleStats.patterns).sort((a, b) => b[1] - a[1])
   const patMax = patEntries.length > 0 ? patEntries[0][1] : 1
-  const patClsMap = {
-    'DD+D': 'pat-dd-d',
-    'D+DD': 'pat-d-dd',
-    'D+D+D': 'pat-d-d-d',
-  }
-
-  patChartEl.innerHTML =
-    patEntries
-      .map(([pat, cnt]) => {
-        const pct = ((cnt / scored) * 100).toFixed(1)
-        const barW = ((cnt / patMax) * 100).toFixed(1)
-        const cls = patClsMap[pat] || 'pat-other'
-        return (
-          '<div class="rule-row">' +
-          '<span class="rule-label">' +
-          pat +
-          '</span>' +
-          '<div class="rule-bar-bg"><div class="rule-bar ' +
-          cls +
-          '" style="width:' +
-          barW +
-          '%">' +
-          (barW > 15 ? cnt : '') +
-          '</div></div>' +
-          '<span class="rule-count">' +
-          cnt +
-          ' (' +
-          pct +
-          '%)</span>' +
-          '</div>'
-        )
-      })
-      .join('') +
-    (RULE_STATS.youon4Count > 0
-      ? '<div class="rule-row" style="margin-top:8px"><span class="rule-label" style="color:#fbbf24">拗音4省略</span><span class="rule-count">' +
-        RULE_STATS.youon4Count +
-        ' (' +
-        ((RULE_STATS.youon4Count / scored) * 100).toFixed(1) +
-        '%)</span></div>'
-      : '')
+  const patClsMap = { 'DD+D': 'pat-dd-d', 'D+DD': 'pat-d-dd', 'D+D+D': 'pat-d-d-d' }
 
   const tokOrder = [
     { key: 'double', label: 'double (2桁)', cls: 'tok-double' },
@@ -555,47 +356,71 @@
     { key: 'halfOverflow', label: 'halfOverflow', cls: 'tok-half' },
     { key: 'overflow', label: 'overflow', cls: 'tok-overflow' },
   ]
-  const tokMax = Math.max(
-    ...tokOrder.map((t) => RULE_STATS.tokenTypes[t.key] || 0),
-    1
-  )
-  const totalTokens =
-    Object.values(RULE_STATS.tokenTypes).reduce((a, b) => a + b, 0) || 1
+  const tokMax = Math.max(...tokOrder.map((t) => ruleStats.tokenTypes[t.key] || 0), 1)
+  const totalTokens = Object.values(ruleStats.tokenTypes).reduce((a, b) => a + b, 0) || 1
 
-  tokChartEl.innerHTML = tokOrder
-    .map((t) => {
-      const cnt = RULE_STATS.tokenTypes[t.key] || 0
-      if (cnt === 0) return ''
-      const pct = ((cnt / totalTokens) * 100).toFixed(1)
-      const barW = ((cnt / tokMax) * 100).toFixed(1)
-      return (
-        '<div class="rule-row">' +
-        '<span class="rule-label">' +
-        t.label +
-        '</span>' +
-        '<div class="rule-bar-bg"><div class="rule-bar ' +
-        t.cls +
-        '" style="width:' +
-        barW +
-        '%">' +
-        (barW > 15 ? cnt : '') +
-        '</div></div>' +
-        '<span class="rule-count">' +
-        cnt +
-        ' (' +
-        pct +
-        '%)</span>' +
-        '</div>'
-      )
-    })
-    .join('')
+  return html`
+    <div className="rule-columns">
+      <div className="rule-col">
+        <h2>Pattern Distribution</h2>
+        <p className="subtitle">分解パターン別エントリ数</p>
+        <div className="rule-section">
+          ${patEntries.map(([pat, cnt]) => {
+            const pct = ((cnt / scored) * 100).toFixed(1)
+            const barW = ((cnt / patMax) * 100).toFixed(1)
+            const cls = patClsMap[pat] || 'pat-other'
+            return html`
+              <div className="rule-row" key=${pat}>
+                <span className="rule-label">${pat}</span>
+                <div className="rule-bar-bg">
+                  <div className=${'rule-bar ' + cls} style=${{ width: barW + '%' }}>${barW > 15 ? cnt : ''}</div>
+                </div>
+                <span className="rule-count">${cnt} (${pct}%)</span>
+              </div>
+            `
+          })}
+          ${ruleStats.youon4Count > 0 &&
+          html`
+            <div className="rule-row" style=${{ marginTop: '8px' }}>
+              <span className="rule-label" style=${{ color: '#fbbf24' }}>拗音4省略</span>
+              <span className="rule-count">
+                ${ruleStats.youon4Count} (${((ruleStats.youon4Count / scored) * 100).toFixed(1)}%)
+              </span>
+            </div>
+          `}
+        </div>
+      </div>
+      <div className="rule-col">
+        <h2>Token Type Distribution</h2>
+        <p className="subtitle">トークン種別の出現回数</p>
+        <div className="rule-section">
+          ${tokOrder.map((t) => {
+            const cnt = ruleStats.tokenTypes[t.key] || 0
+            if (cnt === 0) return null
+            const pct = ((cnt / totalTokens) * 100).toFixed(1)
+            const barW = ((cnt / tokMax) * 100).toFixed(1)
+            return html`
+              <div className="rule-row" key=${t.key}>
+                <span className="rule-label">${t.label}</span>
+                <div className="rule-bar-bg">
+                  <div className=${'rule-bar ' + t.cls} style=${{ width: barW + '%' }}>${barW > 15 ? cnt : ''}</div>
+                </div>
+                <span className="rule-count">${cnt} (${pct}%)</span>
+              </div>
+            `
+          })}
+        </div>
+      </div>
+    </div>
+  `
+}
 
-  // --- Kana Usage ---
-  const ku = RULE_STATS.kanaUsage || {}
+function KanaUsage({ ruleStats }) {
+  const ku = ruleStats.kanaUsage || {}
   const kuVals = Object.values(ku)
   const kuMax = kuVals.length > 0 ? Math.max(...kuVals) : 1
 
-  function kuCls(c) {
+  function getCls(c) {
     if (!c) return 'ku0'
     const r = c / kuMax
     if (r < 0.05) return 'ku1'
@@ -605,118 +430,258 @@
     return 'ku5'
   }
 
-  function kuTd(k) {
-    if (!k) return '<td class="ku0"></td>'
+  function KanaTd({ k }) {
+    if (!k) return html`<td className="ku0"></td>`
     const c = ku[k] || 0
-    return (
-      '<td class="' +
-      kuCls(c) +
-      '"><span class="kc">' +
-      k +
-      '</span><span class="kn">' +
-      c +
-      '</span></td>'
-    )
+    return html`
+      <td className=${getCls(c)}>
+        <span className="kc">${k}</span><span className="kn">${c}</span>
+      </td>
+    `
   }
 
-  function kuGrid(title, cols, rows) {
-    let h =
-      '<div><h3 style="color:#ccc;font-size:14px;margin:0 0 6px">' +
-      title +
-      '</h3><table class="kana-grid"><tr><th class="rl"></th>'
-    for (let i = 0; i < cols.length; i++) h += '<th>' + cols[i] + '</th>'
-    h += '</tr>'
-    for (let i = 0; i < rows.length; i++) {
-      h += '<tr><td class="rl">' + rows[i].l + '</td>'
-      for (let j = 0; j < rows[i].k.length; j++) h += kuTd(rows[i].k[j])
-      for (let j = rows[i].k.length; j < cols.length; j++)
-        h += '<td class="ku0"></td>'
-      h += '</tr>'
-    }
-    return h + '</table></div>'
+  function KanaGrid({ title, cols, rows }) {
+    return html`
+      <div>
+        <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>${title}</h3>
+        <table className="kana-grid">
+          <tr>
+            <th className="rl"></th>
+            ${cols.map((c) => html`<th key=${c}>${c}</th>`)}
+          </tr>
+          ${rows.map(
+            (row) => html`
+              <tr key=${row.l}>
+                <td className="rl">${row.l}</td>
+                ${row.k.map((k, j) => html`<${KanaTd} key=${j} k=${k} />`)}
+                ${Array.from({ length: Math.max(0, cols.length - row.k.length) }, (_, j) =>
+                  html`<td key=${'p' + j} className="ku0"></td>`
+                )}
+              </tr>
+            `
+          )}
+        </table>
+      </div>
+    `
   }
-
-  const vowH = ['あ', 'い', 'う', 'え', 'お']
-  const seion = [
-    { l: 'あ', k: ['あ', 'い', 'う', 'え', 'お'] },
-    { l: 'か', k: ['か', 'き', 'く', 'け', 'こ'] },
-    { l: 'さ', k: ['さ', 'し', 'す', 'せ', 'そ'] },
-    { l: 'た', k: ['た', 'ち', 'つ', 'て', 'と'] },
-    { l: 'な', k: ['な', 'に', 'ぬ', 'ね', 'の'] },
-    { l: 'は', k: ['は', 'ひ', 'ふ', 'へ', 'ほ'] },
-    { l: 'ま', k: ['ま', 'み', 'む', 'め', 'も'] },
-    { l: 'や', k: ['や', null, 'ゆ', null, 'よ'] },
-    { l: 'ら', k: ['ら', 'り', 'る', 'れ', 'ろ'] },
-    { l: 'わ', k: ['わ', null, null, null, 'を'] },
-    { l: 'ん', k: ['ん'] },
-  ]
-  const dakuon = [
-    { l: 'が', k: ['が', 'ぎ', 'ぐ', 'げ', 'ご'] },
-    { l: 'ざ', k: ['ざ', 'じ', 'ず', 'ぜ', 'ぞ'] },
-    { l: 'だ', k: ['だ', 'ぢ', 'づ', 'で', 'ど'] },
-    { l: 'ば', k: ['ば', 'び', 'ぶ', 'べ', 'ぼ'] },
-    { l: 'ぱ', k: ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'] },
-  ]
-  const youonH = ['ゃ', 'ゅ', 'ょ']
-  const youon = [
-    { l: 'き', k: ['きゃ', 'きゅ', 'きょ'] },
-    { l: 'し', k: ['しゃ', 'しゅ', 'しょ'] },
-    { l: 'ち', k: ['ちゃ', 'ちゅ', 'ちょ'] },
-    { l: 'に', k: ['にゃ', 'にゅ', 'にょ'] },
-    { l: 'ひ', k: ['ひゃ', 'ひゅ', 'ひょ'] },
-    { l: 'み', k: ['みゃ', 'みゅ', 'みょ'] },
-    { l: 'り', k: ['りゃ', 'りゅ', 'りょ'] },
-    { l: 'じ', k: ['じゃ', 'じゅ', 'じょ'] },
-  ]
-
-  const shown = {}
-  ;[seion, dakuon, youon].forEach((grp) => {
-    grp.forEach((r) => {
-      r.k.forEach((k) => {
-        if (k) shown[k] = 1
-      })
-    })
-  })
-  shown['っ'] = 1
 
   const others = Object.keys(ku)
-    .filter((k) => !shown[k])
+    .filter((k) => !SHOWN_KANA.has(k))
     .sort((a, b) => (ku[b] || 0) - (ku[a] || 0))
 
-  const kuEl = document.getElementById('kana-usage')
-  let html = '<div class="kana-grids">'
-  html += kuGrid('清音', vowH, seion)
-  html += kuGrid('濁音・半濁音', vowH, dakuon)
-  html += kuGrid('拗音', youonH, youon)
-  html += '</div>'
+  return html`
+    <div>
+      <div className="kana-grids">
+        <${KanaGrid} title="清音" cols=${VOWELS} rows=${SEION} />
+        <${KanaGrid} title="濁音・半濁音" cols=${VOWELS} rows=${DAKUON} />
+        <${KanaGrid} title="拗音" cols=${YOUON_H} rows=${YOUON} />
+      </div>
+      <div className="kana-grids" style=${{ marginTop: '8px' }}>
+        <div>
+          <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>促音</h3>
+          <div className=${'ku-badge ' + getCls(ku['っ'] || 0)}>
+            っ<span className="kn">${ku['っ'] || 0}</span>
+          </div>
+        </div>
+        ${others.length > 0 &&
+        html`
+          <div>
+            <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>その他</h3>
+            <div className="ku-others">
+              ${others.map(
+                (k) => html`
+                  <div key=${k} className=${'ku-chip ' + getCls(ku[k] || 0)}>
+                    <span className="kc">${k}</span><span className="kn">${ku[k] || 0}</span>
+                  </div>
+                `
+              )}
+            </div>
+          </div>
+        `}
+      </div>
+    </div>
+  `
+}
 
-  html += '<div class="kana-grids" style="margin-top:8px">'
-  html +=
-    '<div><h3 style="color:#ccc;font-size:14px;margin:0 0 6px">促音</h3>'
-  html +=
-    '<div class="ku-badge ' +
-    kuCls(ku['っ'] || 0) +
-    '">っ<span class="kn">' +
-    (ku['っ'] || 0) +
-    '</span></div></div>'
+function Tooltip({ d, x, y }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    if (!ref.current) return
+    const tt = ref.current
+    let left = x + 16
+    let top = y + 16
+    tt.style.left = left + 'px'
+    tt.style.top = top + 'px'
+    const rect = tt.getBoundingClientRect()
+    if (rect.right > window.innerWidth) tt.style.left = x - rect.width - 8 + 'px'
+    if (rect.bottom > window.innerHeight) tt.style.top = y - rect.height - 8 + 'px'
+  })
+  if (!d) return null
+  const w1ScoreEl = d.w1Error
+    ? html`<span className="tt-red">ERROR</span>`
+    : d.w1Score !== null
+      ? html`<span className="tt-green">${d.w1Score}</span>`
+      : html`<span className="tt-gray">-</span>`
+  const w2ScoreEl = d.w2Error
+    ? html`<span className="tt-red">ERROR</span>`
+    : d.w2Score !== null
+      ? html`<span className="tt-green">${d.w2Score}</span>`
+      : html`<span className="tt-gray">-</span>`
+  return html`
+    <div className="tooltip" ref=${ref} style=${{ display: 'block' }}>
+      <div className="tt-num">${d.num}</div>
+      ${d.hito &&
+      html`<div className="tt-row">
+        <span className="tt-label">人: </span><span className="tt-val">${d.hito}</span>
+        ${' '}<span className="tt-label">(${d.hitoCnt}×8=${d.hitoCnt * 8})</span>
+      </div>`}
+      ${d.mono &&
+      html`<div className="tt-row">
+        <span className="tt-label">物: </span><span className="tt-val">${d.mono}</span>
+        ${' '}<span className="tt-label">(${d.monoCnt}×10=${d.monoCnt * 10})</span>
+      </div>`}
+      ${d.gainen &&
+      html`<div className="tt-row">
+        <span className="tt-label">概念: </span><span className="tt-val">${d.gainen}</span>
+        ${' '}<span className="tt-label">(${d.gainenCnt}×4=${d.gainenCnt * 4})</span>
+      </div>`}
+      <div className="tt-row">
+        <span className="tt-label">Cat Score: </span>
+        <span className="tt-score tt-green">${d.catScore}</span>
+      </div>
+      ${d.w1 &&
+      html`
+        <div className="tt-row">
+          <span className="tt-label">w1: </span><span className="tt-val">${d.w1}</span>
+        </div>
+        ${d.w1k &&
+        html`<div className="tt-row">
+          <span className="tt-label">w1k: </span><span className="tt-kana">${d.w1k}</span>
+          ${' → '}${w1ScoreEl}
+          ${d.w1Pattern && html`${' '}<span className="tt-label">[${d.w1Pattern}]</span>`}
+        </div>`}
+      `}
+      ${d.w2 &&
+      html`
+        <div className="tt-row">
+          <span className="tt-label">w2: </span><span className="tt-val">${d.w2}</span>
+        </div>
+        ${d.w2k &&
+        html`<div className="tt-row">
+          <span className="tt-label">w2k: </span><span className="tt-kana">${d.w2k}</span>
+          ${' → '}${w2ScoreEl}
+        </div>`}
+      `}
+    </div>
+  `
+}
 
-  if (others.length > 0) {
-    html +=
-      '<div><h3 style="color:#ccc;font-size:14px;margin:0 0 6px">その他</h3>'
-    html += '<div class="ku-others">'
-    others.forEach((k) => {
-      const c = ku[k] || 0
-      html +=
-        '<div class="ku-chip ' +
-        kuCls(c) +
-        '"><span class="kc">' +
-        k +
-        '</span><span class="kn">' +
-        c +
-        '</span></div>'
-    })
-    html += '</div></div>'
-  }
-  html += '</div>'
-  kuEl.innerHTML = html
-})()
+// ─── App ────────────────────────────────────────────────
+
+function App() {
+  const [data, setData] = useState(null)
+  const [ruleStats, setRuleStats] = useState(null)
+  const [mode, setMode] = useState('completion')
+  const [tooltip, setTooltip] = useState(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const dataFile = params.get('data') || './visualize-words.data.json'
+    fetch(dataFile)
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to load ' + dataFile)
+        return r.json()
+      })
+      .then((json) => {
+        setData(json.data)
+        setRuleStats(json.ruleStats)
+      })
+      .catch((err) => {
+        document.getElementById('root').textContent = err.message
+      })
+  }, [])
+
+  const byNum = useMemo(() => {
+    if (!data) return {}
+    const map = {}
+    for (const d of data) map[d.num] = d
+    return map
+  }, [data])
+
+  const stats = useMemo(() => {
+    if (!data) return null
+    const total = data.length
+    const hasHito = data.filter((d) => d.hito).length
+    const hasMono = data.filter((d) => d.mono).length
+    const hasGainen = data.filter((d) => d.gainen).length
+    const hasW1k = data.filter((d) => d.w1k).length
+    const hasAll = data.filter((d) => d.hito && d.mono && d.gainen && d.w1k).length
+    const totalCatScore = data.reduce((s, d) => s + d.catScore, 0)
+    const validScores = data.filter((d) => d.w1Score !== null && !d.w1Error)
+    const avgEnc =
+      validScores.length > 0
+        ? (validScores.reduce((s, d) => s + d.w1Score, 0) / validScores.length).toFixed(1)
+        : '-'
+    const encErrors = data.filter((d) => d.w1Error).length
+    return { total, hasHito, hasMono, hasGainen, hasW1k, hasAll, totalCatScore, avgEnc, encErrors }
+  }, [data])
+
+  const handleMouseMove = useCallback(
+    (e) => {
+      const td = e.target.closest('td[data-num]')
+      if (!td) {
+        setTooltip(null)
+        return
+      }
+      const d = byNum[td.dataset.num]
+      if (!d) {
+        setTooltip(null)
+        return
+      }
+      setTooltip({ d, x: e.clientX, y: e.clientY })
+    },
+    [byNum]
+  )
+
+  const handleMouseLeave = useCallback(() => setTooltip(null), [])
+
+  if (!data) return html`<h1 style=${{ color: '#888' }}>Loading...</h1>`
+
+  return html`
+    <div>
+      <h1>999 Words Dashboard</h1>
+      <p className="subtitle">000–999 辞書エントリの完成度・スコア可視化</p>
+
+      <${SummaryCards} stats=${stats} />
+
+      <h2>Completion Progress</h2>
+      <${ProgressBars} stats=${stats} />
+
+      <h2>XY(row) × Z(col) Heatmap</h2>
+      <p className="subtitle">各3桁数字のステータスをヒートマップ表示</p>
+      <${ModeSwitcher} mode=${mode} onChange=${setMode} />
+      <${Legend} items=${LEGENDS[mode]} />
+      <${MainHeatmap} byNum=${byNum} mode=${mode}
+        onMouseMove=${handleMouseMove} onMouseLeave=${handleMouseLeave} />
+
+      <h2>X(row) × Y(col) Summary (10個まとめ)</h2>
+      <p className="subtitle">XY の10個(Z=0-9)を集約した10×10ヒートマップ</p>
+      <${Legend} items=${SUMMARY_LEGENDS[mode]} />
+      <${SummaryHeatmapTable} byNum=${byNum} mode=${mode} />
+
+      <h2>Rule Usage (w1k 採用済み)</h2>
+      <p className="subtitle">各数字の採用済み w1k エンコードにおけるルール使用率</p>
+      <${RuleCharts} ruleStats=${ruleStats} />
+
+      <h2>Kana Usage (w1k)</h2>
+      <p className="subtitle">w1k エンコードで使用されている各かなの出現回数</p>
+      <${KanaUsage} ruleStats=${ruleStats} />
+
+      ${tooltip && html`<${Tooltip} d=${tooltip.d} x=${tooltip.x} y=${tooltip.y} />`}
+    </div>
+  `
+}
+
+// ─── Mount ──────────────────────────────────────────────
+
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App} />`)
