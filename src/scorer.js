@@ -11,6 +11,7 @@ export const WEIGHTS = {
   halfOverflow: 4,
   overflowPerChar: -10,
   youon4Omission: -5,
+  leadingZeroOmission: 15,
 }
 
 function isSokuon(kana) {
@@ -61,6 +62,8 @@ export function score(input, targetDigits = 3) {
 
   const tokenScore = details.reduce((sum, d) => sum + d.score, 0)
   const youon4Penalty = youon4 ? WEIGHTS.youon4Omission : 0
+  const leadingZeroBonus =
+    digits.length < targetDigits ? WEIGHTS.leadingZeroOmission : 0
 
   return {
     input,
@@ -68,6 +71,7 @@ export function score(input, targetDigits = 3) {
     digitCount: digits.length,
     tokens: details,
     youon4,
-    score: tokenScore + youon4Penalty,
+    leadingZeroOmission: digits.length < targetDigits,
+    score: tokenScore + youon4Penalty + leadingZeroBonus,
   }
 }

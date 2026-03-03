@@ -18,6 +18,7 @@ describe('getTier', () => {
     expect(getTier('か')).toBe('bad')
     expect(getTier('あ')).toBe('bad')
     expect(getTier('れ')).toBe('bad')
+    expect(getTier('え')).toBe('bad')
   })
 
   it('濁音は清音のティアを返す', () => {
@@ -41,6 +42,7 @@ describe('score', () => {
     const result = score('きれい')
     expect(result.digits).toBe('901')
     expect(result.digitCount).toBe(3)
+    expect(result.leadingZeroOmission).toBe(false)
     // き(core 10) + れ(bad 6) + い(core 10) = 26
     expect(result.score).toBe(26)
   })
@@ -61,12 +63,13 @@ describe('score', () => {
     expect(result.score).toBe(6 + 8 + 4)
   })
 
-  it('にし: 2桁、underflow ペナルティなし', () => {
+  it('にし: 2桁、先頭0省略ボーナス +15', () => {
     const result = score('にし')
     expect(result.digits).toBe('24')
     expect(result.digitCount).toBe(2)
-    // に(core 10) + し(core 10) = 20
-    expect(result.score).toBe(20)
+    expect(result.leadingZeroOmission).toBe(true)
+    // に(core 10) + し(core 10) + 先頭0省略(15) = 35
+    expect(result.score).toBe(35)
   })
 
   it('きゃく: double + sub, 3桁', () => {
@@ -123,8 +126,9 @@ describe('score', () => {
 
   it('targetDigits を変更可能', () => {
     const result = score('きれい', 4)
-    // 3桁だが target=4 → い は pos 2 で fullyIn
+    // 3桁だが target=4 → い は pos 2 で fullyIn + 先頭0省略(15)
     expect(result.digitCount).toBe(3)
-    expect(result.score).toBe(26)
+    expect(result.leadingZeroOmission).toBe(true)
+    expect(result.score).toBe(26 + 15)
   })
 })
