@@ -1,0 +1,87 @@
+{
+  "data": [
+    {
+      "num": "000",
+      "hito": "アリス",
+      "mono": "",
+      "gainen": "例",
+      "w1": "アリス",
+      "w1k": "ありす",
+      "w2": "",
+      "w2k": "",
+      "hitoCnt": 1,
+      "monoCnt": 0,
+      "gainenCnt": 1,
+      "catScore": 12,
+      "w1Score": 26,
+      "w1Error": false,
+      "w1Pattern": "D+DD+X",
+      "w2Score": null,
+      "w2Error": false
+    },
+    {
+      "num": "001",
+      "hito": "ボブ,チャーリー",
+      "mono": "犬",
+      "gainen": "数",
+      "w1": "ボブ",
+      "w1k": "ぼぶ",
+      "w2": "犬",
+      "w2k": "いぬ",
+      "hitoCnt": 2,
+      "monoCnt": 1,
+      "gainenCnt": 1,
+      "catScore": 30,
+      "w1Score": 38,
+      "w1Error": false,
+      "w1Pattern": "DD+D",
+      "w2Score": 40,
+      "w2Error": false
+    },
+    {
+      "num": "002",
+      "hito": "",
+      "mono": "猫,鳥",
+      "gainen": "空",
+      "w1": "猫",
+      "w1k": "ねこ",
+      "w2": "鳥",
+      "w2k": "とり",
+      "hitoCnt": 0,
+      "monoCnt": 2,
+      "gainenCnt": 1,
+      "catScore": 24,
+      "w1Score": 40,
+      "w1Error": false,
+      "w1Pattern": "DD+D",
+      "w2Score": 34,
+      "w2Error": false
+    }
+  ],
+  "ruleStats": {
+    "patterns": {
+      "D+DD+X": 1,
+      "DD+D": 2
+    },
+    "tokenTypes": {
+      "core": 1,
+      "sub": 1,
+      "bad": 1,
+      "double": 3,
+      "sokuon": 0,
+      "halfOverflow": 0,
+      "overflow": 1
+    },
+    "youon4Count": 0,
+    "scoredCount": 3,
+    "kanaUsage": {
+      "あ": 1,
+      "り": 1,
+      "す": 1,
+      "ぼ": 1,
+      "ぶ": 1,
+      "ね": 1,
+      "こ": 1
+    }
+  }
+}

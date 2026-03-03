@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>999 Words Visualization</title>
+<link rel="stylesheet" href="./visualize-words.css">
+</head>
+<body>
+
+<h1>999 Words Dashboard</h1>
+<p class="subtitle">000–999 辞書エントリの完成度・スコア可視化</p>
+
+<div class="summary" id="summary"></div>
+
+<h2>Completion Progress</h2>
+<div class="progress-section" id="progress"></div>
+
+<h2>XY(row) × Z(col) Heatmap</h2>
+<p class="subtitle">各3桁数字のステータスをヒートマップ表示</p>
+
+<div class="mode-switcher">
+  <input type="radio" name="mode" id="mode-comp" value="completion" checked>
+  <label for="mode-comp">Completion</label>
+  <input type="radio" name="mode" id="mode-cat" value="category">
+  <label for="mode-cat">Category Score</label>
+  <input type="radio" name="mode" id="mode-enc" value="encode">
+  <label for="mode-enc">Encode Score</label>
+</div>
+
+<div class="legend" id="heatmap-legend"></div>
+<div class="heatmap-wrap"><table class="heatmap" id="heatmap"></table></div>
+
+<h2>X(row) × Y(col) Summary (10個まとめ)</h2>
+<p class="subtitle">XY の10個(Z=0-9)を集約した10×10ヒートマップ</p>
+<div class="legend" id="summary-heatmap-legend"></div>
+<div class="heatmap-wrap"><table class="heatmap summary-heatmap" id="summary-heatmap"></table></div>
+
+<h2>Rule Usage (w1k 採用済み)</h2>
+<p class="subtitle">各数字の採用済み w1k エンコードにおけるルール使用率</p>
+<div class="rule-columns">
+  <div class="rule-col">
+    <h2>Pattern Distribution</h2>
+    <p class="subtitle">分解パターン別エントリ数</p>
+    <div class="rule-section" id="pattern-chart"></div>
+  </div>
+  <div class="rule-col">
+    <h2>Token Type Distribution</h2>
+    <p class="subtitle">トークン種別の出現回数</p>
+    <div class="rule-section" id="token-chart"></div>
+  </div>
+</div>
+
+<h2>Kana Usage (w1k)</h2>
+<p class="subtitle">w1k エンコードで使用されている各かなの出現回数</p>
+<div id="kana-usage"></div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="./viz-client.js"></script>
+</body>
+</html>
