@@ -64,6 +64,14 @@ exports[`decodeRanked > 629 の候補一覧 1`] = `
     "word": "るちぇ",
   },
   {
+    "score": 36,
+    "word": "えつぇ",
+  },
+  {
+    "score": 36,
+    "word": "えちぇ",
+  },
+  {
     "score": 30,
     "word": "ろにき",
   },
@@ -96,6 +104,10 @@ exports[`decodeRanked > 629 の候補一覧 1`] = `
     "word": "るふき",
   },
   {
+    "score": 26,
+    "word": "えにき",
+  },
+  {
     "score": 24,
     "word": "ろふか",
   },
@@ -108,8 +120,28 @@ exports[`decodeRanked > 629 の候補一覧 1`] = `
     "word": "るふく",
   },
   {
+    "score": 24,
+    "word": "えにく",
+  },
+  {
+    "score": 24,
+    "word": "えふき",
+  },
+  {
     "score": 22,
     "word": "るふか",
+  },
+  {
+    "score": 22,
+    "word": "えにか",
+  },
+  {
+    "score": 22,
+    "word": "えふく",
+  },
+  {
+    "score": 20,
+    "word": "えふか",
   },
 ]
 `;

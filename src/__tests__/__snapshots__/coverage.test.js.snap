@@ -2,14 +2,10 @@
 
 exports[`generateCoverage > サマリー 1`] = `
 {
-  "covered": 92,
-  "rate": 99,
+  "covered": 93,
+  "rate": 100,
   "total": 93,
 }
 `;
 
-exports[`generateCoverage > 未対応かな一覧 1`] = `
-[
-  "え",
-]
-`;
+exports[`generateCoverage > 未対応かな一覧 1`] = `[]`;

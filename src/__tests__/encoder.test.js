@@ -101,8 +101,12 @@ describe('encode', () => {
     expect(encode('きれい').youon4).toBe(false)
   })
 
+  it('え → 6 (bad)', () => {
+    expect(encode('え').digits).toBe('6')
+  })
+
   it('unknown kana throws', () => {
-    expect(() => encode('え')).toThrow('Unknown kana')
+    expect(() => encode('ゑ')).toThrow('Unknown kana')
   })
 })
 
