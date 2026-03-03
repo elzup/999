@@ -25,9 +25,11 @@ const modeClassMap = {
     return 'cat-5'
   },
   encode: (d) => {
-    if (!d.w1k) return 'enc-none'
-    if (d.w1Error) return 'enc-err'
-    const s = d.w1Score
+    const s = bestScore(d)
+    if (s === null) {
+      if ((d.w1k && d.w1Error) || (d.w2k && d.w2Error)) return 'enc-err'
+      return 'enc-none'
+    }
     if (s < 20) return 'enc-low'
     if (s < 30) return 'enc-mid'
     if (s < 40) return 'enc-high'
@@ -38,7 +40,7 @@ const modeClassMap = {
 const modeLabelMap = {
   completion: (d) => (compCount(d) === 0 ? '' : d.num),
   category: (d) => (d.catScore > 0 ? d.num : ''),
-  encode: (d) => (d.w1k ? d.num : ''),
+  encode: (d) => (d.w1k || d.w2k ? d.num : ''),
 }
 
 const LEGENDS = {
@@ -63,7 +65,7 @@ const LEGENDS = {
     { cls: 'enc-mid', label: '20-29' },
     { cls: 'enc-low', label: '<20' },
     { cls: 'enc-err', label: 'Error' },
-    { cls: 'enc-none', label: 'No w1k' },
+    { cls: 'enc-none', label: 'No word' },
   ],
 }
 
@@ -248,18 +250,19 @@ function ProgressBars({ stats }) {
   `
 }
 
-function ModeSwitcher({ mode, onChange }) {
+function ModeSwitcher({ mode, onChange, prefix = 'mode' }) {
+  const p = prefix
   return html`
     <div className="mode-switcher">
-      <input type="radio" name="mode" id="mode-comp" value="completion"
+      <input type="radio" name=${p} id=${p + '-comp'} value="completion"
         checked=${mode === 'completion'} onChange=${() => onChange('completion')} />
-      <label htmlFor="mode-comp">Completion</label>
-      <input type="radio" name="mode" id="mode-cat" value="category"
+      <label htmlFor=${p + '-comp'}>Completion</label>
+      <input type="radio" name=${p} id=${p + '-cat'} value="category"
         checked=${mode === 'category'} onChange=${() => onChange('category')} />
-      <label htmlFor="mode-cat">Category Score</label>
-      <input type="radio" name="mode" id="mode-enc" value="encode"
+      <label htmlFor=${p + '-cat'}>Category Score</label>
+      <input type="radio" name=${p} id=${p + '-enc'} value="encode"
         checked=${mode === 'encode'} onChange=${() => onChange('encode')} />
-      <label htmlFor="mode-enc">Encode Score</label>
+      <label htmlFor=${p + '-enc'}>Encode Score</label>
     </div>
   `
 }
@@ -310,29 +313,62 @@ const MainHeatmap = memo(function MainHeatmap({ byNum, mode, onMouseMove, onMous
   `
 })
 
-const SummaryHeatmapTable = memo(function SummaryHeatmapTable({ byNum, mode }) {
+function SumModeSwitcher({ sumMode, onChange }) {
+  return html`
+    <div className="mode-switcher">
+      <input type="radio" name="sumMode" id="sum-xy" value="xy"
+        checked=${sumMode === 'xy'} onChange=${() => onChange('xy')} />
+      <label htmlFor="sum-xy">XY (先頭2桁)</label>
+      <input type="radio" name="sumMode" id="sum-yz" value="yz"
+        checked=${sumMode === 'yz'} onChange=${() => onChange('yz')} />
+      <label htmlFor="sum-yz">YZ (末尾2桁)</label>
+      <input type="radio" name="sumMode" id="sum-both" value="both"
+        checked=${sumMode === 'both'} onChange=${() => onChange('both')} />
+      <label htmlFor="sum-both">XY+YZ (合成)</label>
+    </div>
+  `
+}
+
+const SummaryHeatmapTable = memo(function SummaryHeatmapTable({ byNum, mode, sumMode }) {
   const resolver = summaryResolvers[mode]
-  function xyGroup(x, y) {
+
+  function groupItems(row, col) {
     const items = []
-    for (let z = 0; z <= 9; z++) {
-      const d = byNum['' + x + y + z]
-      if (d) items.push(d)
+    for (let d = 0; d <= 9; d++) {
+      let num
+      if (sumMode === 'xy') num = '' + row + col + d
+      else if (sumMode === 'yz') num = '' + d + row + col
+      else num = '' + row + col + d
+      const entry = byNum[num]
+      if (entry) items.push(entry)
+    }
+    if (sumMode === 'both') {
+      for (let d = 0; d <= 9; d++) {
+        const num = '' + d + row + col
+        const entry = byNum[num]
+        if (entry && !items.includes(entry)) items.push(entry)
+      }
     }
     return items
   }
+
+  const cornerLabel = sumMode === 'xy' ? 'X\\Y' : sumMode === 'yz' ? 'Y\\Z' : 'R\\C'
+  const rowLabel = sumMode === 'yz' ? (r) => 'Y=' + r : sumMode === 'both' ? (r) => r : (r) => r
+  const colLabel = sumMode === 'yz' ? (c) => c : sumMode === 'both' ? (c) => c : (c) => c
+
   return html`
     <div className="heatmap-wrap">
       <table className="heatmap summary-heatmap">
         <tr>
-          <th className="corner">X\\Y</th>
-          ${Array.from({ length: 10 }, (_, y) => html`<th key=${y}>${y}</th>`)}
+          <th className="corner">${cornerLabel}</th>
+          ${Array.from({ length: 10 }, (_, c) => html`<th key=${c}>${colLabel(c)}</th>`)}
         </tr>
-        ${Array.from({ length: 10 }, (_, x) => html`
-          <tr key=${x}>
-            <td className="row-header">${x}</td>
-            ${Array.from({ length: 10 }, (_, y) => {
-              const r = resolver(xyGroup(x, y))
-              return html`<td key=${y} className=${r.cls} data-xy=${'' + x + y}>${r.label}</td>`
+        ${Array.from({ length: 10 }, (_, r) => html`
+          <tr key=${r}>
+            <td className="row-header">${rowLabel(r)}</td>
+            ${Array.from({ length: 10 }, (_, c) => {
+              const r2 = resolver(groupItems(r, c))
+              return html`<td key=${c} className=${r2.cls}>${r2.label}</td>`
             })}
           </tr>
         `)}
@@ -581,7 +617,8 @@ function Tooltip({ d, x, y }) {
 function App() {
   const [data, setData] = useState(null)
   const [ruleStats, setRuleStats] = useState(null)
-  const [mode, setMode] = useState('completion')
+  const [mode, setMode] = useState('encode')
+  const [sumMode, setSumMode] = useState('xy')
   const [tooltip, setTooltip] = useState(null)
 
   useEffect(() => {
@@ -664,10 +701,12 @@ function App() {
       <${MainHeatmap} byNum=${byNum} mode=${mode}
         onMouseMove=${handleMouseMove} onMouseLeave=${handleMouseLeave} />
 
-      <h2>X(row) × Y(col) Summary (10個まとめ)</h2>
-      <p className="subtitle">XY の10個(Z=0-9)を集約した10×10ヒートマップ</p>
+      <h2>2桁 Summary (10個まとめ)</h2>
+      <p className="subtitle">2桁ごとに10個を集約した10×10ヒートマップ</p>
+      <${ModeSwitcher} mode=${mode} onChange=${setMode} prefix="smode" />
+      <${SumModeSwitcher} sumMode=${sumMode} onChange=${setSumMode} />
       <${Legend} items=${SUMMARY_LEGENDS[mode]} />
-      <${SummaryHeatmapTable} byNum=${byNum} mode=${mode} />
+      <${SummaryHeatmapTable} byNum=${byNum} mode=${mode} sumMode=${sumMode} />
 
       <h2>Rule Usage (w1k 採用済み)</h2>
       <p className="subtitle">各数字の採用済み w1k エンコードにおけるルール使用率</p>
