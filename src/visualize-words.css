@@ -176,29 +176,29 @@
   .rule-col { flex: 1; min-width: 300px; }
 
   /* Kana usage grid */
-  .kana-grids {
-    display: flex; gap: 24px; flex-wrap: wrap;
-    align-items: flex-start; margin: 16px 0;
-  }
+  .kana-grid-wrap { overflow-x: auto; margin: 16px 0; }
   .kana-grid { border-collapse: collapse; }
   .kana-grid th {
-    width: 44px; height: 24px; text-align: center; font-size: 10px;
+    height: 24px; text-align: center; font-size: 11px;
     border: 1px solid #2a2d37; background: #1a1d27; color: #888;
+    padding: 2px 6px; white-space: nowrap;
   }
   .kana-grid td {
-    width: 54px; min-height: 38px; text-align: center; font-size: 12px;
-    border: 1px solid #222; cursor: default; line-height: 1.2; padding: 2px 3px;
+    text-align: center; font-size: 12px;
+    border: 1px solid #222; cursor: default; line-height: 1.2;
+    padding: 3px 4px; vertical-align: top; width: 56px;
   }
+  .kana-grid .kg-row td { height: 68px; }
+  .kana-grid .kg-sep td { border-top: 2px solid #444; }
+  .kana-grid .ku-entry { padding: 1px 0; }
   .kana-grid .kc { display: inline; font-size: 14px; font-weight: bold; }
   .kana-grid .kn { display: inline; font-size: 9px; margin-left: 1px; }
-  .kana-grid .ku-youon { font-size: 11px; opacity: 0.75; margin-top: 1px; }
-  .kana-grid .ku-youon .kc { font-size: 11px; }
-  .kana-grid .ku-youon .kn { font-size: 8px; }
+  .kana-grid .ku-entry.ku-sd { outline: 1.5px solid #888; outline-offset: -1px; border-radius: 2px; }
   .kana-grid .rl {
     background: #1a1d27; color: #888; font-weight: bold; font-size: 11px;
-    text-align: center; width: 36px; min-width: 36px;
+    text-align: center; width: 28px; min-width: 28px; white-space: nowrap;
+    position: sticky; left: 0; z-index: 1; vertical-align: middle;
   }
-  .kana-grid .kg-sep td { border-top: 2px solid #444; }
   .ku0 { background: #1a1d22; color: #333; }
   .ku1 { background: #1a2218; color: #6b8a5e; }
   .ku2 { background: #1f2e1a; color: #8ab87a; }

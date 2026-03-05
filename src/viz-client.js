@@ -151,8 +151,7 @@ const summaryResolvers = {
 
 // ─── Kana data ──────────────────────────────────────────
 
-const COL_HEADERS = ['あ/ゃ', 'い', 'う/ゅ', 'え', 'お/ょ']
-const YOUON_COL = { 0: 0, 2: 1, 4: 2 }
+const VOWELS = ['あ', 'い', 'う', 'え', 'お']
 
 const KANA_GROUPS = [
   { rows: [{ l: 'あ', k: ['あ', 'い', 'う', 'え', 'お'] }] },
@@ -189,6 +188,13 @@ const KANA_GROUPS = [
     { l: 'っ', k: ['っ'] },
   ]},
 ]
+
+const SINGLE_DIGIT_KANA = new Set([
+  'ん', 'い', 'に', 'さ', 'し', 'こ', 'ろ', 'な', 'は', 'き',
+  'お', 'ひ', 'ふ', 'み', 'よ', 'ら', 'る', 'う', 'や', 'く',
+  'れ', 'え', 'あ', 'か',
+  'が', 'ぎ', 'ぐ', 'ご', 'ざ', 'じ', 'ば', 'び', 'ぶ', 'ぱ', 'ぴ', 'ぷ',
+])
 
 const SHOWN_KANA = new Set()
 KANA_GROUPS.forEach((g) =>
@@ -474,16 +480,14 @@ function KanaUsage({ ruleStats }) {
     return 'ku5'
   }
 
-  function KanaCell({ base, youon }) {
-    if (!base && !youon) return html`<td className="ku0"></td>`
-    const bc = base ? (ku[base] || 0) : 0
-    const yc = youon ? (ku[youon] || 0) : 0
-    return html`
-      <td className=${getCls(Math.max(bc, yc))}>
-        ${base && html`<div><span className="kc">${base}</span><span className="kn">${bc}</span></div>`}
-        ${youon && html`<div className="ku-youon"><span className="kc">${youon}</span><span className="kn">${yc}</span></div>`}
-      </td>
-    `
+  function cellMax(kanaList) {
+    return Math.max(0, ...kanaList.map((k) => ku[k] || 0))
+  }
+
+  function KanaEntry({ kana }) {
+    const c = ku[kana] || 0
+    const sd = SINGLE_DIGIT_KANA.has(kana) ? ' ku-sd' : ''
+    return html`<div className=${'ku-entry' + sd}><span className="kc">${kana}</span><span className="kn">${c}</span></div>`
   }
 
   const others = Object.keys(ku)
@@ -491,28 +495,39 @@ function KanaUsage({ ruleStats }) {
     .sort((a, b) => (ku[b] || 0) - (ku[a] || 0))
 
   return html`
-    <div>
+    <div className="kana-grid-wrap">
       <table className="kana-grid">
         <tr>
           <th className="rl"></th>
-          ${COL_HEADERS.map((h) => html`<th key=${h}>${h}</th>`)}
+          ${VOWELS.map((v) => html`<th key=${v}>${v}</th>`)}
+          <th>ゃ</th><th>ゅ</th><th>ょ</th>
         </tr>
-        ${KANA_GROUPS.flatMap((g, gi) =>
-          g.rows.map((row, ri) => {
-            const sep = ri === 0 && gi > 0 ? ' kg-sep' : ''
-            return html`
-              <tr key=${row.l} className=${sep}>
-                <td className="rl">${row.l}</td>
-                ${Array.from({ length: 5 }, (_, ci) => {
-                  const base = row.k[ci] || null
-                  const yi = YOUON_COL[ci]
-                  const youon = yi !== undefined && row.y ? (row.y[yi] || null) : null
-                  return html`<${KanaCell} key=${ci} base=${base} youon=${youon} />`
-                })}
-              </tr>
-            `
-          })
-        )}
+        ${KANA_GROUPS.map((g, gi) => {
+          const label = g.rows.map((r) => r.l)
+          return html`
+            <tr key=${gi} className=${'kg-row' + (gi > 0 ? ' kg-sep' : '')}>
+              <td className="rl">${label.map((l) => html`<div key=${l}>${l}</div>`)}</td>
+              ${Array.from({ length: 5 }, (_, vi) => {
+                const entries = g.rows.map((r) => r.k[vi] || null).filter(Boolean)
+                if (entries.length === 0) return html`<td key=${vi} className="ku0"></td>`
+                return html`
+                  <td key=${vi} className=${getCls(cellMax(entries))}>
+                    ${entries.map((k) => html`<${KanaEntry} key=${k} kana=${k} />`)}
+                  </td>
+                `
+              })}
+              ${[0, 1, 2].map((yi) => {
+                const entries = g.rows.map((r) => r.y ? (r.y[yi] || null) : null).filter(Boolean)
+                if (entries.length === 0) return html`<td key=${'y' + yi} className="ku0"></td>`
+                return html`
+                  <td key=${'y' + yi} className=${getCls(cellMax(entries))}>
+                    ${entries.map((k) => html`<${KanaEntry} key=${k} kana=${k} />`)}
+                  </td>
+                `
+              })}
+            </tr>
+          `
+        })}
       </table>
       ${others.length > 0 &&
       html`
