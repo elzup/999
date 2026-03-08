@@ -301,27 +301,30 @@ const MainHeatmap = memo(function MainHeatmap({ byNum, mode, onMouseMove, onMous
   const labelFn = modeLabelMap[mode]
   return html`
     <div className="heatmap-wrap">
-      <table className="heatmap" onMouseMove=${onMouseMove} onMouseLeave=${onMouseLeave}>
+      <table className="heatmap heatmap-wide" onMouseMove=${onMouseMove} onMouseLeave=${onMouseLeave}>
         <tr>
-          <th className="corner">YZ\\X</th>
-          ${Array.from({ length: 10 }, (_, z) => html`<th key=${z}>${z}</th>`)}
+          <th className="corner">X\\YZ</th>
+          ${Array.from({ length: 100 }, (_, i) => {
+            const y = Math.floor(i / 10)
+            const z = i % 10
+            const sep = z === 0 ? ' y-separator' : ''
+            return html`<th key=${i} className=${sep}>${'' + y + z}</th>`
+          })}
         </tr>
-        ${Array.from({ length: 100 }, (_, i) => {
-          const x = Math.floor(i / 10)
-          const y = i % 10
-          const sep = y === 0 ? ' x-separator' : ''
-          return html`
-            <tr key=${'' + x + y}>
-              <td className=${'row-header' + sep}>${'' + x + y}</td>
-              ${Array.from({ length: 10 }, (_, z) => {
-                const num = '' + x + y + z
-                const d = byNum[num]
-                if (!d) return html`<td key=${z} className=${'comp-0' + sep}>${num}</td>`
-                return html`<td key=${z} className=${resolver(d) + sep} data-num=${num}>${labelFn(d) || num}</td>`
-              })}
-            </tr>
-          `
-        })}
+        ${Array.from({ length: 10 }, (_, x) => html`
+          <tr key=${x}>
+            <td className="row-header">${x}</td>
+            ${Array.from({ length: 100 }, (_, i) => {
+              const y = Math.floor(i / 10)
+              const z = i % 10
+              const sep = z === 0 ? ' y-separator' : ''
+              const num = '' + x + y + z
+              const d = byNum[num]
+              if (!d) return html`<td key=${i} className=${'comp-0' + sep}>${num}</td>`
+              return html`<td key=${i} className=${resolver(d) + sep} data-num=${num}>${labelFn(d) || num}</td>`
+            })}
+          </tr>
+        `)}
       </table>
     </div>
   `
@@ -792,7 +795,7 @@ function App() {
       <h2>Completion Progress</h2>
       <${ProgressBars} stats=${stats} />
 
-      <h2>XY(row) × Z(col) Heatmap</h2>
+      <h2>X(row) × YZ(col) Heatmap</h2>
       <p className="subtitle">各3桁数字のステータスをヒートマップ表示</p>
       <${ModeSwitcher} mode=${mode} onChange=${setMode} />
       <${Legend} items=${LEGENDS[mode]} />

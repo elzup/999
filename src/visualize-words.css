@@ -67,10 +67,12 @@
     border: 1px solid #2a2d37;
   }
   .heatmap .x-separator { border-top: 2px solid #444; }
+  .heatmap .y-separator { border-left: 2px solid #444; }
   .heatmap td {
     width: 40px; height: 28px; text-align: center; font-size: 10px;
     border: 1px solid #1a1d27; cursor: default; position: relative;
   }
+  .heatmap-wide td, .heatmap-wide th { width: 32px; min-width: 32px; font-size: 9px; }
 
   /* Completion colors */
   .comp-0 { background: #1a1d22; color: #333; }
