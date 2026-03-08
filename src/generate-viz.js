@@ -35,6 +35,12 @@ function buildData(filename = 'words.tsv') {
   let youon4Count = 0
   let scoredCount = 0
   const kanaUsage = {}
+  // digitKanaAlloc[pos][digit][kana] = count — 各桁位置×数字ごとの使用かな分布
+  const digitKanaAlloc = [0, 1, 2].map(() => {
+    const digits = {}
+    for (let d = 0; d <= 9; d++) digits[d] = {}
+    return digits
+  })
 
   const data = entries.map((entry) => {
     const cat = categoryScore(entry)
@@ -62,6 +68,7 @@ function buildData(filename = 'words.tsv') {
         const pat = s.tokens.map(tokenLabel).join('+')
         row.w1Pattern = pat
         patterns[pat] = (patterns[pat] ?? 0) + 1
+        let digitPos = 0
         for (const t of s.tokens) {
           if (t.type === 'single') {
             tokenTypes[t.tier ?? 'bad']++
@@ -70,6 +77,15 @@ function buildData(filename = 'words.tsv') {
           }
           const nk = [...t.kana].map((ch) => kataToHira(ch)).join('')
           kanaUsage[nk] = (kanaUsage[nk] ?? 0) + 1
+          // 各桁位置×数字のかな割り当て集計
+          for (const ch of t.value) {
+            const d = Number(ch)
+            if (d >= 0 && d <= 9 && digitPos < 3) {
+              const alloc = digitKanaAlloc[digitPos][d]
+              alloc[nk] = (alloc[nk] ?? 0) + 1
+            }
+            digitPos++
+          }
         }
         if (s.youon4) youon4Count++
         scoredCount++
@@ -96,6 +112,7 @@ function buildData(filename = 'words.tsv') {
     youon4Count,
     scoredCount,
     kanaUsage,
+    digitKanaAlloc,
   }
   return { data, ruleStats }
 }

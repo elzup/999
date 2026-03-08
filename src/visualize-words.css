@@ -221,3 +221,40 @@
   }
   .ku-chip .kc { font-size: 14px; font-weight: bold; }
   .ku-chip .kn { font-size: 10px; color: #888; }
+
+  /* Digit Kana Allocation */
+  .digit-alloc-wrap { margin: 16px 0; }
+  .da-digit-header {
+    font-size: 36px; font-weight: bold; color: #fff;
+    text-align: center; margin-bottom: 12px;
+  }
+  .da-pos-grid {
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .da-pos-col {
+    background: #1a1d27; border-radius: 8px; padding: 16px;
+    flex: 1; min-width: 260px;
+  }
+  .da-pos-label {
+    color: #ccc; font-size: 14px; font-weight: bold;
+    margin-bottom: 8px; padding-bottom: 4px;
+    border-bottom: 1px solid #2a2d37;
+  }
+  .da-total {
+    font-size: 11px; color: #888; margin-bottom: 8px;
+  }
+  .da-empty { color: #444; text-align: center; font-size: 13px; padding: 12px 0; }
+  .da-row {
+    display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 12px;
+  }
+  .da-row.da-sd { outline: 1px solid #555; outline-offset: -1px; border-radius: 2px; }
+  .da-kana {
+    width: 32px; text-align: center; font-size: 14px; font-weight: bold; color: #e0e0e0;
+  }
+  .da-bar-bg {
+    flex: 1; height: 18px; background: #15171e; border-radius: 3px; overflow: hidden;
+  }
+  .da-bar {
+    height: 100%; background: #166534; border-radius: 3px; min-width: 2px;
+  }
+  .da-cnt { color: #888; font-size: 11px; width: 80px; text-align: right; }

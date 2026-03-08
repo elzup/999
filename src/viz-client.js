@@ -548,6 +548,60 @@ function KanaUsage({ ruleStats }) {
   `
 }
 
+function DigitKanaAllocPos({ alloc, digit, label }) {
+  const kanaMap = alloc[digit] || {}
+  const entries = Object.entries(kanaMap).sort((a, b) => b[1] - a[1])
+  const total = entries.reduce((s, [, c]) => s + c, 0)
+  return html`
+    <div className="da-pos-col">
+      <div className="da-pos-label">${label}</div>
+      ${total === 0
+        ? html`<div className="da-empty">-</div>`
+        : html`
+          <div className="da-total">${total}</div>
+          ${entries.map(([kana, cnt]) => {
+            const pct = ((cnt / total) * 100).toFixed(0)
+            const barW = ((cnt / entries[0][1]) * 100).toFixed(0)
+            const sd = SINGLE_DIGIT_KANA.has(kana) ? ' da-sd' : ''
+            return html`
+              <div className=${'da-row' + sd} key=${kana}>
+                <span className="da-kana">${kana}</span>
+                <div className="da-bar-bg">
+                  <div className="da-bar" style=${{ width: barW + '%' }}></div>
+                </div>
+                <span className="da-cnt">${cnt} (${pct}%)</span>
+              </div>
+            `
+          })}
+        `}
+    </div>
+  `
+}
+
+function DigitKanaAlloc({ ruleStats }) {
+  const [digit, setDigit] = useState(1)
+  const allocAll = ruleStats.digitKanaAlloc || []
+  const posLabels = ['百の位', '十の位', '一の位']
+
+  return html`
+    <div className="digit-alloc-wrap">
+      <div className="mode-switcher" style=${{ marginBottom: '16px' }}>
+        ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => html`
+          <input type="radio" name="da-digit" id=${'da-d-' + d} value=${d}
+            checked=${digit === d} onChange=${() => setDigit(d)} key=${'i' + d} />
+          <label htmlFor=${'da-d-' + d} key=${'l' + d}>${d}</label>
+        `)}
+      </div>
+      <div className="da-digit-header">${digit}</div>
+      <div className="da-pos-grid">
+        ${posLabels.map((label, p) => html`
+          <${DigitKanaAllocPos} key=${p} alloc=${allocAll[p] || {}} digit=${digit} label=${label} />
+        `)}
+      </div>
+    </div>
+  `
+}
+
 function Tooltip({ d, x, y }) {
   const ref = useRef(null)
   useLayoutEffect(() => {
@@ -727,6 +781,10 @@ function App() {
       <h2>Kana Usage</h2>
       <p className="subtitle">採用済みエンコードで使用されている各かなの出現回数</p>
       <${KanaUsage} ruleStats=${ruleStats} />
+
+      <h2>Digit Kana Allocation</h2>
+      <p className="subtitle">各数字(0-9)に対して使われているかなの割り当て分布</p>
+      <${DigitKanaAlloc} ruleStats=${ruleStats} />
 
       ${tooltip && html`<${Tooltip} d=${tooltip.d} x=${tooltip.x} y=${tooltip.y} />`}
     </div>
