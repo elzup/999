@@ -12,7 +12,10 @@
     "check:digits": "node src/check-digits.js",
     "check:errors": "node src/check-errors.js",
     "viz": "node src/generate-viz.js",
-    "start": "npx serve src"
+    "start": "npx serve src",
+    "preview": "npx serve public",
+    "build:preview": "node src/generate-preview-data.js && cp src/visualize-words.html public/stats.html && cp src/visualize-words.css public/ && cp src/viz-client.js public/ && cp src/visualize-words.data.json public/",
+    "deploy": "npm run build:preview && firebase deploy --only hosting"
   },
   "devDependencies": {
     "vitest": "^3.0.0"

@@ -3,3 +3,9 @@ dist
 src/data/words.tsv
 src/data/words.json
 src/visualize-words.data.json
+.firebase/
+public/visualize-words.data.json
+public/visualize-words.css
+public/viz-client.js
+public/stats.html
+public/data.json

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>999 暗記</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f1117; --surface: #1a1d27; --surface2: #22252f;
+  --border: #2a2d37; --text: #e0e0e0; --text2: #888;
+  --accent: #4ade80; --accent2: #166534; --warn: #fbbf24;
+  --bar-h: 56px; --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { background: var(--bg); color: var(--text); font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size: 14px; height: 100%; overflow: hidden; }
+#app { height: 100%; display: flex; flex-direction: column; }
+
+/* Top bar */
+.top-bar { background: var(--surface); padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.top-bar h1 { font-size: 16px; margin-bottom: 6px; }
+.filter-row { display: flex; gap: 8px; align-items: center; }
+.filter-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; min-width: 72px; text-align: center; }
+.filter-btn.active { border-color: var(--accent); color: var(--accent); }
+.filter-clear { background: none; border: none; color: var(--text2); font-size: 12px; cursor: pointer; padding: 4px 8px; }
+
+/* Content area */
+.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px; padding-bottom: calc(var(--bar-h) + var(--safe-bottom) + 8px); }
+
+/* Digit grid picker */
+.digit-picker-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.digit-picker { background: var(--surface); border-radius: 12px; padding: 16px; width: 300px; }
+.digit-picker h3 { margin-bottom: 8px; font-size: 14px; color: var(--text2); }
+.dp-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.dp-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 4px; font-size: 12px; cursor: pointer; color: var(--text); border: 1px solid transparent; }
+.dp-cell:active, .dp-cell.selected { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
+.dp-clear { width: 100%; margin-top: 8px; padding: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); border-radius: 6px; cursor: pointer; font-size: 13px; }
+
+/* Number grid - fixed 10 columns */
+.num-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+.num-band { grid-column: 1 / -1; background: var(--surface2); color: var(--text2); font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 4px; margin-top: 6px; }
+.num-band:first-child { margin-top: 0; }
+.num-cell { background: var(--surface); border-radius: 4px; padding: 3px 4px; cursor: pointer; position: relative; min-height: 40px; border: 1px solid var(--border); overflow: hidden; }
+.num-cell.expanded { grid-column: 1 / -1; }
+.num-cell.empty { opacity: 0.4; }
+.num-cell .num-id { font-size: 13px; font-weight: bold; color: var(--accent); font-family: monospace; }
+.num-cell .num-word { font-size: 10px; color: var(--text); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.num-cell .num-kana { font-size: 10px; color: var(--text2); }
+.num-cell .bm-star { position: absolute; top: 2px; right: 3px; font-size: 11px; color: var(--text2); cursor: pointer; z-index: 2; }
+.num-cell .bm-star.on { color: var(--warn); }
+
+/* Expanded detail */
+.num-detail { margin-top: 8px; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 12px; }
+.num-detail dt { color: var(--text2); }
+.num-detail dd { color: var(--text); word-break: break-all; }
+
+/* Card grid - compact */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 3px; }
+.card-suit-header { grid-column: 1 / -1; font-size: 14px; font-weight: bold; padding: 6px 0 3px; border-bottom: 1px solid var(--border); }
+.card-cell { background: var(--surface); border-radius: 4px; padding: 4px 5px; cursor: pointer; border: 1px solid var(--border); position: relative; min-height: 32px; }
+.card-cell.expanded { grid-column: 1 / -1; }
+.card-cell .card-id { font-size: 12px; font-weight: bold; }
+.card-cell .card-id.S { color: #94a3b8; }
+.card-cell .card-id.H { color: #f87171; }
+.card-cell .card-id.C { color: #4ade80; }
+.card-cell .card-id.D { color: #60a5fa; }
+.card-cell .card-pao { font-size: 9px; color: var(--text2); margin-top: 2px; }
+.card-cell .card-pao span { display: inline-block; margin-right: 4px; }
+.card-cell .bm-star { position: absolute; top: 2px; right: 3px; font-size: 10px; color: var(--text2); cursor: pointer; }
+.card-cell .bm-star.on { color: var(--warn); }
+
+/* Card label toggles */
+.card-toggles { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+.card-toggles label { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--text2); cursor: pointer; }
+.card-toggles input { accent-color: var(--accent); }
+
+.card-detail { margin-top: 8px; font-size: 12px; }
+.card-detail-row { display: flex; gap: 8px; margin: 3px 0; }
+.card-detail-row .label { color: var(--text2); width: 24px; flex-shrink: 0; }
+.card-detail-row .val { color: var(--text); }
+.card-detail-row .yomi { color: var(--accent); font-size: 11px; }
+
+/* Bottom app bar */
+.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: calc(var(--bar-h) + var(--safe-bottom)); padding-bottom: var(--safe-bottom); background: var(--surface); border-top: 1px solid var(--border); display: flex; z-index: 50; }
+.bar-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; color: var(--text2); font-size: 10px; border: none; background: none; }
+.bar-tab.active { color: var(--accent); }
+.bar-tab svg { width: 22px; height: 22px; }
+.bar-badge { background: var(--accent2); color: var(--accent); font-size: 9px; padding: 1px 5px; border-radius: 8px; }
+
+/* Search */
+.search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-top: 6px; }
+.search-input::placeholder { color: var(--text2); }
+
+/* Stats iframe */
+.stats-frame { width: 100%; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); border: none; background: var(--bg); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { h, render } from 'https://esm.sh/preact@10.19.3'
+import { useState, useEffect, useMemo, useCallback } from 'https://esm.sh/preact@10.19.3/hooks'
+import htm from 'https://esm.sh/htm@3.1.1'
+const html = htm.bind(h)
+
+const SUIT_LABEL = { S: '♠', H: '♥', C: '♣', D: '♦' }
+const SUIT_NAME = { S: 'スペード', H: 'ハート', C: 'クラブ', D: 'ダイヤ' }
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']
+
+function loadBookmarks() {
+  try { return new Set(JSON.parse(localStorage.getItem('bm999') || '[]')) }
+  catch { return new Set() }
+}
+function saveBookmarks(set) {
+  localStorage.setItem('bm999', JSON.stringify([...set]))
+}
+
+function DigitPicker({ title, value, onSelect, onClose }) {
+  return html`
+    <div className="digit-picker-overlay" onClick=${(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="digit-picker">
+        <h3>${title}</h3>
+        <div className="dp-grid">
+          ${Array.from({ length: 100 }, (_, i) => {
+            const v = String(i).padStart(2, '0')
+            return html`<div key=${v} className=${'dp-cell' + (value === v ? ' selected' : '')}
+              onClick=${() => onSelect(v)}>${v}</div>`
+          })}
+        </div>
+        <button className="dp-clear" onClick=${() => { onSelect(null); onClose() }}>クリア</button>
+      </div>
+    </div>
+  `
+}
+
+function NumCell({ d, isBookmarked, onToggleBm, expanded, onToggle }) {
+  const hasWord = d.w1 || d.w2
+  return html`
+    <div className=${'num-cell' + (expanded ? ' expanded' : '') + (!hasWord ? ' empty' : '')}
+      onClick=${onToggle}>
+      <span className="bm-star ${isBookmarked ? 'on' : ''}"
+        onClick=${(e) => { e.stopPropagation(); onToggleBm() }}>
+        ${isBookmarked ? '★' : '☆'}
+      </span>
+      <div className="num-id">${d.num}</div>
+      <div className="num-word">${d.w1k || d.w1 || '-'}</div>
+      ${!expanded ? null : html`
+        <dl className="num-detail">
+          ${d.w1 ? html`<dt>W1</dt><dd>${d.w1}</dd>` : null}
+          ${d.w1k ? html`<dt>読</dt><dd>${d.w1k}</dd>` : null}
+          ${d.w2 ? html`<dt>W2</dt><dd>${d.w2}</dd>` : null}
+          ${d.w2k ? html`<dt>読</dt><dd>${d.w2k}</dd>` : null}
+          ${d.hito ? html`<dt>人</dt><dd>${d.hito}</dd>` : null}
+          ${d.mono ? html`<dt>物</dt><dd>${d.mono}</dd>` : null}
+          ${d.gainen ? html`<dt>念</dt><dd>${d.gainen}</dd>` : null}
+          ${d.w1Score !== null ? html`<dt>Sc</dt><dd>${d.w1Score}</dd>` : null}
+        </dl>
+      `}
+    </div>
+  `
+}
+
+function NumberTab({ numbers, bookmarks, onToggleBm }) {
+  const [upper, setUpper] = useState(null)
+  const [lower, setLower] = useState(null)
+  const [picker, setPicker] = useState(null)
+  const [expanded, setExpanded] = useState(null)
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(() => {
+    let result = numbers
+    if (upper !== null) result = result.filter((d) => d.num.slice(0, 2) === upper)
+    if (lower !== null) result = result.filter((d) => d.num.slice(1) === lower)
+    if (query) {
+      const q = query.toLowerCase()
+      result = result.filter((d) =>
+        d.num.includes(q) || (d.w1 && d.w1.toLowerCase().includes(q)) ||
+        (d.w1k && d.w1k.includes(q)) || (d.hito && d.hito.toLowerCase().includes(q))
+      )
+    }
+    return result
+  }, [numbers, upper, lower, query])
+
+  return html`
+    <div className="top-bar">
+      <h1>数字 (${filtered.length})</h1>
+      <div className="filter-row">
+        <button className=${'filter-btn' + (upper ? ' active' : '')}
+          onClick=${() => setPicker('upper')}>
+          上2桁 ${upper || '--'}
+        </button>
+        <button className=${'filter-btn' + (lower ? ' active' : '')}
+          onClick=${() => setPicker('lower')}>
+          下2桁 ${lower || '--'}
+        </button>
+        ${(upper || lower) ? html`<button className="filter-clear" onClick=${() => { setUpper(null); setLower(null) }}>×リセット</button>` : null}
+      </div>
+      <input className="search-input" placeholder="検索 (番号・単語・かな)"
+        value=${query} onInput=${(e) => setQuery(e.target.value)} />
+    </div>
+    <div className="content">
+      <div className="num-grid">
+        ${filtered.map((d, i) => {
+          const hundred = Math.floor(Number(d.num) / 100)
+          const prevHundred = i > 0 ? Math.floor(Number(filtered[i - 1].num) / 100) : -1
+          const band = hundred !== prevHundred
+            ? html`<div className="num-band" key=${'b' + hundred}>${hundred}00–${hundred}99</div>`
+            : null
+          return html`
+            ${band}
+            <${NumCell} key=${d.num} d=${d}
+              isBookmarked=${bookmarks.has('n:' + d.num)}
+              onToggleBm=${() => onToggleBm('n:' + d.num)}
+              expanded=${expanded === d.num}
+              onToggle=${() => setExpanded(expanded === d.num ? null : d.num)} />
+          `
+        })}
+      </div>
+    </div>
+    ${picker && html`<${DigitPicker}
+      title=${picker === 'upper' ? '上2桁を選択' : '下2桁を選択'}
+      value=${picker === 'upper' ? upper : lower}
+      onSelect=${(v) => { picker === 'upper' ? setUpper(v) : setLower(v); setPicker(null) }}
+      onClose=${() => setPicker(null)} />`}
+  `
+}
+
+function CardCell({ c, isBookmarked, onToggleBm, expanded, onToggle, showLabels }) {
+  const id = SUIT_LABEL[c.suit] + c.rank
+  return html`
+    <div className=${'card-cell' + (expanded ? ' expanded' : '')} onClick=${onToggle}>
+      <span className="bm-star ${isBookmarked ? 'on' : ''}"
+        onClick=${(e) => { e.stopPropagation(); onToggleBm() }}>
+        ${isBookmarked ? '★' : '☆'}
+      </span>
+      <div className=${'card-id ' + c.suit}>${id}</div>
+      <div className="card-pao">
+        ${showLabels.hito ? html`<span>${c.hito || '-'}</span>` : null}
+        ${showLabels.dousa ? html`<span>${c.dousa || '-'}</span>` : null}
+        ${showLabels.mono ? html`<span>${c.mono || '-'}</span>` : null}
+      </div>
+      ${!expanded ? null : html`
+        <div className="card-detail">
+          ${[['人', c.hito, c.hitoYomi], ['動', c.dousa, c.dousaYomi], ['物', c.mono, c.monoYomi]].map(([label, val, yomi]) =>
+            val ? html`
+              <div className="card-detail-row" key=${label}>
+                <span className="label">${label}</span>
+                <span className="val">${val}</span>
+                ${yomi ? html`<span className="yomi">(${yomi})</span>` : null}
+              </div>
+            ` : null
+          )}
+        </div>
+      `}
+    </div>
+  `
+}
+
+function CardTab({ cards, bookmarks, onToggleBm }) {
+  const [expanded, setExpanded] = useState(null)
+  const [showLabels, setShowLabels] = useState({ hito: true, dousa: true, mono: true })
+  const suits = ['S', 'H', 'C', 'D']
+
+  const toggle = (key) => setShowLabels((prev) => ({ ...prev, [key]: !prev[key] }))
+
+  return html`
+    <div className="top-bar">
+      <h1>カード (52)</h1>
+      <div className="card-toggles">
+        <label><input type="checkbox" checked=${showLabels.hito} onChange=${() => toggle('hito')} />人</label>
+        <label><input type="checkbox" checked=${showLabels.dousa} onChange=${() => toggle('dousa')} />動</label>
+        <label><input type="checkbox" checked=${showLabels.mono} onChange=${() => toggle('mono')} />物</label>
+      </div>
+    </div>
+    <div className="content">
+      <div className="card-grid">
+        ${suits.map((s) => html`
+          <div className="card-suit-header" key=${'h' + s}>${SUIT_LABEL[s]} ${SUIT_NAME[s]}</div>
+          ${cards.filter((c) => c.suit === s).map((c) => {
+            const key = s + c.rank
+            return html`<${CardCell} key=${key} c=${c}
+              isBookmarked=${bookmarks.has('c:' + key)}
+              onToggleBm=${() => onToggleBm('c:' + key)}
+              expanded=${expanded === key}
+              onToggle=${() => setExpanded(expanded === key ? null : key)}
+              showLabels=${showLabels} />`
+          })}
+        `)}
+      </div>
+    </div>
+  `
+}
+
+function BookmarkTab({ numbers, cards, bookmarks, onToggleBm }) {
+  const bmNums = useMemo(() => {
+    const keys = [...bookmarks].filter((k) => k.startsWith('n:')).map((k) => k.slice(2))
+    return numbers.filter((d) => keys.includes(d.num))
+  }, [numbers, bookmarks])
+  const bmCards = useMemo(() => {
+    const keys = [...bookmarks].filter((k) => k.startsWith('c:')).map((k) => k.slice(2))
+    return cards.filter((c) => keys.includes(c.suit + c.rank))
+  }, [cards, bookmarks])
+  const [expanded, setExpanded] = useState(null)
+
+  return html`
+    <div className="top-bar"><h1>ブックマーク (${bmNums.length + bmCards.length})</h1></div>
+    <div className="content">
+      ${bmNums.length > 0 ? html`
+        <div style=${{ marginBottom: '12px', color: 'var(--text2)', fontSize: '12px' }}>数字 (${bmNums.length})</div>
+        <div className="num-grid" style=${{ marginBottom: '16px' }}>
+          ${bmNums.map((d) => html`
+            <${NumCell} key=${d.num} d=${d}
+              isBookmarked=${true}
+              onToggleBm=${() => onToggleBm('n:' + d.num)}
+              expanded=${expanded === 'n:' + d.num}
+              onToggle=${() => setExpanded(expanded === 'n:' + d.num ? null : 'n:' + d.num)} />
+          `)}
+        </div>
+      ` : null}
+      ${bmCards.length > 0 ? html`
+        <div style=${{ marginBottom: '12px', color: 'var(--text2)', fontSize: '12px' }}>カード (${bmCards.length})</div>
+        <div className="card-grid">
+          ${bmCards.map((c) => {
+            const key = c.suit + c.rank
+            return html`<${CardCell} key=${key} c=${c}
+              isBookmarked=${true}
+              onToggleBm=${() => onToggleBm('c:' + key)}
+              expanded=${expanded === 'c:' + key}
+              onToggle=${() => setExpanded(expanded === 'c:' + key ? null : 'c:' + key)} />`
+          })}
+        </div>
+      ` : null}
+      ${bmNums.length === 0 && bmCards.length === 0 ? html`
+        <div style=${{ textAlign: 'center', color: 'var(--text2)', padding: '40px 0' }}>
+          ★をタップしてブックマーク追加
+        </div>
+      ` : null}
+    </div>
+  `
+}
+
+// SVG icons
+const IconNum = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l2-8h1l2 8"/><path d="M5 14h3"/><path d="M14 9c-1.5 0-2 1-2 2s.5 2 2 2 2 1 2 2-.5 2-2 2"/><path d="M19 9v4c0 1.1.9 2 2 2"/></svg>`
+const IconCard = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="2" width="18" height="20" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>`
+const IconStar = () => html`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+const IconStats = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>`
+
+function App() {
+  const [tab, setTab] = useState('num')
+  const [data, setData] = useState(null)
+  const [bookmarks, setBookmarks] = useState(loadBookmarks)
+
+  useEffect(() => {
+    fetch('./data.json').then((r) => r.json()).then(setData)
+  }, [])
+
+  const toggleBm = useCallback((key) => {
+    setBookmarks((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      saveBookmarks(next)
+      return next
+    })
+  }, [])
+
+  if (!data) return html`<div style=${{ padding: '40px', textAlign: 'center', color: 'var(--text2)' }}>Loading...</div>`
+
+  const bmCount = bookmarks.size
+
+  return html`
+    ${tab === 'num' && html`<${NumberTab} numbers=${data.numbers} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
+    ${tab === 'card' && html`<${CardTab} cards=${data.cards} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
+    ${tab === 'bm' && html`<${BookmarkTab} numbers=${data.numbers} cards=${data.cards} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
+    ${tab === 'stats' && html`<iframe className="stats-frame" src="./stats.html" />`}
+    <div className="bottom-bar">
+      <button className=${'bar-tab' + (tab === 'num' ? ' active' : '')} onClick=${() => setTab('num')}>
+        <${IconNum} /><span>数字</span>
+      </button>
+      <button className=${'bar-tab' + (tab === 'card' ? ' active' : '')} onClick=${() => setTab('card')}>
+        <${IconCard} /><span>カード</span>
+      </button>
+      <button className=${'bar-tab' + (tab === 'bm' ? ' active' : '')} onClick=${() => setTab('bm')}>
+        <${IconStar} /><span>★${bmCount > 0 ? html` <span className="bar-badge">${bmCount}</span>` : ''}</span>
+      </button>
+      <button className=${'bar-tab' + (tab === 'stats' ? ' active' : '')} onClick=${() => setTab('stats')}>
+        <${IconStats} /><span>統計</span>
+      </button>
+    </div>
+  `
+}
+
+render(html`<${App} />`, document.getElementById('app'))
+</script>
+</body>
+</html>
