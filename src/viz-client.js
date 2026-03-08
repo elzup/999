@@ -548,56 +548,88 @@ function KanaUsage({ ruleStats }) {
   `
 }
 
-function DigitKanaAllocPos({ alloc, digit, label }) {
+// prettier-ignore
+const DA_COLORS = [
+  '#4ade80', '#7dd3fc', '#fbbf24', '#c4b5fd', '#f87171',
+  '#fb923c', '#2dd4bf', '#f472b6', '#a3e635', '#94a3b8',
+  '#e879f9', '#67e8f9', '#fca5a5', '#bef264', '#fdba74',
+]
+
+function DigitKanaAllocBar({ alloc, digit, label, colorMap }) {
   const kanaMap = alloc[digit] || {}
   const entries = Object.entries(kanaMap).sort((a, b) => b[1] - a[1])
   const total = entries.reduce((s, [, c]) => s + c, 0)
+  if (total === 0) return html`
+    <div className="da-bar-row">
+      <span className="da-pos-label">${label}</span>
+      <div className="da-stacked-bg"><div className="da-empty">-</div></div>
+    </div>
+  `
   return html`
-    <div className="da-pos-col">
-      <div className="da-pos-label">${label}</div>
-      ${total === 0
-        ? html`<div className="da-empty">-</div>`
-        : html`
-          <div className="da-total">${total}</div>
-          ${entries.map(([kana, cnt]) => {
-            const pct = ((cnt / total) * 100).toFixed(0)
-            const barW = ((cnt / entries[0][1]) * 100).toFixed(0)
-            const sd = SINGLE_DIGIT_KANA.has(kana) ? ' da-sd' : ''
-            return html`
-              <div className=${'da-row' + sd} key=${kana}>
-                <span className="da-kana">${kana}</span>
-                <div className="da-bar-bg">
-                  <div className="da-bar" style=${{ width: barW + '%' }}></div>
-                </div>
-                <span className="da-cnt">${cnt} (${pct}%)</span>
-              </div>
-            `
-          })}
-        `}
+    <div className="da-bar-row">
+      <span className="da-pos-label">${label}</span>
+      <div className="da-stacked-bg">
+        ${entries.map(([kana, cnt]) => {
+          const pct = (cnt / total) * 100
+          const color = colorMap[kana] || '#555'
+          return html`
+            <div className="da-seg" key=${kana}
+              style=${{ width: pct + '%', background: color }}
+              title=${kana + ' ' + cnt + ' (' + pct.toFixed(0) + '%)'}
+            ><span className="da-seg-label">${pct >= 8 ? kana : ''}${pct >= 14 ? ' ' + cnt : ''}</span></div>
+          `
+        })}
+      </div>
+      <span className="da-bar-total">${total}</span>
     </div>
   `
 }
 
 function DigitKanaAlloc({ ruleStats }) {
-  const [digit, setDigit] = useState(1)
   const allocAll = ruleStats.digitKanaAlloc || []
-  const posLabels = ['百の位', '十の位', '一の位']
+  const posLabels = ['百', '十', '一']
+
+  // 数字ごとに全桁のかなを集約し、固定色マップを作成
+  const digitColorMaps = useMemo(() => {
+    return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => {
+      const merged = {}
+      for (let p = 0; p < 3; p++) {
+        const km = (allocAll[p] || {})[digit] || {}
+        for (const [kana, cnt] of Object.entries(km)) {
+          merged[kana] = (merged[kana] || 0) + cnt
+        }
+      }
+      const sorted = Object.entries(merged).sort((a, b) => b[1] - a[1])
+      const colorMap = {}
+      sorted.forEach(([kana], i) => {
+        colorMap[kana] = DA_COLORS[i % DA_COLORS.length]
+      })
+      return { colorMap, legend: sorted }
+    })
+  }, [allocAll])
 
   return html`
     <div className="digit-alloc-wrap">
-      <div className="mode-switcher" style=${{ marginBottom: '16px' }}>
-        ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => html`
-          <input type="radio" name="da-digit" id=${'da-d-' + d} value=${d}
-            checked=${digit === d} onChange=${() => setDigit(d)} key=${'i' + d} />
-          <label htmlFor=${'da-d-' + d} key=${'l' + d}>${d}</label>
-        `)}
-      </div>
-      <div className="da-digit-header">${digit}</div>
-      <div className="da-pos-grid">
-        ${posLabels.map((label, p) => html`
-          <${DigitKanaAllocPos} key=${p} alloc=${allocAll[p] || {}} digit=${digit} label=${label} />
-        `)}
-      </div>
+      ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => {
+        const { colorMap, legend } = digitColorMaps[digit]
+        return html`
+          <div className="da-digit-group" key=${digit}>
+            <div className="da-digit-label">${digit}</div>
+            <div className="da-digit-bars">
+              ${posLabels.map((label, p) => html`
+                <${DigitKanaAllocBar} key=${p} alloc=${allocAll[p] || {}} digit=${digit} label=${label} colorMap=${colorMap} />
+              `)}
+            </div>
+            <div className="da-digit-legend">
+              ${legend.map(([kana]) => html`
+                <span className="da-legend-item" key=${kana}>
+                  <span className="da-legend-swatch" style=${{ background: colorMap[kana] }}></span>${kana}
+                </span>
+              `)}
+            </div>
+          </div>
+        `
+      })}
     </div>
   `
 }

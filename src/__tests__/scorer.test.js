@@ -72,12 +72,13 @@ describe('score', () => {
     expect(result.score).toBe(35)
   })
 
-  it('きゃく: double + sub, 3桁', () => {
+  it('きゃく: double + sub, 3桁, mix(9)', () => {
     const result = score('きゃく')
     expect(result.digits).toBe('989')
     expect(result.digitCount).toBe(3)
-    // きゃ(double 30) + く(sub 8) = 38
-    expect(result.score).toBe(38)
+    expect(result.mix).toBe(true)
+    // きゃ(double 30) + く(sub 8) + mix(-7) = 31
+    expect(result.score).toBe(31)
   })
 
   it('tokens に type と tier が含まれる', () => {
@@ -122,6 +123,33 @@ describe('score', () => {
     expect(result.youon4).toBe(true)
     // きゅ(double 30) + し(core 10) + youon4省略(-5) = 35
     expect(result.score).toBe(35)
+  })
+
+  it('きかい: き(core) + かい(double) + mix(9) 減点', () => {
+    const result = score('きかい')
+    expect(result.digits).toBe('991')
+    expect(result.mix).toBe(true)
+    // き(core 10) + かい(double 30) + mix(-7) = 33
+    expect(result.score).toBe(33)
+  })
+
+  it('なの: 同じ数字7が な と の で mix減点', () => {
+    const result = score('なの')
+    expect(result.digits).toBe('775')
+    expect(result.mix).toBe(true)
+    // な(core 10) + の(double 30) + mix(-7) = 33
+    expect(result.score).toBe(33)
+  })
+
+  it('きれい: mixなし', () => {
+    const result = score('きれい')
+    expect(result.mix).toBe(false)
+  })
+
+  it('はっぴ: 促音はmix判定から除外', () => {
+    const result = score('はっぴ')
+    expect(result.mix).toBe(false)
+    expect(result.score).toBe(38)
   })
 
   it('targetDigits を変更可能', () => {

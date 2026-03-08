@@ -12,10 +12,27 @@ export const WEIGHTS = {
   overflowPerChar: -10,
   youon4Omission: -5,
   leadingZeroOmission: 15,
+  mix: -7,
 }
 
 function isSokuon(kana) {
   return kana === 'っ' || kana === 'ッ'
+}
+
+/** 同じ数字が異なるかなで表されているか判定（促音は除外） */
+function detectMix(details) {
+  const digitToKana = {}
+  for (const t of details) {
+    if (isSokuon(t.kana)) continue
+    for (const d of t.value) {
+      if (digitToKana[d] === undefined) {
+        digitToKana[d] = t.kana
+      } else if (digitToKana[d] !== t.kana) {
+        return true
+      }
+    }
+  }
+  return false
 }
 
 /** 1桁かなのティアを取得（濁音・カタカナも正規化して判定） */
@@ -64,6 +81,8 @@ export function score(input, targetDigits = 3) {
   const youon4Penalty = youon4 ? WEIGHTS.youon4Omission : 0
   const leadingZeroBonus =
     digits.length < targetDigits ? WEIGHTS.leadingZeroOmission : 0
+  const hasMix = detectMix(details)
+  const mixPenalty = hasMix ? WEIGHTS.mix : 0
 
   return {
     input,
@@ -72,6 +91,7 @@ export function score(input, targetDigits = 3) {
     tokens: details,
     youon4,
     leadingZeroOmission: digits.length < targetDigits,
-    score: tokenScore + youon4Penalty + leadingZeroBonus,
+    mix: hasMix,
+    score: tokenScore + youon4Penalty + leadingZeroBonus + mixPenalty,
   }
 }
