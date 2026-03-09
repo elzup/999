@@ -96,8 +96,9 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .np-filter-digits .np-placeholder { color: var(--border); }
 .np-filter-info { font-size: 12px; color: var(--text2); flex: 1; }
 .np-filter-clear { background: none; border: 1px solid var(--border); color: var(--text2); border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
-.np-numpad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
-.np-numkey { aspect-ratio: 2/1; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 6px; font-size: 18px; font-weight: bold; cursor: pointer; color: var(--text); border: 1px solid var(--border); font-family: monospace; user-select: none; }
+.np-numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 280px; margin: 0 auto; }
+.np-numkey { aspect-ratio: 5/3; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; color: var(--text); border: 1px solid var(--border); font-family: monospace; user-select: none; }
+.np-numkey.zero { grid-column: 2; }
 .np-numkey:active { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
 .np-numkey.active { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
 
@@ -336,11 +337,14 @@ function NumberTab({ numbers, bookmarks, onToggleBm }) {
           ${npDigits.length > 0 && html`<button className="np-filter-clear" onClick=${clearFilter}>C</button>`}
         </div>
         <div className="np-numpad">
-          ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((digit) => html`
+          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
             <div key=${digit}
               className=${'np-numkey' + (npDigits.length === 1 && npDigits[0] === String(digit) ? ' active' : '')}
               onClick=${() => tapDigit(digit)}>${digit}</div>
           `)}
+          <div key=${0}
+            className=${'np-numkey zero' + (npDigits.length === 1 && npDigits[0] === '0' ? ' active' : '')}
+            onClick=${() => tapDigit(0)}>0</div>
         </div>
       </div>
     </div>
@@ -797,12 +801,16 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
       ${mode === 'check' && !finished ? html`
         <div className="np-filter-bar" style=${{ paddingBottom: 'calc(12px + var(--bar-h) + var(--safe-bottom))' }}>
           <div className="np-numpad">
-            ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((digit) => html`
+            ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
               <div key=${digit}
                 className="np-numkey"
                 style=${{ color: DIGIT_COLORS[digit] }}
                 onClick=${() => tapDigit(digit)}>${digit}</div>
             `)}
+            <div key=${0}
+              className="np-numkey zero"
+              style=${{ color: DIGIT_COLORS[0] }}
+              onClick=${() => tapDigit(0)}>0</div>
           </div>
         </div>
       ` : null}
