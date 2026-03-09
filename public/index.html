@@ -199,9 +199,9 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }) {
     <div className="detail-panel">
       <div className="detail-header">
         <span className="detail-id">${d.num}</span>
-        <div>
-          ${d.w1 ? html`<div className="detail-main-word">${d.w1}${d.w1k ? html` <span className="detail-sub-word">${d.w1k}</span>` : ''}</div>` : null}
-          ${d.w2 ? html`<div className="detail-sub-word">${d.w2}${d.w2k ? ' (' + d.w2k + ')' : ''}</div>` : null}
+        <div style=${{ display: 'flex', gap: '8px', alignItems: 'baseline', flexWrap: 'wrap' }}>
+          ${d.w1 ? html`<span className="detail-main-word">${d.w1}${d.w1k ? html` <span className="detail-sub-word">${d.w1k}</span>` : ''}</span>` : null}
+          ${d.w2 ? html`<span className="detail-main-word" style=${{ color: 'var(--text2)' }}>${d.w2}${d.w2k ? html` <span className="detail-sub-word">${d.w2k}</span>` : ''}</span>` : null}
         </div>
         <div className="detail-actions">
           ${onToggleBm && html`<span className=${'bm-star ' + (isBm ? 'on' : '')}
