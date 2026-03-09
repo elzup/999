@@ -20,6 +20,10 @@ const numbers = vizData.data.map((d) => ({
   gainen: d.gainen,
   catScore: d.catScore,
   w1Score: d.w1Score,
+  w1Pattern: d.w1Pattern,
+  w1Error: d.w1Error,
+  w2Score: d.w2Score,
+  w2Error: d.w2Error,
 }))
 
 // Cards data
