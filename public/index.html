@@ -818,8 +818,15 @@ const IconStar = () => html`<svg viewBox="0 0 24 24" fill="currentColor"><path d
 const IconStats = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>`
 const IconPi = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 5h12"/><path d="M10 5v14"/><path d="M16 5v10c0 2.2 1.8 4 4 4"/></svg>`
 
+const VALID_TABS = ['num', 'd2', 'card', 'bm', 'pi', 'stats']
+function loadTab() {
+  const saved = localStorage.getItem('tab999')
+  return VALID_TABS.includes(saved) ? saved : 'num'
+}
+
 function App() {
-  const [tab, setTab] = useState('num')
+  const [tab, _setTab] = useState(loadTab)
+  const setTab = useCallback((t) => { localStorage.setItem('tab999', t); _setTab(t) }, [])
   const [data, setData] = useState(null)
   const [bookmarks, setBookmarks] = useState(loadBookmarks)
 
