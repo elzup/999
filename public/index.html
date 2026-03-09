@@ -634,15 +634,10 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
   }, [])
 
   const endCheck = useCallback((finalAnswers) => {
+    const used = finalAnswers || answers
     const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0
-    const correctCount = (finalAnswers || answers).filter((a) => a.correct).length
-    // Find longest streak from start
-    let streak = 0
-    for (const a of (finalAnswers || answers)) {
-      if (a.correct) streak++
-      else break
-    }
-    const record = { date: new Date().toISOString(), score: streak, total: (finalAnswers || answers).length, time: elapsed }
+    const correctCount = used.filter((a) => a.correct).length
+    const record = { date: new Date().toISOString(), score: correctCount, total: used.length, time: elapsed }
     const newRecords = [record, ...records].slice(0, 50)
     setRecords(newRecords)
     savePiRecords(newRecords)
@@ -657,10 +652,6 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
     const newAnswer = { idx: checkPos, digit: String(digit), correct: isCorrect }
     const newAnswers = [...answers, newAnswer]
     setAnswers(newAnswers)
-    if (!isCorrect) {
-      endCheck(newAnswers)
-      return
-    }
     const nextPos = checkPos + 1
     if (nextPos >= PI_DIGITS.length) {
       endCheck(newAnswers)
@@ -697,8 +688,8 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
           <div className="pi-header-sub">111桁</div>
           ${mode === 'view' && (lastRecord || finished) ? html`
             <div style=${{ fontSize: '11px', color: 'var(--text2)' }}>
-              ${lastRecord ? html`前回:<span style=${{ color: 'var(--accent)' }}>${lastRecord.score}桁</span>` : null}
-              ${bestRecord ? html` 最高:<span style=${{ color: 'var(--warn)' }}>${bestRecord.score}桁</span>` : null}
+              ${lastRecord ? html`前回:<span style=${{ color: 'var(--accent)' }}>${lastRecord.score}/${lastRecord.total}</span>` : null}
+              ${bestRecord ? html` 最高:<span style=${{ color: 'var(--warn)' }}>${bestRecord.score}/${bestRecord.total}</span>` : null}
             </div>
           ` : null}
           <div style=${{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -707,7 +698,7 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
                 onClick=${startCheck}>テスト</button>
             ` : html`
               <span style=${{ fontSize: '13px', color: 'var(--accent)', fontFamily: 'monospace' }}>
-                ${checkPos - 1}桁目
+                ${checkPos - 1}桁目 ${answers.filter((a) => a.correct).length}/${answers.length}
               </span>
               <button className="filter-btn" style=${{ fontSize: '12px', minWidth: '50px', padding: '4px 10px' }}
                 onClick=${() => endCheck()}>終了</button>
@@ -790,7 +781,7 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
               ${records.slice(0, 10).map((r, i) => html`
                 <div key=${i} style=${{ display: 'flex', gap: '10px', fontSize: '12px', padding: '4px 8px', background: 'var(--surface)', borderRadius: '4px', fontFamily: 'monospace' }}>
                   <span style=${{ color: 'var(--text2)', minWidth: '80px' }}>${r.date.slice(5, 16).replace('T', ' ')}</span>
-                  <span style=${{ color: i === 0 ? 'var(--accent)' : 'var(--text)', fontWeight: 'bold' }}>${r.score}桁</span>
+                  <span style=${{ color: i === 0 ? 'var(--accent)' : 'var(--text)', fontWeight: 'bold' }}>${r.score}/${r.total}</span>
                   <span style=${{ color: 'var(--text2)' }}>${r.time}秒</span>
                 </div>
               `)}
