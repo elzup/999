@@ -140,6 +140,13 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .pi-cell.wrong { background: #7f1d1d; }
 .pi-dot-cell { font-size: 20px; font-weight: bold; color: var(--text2); padding: 0 2px; display: flex; align-items: center; height: 34px; }
 .pi-row-label { width: 100%; background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-family: monospace; }
+.pi-check-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+.pi-check-cell { background: var(--surface); border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; min-height: 32px; }
+.pi-check-cell .pi-digit { font-size: 15px; font-weight: bold; font-family: monospace; }
+.pi-check-cell.current { border-color: var(--warn); border-width: 2px; }
+.pi-check-cell.correct { background: #166534; }
+.pi-check-cell.wrong { background: #7f1d1d; }
+.pi-check-cell.pending { opacity: 0.3; }
 
 /* Stats iframe */
 .stats-frame { width: 100%; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); border: none; background: var(--bg); }
@@ -719,63 +726,68 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
         </div>
       ` : null}
       <div className="content" style=${{ flex: 1, paddingBottom: '4px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-        <div className="pi-groups">
-          ${(() => {
-            const out = []
-            // "3." prefix
-            out.push(html`<div key="dot" className="pi-dot-cell">3.</div>`)
-
-            const renderGroup = (g) => {
-              const startIdx = 1 + g * 3
-              const groupDigits = PI_DIGITS.slice(startIdx, Math.min(startIdx + 3, PI_DIGITS.length))
-              if (groupDigits.length === 0) return null
-              const pairOf = selected !== null ? (selected % 2 === 0 ? selected : selected - 1) : -1
-              const isGroupSelected = g === pairOf || g === pairOf + 1
+        ${mode === 'check' ? html`
+          <div className="pi-check-grid">
+            ${PI_DIGITS.slice(1).map((d, j) => {
+              const idx = j + 1
+              const answered = answers.find((a) => a.idx === idx)
+              const isCurrent = idx === checkPos
+              const cls = 'pi-check-cell' + (isCurrent ? ' current' : '') + (answered ? (answered.correct ? ' correct' : ' wrong') : (!answered && idx > checkPos ? ' pending' : ''))
+              const cellColor = DIGIT_COLORS[Number(d)]
               return html`
-                <div className=${'pi-group' + (isGroupSelected ? ' selected' : '')}
-                  onClick=${() => mode === 'view' && groupDigits.length === 3 && setSelected(selected === g ? null : g)}>
-                  ${groupDigits.map((d, j) => {
-                    const idx = startIdx + j
-                    const answered = answers.find((a) => a.idx === idx)
-                    const isHidden = mode === 'check' && !answered
-                    const isCurrent = mode === 'check' && idx === checkPos
-                    const cellColor = DIGIT_COLORS[Number(d)]
-                    const cls = 'pi-cell' + (isCurrent ? ' current' : '') + (answered ? (answered.correct ? ' correct' : ' wrong') : '')
-                    return html`
-                      <div key=${idx} className=${cls}>
-                        ${isHidden ? html`
-                          <div className="pi-digit" style=${{ color: 'var(--border)' }}>?</div>
-                        ` : html`
-                          <div className="pi-digit" style=${{ color: answered && !answered.correct ? '#f87171' : cellColor }}>${d}</div>
-                        `}
-                      </div>
-                    `
-                  })}
+                <div key=${idx} className=${cls}>
+                  ${answered ? html`
+                    <div className="pi-digit" style=${{ color: answered.correct ? cellColor : '#f87171' }}>${answered.correct ? d : answered.digit}</div>
+                  ` : html`
+                    <div className="pi-digit" style=${{ color: 'var(--border)' }}>${isCurrent ? '_' : '·'}</div>
+                  `}
                 </div>
               `
-            }
+            })}
+          </div>
+        ` : html`
+          <div className="pi-groups">
+            ${(() => {
+              const out = []
+              out.push(html`<div key="dot" className="pi-dot-cell">3.</div>`)
 
-            // Pair groups by 2 (37 groups → 18 pairs + 1 remainder)
-            for (let p = 0; p < 37; p += 2) {
-              // Row label every 6 pairs (12 groups = 36 digits)
-              if (p % 12 === 0) {
-                const from = p * 3 + 1
-                const to = Math.min(from + 35, 111)
-                out.push(html`<div className="pi-row-label" key=${'r' + p}>${from}〜${to}桁目</div>`)
+              const renderGroup = (g) => {
+                const startIdx = 1 + g * 3
+                const groupDigits = PI_DIGITS.slice(startIdx, Math.min(startIdx + 3, PI_DIGITS.length))
+                if (groupDigits.length === 0) return null
+                const pairOf = selected !== null ? (selected % 2 === 0 ? selected : selected - 1) : -1
+                const isGroupSelected = g === pairOf || g === pairOf + 1
+                return html`
+                  <div className=${'pi-group' + (isGroupSelected ? ' selected' : '')}
+                    onClick=${() => groupDigits.length === 3 && setSelected(selected === g ? null : g)}>
+                    ${groupDigits.map((d, j) => {
+                      const idx = startIdx + j
+                      const cellColor = DIGIT_COLORS[Number(d)]
+                      return html`
+                        <div key=${idx} className="pi-cell">
+                          <div className="pi-digit" style=${{ color: cellColor }}>${d}</div>
+                        </div>
+                      `
+                    })}
+                  </div>
+                `
               }
-              const g1 = renderGroup(p)
-              const g2 = p + 1 < 37 ? renderGroup(p + 1) : null
-              out.push(html`
-                <div key=${'p' + p} className="pi-pair">
-                  ${g1}
-                  ${g2 ? html`<div className="pi-pair-sep"></div>` : null}
-                  ${g2}
-                </div>
-              `)
-            }
-            return out
-          })()}
-        </div>
+
+              for (let p = 0; p < 37; p += 2) {
+                const g1 = renderGroup(p)
+                const g2 = p + 1 < 37 ? renderGroup(p + 1) : null
+                out.push(html`
+                  <div key=${'p' + p} className="pi-pair">
+                    ${g1}
+                    ${g2 ? html`<div className="pi-pair-sep"></div>` : null}
+                    ${g2}
+                  </div>
+                `)
+              }
+              return out
+            })()}
+          </div>
+        `}
         ${records.length > 0 && mode === 'view' ? html`
           <div style=${{ marginTop: '16px', padding: '0 4px' }}>
             <div style=${{ fontSize: '12px', color: 'var(--text2)', marginBottom: '6px' }}>記録 (最新${Math.min(records.length, 10)}件)</div>
@@ -791,8 +803,8 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
           </div>
         ` : null}
       </div>
-      ${mode === 'check' && !finished ? html`
-        <div className="np-filter-bar" style=${{ paddingBottom: 'calc(12px + var(--bar-h) + var(--safe-bottom))' }}>
+      ${mode === 'check' ? html`
+        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px' }}>
           <div className="np-numpad">
             ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
               <div key=${digit}
