@@ -615,7 +615,7 @@ function savePiRecords(records) {
   localStorage.setItem('pi999', JSON.stringify(records))
 }
 
-function PiTab({ numbers, bookmarks, onToggleBm }) {
+function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
   const [selected, setSelected] = useState(null) // group index (0-36)
   const [mode, setMode] = useState('view') // 'view' | 'check'
   const [checkPos, setCheckPos] = useState(1) // start after '3' (index 1 = first decimal digit)
@@ -631,7 +631,8 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
     setStartTime(Date.now())
     setFinished(false)
     setSelected(null)
-  }, [])
+    onCheckingChange && onCheckingChange(true)
+  }, [onCheckingChange])
 
   const endCheck = useCallback((finalAnswers) => {
     const used = finalAnswers || answers
@@ -643,7 +644,8 @@ function PiTab({ numbers, bookmarks, onToggleBm }) {
     savePiRecords(newRecords)
     setMode('view')
     setFinished(true)
-  }, [startTime, answers, records])
+    onCheckingChange && onCheckingChange(false)
+  }, [startTime, answers, records, onCheckingChange])
 
   const tapDigit = useCallback((digit) => {
     if (mode !== 'check' || finished) return
@@ -828,6 +830,7 @@ function App() {
   const setTab = useCallback((t) => { localStorage.setItem('tab999', t); _setTab(t) }, [])
   const [data, setData] = useState(null)
   const [bookmarks, setBookmarks] = useState(loadBookmarks)
+  const [locked, setLocked] = useState(false)
 
   useEffect(() => {
     fetch('./data.json').then((r) => r.json()).then(setData)
@@ -852,9 +855,9 @@ function App() {
     ${tab === 'd2' && html`<${DigitTab} numbers=${data.numbers} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
     ${tab === 'card' && html`<${CardTab} cards=${data.cards} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
     ${tab === 'bm' && html`<${BookmarkTab} numbers=${data.numbers} cards=${data.cards} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
-    ${tab === 'pi' && html`<${PiTab} numbers=${data.numbers} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
+    ${tab === 'pi' && html`<${PiTab} numbers=${data.numbers} bookmarks=${bookmarks} onToggleBm=${toggleBm} onCheckingChange=${setLocked} />`}
     ${tab === 'stats' && html`<iframe className="stats-frame" src="./stats.html" />`}
-    <div className="bottom-bar">
+    <div className="bottom-bar" style=${locked ? { pointerEvents: 'none', opacity: 0.4 } : {}}>
       <button className=${'bar-tab' + (tab === 'num' ? ' active' : '')} onClick=${() => setTab('num')}>
         <${IconNum} /><span>数字</span>
       </button>
