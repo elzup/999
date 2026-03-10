@@ -128,17 +128,17 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .pi-header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 12px; }
 .pi-header-title { font-size: 16px; font-weight: bold; }
 .pi-header-sub { font-size: 12px; color: var(--text2); }
-.pi-groups { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.pi-groups { display: flex; flex-wrap: wrap; gap: 3px 6px; }
 .pi-pair { display: flex; gap: 2px; }
 .pi-pair-sep { width: 1px; background: var(--border); }
-.pi-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; cursor: pointer; height: 34px; }
+.pi-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; cursor: pointer; height: 30px; }
 .pi-group.selected { border-color: var(--accent); }
-.pi-cell { padding: 2px 4px; min-width: 22px; display: flex; align-items: center; justify-content: center; }
-.pi-cell .pi-digit { font-size: 16px; font-weight: bold; font-family: monospace; }
+.pi-cell { padding: 1px 2px; min-width: 18px; display: flex; align-items: center; justify-content: center; }
+.pi-cell .pi-digit { font-size: 14px; font-weight: bold; font-family: monospace; }
 .pi-cell.current { background: var(--accent2); }
 .pi-cell.correct { background: #166534; }
 .pi-cell.wrong { background: #7f1d1d; }
-.pi-dot-cell { font-size: 20px; font-weight: bold; color: var(--text2); padding: 0 2px; display: flex; align-items: center; height: 34px; }
+.pi-dot-cell { font-size: 18px; font-weight: bold; color: var(--text2); padding: 0 2px; display: flex; align-items: center; height: 30px; }
 .pi-row-label { width: 100%; background: var(--surface2); color: var(--text2); font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-family: monospace; }
 .pi-check-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
 .pi-check-cell { background: var(--surface); border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; min-height: 32px; }
@@ -824,7 +824,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
         ` : null}
       </div>
       ${mode === 'check' ? html`
-        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px' }}>
+        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', paddingBottom: 'calc(8px + var(--bar-h) + var(--safe-bottom))' }}>
           <div className="np-numpad">
             ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
               <div key=${digit}
@@ -1038,7 +1038,7 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
         </div>
       </div>
       ${mode === 'check' ? html`
-        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px' }}>
+        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', paddingBottom: 'calc(8px + var(--bar-h) + var(--safe-bottom))' }}>
           <div className="np-numpad">
             ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
               <div key=${digit} className="np-numkey" onClick=${() => tapDigit(digit)}>${digit}</div>
