@@ -156,6 +156,7 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .year-row.selected { border-color: var(--accent); background: var(--accent2); }
 .year-row .yr-no { font-size: 11px; color: var(--text2); min-width: 20px; text-align: right; font-family: monospace; }
 .year-row .yr-year { font-size: 16px; font-weight: bold; font-family: monospace; color: var(--accent); min-width: 48px; }
+.year-row .yr-mod { font-size: 13px; font-weight: bold; font-family: monospace; min-width: 16px; text-align: center; border-radius: 4px; padding: 1px 4px; background: var(--surface2); }
 .year-row .yr-event { font-size: 13px; color: var(--text); flex: 1; }
 .year-row .yr-year.hidden { color: var(--border); }
 .year-row.correct { border-color: #4ade80; }
@@ -1029,6 +1030,7 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
                 onClick=${() => setSelected(selected === idx ? null : idx)}>
                 <span className="yr-no">${item.no}</span>
                 <span className="yr-year">${item.year}</span>
+                <span className="yr-mod">${Number(item.year) % 7}</span>
                 <span className="yr-event">${item.event}</span>
               </div>
             `)}
