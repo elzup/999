@@ -148,6 +148,25 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .pi-check-cell.wrong { background: #7f1d1d; }
 .pi-check-cell.pending { opacity: 0.3; }
 
+/* Year tab */
+.year-layout { display: flex; flex-direction: column; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); }
+.year-header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 12px; }
+.year-list { display: flex; flex-direction: column; gap: 2px; }
+.year-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+.year-row.selected { border-color: var(--accent); background: var(--accent2); }
+.year-row .yr-no { font-size: 11px; color: var(--text2); min-width: 20px; text-align: right; font-family: monospace; }
+.year-row .yr-year { font-size: 16px; font-weight: bold; font-family: monospace; color: var(--accent); min-width: 48px; }
+.year-row .yr-event { font-size: 13px; color: var(--text); flex: 1; }
+.year-row .yr-year.hidden { color: var(--border); }
+.year-row.correct { border-color: #4ade80; }
+.year-row.wrong { border-color: #f87171; }
+.year-row.current { border-color: var(--warn); border-width: 2px; }
+.year-input { display: flex; align-items: center; gap: 4px; min-width: 48px; }
+.year-input .yr-digit { width: 18px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; font-family: monospace; background: var(--surface2); border-radius: 3px; }
+.year-input .yr-digit.filled { color: var(--accent); }
+.year-input .yr-digit.cursor { border: 1px solid var(--warn); color: var(--warn); }
+.year-input .yr-digit.empty { color: var(--border); }
+
 /* Stats iframe */
 .stats-frame { width: 100%; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); border: none; background: var(--bg); }
 </style>
@@ -823,6 +842,208 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
   `
 }
 
+// Year memorization data (50 events)
+const YEAR_DATA = [
+  [538,'仏教伝来'],[1206,'テンギス・ハン即位'],[604,'十七条憲法制定'],
+  [1453,'コンスタンティノープル陥落'],[710,'平城京遷都'],[1945,'国際連合成立'],
+  [1582,'本能寺の変'],[794,'平安京遷都'],[1016,'藤原道長が摂政となる'],
+  [1333,'鎌倉幕府滅亡'],[1969,'アポロ11号月面着陸'],[1192,'鎌倉幕府成立'],
+  [1221,'承久の乱'],[1929,'世界恐慌'],[1156,'保元の乱'],
+  [1789,'フランス革命開始'],[1543,'鉄砲伝来'],[1914,'第一次世界大戦参戦'],
+  [593,'聖徳太子が推古天皇の摂政となる'],[1600,'関ヶ原の戦い'],
+  [1637,'島原・天草一揆'],[1722,'上げ米の制'],[1853,'ペリー来航'],
+  [701,'大宝律令制定'],[1904,'日露戦争開戦'],[1945,'太平洋戦争終結'],
+  [1989,'ベルリンの壁崩壊'],[1939,'第二次世界大戦開戦'],
+  [395,'ローマ帝国東西分裂'],[607,'遣隋使派遣'],
+  [1215,'マグナ・カルタ制定'],[1949,'中華人民共和国成立'],
+  [1871,'ドイツ帝国成立'],[1688,'名誉革命'],[1776,'アメリカ独立宣言'],
+  [1923,'関東大震災'],[1868,'明治維新'],[1336,'南北朝の動乱開始'],
+  [1914,'第一次世界大戦開戦'],[1917,'ロシア革命'],
+  [1962,'キューバ危機'],[1919,'ヴェルサイユ条約'],[1392,'南北朝合一'],
+  [1941,'独ソ戦開始'],[1271,'マルコ・ポーロが東方へ出発'],
+  [1947,'インド・パキスタン独立'],[1560,'桶狭間の戦い'],
+  [1868,'明治維新'],[645,'大化の改新'],[1185,'壇ノ浦の戦い'],
+].map(([year, event], i) => ({ no: i + 1, year: String(year), event }))
+
+function loadYearRecords() {
+  try {
+    const raw = localStorage.getItem('year999')
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+function saveYearRecords(records) {
+  localStorage.setItem('year999', JSON.stringify(records))
+}
+
+function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
+  const [selected, setSelected] = useState(null)
+  const [mode, setMode] = useState('view') // 'view' | 'check'
+  const [checkIdx, setCheckIdx] = useState(0)
+  const [digitPos, setDigitPos] = useState(0)
+  const [inputDigits, setInputDigits] = useState([])
+  const [results, setResults] = useState([]) // [{no, input, correct}]
+  const [startTime, setStartTime] = useState(null)
+  const [records, setRecords] = useState(loadYearRecords)
+
+  const startCheck = useCallback(() => {
+    setMode('check')
+    setCheckIdx(0)
+    setDigitPos(0)
+    setInputDigits([])
+    setResults([])
+    setStartTime(Date.now())
+    setSelected(null)
+    onCheckingChange && onCheckingChange(true)
+  }, [onCheckingChange])
+
+  const endCheck = useCallback((finalResults) => {
+    const used = finalResults || results
+    const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0
+    const correctCount = used.filter((r) => r.correct).length
+    const record = { date: new Date().toISOString(), score: correctCount, total: used.length, time: elapsed }
+    const newRecords = [record, ...records].slice(0, 50)
+    setRecords(newRecords)
+    saveYearRecords(newRecords)
+    setMode('view')
+    onCheckingChange && onCheckingChange(false)
+  }, [startTime, results, records, onCheckingChange])
+
+  const tapDigit = useCallback((digit) => {
+    if (mode !== 'check') return
+    const item = YEAR_DATA[checkIdx]
+    const yearDigits = item.year.split('')
+    const newInput = [...inputDigits, String(digit)]
+    setInputDigits(newInput)
+
+    if (newInput.length >= yearDigits.length) {
+      const inputStr = newInput.join('')
+      const isCorrect = inputStr === item.year
+      const newResults = [...results, { no: item.no, input: inputStr, year: item.year, correct: isCorrect }]
+      setResults(newResults)
+      setInputDigits([])
+      setDigitPos(0)
+      const nextIdx = checkIdx + 1
+      if (nextIdx >= YEAR_DATA.length) {
+        endCheck(newResults)
+        return
+      }
+      setCheckIdx(nextIdx)
+    } else {
+      setDigitPos(newInput.length)
+    }
+  }, [mode, checkIdx, inputDigits, results, endCheck])
+
+  // Find matching number data for selected year
+  const selectedNums = useMemo(() => {
+    if (selected === null || !numbers) return null
+    const item = YEAR_DATA[selected]
+    const year = item.year
+    const matched = []
+    if (year.length === 4) {
+      const n1 = numbers.find((d) => d.num === year.slice(1))
+      if (n1) matched.push(n1)
+    } else if (year.length === 3) {
+      const n1 = numbers.find((d) => d.num === year)
+      if (n1) matched.push(n1)
+    }
+    return matched.length > 0 ? matched : null
+  }, [selected, numbers])
+
+  const lastRecord = records.length > 0 ? records[0] : null
+  const bestRecord = records.length > 0 ? records.reduce((best, r) => r.score > best.score ? r : best, records[0]) : null
+
+  return html`
+    <div className="year-layout">
+      <div className="year-header">
+        <div style=${{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style=${{ fontSize: '16px', fontWeight: 'bold' }}>年号記憶</div>
+          <div style=${{ fontSize: '12px', color: 'var(--text2)' }}>50問</div>
+          ${mode === 'view' && lastRecord ? html`
+            <div style=${{ fontSize: '11px', color: 'var(--text2)' }}>
+              前回:<span style=${{ color: 'var(--accent)' }}>${lastRecord.score}/${lastRecord.total}</span>
+              ${bestRecord ? html` 最高:<span style=${{ color: 'var(--warn)' }}>${bestRecord.score}/${bestRecord.total}</span>` : null}
+            </div>
+          ` : null}
+          <div style=${{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
+            ${mode === 'view' ? html`
+              <button className="filter-btn" style=${{ fontSize: '12px', minWidth: '60px', padding: '4px 10px' }}
+                onClick=${startCheck}>テスト</button>
+            ` : html`
+              <span style=${{ fontSize: '13px', color: 'var(--accent)', fontFamily: 'monospace' }}>
+                ${checkIdx + 1}/50 ${results.filter((r) => r.correct).length}正解
+              </span>
+              <button className="filter-btn" style=${{ fontSize: '12px', minWidth: '50px', padding: '4px 10px' }}
+                onClick=${() => endCheck()}>終了</button>
+            `}
+          </div>
+        </div>
+      </div>
+      ${selectedNums && mode === 'view' ? html`
+        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+          ${selectedNums.map((d) => html`
+            <${NumDetailPanel} key=${d.num} d=${d} bookmarks=${bookmarks} onToggleBm=${onToggleBm} />
+          `)}
+          <div style=${{ padding: '0 12px 8px' }}>
+            <button className="d2-mode-btn" style=${{ padding: '4px 10px', width: '100%' }} onClick=${() => setSelected(null)}>閉じる</button>
+          </div>
+        </div>
+      ` : null}
+      <div className="content" style=${{ flex: 1, paddingBottom: '4px' }}>
+        <div className="year-list">
+          ${mode === 'check' ? html`
+            ${YEAR_DATA.map((item, idx) => {
+              const result = results.find((r) => r.no === item.no)
+              const isCurrent = idx === checkIdx
+              const yearDigits = item.year.split('')
+              const cls = 'year-row' + (result ? (result.correct ? ' correct' : ' wrong') : '') + (isCurrent ? ' current' : '')
+              return html`
+                <div key=${idx} className=${cls}>
+                  <span className="yr-no">${item.no}</span>
+                  ${result ? html`
+                    <span className="yr-year" style=${{ color: result.correct ? 'var(--accent)' : '#f87171' }}>${result.correct ? item.year : result.input}</span>
+                    ${!result.correct ? html`<span style=${{ fontSize: '12px', color: 'var(--text2)' }}>${item.year}</span>` : null}
+                  ` : isCurrent ? html`
+                    <div className="year-input">
+                      ${yearDigits.map((_, di) => {
+                        const filled = di < inputDigits.length
+                        const isCursor = di === inputDigits.length
+                        const cls2 = 'yr-digit' + (filled ? ' filled' : '') + (isCursor ? ' cursor' : '') + (!filled && !isCursor ? ' empty' : '')
+                        return html`<div key=${di} className=${cls2}>${filled ? inputDigits[di] : isCursor ? '_' : '·'}</div>`
+                      })}
+                    </div>
+                  ` : html`
+                    <span className="yr-year hidden">${'·'.repeat(item.year.length)}</span>
+                  `}
+                  <span className="yr-event">${item.event}</span>
+                </div>
+              `
+            })}
+          ` : html`
+            ${YEAR_DATA.map((item, idx) => html`
+              <div key=${idx} className=${'year-row' + (selected === idx ? ' selected' : '')}
+                onClick=${() => setSelected(selected === idx ? null : idx)}>
+                <span className="yr-no">${item.no}</span>
+                <span className="yr-year">${item.year}</span>
+                <span className="yr-event">${item.event}</span>
+              </div>
+            `)}
+          `}
+        </div>
+      </div>
+      ${mode === 'check' ? html`
+        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px' }}>
+          <div className="np-numpad">
+            ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
+              <div key=${digit} className="np-numkey" onClick=${() => tapDigit(digit)}>${digit}</div>
+            `)}
+            <div key=${0} className="np-numkey zero" onClick=${() => tapDigit(0)}>0</div>
+          </div>
+        </div>
+      ` : null}
+    </div>
+  `
+}
+
 // SVG icons
 const IconNum = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l2-8h1l2 8"/><path d="M5 14h3"/><path d="M14 9c-1.5 0-2 1-2 2s.5 2 2 2 2 1 2 2-.5 2-2 2"/><path d="M19 9v4c0 1.1.9 2 2 2"/></svg>`
 const IconD2 = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`
@@ -830,8 +1051,9 @@ const IconCard = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="current
 const IconStar = () => html`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
 const IconStats = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>`
 const IconPi = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 5h12"/><path d="M10 5v14"/><path d="M16 5v10c0 2.2 1.8 4 4 4"/></svg>`
+const IconYear = () => html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg>`
 
-const VALID_TABS = ['num', 'd2', 'card', 'bm', 'pi', 'stats']
+const VALID_TABS = ['num', 'd2', 'card', 'bm', 'pi', 'year', 'stats']
 function loadTab() {
   const saved = localStorage.getItem('tab999')
   return VALID_TABS.includes(saved) ? saved : 'num'
@@ -868,6 +1090,7 @@ function App() {
     ${tab === 'card' && html`<${CardTab} cards=${data.cards} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
     ${tab === 'bm' && html`<${BookmarkTab} numbers=${data.numbers} cards=${data.cards} bookmarks=${bookmarks} onToggleBm=${toggleBm} />`}
     ${tab === 'pi' && html`<${PiTab} numbers=${data.numbers} bookmarks=${bookmarks} onToggleBm=${toggleBm} onCheckingChange=${setLocked} />`}
+    ${tab === 'year' && html`<${YearTab} numbers=${data.numbers} bookmarks=${bookmarks} onToggleBm=${toggleBm} onCheckingChange=${setLocked} />`}
     ${tab === 'stats' && html`<iframe className="stats-frame" src="./stats.html" />`}
     <div className="bottom-bar" style=${locked ? { pointerEvents: 'none', opacity: 0.4 } : {}}>
       <button className=${'bar-tab' + (tab === 'num' ? ' active' : '')} onClick=${() => setTab('num')}>
@@ -884,6 +1107,9 @@ function App() {
       </button>
       <button className=${'bar-tab' + (tab === 'pi' ? ' active' : '')} onClick=${() => setTab('pi')}>
         <${IconPi} /><span>π</span>
+      </button>
+      <button className=${'bar-tab' + (tab === 'year' ? ' active' : '')} onClick=${() => setTab('year')}>
+        <${IconYear} /><span>年号</span>
       </button>
       <button className=${'bar-tab' + (tab === 'stats' ? ' active' : '')} onClick=${() => setTab('stats')}>
         <${IconStats} /><span>統計</span>
