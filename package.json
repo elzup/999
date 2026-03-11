@@ -12,12 +12,24 @@
     "check:digits": "node src/check-digits.js",
     "check:errors": "node src/check-errors.js",
     "viz": "node src/generate-viz.js",
+    "dev": "vite",
+    "build": "npm run build:data && vite build",
+    "build:data": "node src/generate-preview-data.js",
     "start": "npx serve src",
-    "preview": "npx serve public",
+    "preview:legacy": "npx serve public",
+    "preview": "vite preview",
     "build:preview": "node src/generate-preview-data.js && cp src/visualize-words.html public/stats.html && cp src/visualize-words.css public/ && cp src/viz-client.js public/ && cp src/visualize-words.data.json public/",
-    "deploy": "npm run build:preview && firebase deploy --only hosting"
+    "deploy:legacy": "npm run build:preview && firebase deploy --only hosting",
+    "deploy": "npm run build:preview && npm run build && firebase deploy --only hosting"
   },
   "devDependencies": {
-    "vitest": "^3.0.0"
+    "@preact/preset-vite": "^2.10.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^3.0.0",
+    "zod": "^4.3.6"
+  },
+  "dependencies": {
+    "preact": "^10.29.0"
   }
 }
