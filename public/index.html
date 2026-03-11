@@ -13,7 +13,7 @@
   --bar-h: 56px; --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 html, body { background: var(--bg); color: var(--text); font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size: 14px; height: 100%; overflow: hidden; }
-#app { height: 100%; display: flex; flex-direction: column; }
+#app { height: 100%; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(var(--bar-h) + var(--safe-bottom)); }
 
 /* Top bar */
 .top-bar { background: var(--surface); padding: 8px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -24,7 +24,7 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .filter-clear { background: none; border: none; color: var(--text2); font-size: 12px; cursor: pointer; padding: 4px 8px; }
 
 /* Content area */
-.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px; }
+.content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px; min-height: 0; }
 
 /* Number grid - fixed 10 columns */
 .num-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
@@ -37,13 +37,14 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .num-cell .num-id { font-size: 13px; font-weight: bold; color: var(--accent); font-family: monospace; }
 .num-score-dot { position: absolute; bottom: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; }
 
-/* Detail panel */
-.detail-panel { padding: 10px 12px; }
-.detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.detail-id { font-size: 28px; font-weight: bold; color: var(--accent); font-family: monospace; line-height: 1; }
-.detail-main-word { font-size: 16px; font-weight: bold; color: var(--text); }
-.detail-sub-word { font-size: 13px; color: var(--text2); }
-.detail-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* Detail panel - 2 fixed rows */
+.detail-panel { padding: 8px 12px; }
+.detail-row1 { display: flex; align-items: center; gap: 8px; height: 32px; overflow: hidden; }
+.detail-row2 { display: flex; align-items: center; gap: 6px; height: 28px; overflow: hidden; margin-top: 4px; }
+.detail-id { font-size: 24px; font-weight: bold; color: var(--accent); font-family: monospace; line-height: 1; flex-shrink: 0; }
+.detail-main-word { font-size: 14px; font-weight: bold; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+.detail-sub-word { font-size: 12px; color: var(--text2); }
+.detail-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .detail-body { display: flex; flex-wrap: wrap; gap: 6px; }
 .detail-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
 .detail-chip .dc-label { color: var(--text2); font-size: 10px; }
@@ -76,7 +77,7 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .card-detail-item .cd-yomi { font-size: 11px; color: var(--accent); }
 
 /* 2桁タブ */
-.d2-layout { display: flex; flex-direction: column; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); }
+.d2-layout { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .d2-result-area { flex: 1; overflow-y: auto; padding: 8px; padding-bottom: 4px; display: flex; flex-direction: column; justify-content: flex-end; }
 .d2-fav-section { margin-bottom: 8px; }
 .d2-fav-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
@@ -85,17 +86,34 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .d2-detail-list { flex: 1; overflow-y: auto; }
 .d2-detail-list .detail-panel { border-bottom: 1px solid var(--border); }
 .d2-detail-list .detail-panel:last-child { border-bottom: none; }
-.sticky-wrap { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); min-height: 100px; max-height: 50vh; overflow-y: auto; }
+.sticky-wrap { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); min-height: 80px; max-height: 40vh; overflow-y: auto; }
 .sticky-empty { min-height: 100px; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 13px; }
 .bm-star { cursor: pointer; }
 .bm-star.on { color: var(--warn); }
 /* Numpad filter (数字タブ) */
-.np-filter-bar { flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 8px 12px 12px; }
+.np-filter-bar { flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 6px 8px 8px; }
 .np-filter-display { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .np-filter-digits { font-size: 28px; font-weight: bold; color: var(--accent); font-family: monospace; letter-spacing: 4px; min-width: 60px; }
 .np-filter-digits .np-placeholder { color: var(--border); }
 .np-filter-info { font-size: 12px; color: var(--text2); flex: 1; }
 .np-filter-clear { background: none; border: 1px solid var(--border); color: var(--text2); border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+/* 3段モード */
+.df-rows { display: flex; flex-direction: column; gap: 3px; }
+.df-row { display: flex; gap: 2px; align-items: center; }
+.df-row-label { font-size: 10px; color: var(--text2); min-width: 16px; text-align: center; font-family: monospace; }
+.df-key { flex: 1; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; color: var(--text); border: 1px solid var(--border); font-family: monospace; user-select: none; }
+.df-key.active { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
+.df-key:active { background: var(--accent2); border-color: var(--accent); }
+/* 3連テンキーモード */
+.df-pads { display: flex; gap: 6px; }
+.df-pad { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.df-pad-label { font-size: 10px; color: var(--text2); text-align: center; margin-bottom: 2px; font-family: monospace; }
+.df-pad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.df-pad-key { height: 28px; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 5px; font-size: 13px; font-weight: bold; cursor: pointer; color: var(--text); border: 1px solid var(--border); font-family: monospace; user-select: none; }
+.df-pad-key.zero { grid-column: 2; }
+.df-pad-key.active { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
+.df-pad-key:active { background: var(--accent2); border-color: var(--accent); }
+/* Shared numpad (pi/year test) */
 .np-numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 280px; margin: 0 auto; }
 .np-numkey { aspect-ratio: 5/3; display: flex; align-items: center; justify-content: center; background: var(--surface2); border-radius: 8px; font-size: 22px; font-weight: bold; cursor: pointer; color: var(--text); border: 1px solid var(--border); font-family: monospace; user-select: none; }
 .np-numkey.zero { grid-column: 2; }
@@ -124,16 +142,16 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .bar-badge { background: var(--accent2); color: var(--accent); font-size: 9px; padding: 1px 5px; border-radius: 8px; }
 
 /* Pi tab */
-.pi-layout { display: flex; flex-direction: column; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); }
+.pi-layout { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .pi-header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 12px; }
 .pi-header-title { font-size: 16px; font-weight: bold; }
 .pi-header-sub { font-size: 12px; color: var(--text2); }
-.pi-groups { display: flex; flex-wrap: wrap; gap: 3px 6px; }
+.pi-groups { display: flex; flex-wrap: wrap; gap: 2px 0; justify-content: space-between; }
 .pi-pair { display: flex; gap: 2px; }
 .pi-pair-sep { width: 1px; background: var(--border); }
 .pi-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; cursor: pointer; height: 30px; }
 .pi-group.selected { border-color: var(--accent); }
-.pi-cell { padding: 1px 2px; min-width: 18px; display: flex; align-items: center; justify-content: center; }
+.pi-cell { padding: 1px 1px; min-width: 15px; display: flex; align-items: center; justify-content: center; }
 .pi-cell .pi-digit { font-size: 14px; font-weight: bold; font-family: monospace; }
 .pi-cell.current { background: var(--accent2); }
 .pi-cell.correct { background: #166534; }
@@ -149,7 +167,7 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .pi-check-cell.pending { opacity: 0.3; }
 
 /* Year tab */
-.year-layout { display: flex; flex-direction: column; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); }
+.year-layout { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .year-header { flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 12px; }
 .year-list { display: flex; flex-direction: column; gap: 2px; }
 .year-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
@@ -168,8 +186,25 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .year-input .yr-digit.cursor { border: 1px solid var(--warn); color: var(--warn); }
 .year-input .yr-digit.empty { color: var(--border); }
 
+/* Record panel overlay */
+.rec-overlay { position: fixed; inset: 0; bottom: calc(var(--bar-h) + var(--safe-bottom)); background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
+.rec-panel { background: var(--surface); border-radius: 12px 12px 0 0; width: 100%; max-width: 480px; max-height: 60vh; display: flex; flex-direction: column; }
+.rec-panel-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.rec-panel-header h3 { font-size: 14px; flex: 1; }
+.rec-panel-list { flex: 1; overflow-y: auto; padding: 8px 16px; }
+.rec-row { display: flex; gap: 8px; align-items: center; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-family: monospace; }
+.rec-row:last-child { border-bottom: none; }
+.rec-row .rec-date { color: var(--text2); min-width: 80px; }
+.rec-row .rec-score { font-weight: bold; min-width: 50px; }
+.rec-row .rec-time { color: var(--text2); flex: 1; }
+.rec-row .rec-del { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 14px; padding: 2px 6px; }
+.rec-row .rec-del:active { color: #f87171; }
+.rec-btn { background: none; border: 1px solid var(--border); color: var(--text2); border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
+.rec-btn:active { color: var(--text); }
+.rec-btn.danger { color: #f87171; border-color: #f8717133; }
+
 /* Stats iframe */
-.stats-frame { width: 100%; height: calc(100vh - var(--bar-h) - var(--safe-bottom)); border: none; background: var(--bg); }
+.stats-frame { width: 100%; flex: 1; border: none; background: var(--bg); }
 </style>
 </head>
 <body>
@@ -225,24 +260,22 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }) {
   const isBm = bookmarks ? bookmarks.has(bmKey) : false
   return html`
     <div className="detail-panel">
-      <div className="detail-header">
+      <div className="detail-row1">
         <span className="detail-id">${d.num}</span>
-        <div style=${{ display: 'flex', gap: '8px', alignItems: 'baseline', flexWrap: 'wrap' }}>
-          ${d.w1 ? html`<span className="detail-main-word">${d.w1}${d.w1k ? html` <span className="detail-sub-word">${d.w1k}</span>` : ''}</span>` : null}
-          ${d.w2 ? html`<span className="detail-main-word" style=${{ color: 'var(--text2)' }}>${d.w2}${d.w2k ? html` <span className="detail-sub-word">${d.w2k}</span>` : ''}</span>` : null}
-        </div>
-        <div className="detail-actions">
-          ${onToggleBm && html`<span className=${'bm-star ' + (isBm ? 'on' : '')}
-            style=${{ fontSize: '22px' }} onClick=${() => onToggleBm(bmKey)}>
-            ${isBm ? '★' : '☆'}
-          </span>`}
-          ${onClose && html`<button className="d2-mode-btn" style=${{ padding: '4px 10px', flex: 'none' }} onClick=${onClose}>×</button>`}
-        </div>
-      </div>
-      <div className="detail-body">
+        ${d.w1 ? html`<span className="detail-main-word">${d.w1}${d.w1k ? html` <span className="detail-sub-word">${d.w1k}</span>` : ''}</span>` : null}
         ${d.w1Score != null ? html`<${ScoreBar} label=${'W1' + (d.w1Pattern ? ' [' + d.w1Pattern + ']' : '')} score=${d.w1Score} error=${d.w1Error} />` : null}
+        ${d.w2 ? html`<span className="detail-main-word" style=${{ color: 'var(--text2)' }}>${d.w2}${d.w2k ? html` <span className="detail-sub-word">${d.w2k}</span>` : ''}</span>` : null}
         ${d.w2Score != null ? html`<${ScoreBar} label="W2" score=${d.w2Score} error=${d.w2Error} />` : null}
         ${d.catScore ? html`<div className="detail-chip cat"><span className="dc-label">Cat</span><span className="dc-val">${d.catScore}</span></div>` : null}
+        <div className="detail-actions">
+          ${onToggleBm && html`<span className=${'bm-star ' + (isBm ? 'on' : '')}
+            style=${{ fontSize: '18px' }} onClick=${() => onToggleBm(bmKey)}>
+            ${isBm ? '★' : '☆'}
+          </span>`}
+          ${onClose && html`<button className="d2-mode-btn" style=${{ padding: '3px 8px', flex: 'none' }} onClick=${onClose}>×</button>`}
+        </div>
+      </div>
+      <div className="detail-row2">
         ${d.hito ? html`<div className="detail-chip"><span className="dc-label">人</span><span className="dc-val">${d.hito}</span></div>` : null}
         ${d.mono ? html`<div className="detail-chip"><span className="dc-label">物</span><span className="dc-val">${d.mono}</span></div>` : null}
         ${d.gainen ? html`<div className="detail-chip"><span className="dc-label">念</span><span className="dc-val">${d.gainen}</span></div>` : null}
@@ -282,6 +315,32 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }) {
   `
 }
 
+function RecordPanel({ title, records, onDelete, onClear, onClose }) {
+  return html`
+    <div className="rec-overlay" onClick=${(e) => e.target === e.currentTarget && onClose()}>
+      <div className="rec-panel">
+        <div className="rec-panel-header">
+          <h3>${title} 記録 (${records.length}件)</h3>
+          ${records.length > 0 && html`<button className="rec-btn danger" onClick=${onClear}>全削除</button>`}
+          <button className="rec-btn" onClick=${onClose}>閉じる</button>
+        </div>
+        <div className="rec-panel-list">
+          ${records.length === 0 ? html`
+            <div style=${{ textAlign: 'center', color: 'var(--text2)', padding: '20px 0' }}>記録なし</div>
+          ` : records.map((r, i) => html`
+            <div key=${i} className="rec-row">
+              <span className="rec-date">${r.date.slice(5, 16).replace('T', ' ')}</span>
+              <span className="rec-score" style=${{ color: i === 0 ? 'var(--accent)' : 'var(--text)' }}>${r.score}/${r.total}</span>
+              <span className="rec-time">${r.time}秒</span>
+              <button className="rec-del" onClick=${() => onDelete(i)}>×</button>
+            </div>
+          `)}
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function scoreColor(score) {
   if (score == null) return null
   return score >= 35 ? '#4ade80' : score >= 25 ? '#fbbf24' : '#f87171'
@@ -304,36 +363,58 @@ function NumCell({ d, selected, onSelect }) {
 
 function NumberTab({ numbers, bookmarks, onToggleBm }) {
   const [selected, setSelected] = useState(null)
-  const [npDigits, setNpDigits] = useState([])
+  const [df, setDf] = useState([null, null, null]) // per-digit filter: null = wildcard
+  const [showFilter, setShowFilter] = useState(false)
+  const [filterMode, setFilterMode] = useState('rows') // 'rows' | 'pads'
 
   const filtered = useMemo(() => {
-    if (npDigits.length === 0) return numbers
-    const prefix = npDigits.join('')
-    return numbers.filter((d) => d.num.startsWith(prefix))
-  }, [numbers, npDigits])
+    if (df[0] === null && df[1] === null && df[2] === null) return numbers
+    return numbers.filter((d) => {
+      if (df[0] !== null && d.num[0] !== df[0]) return false
+      if (df[1] !== null && d.num[1] !== df[1]) return false
+      if (df[2] !== null && d.num[2] !== df[2]) return false
+      return true
+    })
+  }, [numbers, df])
 
   const selectedData = useMemo(() => {
     if (selected === null) return null
     return numbers.find((d) => d.num === selected) || null
   }, [numbers, selected])
 
-  const tapDigit = useCallback((digit) => {
-    setNpDigits((prev) => {
-      if (prev.length >= 3) return [String(digit)]
-      return [...prev, String(digit)]
+  const tapDigitAt = useCallback((pos, digit) => {
+    setDf((prev) => {
+      const next = [...prev]
+      next[pos] = prev[pos] === digit ? null : digit
+      return next
     })
     setSelected(null)
   }, [])
 
-  const clearFilter = useCallback(() => { setNpDigits([]); setSelected(null) }, [])
+  const clearFilter = useCallback(() => {
+    setDf([null, null, null])
+    setSelected(null)
+  }, [])
+
+  const hasFilter = df[0] !== null || df[1] !== null || df[2] !== null
+  const filterLabel = df.map((d) => d === null ? '*' : d).join('')
 
   return html`
-    <div style=${{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--bar-h) - var(--safe-bottom))' }}>
+    <div style=${{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="sticky-wrap">
         ${selectedData ? html`
           <${NumDetailPanel} d=${selectedData} bookmarks=${bookmarks} onToggleBm=${onToggleBm} onClose=${() => setSelected(null)} />
         ` : html`
-          <div className="sticky-empty">番号を選択</div>
+          <div className="sticky-empty">
+            <span>番号を選択</span>
+            <button className="filter-btn" style=${{ fontSize: '12px', padding: '4px 10px', marginLeft: '12px' }}
+              onClick=${() => setShowFilter(!showFilter)}>${showFilter ? '閉じる' : '検索'}</button>
+            ${hasFilter ? html`
+              <span style=${{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 'bold', color: 'var(--accent)', marginLeft: '8px' }}>${filterLabel}</span>
+              <span style=${{ fontSize: '12px', color: 'var(--text2)', marginLeft: '4px' }}>${filtered.length}件</span>
+              <button className="np-filter-clear" style=${{ marginLeft: '4px' }} onClick=${clearFilter}>C</button>
+            ` : null}
+          </div>
         `}
       </div>
       <div className="content" style=${{ flex: 1, paddingBottom: '4px' }}>
@@ -353,27 +434,58 @@ function NumberTab({ numbers, bookmarks, onToggleBm }) {
           })}
         </div>
       </div>
-      <div className="np-filter-bar">
-        <div className="np-filter-display">
-          <div className="np-filter-digits">
-            ${npDigits.length > 0 ? npDigits.join('') : ''}${Array.from({ length: 3 - npDigits.length }, () =>
-              html`<span className="np-placeholder">_</span>`
-            )}
+      ${showFilter ? html`
+        <div className="np-filter-bar">
+          <div style=${{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <div style=${{ display: 'flex', gap: '4px' }}>
+              <button className=${'filter-btn' + (filterMode === 'rows' ? ' active' : '')}
+                style=${{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
+                onClick=${() => setFilterMode('rows')}>3段</button>
+              <button className=${'filter-btn' + (filterMode === 'pads' ? ' active' : '')}
+                style=${{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
+                onClick=${() => setFilterMode('pads')}>テンキー</button>
+            </div>
+            ${hasFilter ? html`<button className="np-filter-clear" onClick=${clearFilter}>C</button>` : null}
           </div>
-          <div className="np-filter-info">${filtered.length}件</div>
-          ${npDigits.length > 0 && html`<button className="np-filter-clear" onClick=${clearFilter}>C</button>`}
+          ${filterMode === 'rows' ? html`
+            <div className="df-rows">
+              ${[0, 1, 2].map((pos) => html`
+                <div key=${pos} className="df-row">
+                  <span className="df-row-label">${pos + 1}</span>
+                  ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
+                    <div key=${digit}
+                      className=${'df-key' + (df[pos] === String(digit) ? ' active' : '')}
+                      onClick=${() => tapDigitAt(pos, String(digit))}>${digit}</div>
+                  `)}
+                  <div className=${'df-key' + (df[pos] === null ? ' active' : '')}
+                    style=${{ fontSize: '12px' }}
+                    onClick=${() => { setDf((prev) => { const n = [...prev]; n[pos] = null; return n }) }}>*</div>
+                </div>
+              `)}
+            </div>
+          ` : html`
+            <div className="df-pads">
+              ${[0, 1, 2].map((pos) => html`
+                <div key=${pos} className="df-pad">
+                  <div className="df-pad-label">${pos + 1}桁目</div>
+                  <div className="df-pad-grid">
+                    ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
+                      <div key=${digit}
+                        className=${'df-pad-key' + (df[pos] === String(digit) ? ' active' : '')}
+                        onClick=${() => tapDigitAt(pos, String(digit))}>${digit}</div>
+                    `)}
+                    <div className=${'df-pad-key' + (df[pos] === null ? ' active' : '')}
+                      style=${{ fontSize: '10px' }}
+                      onClick=${() => { setDf((prev) => { const n = [...prev]; n[pos] = null; return n }) }}>*</div>
+                    <div className=${'df-pad-key zero' + (df[pos] === '0' ? ' active' : '')}
+                      onClick=${() => tapDigitAt(pos, '0')}>0</div>
+                  </div>
+                </div>
+              `)}
+            </div>
+          `}
         </div>
-        <div className="np-numpad">
-          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
-            <div key=${digit}
-              className=${'np-numkey' + (npDigits.length === 1 && npDigits[0] === String(digit) ? ' active' : '')}
-              onClick=${() => tapDigit(digit)}>${digit}</div>
-          `)}
-          <div key=${0}
-            className=${'np-numkey zero' + (npDigits.length === 1 && npDigits[0] === '0' ? ' active' : '')}
-            onClick=${() => tapDigit(0)}>0</div>
-        </div>
-      </div>
+      ` : null}
     </div>
   `
 }
@@ -445,7 +557,7 @@ function DigitTab({ numbers, bookmarks, onToggleBm }) {
   const clearSel = useCallback(() => { setSelected(null); setSpecialSel(null) }, [])
 
   return html`
-    <div style=${{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--bar-h) - var(--safe-bottom))' }}>
+    <div style=${{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="sticky-wrap" style=${{ maxHeight: '60vh' }}>
         ${detail ? html`
           <div className="d2-detail-header">
@@ -538,7 +650,7 @@ function CardTab({ cards, bookmarks, onToggleBm }) {
   }, [cards, selected])
 
   return html`
-    <div style=${{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--bar-h) - var(--safe-bottom))' }}>
+    <div style=${{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="sticky-wrap">
         ${selectedCard ? html`
           <${CardDetailPanel} c=${selectedCard} bookmarks=${bookmarks} onToggleBm=${onToggleBm} onClose=${() => setSelected(null)} />
@@ -585,7 +697,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm }) {
   }, [cards, selected])
 
   return html`
-    <div style=${{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - var(--bar-h) - var(--safe-bottom))' }}>
+    <div style=${{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="sticky-wrap">
         ${selectedNum ? html`
           <${NumDetailPanel} d=${selectedNum} bookmarks=${bookmarks} onToggleBm=${onToggleBm} onClose=${() => setSelected(null)} />
@@ -650,6 +762,18 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
   const [startTime, setStartTime] = useState(null)
   const [records, setRecords] = useState(loadPiRecords)
   const [finished, setFinished] = useState(false)
+  const [showRecords, setShowRecords] = useState(false)
+
+  const deleteRecord = useCallback((idx) => {
+    const newRecords = records.filter((_, i) => i !== idx)
+    setRecords(newRecords)
+    savePiRecords(newRecords)
+  }, [records])
+
+  const clearRecords = useCallback(() => {
+    setRecords([])
+    savePiRecords([])
+  }, [])
 
   const startCheck = useCallback(() => {
     setMode('check')
@@ -682,7 +806,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
     const newAnswers = [...answers, newAnswer]
     setAnswers(newAnswers)
     const nextPos = checkPos + 1
-    if (nextPos >= PI_DIGITS.length) {
+    if (nextPos > 100) {
       endCheck(newAnswers)
       return
     }
@@ -714,7 +838,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
       <div className="pi-header">
         <div style=${{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div className="pi-header-title">π 円周率</div>
-          <div className="pi-header-sub">111桁</div>
+          <div className="pi-header-sub">111桁 (テスト100桁)</div>
           ${mode === 'view' && (lastRecord || finished) ? html`
             <div style=${{ fontSize: '11px', color: 'var(--text2)' }}>
               ${lastRecord ? html`前回:<span style=${{ color: 'var(--accent)' }}>${lastRecord.score}/${lastRecord.total}</span>` : null}
@@ -723,6 +847,10 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
           ` : null}
           <div style=${{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
             ${mode === 'view' ? html`
+              ${records.length > 0 ? html`
+                <button className="filter-btn" style=${{ fontSize: '11px', minWidth: '40px', padding: '4px 8px' }}
+                  onClick=${() => setShowRecords(true)}>記録</button>
+              ` : null}
               <button className="filter-btn" style=${{ fontSize: '12px', minWidth: '60px', padding: '4px 10px' }}
                 onClick=${startCheck}>テスト</button>
             ` : html`
@@ -735,20 +863,27 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
           </div>
         </div>
       </div>
-      ${selectedPair ? html`
-        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+      ${mode === 'view' ? html`
+      <div className="sticky-wrap">
+        ${selectedPair ? html`
           ${selectedPair.map((d) => html`
             <${NumDetailPanel} key=${d.num} d=${d} bookmarks=${bookmarks} onToggleBm=${onToggleBm} />
           `)}
           <div style=${{ padding: '0 12px 8px' }}>
             <button className="d2-mode-btn" style=${{ padding: '4px 10px', width: '100%' }} onClick=${() => setSelected(null)}>閉じる</button>
           </div>
-        </div>
+        ` : html`
+          <div className="sticky-empty">グループをタップして詳細表示</div>
+        `}
+      </div>
       ` : null}
-      <div className="content" style=${{ flex: 1, paddingBottom: '4px' }}>
+      ${showRecords ? html`
+        <${RecordPanel} title="π" records=${records} onDelete=${deleteRecord} onClear=${clearRecords} onClose=${() => setShowRecords(false)} />
+      ` : null}
+      <div className="content" style=${{ flex: 1, paddingBottom: '4px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
         ${mode === 'check' ? html`
           <div className="pi-check-grid">
-            ${PI_DIGITS.slice(1).map((d, j) => {
+            ${PI_DIGITS.slice(1, 101).map((d, j) => {
               const idx = j + 1
               const answered = answers.find((a) => a.idx === idx)
               const isCurrent = idx === checkPos
@@ -766,10 +901,11 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
             })}
           </div>
         ` : html`
-          <div className="pi-groups">
+          <div>
+            <div className="pi-dot-cell">3.</div>
+            <div className="pi-groups">
             ${(() => {
               const out = []
-              out.push(html`<div key="dot" className="pi-dot-cell">3.</div>`)
 
               const renderGroup = (g) => {
                 const startIdx = 1 + g * 3
@@ -806,25 +942,12 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
               }
               return out
             })()}
-          </div>
-        `}
-        ${records.length > 0 && mode === 'view' ? html`
-          <div style=${{ marginTop: '16px', padding: '0 4px' }}>
-            <div style=${{ fontSize: '12px', color: 'var(--text2)', marginBottom: '6px' }}>記録 (最新${Math.min(records.length, 5)}件)</div>
-            <div style=${{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              ${records.slice(0, 5).map((r, i) => html`
-                <div key=${i} style=${{ display: 'flex', gap: '10px', fontSize: '12px', padding: '4px 8px', background: 'var(--surface)', borderRadius: '4px', fontFamily: 'monospace' }}>
-                  <span style=${{ color: 'var(--text2)', minWidth: '80px' }}>${r.date.slice(5, 16).replace('T', ' ')}</span>
-                  <span style=${{ color: i === 0 ? 'var(--accent)' : 'var(--text)', fontWeight: 'bold' }}>${r.score}/${r.total}</span>
-                  <span style=${{ color: 'var(--text2)' }}>${r.time}秒</span>
-                </div>
-              `)}
             </div>
           </div>
-        ` : null}
+        `}
       </div>
       ${mode === 'check' ? html`
-        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', paddingBottom: 'calc(8px + var(--bar-h) + var(--safe-bottom))' }}>
+        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px' }}>
           <div className="np-numpad">
             ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
               <div key=${digit}
@@ -890,6 +1013,18 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
   const [results, setResults] = useState([]) // [{no, input, correct}]
   const [startTime, setStartTime] = useState(null)
   const [records, setRecords] = useState(loadYearRecords)
+  const [showRecords, setShowRecords] = useState(false)
+
+  const deleteRecord = useCallback((idx) => {
+    const newRecords = records.filter((_, i) => i !== idx)
+    setRecords(newRecords)
+    saveYearRecords(newRecords)
+  }, [records])
+
+  const clearRecords = useCallback(() => {
+    setRecords([])
+    saveYearRecords([])
+  }, [])
 
   const startCheck = useCallback(() => {
     setMode('check')
@@ -972,6 +1107,10 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
           ` : null}
           <div style=${{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
             ${mode === 'view' ? html`
+              ${records.length > 0 ? html`
+                <button className="filter-btn" style=${{ fontSize: '11px', minWidth: '40px', padding: '4px 8px' }}
+                  onClick=${() => setShowRecords(true)}>記録</button>
+              ` : null}
               <button className="filter-btn" style=${{ fontSize: '12px', minWidth: '60px', padding: '4px 10px' }}
                 onClick=${startCheck}>テスト</button>
             ` : html`
@@ -984,15 +1123,22 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
           </div>
         </div>
       </div>
-      ${selectedNums && mode === 'view' ? html`
-        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+      ${mode === 'view' ? html`
+      <div className="sticky-wrap">
+        ${selectedNums ? html`
           ${selectedNums.map((d) => html`
             <${NumDetailPanel} key=${d.num} d=${d} bookmarks=${bookmarks} onToggleBm=${onToggleBm} />
           `)}
           <div style=${{ padding: '0 12px 8px' }}>
             <button className="d2-mode-btn" style=${{ padding: '4px 10px', width: '100%' }} onClick=${() => setSelected(null)}>閉じる</button>
           </div>
-        </div>
+        ` : html`
+          <div className="sticky-empty">年号をタップして詳細表示</div>
+        `}
+      </div>
+      ` : null}
+      ${showRecords ? html`
+        <${RecordPanel} title="年号" records=${records} onDelete=${deleteRecord} onClear=${clearRecords} onClose=${() => setShowRecords(false)} />
       ` : null}
       <div className="content" style=${{ flex: 1, paddingBottom: '4px' }}>
         <div className="year-list">
@@ -1038,7 +1184,7 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }) {
         </div>
       </div>
       ${mode === 'check' ? html`
-        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px', paddingBottom: 'calc(8px + var(--bar-h) + var(--safe-bottom))' }}>
+        <div style=${{ flexShrink: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '8px 12px' }}>
           <div className="np-numpad">
             ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => html`
               <div key=${digit} className="np-numkey" onClick=${() => tapDigit(digit)}>${digit}</div>
