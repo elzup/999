@@ -140,6 +140,7 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .pi-header-title { font-size: 16px; font-weight: bold; }
 .pi-header-sub { font-size: 12px; color: var(--text2); }
 .pi-groups { display: flex; flex-wrap: wrap; gap: 2px 0; justify-content: space-between; }
+.pi-pair.spacer { visibility: hidden; height: 0; margin: 0; padding: 0; overflow: hidden; }
 .pi-pair { display: flex; gap: 2px; }
 .pi-pair-sep { width: 1px; background: var(--border); }
 .pi-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; cursor: pointer; height: 30px; }

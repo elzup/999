@@ -121,10 +121,30 @@ function PiViewGroups({
     )
   }
 
+  // Invisible spacers to left-align the last row with space-between
+  const spacers = Array.from({ length: 6 }, (_, i) => (
+    <div key={'sp' + i} class="pi-pair spacer" aria-hidden="true">
+      <div class="pi-group">
+        <div class="pi-cell"><div class="pi-digit">0</div></div>
+        <div class="pi-cell"><div class="pi-digit">0</div></div>
+        <div class="pi-cell"><div class="pi-digit">0</div></div>
+      </div>
+      <div class="pi-pair-sep" />
+      <div class="pi-group">
+        <div class="pi-cell"><div class="pi-digit">0</div></div>
+        <div class="pi-cell"><div class="pi-digit">0</div></div>
+        <div class="pi-cell"><div class="pi-digit">0</div></div>
+      </div>
+    </div>
+  ))
+
   return (
     <div>
       <div class="pi-dot-cell">3.</div>
-      <div class="pi-groups">{out}</div>
+      <div class="pi-groups">
+        {out}
+        {spacers}
+      </div>
     </div>
   )
 }
