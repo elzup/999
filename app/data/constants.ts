@@ -55,5 +55,5 @@ export const YEAR_DATA: YearItem[] = ([
   event,
 }))
 
-export const VALID_TABS = ['num', 'd2', 'card', 'bm', 'pi', 'year', 'stats'] as const
+export const VALID_TABS = ['num', 'card', 'pi', 'year', 'misc'] as const
 export type TabId = (typeof VALID_TABS)[number]

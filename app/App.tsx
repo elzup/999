@@ -3,20 +3,17 @@ import { validateAppData } from './data/parse'
 import { loadBookmarks, saveBookmarks, loadTab, saveTab } from './data/storage'
 import type { AppData } from './data/schema'
 import type { TabId } from './data/constants'
-import NumberTab from './components/NumberTab'
-import DigitTab from './components/DigitTab'
+import NumGroupTab from './components/NumGroupTab'
 import CardTab from './components/CardTab'
-import BookmarkTab from './components/BookmarkTab'
 import PiTab from './components/PiTab'
 import YearTab from './components/YearTab'
+import MiscTab from './components/MiscTab'
 import {
   IconNum,
-  IconD2,
   IconCard,
-  IconStar,
-  IconStats,
   IconPi,
   IconYear,
+  IconStats,
 } from './components/Icons'
 
 export function App() {
@@ -53,26 +50,13 @@ export function App() {
     )
   }
 
-  const bmCount = bookmarks.size
-
   return (
     <>
       {tab === 'num' && (
-        <NumberTab numbers={data.numbers} bookmarks={bookmarks} onToggleBm={toggleBm} />
-      )}
-      {tab === 'd2' && (
-        <DigitTab numbers={data.numbers} bookmarks={bookmarks} onToggleBm={toggleBm} />
+        <NumGroupTab numbers={data.numbers} bookmarks={bookmarks} onToggleBm={toggleBm} />
       )}
       {tab === 'card' && (
         <CardTab cards={data.cards} bookmarks={bookmarks} onToggleBm={toggleBm} />
-      )}
-      {tab === 'bm' && (
-        <BookmarkTab
-          numbers={data.numbers}
-          cards={data.cards}
-          bookmarks={bookmarks}
-          onToggleBm={toggleBm}
-        />
       )}
       {tab === 'pi' && (
         <PiTab
@@ -90,16 +74,20 @@ export function App() {
           onCheckingChange={setLocked}
         />
       )}
-      {tab === 'stats' && <iframe class="stats-frame" src="./stats.html" />}
+      {tab === 'misc' && (
+        <MiscTab
+          numbers={data.numbers}
+          cards={data.cards}
+          bookmarks={bookmarks}
+          onToggleBm={toggleBm}
+        />
+      )}
       <div class="bottom-bar" style={locked ? { pointerEvents: 'none', opacity: 0.4 } : {}}>
         <TabButton id="num" current={tab} onSelect={setTab} icon={<IconNum />} label="数字" />
-        <TabButton id="d2" current={tab} onSelect={setTab} icon={<IconD2 />} label="2桁" />
         <TabButton id="card" current={tab} onSelect={setTab} icon={<IconCard />} label="カード" />
-        <TabButton id="bm" current={tab} onSelect={setTab} icon={<IconStar />}
-          label={bmCount > 0 ? <>★ <span class="bar-badge">{bmCount}</span></> : '★'} />
         <TabButton id="pi" current={tab} onSelect={setTab} icon={<IconPi />} label="π" />
         <TabButton id="year" current={tab} onSelect={setTab} icon={<IconYear />} label="年号" />
-        <TabButton id="stats" current={tab} onSelect={setTab} icon={<IconStats />} label="統計" />
+        <TabButton id="misc" current={tab} onSelect={setTab} icon={<IconStats />} label="その他" />
       </div>
     </>
   )

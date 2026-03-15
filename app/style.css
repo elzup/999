@@ -123,6 +123,20 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .d2-cell.selected { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
 .d2-cell.has-word { color: var(--accent); }
 
+/* Sub-tab switch */
+.sub-tab-switch { display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sub-tab-btn { flex: 1; padding: 8px 4px; border: none; background: none; color: var(--text2); font-size: 13px; font-weight: bold; cursor: pointer; border-bottom: 2px solid transparent; }
+.sub-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* D3 (3桁テスト) */
+.d3-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.d3-cell { display: flex; align-items: center; justify-content: center; gap: 1px; background: var(--surface); border-radius: 4px; padding: 4px 2px; cursor: pointer; border: 1px solid var(--border); font-family: monospace; font-weight: bold; min-height: 32px; }
+.d3-cell:active { background: var(--accent2); }
+.d3-cell.selected { border-color: var(--accent); background: var(--accent2); }
+.d3-prefix { font-size: 12px; color: var(--text); }
+.d3-suffix { font-size: 12px; color: var(--accent); }
+.d3-suffix.hidden { color: var(--border); }
+
 /* Search */
 .search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-top: 6px; }
 .search-input::placeholder { color: var(--text2); }
