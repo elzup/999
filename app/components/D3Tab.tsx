@@ -27,19 +27,17 @@ const D3_LIST = [
 type RevealState = Record<string, boolean>
 type ViewMode = 'seq' | 'group'
 
-// Group entries by last digit (Z)
-function groupByZ(): Map<string, string[]> {
-  const groups = new Map<string, string[]>()
+// Group entries by last digit (Z), ordered 0-6
+const Z_GROUPS: [string, string[]][] = (() => {
+  const map: Record<string, string[]> = {}
   for (const xyz of D3_LIST) {
     const z = xyz[2]
-    const list = groups.get(z) ?? []
-    list.push(xyz)
-    groups.set(z, list)
+    ;(map[z] ??= []).push(xyz)
   }
-  return groups
-}
-
-const Z_GROUPS = groupByZ()
+  return ['0', '1', '2', '3', '4', '5', '6']
+    .filter((z) => map[z])
+    .map((z) => [z, map[z]])
+})()
 
 // core kana for digits 0-6
 const Z_KANA: Record<string, string> = {
@@ -76,11 +74,6 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     setRevealed({})
     setSelected(null)
   }, [])
-
-  const selectedEntry = useMemo(() => {
-    if (selected === null) return null
-    return numMap.get(selected) ?? null
-  }, [selected, numMap])
 
   const selectedPrefixEntry = useMemo(() => {
     if (selected === null) return null
@@ -122,7 +115,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
       }}
     >
       <div class="sticky-wrap" style={{ maxHeight: '50vh' }}>
-        {selected !== null && (selectedEntry || selectedPrefixEntry) ? (
+        {selected !== null && selectedPrefixEntry ? (
           <div>
             <div class="d2-detail-header">
               <span class="detail-id">{selected.slice(0, 2)}</span>
@@ -138,20 +131,11 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
               </button>
             </div>
             <div class="d2-detail-list">
-              {selectedPrefixEntry && (
-                <NumDetailPanel
-                  d={selectedPrefixEntry}
-                  bookmarks={bookmarks}
-                  onToggleBm={onToggleBm}
-                />
-              )}
-              {selectedEntry && (
-                <NumDetailPanel
-                  d={selectedEntry}
-                  bookmarks={bookmarks}
-                  onToggleBm={onToggleBm}
-                />
-              )}
+              <NumDetailPanel
+                d={selectedPrefixEntry}
+                bookmarks={bookmarks}
+                onToggleBm={onToggleBm}
+              />
             </div>
           </div>
         ) : (
@@ -187,7 +171,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
           </div>
         ) : (
           <div class="d3-groups">
-            {Array.from(Z_GROUPS.entries()).map(([z, items]) => {
+            {Z_GROUPS.map(([z, items]) => {
               const pairs: string[][] = []
               for (let i = 0; i < items.length; i += 2) {
                 pairs.push(items.slice(i, i + 2))
