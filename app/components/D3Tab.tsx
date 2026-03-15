@@ -1,6 +1,7 @@
 import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
+import { DIGIT_COLORS } from '../data/constants'
 import NumDetailPanel from './NumDetailPanel'
 
 type Props = {
@@ -24,10 +25,31 @@ const D3_LIST = [
 ] as const
 
 type RevealState = Record<string, boolean>
+type ViewMode = 'seq' | 'group'
+
+// Group entries by last digit (Z)
+function groupByZ(): Map<string, string[]> {
+  const groups = new Map<string, string[]>()
+  for (const xyz of D3_LIST) {
+    const z = xyz[2]
+    const list = groups.get(z) ?? []
+    list.push(xyz)
+    groups.set(z, list)
+  }
+  return groups
+}
+
+const Z_GROUPS = groupByZ()
+
+// core kana for digits 0-6
+const Z_KANA: Record<string, string> = {
+  '0': 'ん', '1': 'い', '2': 'に', '3': 'さ', '4': 'し', '5': 'こ', '6': 'ろ',
+}
 
 function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
   const [revealed, setRevealed] = useState<RevealState>({})
   const [selected, setSelected] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('seq')
 
   const numMap = useMemo(() => {
     const m = new Map<string, NumberEntry>()
@@ -60,12 +82,34 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     return numMap.get(selected) ?? null
   }, [selected, numMap])
 
-  // Also get the 2-digit (0XY) entry for the prefix
   const selectedPrefixEntry = useMemo(() => {
     if (selected === null) return null
     const prefix = '0' + selected.slice(0, 2)
     return numMap.get(prefix) ?? null
   }, [selected, numMap])
+
+  const renderCell = (xyz: string) => {
+    const xy = xyz.slice(0, 2)
+    const z = xyz[2]
+    const isRevealed = !!revealed[xyz]
+    const isSelected = selected === xyz
+    return (
+      <div
+        key={xyz}
+        class={
+          'd3-cell' +
+          (isSelected ? ' selected' : '') +
+          (isRevealed ? ' revealed' : '')
+        }
+        onClick={() => toggleReveal(xyz)}
+      >
+        <span class="d3-prefix">{xy}</span>
+        <span class={'d3-suffix' + (isRevealed ? '' : ' hidden')}>
+          {isRevealed ? z : '?'}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -116,37 +160,69 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
       </div>
       <div class="content" style={{ flex: 1, paddingBottom: '4px' }}>
         <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-          <button class="d2-mode-btn" onClick={revealAll}>
-            全て表示
+          <button
+            class={'d2-mode-btn' + (viewMode === 'seq' ? ' active' : '')}
+            onClick={() => setViewMode('seq')}
+          >
+            数字順
           </button>
-          <button class="d2-mode-btn" onClick={hideAll}>
-            全て隠す
+          <button
+            class={'d2-mode-btn' + (viewMode === 'group' ? ' active' : '')}
+            onClick={() => setViewMode('group')}
+          >
+            末尾グループ
           </button>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+            <button class="d2-mode-btn" onClick={revealAll}>
+              全表示
+            </button>
+            <button class="d2-mode-btn" onClick={hideAll}>
+              全隠す
+            </button>
+          </div>
         </div>
-        <div class="d3-grid">
-          {D3_LIST.map((xyz) => {
-            const xy = xyz.slice(0, 2)
-            const z = xyz[2]
-            const isRevealed = !!revealed[xyz]
-            const isSelected = selected === xyz
-            return (
-              <div
-                key={xyz}
-                class={
-                  'd3-cell' +
-                  (isSelected ? ' selected' : '') +
-                  (isRevealed ? ' revealed' : '')
-                }
-                onClick={() => toggleReveal(xyz)}
-              >
-                <span class="d3-prefix">{xy}</span>
-                <span class={'d3-suffix' + (isRevealed ? '' : ' hidden')}>
-                  {isRevealed ? z : '?'}
-                </span>
-              </div>
-            )
-          })}
-        </div>
+        {viewMode === 'seq' ? (
+          <div class="d3-grid">
+            {D3_LIST.map((xyz) => renderCell(xyz))}
+          </div>
+        ) : (
+          <div class="d3-groups">
+            {Array.from(Z_GROUPS.entries()).map(([z, items]) => {
+              const pairs: string[][] = []
+              for (let i = 0; i < items.length; i += 2) {
+                pairs.push(items.slice(i, i + 2))
+              }
+              return (
+                <div key={z} class="d3-z-section">
+                  <div class="d3-z-label">
+                    <span style={{ color: DIGIT_COLORS[Number(z)] }}>
+                      {z}
+                    </span>
+                    <span style={{ color: 'var(--text2)', marginLeft: '4px' }}>
+                      {Z_KANA[z]}
+                    </span>
+                    <span style={{ color: 'var(--text2)', marginLeft: '4px', fontSize: '11px' }}>
+                      ({items.length})
+                    </span>
+                  </div>
+                  <div class="d3-pairs">
+                    {pairs.map((pair, pi) => (
+                      <div key={pi} class="d3-pair">
+                        {renderCell(pair[0])}
+                        {pair[1] ? (
+                          <>
+                            <div class="d3-pair-sep" />
+                            {renderCell(pair[1])}
+                          </>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

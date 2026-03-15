@@ -136,6 +136,14 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .d3-prefix { font-size: 12px; color: var(--text); }
 .d3-suffix { font-size: 12px; color: var(--accent); }
 .d3-suffix.hidden { color: var(--border); }
+/* D3 grouped view */
+.d3-groups { display: flex; flex-direction: column; gap: 12px; }
+.d3-z-section { }
+.d3-z-label { font-size: 14px; font-weight: bold; font-family: monospace; padding: 4px 0; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.d3-pairs { display: flex; flex-wrap: wrap; gap: 2px 0; justify-content: space-between; }
+.d3-pair { display: flex; gap: 2px; }
+.d3-pair-sep { width: 1px; background: var(--border); }
+.d3-pair .d3-cell { border-radius: 5px; min-width: 38px; min-height: 30px; }
 
 /* Search */
 .search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-top: 6px; }
