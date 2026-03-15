@@ -47,7 +47,7 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
           class={'sub-tab-btn' + (sub === 'd3' ? ' active' : '')}
           onClick={() => handleSub('d3')}
         >
-          3桁
+          年コード
         </button>
       </div>
       {sub === 'all' && (
