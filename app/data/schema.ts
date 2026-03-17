@@ -52,6 +52,7 @@ export const YearItemSchema = z.object({
   no: z.number(),
   year: z.string(),
   event: z.string(),
+  desc: z.string(),
 })
 
 export type YearItem = z.infer<typeof YearItemSchema>

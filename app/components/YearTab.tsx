@@ -1,8 +1,8 @@
 import { h } from 'preact'
-import { useState, useCallback, useMemo } from 'preact/hooks'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import type { Record } from '../data/schema'
-import { YEAR_DATA } from '../data/constants'
+import { YEAR_DATA, DIGIT_COLORS } from '../data/constants'
 import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
@@ -17,10 +17,20 @@ type Props = {
 type CheckResult = {
   no: number
   input: string
-  year: string
+  xyz: string
   correct: boolean
 }
 type Mode = 'view' | 'check'
+
+/** Extract XYZ (last 3 digits) from a year string */
+function getXYZ(year: string): string {
+  return year.length >= 4 ? year.slice(-3) : year.padStart(3, '0')
+}
+
+/** Extract C prefix (thousands digit) from a year string */
+function getC(year: string): string {
+  return year.length >= 4 ? year.slice(0, -3) : ''
+}
 
 function YearCheckRow({
   item,
@@ -28,12 +38,14 @@ function YearCheckRow({
   isCurrent,
   inputDigits,
 }: {
-  item: { no: number; year: string; event: string }
+  item: { no: number; year: string; event: string; desc: string }
   result: CheckResult | undefined
   isCurrent: boolean
   inputDigits: string[]
 }) {
-  const yearDigits = item.year.split('')
+  const xyz = getXYZ(item.year)
+  const c = getC(item.year)
+  const xyzDigits = xyz.split('')
   const cls =
     'year-row' +
     (result ? (result.correct ? ' correct' : ' wrong') : '') +
@@ -44,41 +56,48 @@ function YearCheckRow({
       <span class="yr-no">{item.no}</span>
       {result ? (
         <>
+          <span class="yr-c">{c}</span>
           <span
-            class="yr-year"
+            class="yr-xyz"
             style={{
               color: result.correct ? 'var(--accent)' : '#f87171',
             }}
           >
-            {result.correct ? item.year : result.input}
+            {result.correct ? xyz : result.input}
           </span>
           {!result.correct ? (
             <span style={{ fontSize: '12px', color: 'var(--text2)' }}>
-              {item.year}
+              {xyz}
             </span>
           ) : null}
         </>
       ) : isCurrent ? (
-        <div class="year-input">
-          {yearDigits.map((_, di) => {
-            const filled = di < inputDigits.length
-            const isCursor = di === inputDigits.length
-            const cls2 =
-              'yr-digit' +
-              (filled ? ' filled' : '') +
-              (isCursor ? ' cursor' : '') +
-              (!filled && !isCursor ? ' empty' : '')
-            return (
-              <div key={di} class={cls2}>
-                {filled ? inputDigits[di] : isCursor ? '_' : '\u00b7'}
-              </div>
-            )
-          })}
-        </div>
+        <>
+          <span class="yr-c">{c}</span>
+          <div class="year-input">
+            {xyzDigits.map((_, di) => {
+              const filled = di < inputDigits.length
+              const isCursor = di === inputDigits.length
+              const cls2 =
+                'yr-digit' +
+                (filled ? ' filled' : '') +
+                (isCursor ? ' cursor' : '') +
+                (!filled && !isCursor ? ' empty' : '')
+              return (
+                <div key={di} class={cls2}>
+                  {filled ? inputDigits[di] : isCursor ? '_' : '\u00b7'}
+                </div>
+              )
+            })}
+          </div>
+        </>
       ) : (
-        <span class="yr-year hidden">
-          {'\u00b7'.repeat(item.year.length)}
-        </span>
+        <>
+          <span class="yr-c">{c}</span>
+          <span class="yr-xyz hidden">
+            {'\u00b7\u00b7\u00b7'}
+          </span>
+        </>
       )}
       <span class="yr-event">{item.event}</span>
     </div>
@@ -91,20 +110,28 @@ function YearViewRow({
   selected,
   onSelect,
 }: {
-  item: { no: number; year: string; event: string }
+  item: { no: number; year: string; event: string; desc: string }
   idx: number
   selected: boolean
   onSelect: () => void
 }) {
+  const c = getC(item.year)
+  const xyz = getXYZ(item.year)
   return (
     <div
       class={'year-row' + (selected ? ' selected' : '')}
       onClick={onSelect}
     >
       <span class="yr-no">{item.no}</span>
-      <span class="yr-year">{item.year}</span>
+      <span class="yr-year">
+        <span class="yr-c">{c}</span>
+        <span class="yr-xyz">{xyz}</span>
+      </span>
       <span class="yr-mod">{Number(item.year) % 7}</span>
-      <span class="yr-event">{item.event}</span>
+      <span class="yr-event">
+        {item.event}
+        <span class="yr-desc">{item.desc}</span>
+      </span>
     </div>
   )
 }
@@ -118,12 +145,27 @@ function YearTab({
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
   const [checkIdx, setCheckIdx] = useState(0)
-  const [digitPos, setDigitPos] = useState(0)
   const [inputDigits, setInputDigits] = useState<string[]>([])
   const [results, setResults] = useState<CheckResult[]>([])
   const [startTime, setStartTime] = useState<number | null>(null)
   const [records, setRecords] = useState<Record[]>(loadYearRecords)
   const [showRecords, setShowRecords] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const timerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (mode === 'check') {
+      timerRef.current = window.setInterval(() => {
+        setElapsed(startTime ? Math.round((Date.now() - startTime) / 1000) : 0)
+      }, 1000)
+    }
+    return () => {
+      if (timerRef.current !== null) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [mode, startTime])
 
   const deleteRecord = useCallback(
     (idx: number) => {
@@ -142,18 +184,18 @@ function YearTab({
   const startCheck = useCallback(() => {
     setMode('check')
     setCheckIdx(0)
-    setDigitPos(0)
     setInputDigits([])
     setResults([])
     setStartTime(Date.now())
+    setElapsed(0)
     setSelected(null)
-    onCheckingChange && onCheckingChange(true)
+    onCheckingChange?.(true)
   }, [onCheckingChange])
 
   const endCheck = useCallback(
     (finalResults?: CheckResult[]) => {
-      const used = finalResults || results
-      const elapsed = startTime
+      const used = finalResults ?? results
+      const el = startTime
         ? Math.round((Date.now() - startTime) / 1000)
         : 0
       const correctCount = used.filter((r) => r.correct).length
@@ -161,13 +203,13 @@ function YearTab({
         date: new Date().toISOString(),
         score: correctCount,
         total: used.length,
-        time: elapsed,
+        time: el,
       }
       const newRecords = [record, ...records].slice(0, 50)
       setRecords(newRecords)
       saveYearRecords(newRecords)
       setMode('view')
-      onCheckingChange && onCheckingChange(false)
+      onCheckingChange?.(false)
     },
     [startTime, results, records, onCheckingChange]
   )
@@ -176,33 +218,30 @@ function YearTab({
     (digit: number) => {
       if (mode !== 'check') return
       const item = YEAR_DATA[checkIdx]
-      const yearDigits = item.year.split('')
+      const xyz = getXYZ(item.year)
       const newInput = [...inputDigits, String(digit)]
       setInputDigits(newInput)
 
-      if (newInput.length >= yearDigits.length) {
+      if (newInput.length >= 3) {
         const inputStr = newInput.join('')
-        const isCorrect = inputStr === item.year
+        const isCorrect = inputStr === xyz
         const newResults = [
           ...results,
           {
             no: item.no,
             input: inputStr,
-            year: item.year,
+            xyz,
             correct: isCorrect,
           },
         ]
         setResults(newResults)
         setInputDigits([])
-        setDigitPos(0)
         const nextIdx = checkIdx + 1
         if (nextIdx >= YEAR_DATA.length) {
           endCheck(newResults)
           return
         }
         setCheckIdx(nextIdx)
-      } else {
-        setDigitPos(newInput.length)
       }
     },
     [mode, checkIdx, inputDigits, results, endCheck]
@@ -211,16 +250,9 @@ function YearTab({
   const selectedNums = useMemo(() => {
     if (selected === null || !numbers) return null
     const item = YEAR_DATA[selected]
-    const year = item.year
-    const matched: NumberEntry[] = []
-    if (year.length === 4) {
-      const n1 = numbers.find((d) => d.num === year.slice(1))
-      if (n1) matched.push(n1)
-    } else if (year.length === 3) {
-      const n1 = numbers.find((d) => d.num === year)
-      if (n1) matched.push(n1)
-    }
-    return matched.length > 0 ? matched : null
+    const xyz = getXYZ(item.year)
+    const entry = numbers.find((d) => d.num === xyz)
+    return entry ? [entry] : null
   }, [selected, numbers])
 
   const lastRecord = records.length > 0 ? records[0] : null
@@ -242,7 +274,7 @@ function YearTab({
             年号記憶
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text2)' }}>
-            {YEAR_DATA.length}問
+            {YEAR_DATA.length}問 (XYZ 3桁)
           </div>
           {mode === 'view' && lastRecord ? (
             <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
@@ -305,6 +337,7 @@ function YearTab({
                     fontFamily: 'monospace',
                   }}
                 >
+                  {elapsed}秒{' '}
                   {checkIdx + 1}/{YEAR_DATA.length}{' '}
                   {results.filter((r) => r.correct).length}正解
                 </span>
@@ -347,7 +380,7 @@ function YearTab({
               </div>
             </>
           ) : (
-            <div class="sticky-empty">年号をタップして詳細表示</div>
+            <div class="sticky-empty">年号をタップしてXYZの詳細表示</div>
           )}
         </div>
       ) : null}
@@ -403,6 +436,7 @@ function YearTab({
               <div
                 key={digit}
                 class="np-numkey"
+                style={{ color: DIGIT_COLORS[digit] }}
                 onClick={() => tapDigit(digit)}
               >
                 {digit}
@@ -411,6 +445,7 @@ function YearTab({
             <div
               key={0}
               class="np-numkey zero"
+              style={{ color: DIGIT_COLORS[0] }}
               onClick={() => tapDigit(0)}
             >
               0
