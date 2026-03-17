@@ -62,3 +62,11 @@ export function loadYearRecords(): Record[] {
 export function saveYearRecords(records: Record[]) {
   saveJson('year999', records)
 }
+
+export function loadD3Records(): Record[] {
+  return loadJson('d3-999', RecordsSchema, [])
+}
+
+export function saveD3Records(records: Record[]) {
+  saveJson('d3-999', records)
+}

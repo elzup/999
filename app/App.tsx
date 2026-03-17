@@ -53,7 +53,7 @@ export function App() {
   return (
     <>
       {tab === 'num' && (
-        <NumGroupTab numbers={data.numbers} bookmarks={bookmarks} onToggleBm={toggleBm} />
+        <NumGroupTab numbers={data.numbers} bookmarks={bookmarks} onToggleBm={toggleBm} onCheckingChange={setLocked} />
       )}
       {tab === 'card' && (
         <CardTab cards={data.cards} bookmarks={bookmarks} onToggleBm={toggleBm} />
