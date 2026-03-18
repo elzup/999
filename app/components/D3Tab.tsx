@@ -2,7 +2,7 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import type { Record as TestRecord } from '../data/schema'
-import { DIGIT_COLORS } from '../data/constants'
+import { DIGIT_COLORS, D3_LIST } from '../data/constants'
 import { loadD3Records, saveD3Records } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
@@ -13,20 +13,6 @@ type Props = {
   onToggleBm: (key: string) => void
   onCheckingChange?: (checking: boolean) => void
 }
-
-// 100 XYZ entries: for each 2-digit prefix XY, a specific Z digit
-const D3_LIST = [
-  '000', '011', '022', '033', '045', '056', '060', '071', '083', '094',
-  '105', '116', '121', '132', '143', '154', '166', '170', '181', '192',
-  '204', '215', '226', '230', '242', '253', '264', '275', '280', '291',
-  '302', '313', '325', '336', '340', '351', '363', '374', '385', '396',
-  '401', '412', '423', '434', '446', '450', '461', '472', '484', '495',
-  '506', '510', '522', '533', '544', '555', '560', '571', '582', '593',
-  '605', '616', '620', '631', '643', '654', '665', '676', '681', '692',
-  '703', '714', '726', '730', '741', '752', '764', '775', '786', '790',
-  '802', '813', '824', '835', '840', '851', '862', '873', '885', '896',
-  '900', '911', '923', '934', '945', '956', '961', '972', '983', '994',
-] as const
 
 type RevealState = Record<string, boolean>
 type ViewMode = 'seq' | 'group'
@@ -48,12 +34,6 @@ const Z_GROUPS: [string, string[]][] = (() => {
 // core kana for digits 0-6
 const Z_KANA: Record<string, string> = {
   '0': 'ん', '1': 'い', '2': 'に', '3': 'さ', '4': 'し', '5': 'こ', '6': 'ろ',
-}
-
-// Build XY -> Z lookup
-const XY_TO_Z: Record<string, string> = {}
-for (const xyz of D3_LIST) {
-  XY_TO_Z[xyz.slice(0, 2)] = xyz[2]
 }
 
 function shuffle<T>(arr: readonly T[]): T[] {
