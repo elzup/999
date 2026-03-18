@@ -2,7 +2,7 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import type { Record } from '../data/schema'
-import { YEAR_DATA, DIGIT_COLORS } from '../data/constants'
+import { YEAR_DATA, DIGIT_COLORS, XY_TO_Z } from '../data/constants'
 import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
@@ -117,6 +117,8 @@ function YearViewRow({
 }) {
   const c = getC(item.year)
   const xyz = getXYZ(item.year)
+  const xy = xyz.slice(0, 2)
+  const z = XY_TO_Z[xy]
   return (
     <div
       class={'year-row' + (selected ? ' selected' : '')}
@@ -127,7 +129,12 @@ function YearViewRow({
         <span class="yr-c">{c}</span>
         <span class="yr-xyz">{xyz}</span>
       </span>
-      <span class="yr-mod">{Number(item.year) % 7}</span>
+      <span
+        class="yr-mod"
+        style={{ color: z !== undefined ? DIGIT_COLORS[Number(z)] : undefined }}
+      >
+        {z ?? '?'}
+      </span>
       <span class="yr-event">
         {item.event}
         <span class="yr-desc">{item.desc}</span>
