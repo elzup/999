@@ -49,6 +49,27 @@ export function parseWordsTsv(tsv: string) {
     .filter((v): v is NonNullable<typeof v> => v !== null)
 }
 
+/** mark 文字列 (♠️A, ♥️10 等) → { suit, rank } */
+const MARK_SUIT: Record<string, 'S' | 'H' | 'C' | 'D'> = {
+  '♠️': 'S',
+  '♠': 'S',
+  '♥️': 'H',
+  '♥': 'H',
+  '♣️': 'C',
+  '♣': 'C',
+  '♦️': 'D',
+  '♦': 'D',
+}
+
+function parseMark(mark: string): { suit: string; rank: string } | null {
+  for (const [sym, suit] of Object.entries(MARK_SUIT)) {
+    if (mark.startsWith(sym)) {
+      return { suit, rank: mark.slice(sym.length) }
+    }
+  }
+  return null
+}
+
 /** cards.tsv → CardEntry[] (Zod バリデーション付き) */
 export function parseCardsTsv(tsv: string) {
   const { headers, rows } = parseTsvRows(tsv)
@@ -58,19 +79,22 @@ export function parseCardsTsv(tsv: string) {
 
   return rows
     .map((row) => {
+      const mark = col(row, 'mark')
+      const parsed = parseMark(mark)
+      if (!parsed) {
+        console.warn(`Skip invalid card mark: ${mark}`)
+        return null
+      }
       const raw = {
-        suit: col(row, 'suit'),
-        rank: col(row, 'rank'),
-        hito: col(row, 'hito'),
-        hitoYomi: col(row, 'hitoYomi'),
-        dousa: col(row, 'dousa'),
-        dousaYomi: col(row, 'dousaYomi'),
-        mono: col(row, 'mono'),
-        monoYomi: col(row, 'monoYomi'),
+        suit: parsed.suit,
+        rank: parsed.rank,
+        a: col(row, 'A'),
+        i: col(row, 'I'),
+        u: col(row, 'U'),
       }
       const result = CardEntrySchema.safeParse(raw)
       if (!result.success) {
-        console.warn(`Skip invalid card entry: ${raw.suit}${raw.rank}`, result.error.issues)
+        console.warn(`Skip invalid card entry: ${mark}`, result.error.issues)
         return null
       }
       return result.data

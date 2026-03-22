@@ -26,12 +26,9 @@ const NumberSchema = z.object({
 const CardSchema = z.object({
   suit: z.enum(['S', 'H', 'C', 'D']),
   rank: z.string().min(1),
-  hito: z.string().default(''),
-  hitoYomi: z.string().default(''),
-  dousa: z.string().default(''),
-  dousaYomi: z.string().default(''),
-  mono: z.string().default(''),
-  monoYomi: z.string().default(''),
+  a: z.string().default(''),
+  i: z.string().default(''),
+  u: z.string().default(''),
 })
 
 // Numbers data
@@ -50,26 +47,39 @@ const numbers = vizData.data
   .filter(Boolean)
 
 // Cards data
+const MARK_SUIT = { '♠️': 'S', '♠': 'S', '♥️': 'H', '♥': 'H', '♣️': 'C', '♣': 'C', '♦️': 'D', '♦': 'D' }
+
+function parseMark(mark) {
+  for (const [sym, suit] of Object.entries(MARK_SUIT)) {
+    if (mark.startsWith(sym)) return { suit, rank: mark.slice(sym.length) }
+  }
+  return null
+}
+
 const cardsTsv = readFileSync(join(baseDir, 'data', 'cards.tsv'), 'utf8')
-const cards = cardsTsv
-  .split('\n')
+const cardLines = cardsTsv.split('\n').filter((l) => l.trim())
+const cardHeaders = cardLines[0].split('\t').map((h) => h.trim())
+const cards = cardLines
   .slice(1)
-  .filter((l) => l.trim())
   .map((line) => {
-    const cols = line.split('\t')
+    const cols = line.split('\t').map((c) => c.trim())
+    const colIdx = (name) => cardHeaders.indexOf(name)
+    const mark = cols[colIdx('mark')] ?? ''
+    const parsed = parseMark(mark)
+    if (!parsed) {
+      console.warn(`Skip card mark: ${mark}`)
+      return null
+    }
     const raw = {
-      suit: cols[0],
-      rank: cols[1],
-      hito: cols[2],
-      hitoYomi: cols[3],
-      dousa: cols[4],
-      dousaYomi: cols[5],
-      mono: cols[6],
-      monoYomi: cols[7],
+      suit: parsed.suit,
+      rank: parsed.rank,
+      a: cols[colIdx('A')] ?? '',
+      i: cols[colIdx('I')] ?? '',
+      u: cols[colIdx('U')] ?? '',
     }
     const result = CardSchema.safeParse(raw)
     if (!result.success) {
-      console.warn(`Skip card: ${raw.suit}${raw.rank}`, result.error.issues[0]?.message)
+      console.warn(`Skip card: ${mark}`, result.error.issues[0]?.message)
       return null
     }
     return result.data

@@ -8,7 +8,7 @@ type Props = {
   onClose?: () => void
 }
 
-type PaoItem = [label: string, val: string, yomi: string]
+type AiuItem = [label: string, val: string]
 
 function suitColor(suit: string): string {
   if (suit === 'H') return '#f87171'
@@ -21,10 +21,10 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
   const bmKey = 'c:' + c.suit + c.rank
   const isBm = bookmarks.has(bmKey)
 
-  const paoItems: PaoItem[] = [
-    ['人', c.hito, c.hitoYomi],
-    ['動', c.dousa, c.dousaYomi],
-    ['物', c.mono, c.monoYomi],
+  const aiuItems: AiuItem[] = [
+    ['A', c.a],
+    ['I', c.i],
+    ['U', c.u],
   ]
 
   return (
@@ -54,12 +54,11 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
         </div>
       </div>
       <div class="card-detail-body">
-        {paoItems.map(([label, val, yomi]) =>
+        {aiuItems.map(([label, val]) =>
           val ? (
             <div class="card-detail-item" key={label}>
               <div class="cd-label">{label}</div>
               <div class="cd-val">{val}</div>
-              {yomi ? <div class="cd-yomi">{yomi}</div> : null}
             </div>
           ) : null
         )}
