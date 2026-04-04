@@ -3,7 +3,6 @@ import { useState, useCallback } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumberTab from './NumberTab'
 import DigitTab from './DigitTab'
-import D3Tab from './D3Tab'
 
 type Props = {
   numbers: NumberEntry[]
@@ -12,7 +11,7 @@ type Props = {
   onCheckingChange?: (checking: boolean) => void
 }
 
-type SubTab = 'all' | 'd2' | 'd3'
+type SubTab = 'all' | 'd2'
 
 function NumGroupTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [sub, setSub] = useState<SubTab>('all')
@@ -44,21 +43,12 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props
         >
           2桁
         </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'd3' ? ' active' : '')}
-          onClick={() => handleSub('d3')}
-        >
-          年コード
-        </button>
       </div>
       {sub === 'all' && (
         <NumberTab numbers={numbers} bookmarks={bookmarks} onToggleBm={onToggleBm} />
       )}
       {sub === 'd2' && (
         <DigitTab numbers={numbers} bookmarks={bookmarks} onToggleBm={onToggleBm} />
-      )}
-      {sub === 'd3' && (
-        <D3Tab numbers={numbers} bookmarks={bookmarks} onToggleBm={onToggleBm} onCheckingChange={onCheckingChange} />
       )}
     </div>
   )

@@ -237,3 +237,57 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 
 /* Stats iframe */
 .stats-frame { width: 100%; flex: 1; border: none; background: var(--bg); }
+
+/* Weekday */
+.weekday-layout { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.weekday-explain-stack, .weekday-test-stack { display: flex; flex-direction: column; gap: 8px; }
+.weekday-toolbar { display: flex; gap: 8px; align-items: center; }
+.weekday-date-input { margin-top: 0; flex: 1; }
+.weekday-error { background: #7f1d1d33; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 8px; padding: 10px 12px; }
+.weekday-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.weekday-result-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.weekday-date { font-size: 16px; font-weight: bold; font-family: monospace; color: var(--text); }
+.weekday-answer { font-size: 24px; font-weight: bold; color: var(--accent); display: flex; gap: 8px; align-items: baseline; }
+.weekday-answer-en { font-size: 12px; color: var(--text2); font-family: monospace; font-weight: normal; }
+.weekday-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.weekday-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; font-size: 11px; color: var(--text2); }
+.weekday-badge.warn { color: var(--warn); border-color: #fbbf2433; }
+.weekday-formula { font-family: monospace; font-size: 13px; color: var(--text2); background: var(--surface2); border-radius: 8px; padding: 8px 10px; }
+.weekday-step-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; }
+.weekday-step-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.weekday-step-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.weekday-step-value { font-size: 22px; font-weight: bold; font-family: monospace; color: var(--accent); margin-bottom: 4px; }
+.weekday-step-explain { font-size: 11px; color: var(--text2); line-height: 1.4; }
+.weekday-reference-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.weekday-ref-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.weekday-ref-title { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
+.weekday-ref-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.weekday-ref-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 8px; font-size: 11px; font-family: monospace; }
+.weekday-test-summary { display: flex; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.weekday-test-title { font-size: 16px; font-weight: bold; }
+.weekday-test-sub { font-size: 12px; color: var(--text2); }
+.weekday-timer { font-size: 13px; color: var(--accent); font-family: monospace; }
+.weekday-current-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 12px; text-align: center; }
+.weekday-current-card.done { border-color: var(--accent); }
+.weekday-current-no { font-size: 12px; color: var(--text2); margin-bottom: 6px; font-family: monospace; }
+.weekday-current-date { font-size: 28px; font-weight: bold; font-family: monospace; color: var(--accent); }
+.weekday-current-help { font-size: 12px; color: var(--text2); margin-top: 6px; }
+.weekday-answer-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.weekday-answer-btn { height: 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 18px; font-weight: bold; cursor: pointer; min-width: 0; }
+.weekday-answer-btn:disabled { opacity: 0.4; cursor: default; }
+.weekday-answer-btn:active:not(:disabled) { border-color: var(--accent); background: var(--accent2); color: var(--accent); }
+.weekday-quiz-list { display: flex; flex-direction: column; gap: 8px; }
+.weekday-quiz-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.weekday-quiz-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.weekday-quiz-no { font-size: 11px; color: var(--text2); font-family: monospace; min-width: 24px; }
+.weekday-quiz-date { font-size: 15px; font-weight: bold; font-family: monospace; color: var(--text); }
+.weekday-quiz-status { font-size: 11px; border-radius: 999px; padding: 3px 8px; }
+.weekday-quiz-status.ok { color: #4ade80; background: #16653433; }
+.weekday-quiz-status.ng { color: #fca5a5; background: #7f1d1d33; }
+.weekday-quiz-picked { font-size: 12px; color: var(--text2); }
+.weekday-quiz-time { font-size: 12px; color: var(--accent); font-family: monospace; margin-left: auto; }
+.weekday-quiz-pending { font-size: 12px; color: var(--text2); }
+
+@media (min-width: 720px) {
+  .weekday-reference-grid { grid-template-columns: 1fr 1fr; }
+}

@@ -7,12 +7,14 @@ import NumGroupTab from './components/NumGroupTab'
 import CardTab from './components/CardTab'
 import PiTab from './components/PiTab'
 import YearTab from './components/YearTab'
+import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
 import {
   IconNum,
   IconCard,
   IconPi,
   IconYear,
+  IconWeekday,
   IconStats,
 } from './components/Icons'
 
@@ -74,6 +76,14 @@ export function App() {
           onCheckingChange={setLocked}
         />
       )}
+      {tab === 'weekday' && (
+        <WeekdayTab
+          numbers={data.numbers}
+          bookmarks={bookmarks}
+          onToggleBm={toggleBm}
+          onCheckingChange={setLocked}
+        />
+      )}
       {tab === 'misc' && (
         <MiscTab
           numbers={data.numbers}
@@ -87,6 +97,7 @@ export function App() {
         <TabButton id="card" current={tab} onSelect={setTab} icon={<IconCard />} label="カード" />
         <TabButton id="pi" current={tab} onSelect={setTab} icon={<IconPi />} label="π" />
         <TabButton id="year" current={tab} onSelect={setTab} icon={<IconYear />} label="年号" />
+        <TabButton id="weekday" current={tab} onSelect={setTab} icon={<IconWeekday />} label="曜日" />
         <TabButton id="misc" current={tab} onSelect={setTab} icon={<IconStats />} label="その他" />
       </div>
     </>
