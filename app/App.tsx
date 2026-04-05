@@ -58,7 +58,7 @@ export function App() {
         <NumGroupTab numbers={data.numbers} bookmarks={bookmarks} onToggleBm={toggleBm} onCheckingChange={setLocked} />
       )}
       {tab === 'card' && (
-        <CardTab cards={data.cards} bookmarks={bookmarks} onToggleBm={toggleBm} />
+        <CardTab cards={data.cards} bookmarks={bookmarks} onToggleBm={toggleBm} onCheckingChange={setLocked} />
       )}
       {tab === 'pi' && (
         <PiTab

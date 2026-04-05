@@ -70,3 +70,11 @@ export function loadD3Records(): Record[] {
 export function saveD3Records(records: Record[]) {
   saveJson('d3-999', records)
 }
+
+export function loadCardRecords(): Record[] {
+  return loadJson('card999', RecordsSchema, [])
+}
+
+export function saveCardRecords(records: Record[]) {
+  saveJson('card999', records)
+}
