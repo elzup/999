@@ -68,6 +68,8 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .card-detail-item .cd-label { font-size: 10px; color: var(--text2); margin-bottom: 2px; }
 .card-detail-item .cd-val { font-size: 14px; font-weight: bold; color: var(--text); }
 .card-detail-item .cd-yomi { font-size: 11px; color: var(--accent); }
+.card-detail-item .cd-scorebar { margin-top: 6px; width: 72px; height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.card-detail-item .cd-scorefill { height: 100%; background: var(--accent); border-radius: 999px; }
 
 /* 2桁タブ */
 .d2-layout { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }

@@ -88,9 +88,9 @@ export function parseCardsTsv(tsv: string) {
       const raw = {
         suit: parsed.suit,
         rank: parsed.rank,
-        a: col(row, 'A'),
-        i: col(row, 'I'),
-        u: col(row, 'U'),
+        first: col(row, 'B') || col(row, 'I') || col(row, 'first'),
+        score: parseScore(col(row, 'C') || col(row, 'score')),
+        secondary: col(row, 'D') || col(row, 'U') || col(row, 'secondary'),
       }
       const result = CardEntrySchema.safeParse(raw)
       if (!result.success) {
@@ -100,6 +100,14 @@ export function parseCardsTsv(tsv: string) {
       return result.data
     })
     .filter((v): v is NonNullable<typeof v> => v !== null)
+}
+
+function parseScore(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const value = Number(trimmed)
+  if (!Number.isFinite(value)) return null
+  return Math.max(0, Math.min(3, value))
 }
 
 /** data.json をバリデーション */

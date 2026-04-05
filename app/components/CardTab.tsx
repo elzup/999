@@ -4,6 +4,7 @@ import type { CardEntry } from '../data/schema'
 import type { Record as TestRecord } from '../data/schema'
 import { SUIT_LABEL } from '../data/constants'
 import { loadCardRecords, saveCardRecords } from '../data/storage'
+import { formatCardId, pickCardPrompt } from '../data/cards'
 import CardDetailPanel from './CardDetailPanel'
 import RecordPanel from './RecordPanel'
 
@@ -46,10 +47,6 @@ function shuffle<T>(arr: readonly T[]): T[] {
   return a
 }
 
-function cardId(c: CardEntry): string {
-  return SUIT_LABEL[c.suit] + c.rank
-}
-
 function suitColor(suit: string): string {
   if (suit === 'H') return '#f87171'
   if (suit === 'C') return '#4ade80'
@@ -64,7 +61,7 @@ type CardCellProps = {
 }
 
 function CardCell({ c, selected, onSelect }: CardCellProps) {
-  const id = SUIT_LABEL[c.suit] + c.rank
+  const id = formatCardId(c)
   return (
     <div
       class={'card-cell' + (selected ? ' selected' : '')}
@@ -75,16 +72,8 @@ function CardCell({ c, selected, onSelect }: CardCellProps) {
   )
 }
 
-// ♠♣ → U優先, ♥♦ → A優先, fallback to other non-empty columns
 function pickCardValue(c: CardEntry): { value: string; label: string } | null {
-  const priority =
-    c.suit === 'S' || c.suit === 'C'
-      ? (['u', 'a', 'i'] as const)
-      : (['a', 'u', 'i'] as const)
-  for (const col of priority) {
-    if (c[col].trim() !== '') return { value: c[col], label: col.toUpperCase() }
-  }
-  return null
+  return pickCardPrompt(c)
 }
 
 const SUITS = ['S', 'H', 'C', 'D'] as const
@@ -333,7 +322,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
                     onClick={() => !isMatched && tapCard(item.key)}
                   >
                     <span style={{ color: suitColor(item.card.suit) }}>
-                      {cardId(item.card)}
+                      {formatCardId(item.card)}
                     </span>
                   </div>
                 )
@@ -341,7 +330,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
             </div>
 
             <div class="cm-column">
-              <div class="cm-col-label">A/I/U</div>
+              <div class="cm-col-label">A/B/C/D</div>
               {shuffledValues.map((item) => {
                 const isMatched = batchMatched.has(item.key)
                 return (

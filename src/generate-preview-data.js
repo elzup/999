@@ -26,9 +26,9 @@ const NumberSchema = z.object({
 const CardSchema = z.object({
   suit: z.enum(['S', 'H', 'C', 'D']),
   rank: z.string().min(1),
-  a: z.string().default(''),
-  i: z.string().default(''),
-  u: z.string().default(''),
+  first: z.string().default(''),
+  score: z.number().nullable().default(null),
+  secondary: z.string().default(''),
 })
 
 // Numbers data
@@ -73,9 +73,9 @@ const cards = cardLines
     const raw = {
       suit: parsed.suit,
       rank: parsed.rank,
-      a: cols[colIdx('A')] ?? '',
-      i: cols[colIdx('I')] ?? '',
-      u: cols[colIdx('U')] ?? '',
+      first: (cols[colIdx('B')] ?? '') || (cols[colIdx('I')] ?? '') || (cols[colIdx('first')] ?? ''),
+      score: parseScore((cols[colIdx('C')] ?? '') || (cols[colIdx('score')] ?? '')),
+      secondary: (cols[colIdx('D')] ?? '') || (cols[colIdx('U')] ?? '') || (cols[colIdx('secondary')] ?? ''),
     }
     const result = CardSchema.safeParse(raw)
     if (!result.success) {
@@ -85,6 +85,14 @@ const cards = cardLines
     return result.data
   })
   .filter(Boolean)
+
+function parseScore(raw) {
+  const trimmed = String(raw || '').trim()
+  if (!trimmed) return null
+  const value = Number(trimmed)
+  if (!Number.isFinite(value)) return null
+  return Math.max(0, Math.min(3, value))
+}
 
 const out = { numbers, cards }
 writeFileSync(join(publicDir, 'data.json'), JSON.stringify(out))

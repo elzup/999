@@ -22,9 +22,9 @@ export type NumberEntry = z.infer<typeof NumberEntrySchema>
 export const CardEntrySchema = z.object({
   suit: z.enum(['S', 'H', 'C', 'D']),
   rank: z.string().min(1),
-  a: z.string().default(''),
-  i: z.string().default(''),
-  u: z.string().default(''),
+  first: z.string().default(''),
+  score: z.number().nullable().default(null),
+  secondary: z.string().default(''),
 })
 
 export type CardEntry = z.infer<typeof CardEntrySchema>

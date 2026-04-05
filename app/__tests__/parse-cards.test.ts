@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { parseCardsTsv } from '../data/parse'
 
 const SAMPLE_TSV = [
-  'mark\tA\tI\tU',
-  '♠️A\t紗枝\t支援\tsue',
-  '♠️2\tサブ\tジブ\tスニ,スプー',
-  '♥️K\t派遣\t\tバケツ',
-  '♣️J\tクリスタ\t\t栗',
-  '♦️10\ttad\t\tタトゥー',
+  'mark\tA\tB\tC\tD',
+  '♠️A\t紗枝\t支援\t3\tsue',
+  '♠️2\tサブ\tジブ\t2\tスニ,スプー',
+  '♥️K\t派遣\t\t1\tバケツ',
+  '♣️J\tクリスタ\t\t\t栗',
+  '♦️10\ttad\t\t0\tタトゥー',
 ].join('\n')
 
 describe('parseCardsTsv', () => {
@@ -31,13 +31,14 @@ describe('parseCardsTsv', () => {
     expect(cards[4].rank).toBe('10')
   })
 
-  it('parses A/I/U columns', () => {
-    expect(cards[0]).toMatchObject({ a: '紗枝', i: '支援', u: 'sue' })
-    expect(cards[1]).toMatchObject({ a: 'サブ', i: 'ジブ', u: 'スニ,スプー' })
+  it('parses A/B/C/D semantics', () => {
+    expect(cards[0]).toMatchObject({ first: '支援', score: 3, secondary: 'sue' })
+    expect(cards[1]).toMatchObject({ first: 'ジブ', score: 2, secondary: 'スニ,スプー' })
   })
 
   it('defaults empty columns to empty string', () => {
-    expect(cards[2].i).toBe('')
+    expect(cards[2].first).toBe('')
+    expect(cards[3].secondary).toBe('栗')
   })
 
   it('skips rows with invalid mark', () => {
@@ -46,9 +47,21 @@ describe('parseCardsTsv', () => {
   })
 
   it('handles variant suit emojis without variation selector', () => {
-    const tsv = 'mark\tA\tI\tU\n♠A\ttest\t\t'
+    const tsv = 'mark\tA\tB\tC\tD\n♠A\ttest\t\t\t'
     const result = parseCardsTsv(tsv)
     expect(result).toHaveLength(1)
     expect(result[0].suit).toBe('S')
+  })
+
+  it('supports legacy I/U columns during transition', () => {
+    const tsv = 'mark\tA\tI\tU\n♠️A\talpha\tbeta\tgamma'
+    const result = parseCardsTsv(tsv)
+    expect(result[0]).toMatchObject({ first: 'beta', score: null, secondary: 'gamma' })
+  })
+
+  it('clamps score to max 3', () => {
+    const tsv = 'mark\tA\tB\tC\tD\n♠️A\talpha\tbeta\t9\tgamma'
+    const result = parseCardsTsv(tsv)
+    expect(result[0].score).toBe(3)
   })
 })

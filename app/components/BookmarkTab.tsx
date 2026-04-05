@@ -1,7 +1,7 @@
 import { h } from 'preact'
 import { useState, useMemo } from 'preact/hooks'
 import type { NumberEntry, CardEntry } from '../data/schema'
-import { SUIT_LABEL } from '../data/constants'
+import { formatCardId } from '../data/cards'
 import NumDetailPanel from './NumDetailPanel'
 import CardDetailPanel from './CardDetailPanel'
 
@@ -19,7 +19,7 @@ type CardCellProps = {
 }
 
 function CardCell({ c, selected, onSelect }: CardCellProps) {
-  const id = SUIT_LABEL[c.suit] + c.rank
+  const id = formatCardId(c)
   return (
     <div
       class={'card-cell' + (selected ? ' selected' : '')}

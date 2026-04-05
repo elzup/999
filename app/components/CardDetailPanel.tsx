@@ -1,5 +1,5 @@
 import type { CardEntry } from '../data/schema'
-import { SUIT_LABEL } from '../data/constants'
+import { cardValues, formatCardId } from '../data/cards'
 
 type Props = {
   c: CardEntry
@@ -8,7 +8,7 @@ type Props = {
   onClose?: () => void
 }
 
-type AiuItem = [label: string, val: string]
+type CardValueItem = [label: string, val: string]
 
 function suitColor(suit: string): string {
   if (suit === 'H') return '#f87171'
@@ -21,18 +21,15 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
   const bmKey = 'c:' + c.suit + c.rank
   const isBm = bookmarks.has(bmKey)
 
-  const aiuItems: AiuItem[] = [
-    ['A', c.a],
-    ['I', c.i],
-    ['U', c.u],
-  ]
+  const items: CardValueItem[] = cardValues(c)
+  const score = c.score ?? 0
+  const scoreWidth = `${(Math.max(0, Math.min(3, score)) / 3) * 100}%`
 
   return (
     <div class="detail-panel">
       <div class="detail-header">
         <span class="detail-id" style={{ color: suitColor(c.suit) }}>
-          {SUIT_LABEL[c.suit]}
-          {c.rank}
+          {formatCardId(c)}
         </span>
         <div class="detail-actions">
           <span
@@ -54,7 +51,18 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
         </div>
       </div>
       <div class="card-detail-body">
-        {aiuItems.map(([label, val]) =>
+        {c.score !== null ? (
+          <div class="card-detail-item" key="score">
+            <div class="cd-label">Score</div>
+            <div class="cd-val">
+              {c.score}/3
+            </div>
+            <div class="cd-scorebar">
+              <div class="cd-scorefill" style={{ width: scoreWidth }} />
+            </div>
+          </div>
+        ) : null}
+        {items.map(([label, val]) =>
           val ? (
             <div class="card-detail-item" key={label}>
               <div class="cd-label">{label}</div>
