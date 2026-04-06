@@ -36,8 +36,6 @@ type MatchResult = {
   correct: boolean
 }
 
-const BATCH_SIZE = 6
-
 function shuffle<T>(arr: readonly T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -84,11 +82,8 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
   // Test state
   const [allItems, setAllItems] = useState<MatchItem[]>([])
-  const [batchIdx, setBatchIdx] = useState(0)
+  const [checkIdx, setCheckIdx] = useState(0)
   const [results, setResults] = useState<MatchResult[]>([])
-  const [pickedCard, setPickedCard] = useState<string | null>(null)
-  const [batchMatched, setBatchMatched] = useState<Set<string>>(new Set())
-  const [batchWrong, setBatchWrong] = useState<Map<string, boolean>>(new Map())
   const [startTime, setStartTime] = useState<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [finished, setFinished] = useState(false)
@@ -115,18 +110,16 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
     return cards.find((c) => c.suit + c.rank === selected) || null
   }, [cards, selected])
 
-  const currentBatch = useMemo(() => {
-    const start = batchIdx * BATCH_SIZE
-    return allItems.slice(start, start + BATCH_SIZE)
-  }, [allItems, batchIdx])
+  const currentItem = useMemo(() => {
+    return allItems[checkIdx] ?? null
+  }, [allItems, checkIdx])
 
-  const shuffledValues = useMemo(() => {
-    return shuffle(currentBatch.map((item) => ({ key: item.key, value: item.value, label: item.label })))
-  }, [currentBatch])
-
-  const totalBatches = useMemo(() => {
-    return Math.ceil(allItems.length / BATCH_SIZE)
-  }, [allItems])
+  const currentOptions = useMemo(() => {
+    if (!currentItem) return []
+    const distractors = allItems.filter((item) => item.key !== currentItem.key)
+    const picked = shuffle(distractors).slice(0, 3)
+    return shuffle([currentItem, ...picked])
+  }, [allItems, currentItem])
 
   const startCheck = useCallback(
     () => {
@@ -142,12 +135,9 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
           })
         }
       }
-      setAllItems(shuffle(items))
-      setBatchIdx(0)
+      setAllItems(items)
+      setCheckIdx(0)
       setResults([])
-      setPickedCard(null)
-      setBatchMatched(new Set())
-      setBatchWrong(new Map())
       setStartTime(Date.now())
       setElapsed(0)
       setFinished(false)
@@ -181,58 +171,23 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
     [startTime, results, records, onCheckingChange]
   )
 
-  const advanceBatch = useCallback(
-    (currentResults: MatchResult[]) => {
-      const nextBatch = batchIdx + 1
-      if (nextBatch >= totalBatches) {
-        endCheck(currentResults)
+  const tapChoice = useCallback(
+    (choiceKey: string) => {
+      if (!currentItem || finished) return
+      const isCorrect = choiceKey === currentItem.key
+      const newResults = [
+        ...results,
+        { key: currentItem.key, correct: isCorrect },
+      ]
+      setResults(newResults)
+      const nextIdx = checkIdx + 1
+      if (nextIdx >= allItems.length) {
+        endCheck(newResults)
         return
       }
-      setBatchIdx(nextBatch)
-      setPickedCard(null)
-      setBatchMatched(new Set())
-      setBatchWrong(new Map())
+      setCheckIdx(nextIdx)
     },
-    [batchIdx, totalBatches, endCheck]
-  )
-
-  const tapCard = useCallback(
-    (key: string) => {
-      if (batchMatched.has(key)) return
-      setPickedCard(pickedCard === key ? null : key)
-    },
-    [pickedCard, batchMatched]
-  )
-
-  const tapValue = useCallback(
-    (valueKey: string) => {
-      if (pickedCard === null) return
-      if (batchMatched.has(valueKey)) return
-
-      const isCorrect = pickedCard === valueKey
-      const newResult: MatchResult = { key: pickedCard, correct: isCorrect }
-
-      if (isCorrect) {
-        const newMatched = new Set(batchMatched)
-        newMatched.add(valueKey)
-        setBatchMatched(newMatched)
-        const newResults = [...results, newResult]
-        setResults(newResults)
-        setPickedCard(null)
-
-        if (newMatched.size === currentBatch.length) {
-          advanceBatch(newResults)
-        }
-      } else {
-        const newWrong = new Map(batchWrong)
-        newWrong.set(pickedCard, true)
-        setBatchWrong(newWrong)
-        const newResults = [...results, newResult]
-        setResults(newResults)
-        setPickedCard(null)
-      }
-    },
-    [pickedCard, batchMatched, batchWrong, results, currentBatch, advanceBatch]
+    [currentItem, finished, results, checkIdx, allItems.length, endCheck]
   )
 
   const deleteRecord = useCallback(
@@ -284,7 +239,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
               {elapsed}秒 {correctCount}/{results.length}
             </span>
             <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-              {batchIdx + 1}/{totalBatches}
+              {Math.min(checkIdx + 1, allItems.length)}/{allItems.length}
             </span>
             <button
               class="filter-btn"
@@ -303,51 +258,37 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
         {/* Matching area */}
         <div class="content" style={{ flex: 1 }}>
-          <div class="cm-match-area">
-            <div class="cm-column">
-              <div class="cm-col-label">カード</div>
-              {currentBatch.map((item) => {
-                const isMatched = batchMatched.has(item.key)
-                const isPicked = pickedCard === item.key
-                const isWrong = batchWrong.has(item.key)
-                return (
-                  <div
-                    key={item.key}
-                    class={
-                      'cm-item cm-card' +
-                      (isMatched ? ' matched' : '') +
-                      (isPicked ? ' picked' : '') +
-                      (isWrong ? ' wrong' : '')
-                    }
-                    onClick={() => !isMatched && tapCard(item.key)}
-                  >
-                    <span style={{ color: suitColor(item.card.suit) }}>
-                      {formatCardId(item.card)}
-                    </span>
+          <div class="cm-quiz-wrap">
+            {currentItem ? (
+              <>
+                <div class="cm-card-prompt">
+                  <div class="cm-card-order">
+                    {checkIdx + 1} / {allItems.length}
                   </div>
-                )
-              })}
-            </div>
+                  <div
+                    class={'cm-card-face ' + currentItem.card.suit}
+                    style={{ color: suitColor(currentItem.card.suit) }}
+                  >
+                    {formatCardId(currentItem.card)}
+                  </div>
+                </div>
 
-            <div class="cm-column">
-              <div class="cm-col-label">A/B/C/D</div>
-              {shuffledValues.map((item) => {
-                const isMatched = batchMatched.has(item.key)
-                return (
-                  <div
-                    key={'v-' + item.key}
-                    class={
-                      'cm-item cm-value' +
-                      (isMatched ? ' matched' : '') +
-                      (pickedCard !== null && !isMatched ? ' selectable' : '')
-                    }
-                    onClick={() => tapValue(item.key)}
-                  >
-                    {item.value}
-                  </div>
-                )
-              })}
-            </div>
+                <div class="cm-choice-list">
+                  {currentOptions.map((item, idx) => (
+                    <button
+                      key={'v-' + item.key}
+                      class="cm-choice-btn"
+                      onClick={() => tapChoice(item.key)}
+                    >
+                      <span class="cm-choice-index">
+                        {String.fromCharCode(65 + idx)}
+                      </span>
+                      <span class="cm-choice-value">{item.value}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
