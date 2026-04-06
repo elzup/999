@@ -1,7 +1,6 @@
 import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { autoYomi } from './card-readings.js'
 
 const SHEET_ID = '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
 const GID = '1530780723'
@@ -9,23 +8,32 @@ const EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?fo
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
 
-/** スートの絵文字 → コード */
-const SUIT_MAP = {
-  '♠️': 'S',
-  '♥️': 'H',
-  '♣️': 'C',
-  '♦️': 'D',
+function parseTsvRows(tsv) {
+  const lines = tsv.split('\n').filter((line) => line.trim() !== '')
+  if (lines.length === 0) throw new Error('Empty TSV')
+  const headers = lines[0].split('\t').map((header) => header.trim())
+  const rows = lines.slice(1).map((line) => line.split('\t').map((cell) => cell.trim()))
+  return { headers, rows }
 }
 
-/** カードIDをパース: "♠️A" → { suit: "S", rank: "A" } */
-function parseCardId(raw) {
-  for (const [emoji, code] of Object.entries(SUIT_MAP)) {
-    if (raw.startsWith(emoji)) {
-      const rank = raw.slice(emoji.length).trim()
-      return { suit: code, rank }
-    }
-  }
-  return null
+function headerIndex(headers) {
+  const map = new Map()
+  headers.forEach((header, index) => {
+    if (!map.has(header)) map.set(header, index)
+  })
+  return map
+}
+
+function col(row, indexMap, name) {
+  return row[indexMap.get(name) ?? -1] ?? ''
+}
+
+function normalizeScore(raw) {
+  const trimmed = String(raw || '').trim()
+  if (!trimmed) return ''
+  const value = Number(trimmed)
+  if (!Number.isFinite(value)) return ''
+  return String(Math.max(0, Math.min(3, value)))
 }
 
 /** Google Sheet から TSV を取得 */
@@ -48,83 +56,36 @@ async function fetchSheet() {
   return text
 }
 
-/**
- * カードシートの TSV をパース
- *
- * シート構成 (38列):
- *   col0:  card (♠️A)
- *   col1:  hito (人)
- *   col2:  hito_yomi (読み) ← 空欄
- *   col3:  hito_done (TRUE/FALSE)
- *   col4:  dousa (動作)
- *   col5:  dousa_yomi (読み) ← 空欄
- *   col6:  dousa_done
- *   col7:  mono (物)
- *   col8:  mono_yomi (読み) ← 空欄
- *   col9:  mono_done
- *   col10: card (再掲)
- *   col11: hito2 (代替人)
- *   col12: hito2_yomi ← 空欄
- *   col13: hito2_done
- *   col14: alt2
- *   col15: alt2_yomi ← 空欄
- *   col16: alt2_done
- *   col34: rank
- *   col35: best kana
- *   col36: better kana
- *   col37: bad kana
- */
-function parseTsv(tsv) {
-  const lines = tsv.split('\n').filter((l) => l.trim() !== '')
-  const entries = []
+function parseSheet(tsv) {
+  const { headers, rows } = parseTsvRows(tsv)
+  const indexMap = headerIndex(headers)
 
-  for (const line of lines) {
-    const cols = line.split('\t')
-    const cardRaw = cols[0]?.trim()
-    if (!cardRaw) continue
+  const hasModernHeaders =
+    indexMap.has('mark') &&
+    indexMap.has('first') &&
+    indexMap.has('score') &&
+    (indexMap.has('secondary(flip)') || indexMap.has('secondary'))
 
-    const parsed = parseCardId(cardRaw)
-    if (!parsed) continue
-
-    const { suit, rank } = parsed
-
-    const hito = cols[1]?.trim() || ''
-    const hitoYomi = cols[2]?.trim() || ''
-    const dousa = cols[4]?.trim() || ''
-    const dousaYomi = cols[5]?.trim() || ''
-    const mono = cols[7]?.trim() || ''
-    const monoYomi = cols[8]?.trim() || ''
-
-    const hito2 = cols[11]?.trim() || ''
-    const hito2Yomi = cols[12]?.trim() || ''
-    const alt2 = cols[14]?.trim() || ''
-    const alt2Yomi = cols[15]?.trim() || ''
-
-    entries.push({
-      suit,
-      rank,
-      hito,
-      hitoYomi: hitoYomi || autoYomi(hito),
-      dousa,
-      dousaYomi: dousaYomi || autoYomi(dousa),
-      mono,
-      monoYomi: monoYomi || autoYomi(mono),
-      hito2,
-      hito2Yomi: hito2Yomi || autoYomi(hito2),
-      alt2,
-      alt2Yomi: alt2Yomi || autoYomi(alt2),
-    })
+  if (!hasModernHeaders) {
+    throw new Error(
+      '想定しているヘッダ mark / first / score / secondary(flip) が見つかりません'
+    )
   }
 
-  return entries
+  return rows
+    .map((row) => ({
+      mark: col(row, indexMap, 'mark'),
+      first: col(row, indexMap, 'first'),
+      score: normalizeScore(col(row, indexMap, 'score')),
+      secondary: col(row, indexMap, 'secondary(flip)') || col(row, indexMap, 'secondary'),
+    }))
+    .filter((entry) => entry.mark)
 }
 
 function toTsv(entries) {
-  const header =
-    'suit\trank\thito\thitoYomi\tdousa\tdousaYomi\tmono\tmonoYomi\thito2\thito2Yomi\talt2\talt2Yomi'
+  const header = 'mark\tfirst\tscore\tsecondary(flip)'
   const rows = entries.map(
-    (e) =>
-      `${e.suit}\t${e.rank}\t${e.hito}\t${e.hitoYomi}\t${e.dousa}\t${e.dousaYomi}\t${e.mono}\t${e.monoYomi}\t${e.hito2}\t${e.hito2Yomi}\t${e.alt2}\t${e.alt2Yomi}`
+    (entry) => `${entry.mark}\t${entry.first}\t${entry.score}\t${entry.secondary}`
   )
   return [header, ...rows].join('\n') + '\n'
 }
@@ -134,27 +95,21 @@ async function main() {
   const tsv = await fetchSheet()
 
   console.log('Parsing...')
-  const entries = parseTsv(tsv)
+  const entries = parseSheet(tsv)
 
   const outPath = join(dataDir, 'cards.tsv')
   writeFileSync(outPath, toTsv(entries))
   console.log(`Saved ${entries.length} card entries to ${outPath}`)
 
   const stats = {
-    hito: entries.filter((e) => e.hito).length,
-    dousa: entries.filter((e) => e.dousa).length,
-    mono: entries.filter((e) => e.mono).length,
-    hitoYomi: entries.filter((e) => e.hitoYomi).length,
-    dousaYomi: entries.filter((e) => e.dousaYomi).length,
-    monoYomi: entries.filter((e) => e.monoYomi).length,
+    first: entries.filter((entry) => entry.first).length,
+    score: entries.filter((entry) => entry.score !== '').length,
+    secondary: entries.filter((entry) => entry.secondary).length,
   }
 
-  console.log(`  hito: ${stats.hito}/${entries.length}`)
-  console.log(`  dousa: ${stats.dousa}/${entries.length}`)
-  console.log(`  mono: ${stats.mono}/${entries.length}`)
-  console.log(`  hitoYomi: ${stats.hitoYomi}/${entries.length}`)
-  console.log(`  dousaYomi: ${stats.dousaYomi}/${entries.length}`)
-  console.log(`  monoYomi: ${stats.monoYomi}/${entries.length}`)
+  console.log(`  first: ${stats.first}/${entries.length}`)
+  console.log(`  score: ${stats.score}/${entries.length}`)
+  console.log(`  secondary: ${stats.secondary}/${entries.length}`)
 }
 
 main().catch((err) => {

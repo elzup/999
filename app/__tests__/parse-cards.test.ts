@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { parseCardsTsv } from '../data/parse'
 
 const SAMPLE_TSV = [
-  'mark\tA\tB\tC\tD',
-  '♠️A\t紗枝\t支援\t3\tsue',
-  '♠️2\tサブ\tジブ\t2\tスニ,スプー',
-  '♥️K\t派遣\t\t1\tバケツ',
-  '♣️J\tクリスタ\t\t\t栗',
-  '♦️10\ttad\t\t0\tタトゥー',
+  'mark\tfirst\tscore\tsecondary(flip)',
+  'A♠️\tエスピー,エース\t2\tsue',
+  '2♠️\tニス\t3\tスニ,スプー',
+  'K♥️\t\t1\tバケツ',
+  'J♣️\t\t\t栗',
+  '10♦️\t\t0\tタトゥー',
 ].join('\n')
 
 describe('parseCardsTsv', () => {
@@ -31,9 +31,9 @@ describe('parseCardsTsv', () => {
     expect(cards[4].rank).toBe('10')
   })
 
-  it('parses A/B/C/D semantics', () => {
-    expect(cards[0]).toMatchObject({ first: '支援', score: 3, secondary: 'sue' })
-    expect(cards[1]).toMatchObject({ first: 'ジブ', score: 2, secondary: 'スニ,スプー' })
+  it('parses first/score/secondary(flip) semantics', () => {
+    expect(cards[0]).toMatchObject({ first: 'エスピー,エース', score: 2, secondary: 'sue' })
+    expect(cards[1]).toMatchObject({ first: 'ニス', score: 3, secondary: 'スニ,スプー' })
   })
 
   it('defaults empty columns to empty string', () => {
@@ -47,20 +47,20 @@ describe('parseCardsTsv', () => {
   })
 
   it('handles variant suit emojis without variation selector', () => {
-    const tsv = 'mark\tA\tB\tC\tD\n♠A\ttest\t\t\t'
+    const tsv = 'mark\tfirst\tscore\tsecondary(flip)\nA♠\ttest\t\t'
     const result = parseCardsTsv(tsv)
     expect(result).toHaveLength(1)
     expect(result[0].suit).toBe('S')
   })
 
-  it('supports legacy I/U columns during transition', () => {
-    const tsv = 'mark\tA\tI\tU\n♠️A\talpha\tbeta\tgamma'
+  it('supports legacy B/C/D style during transition', () => {
+    const tsv = 'mark\tB\tC\tD\nA♠️\tbeta\t2\tgamma'
     const result = parseCardsTsv(tsv)
-    expect(result[0]).toMatchObject({ first: 'beta', score: null, secondary: 'gamma' })
+    expect(result[0]).toMatchObject({ first: 'beta', score: 2, secondary: 'gamma' })
   })
 
   it('clamps score to max 3', () => {
-    const tsv = 'mark\tA\tB\tC\tD\n♠️A\talpha\tbeta\t9\tgamma'
+    const tsv = 'mark\tfirst\tscore\tsecondary(flip)\nA♠️\talpha\t9\tgamma'
     const result = parseCardsTsv(tsv)
     expect(result[0].score).toBe(3)
   })

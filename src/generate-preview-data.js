@@ -52,6 +52,7 @@ const MARK_SUIT = { '♠️': 'S', '♠': 'S', '♥️': 'H', '♥': 'H', '♣�
 function parseMark(mark) {
   for (const [sym, suit] of Object.entries(MARK_SUIT)) {
     if (mark.startsWith(sym)) return { suit, rank: mark.slice(sym.length) }
+    if (mark.endsWith(sym)) return { suit, rank: mark.slice(0, -sym.length) }
   }
   return null
 }
@@ -73,9 +74,9 @@ const cards = cardLines
     const raw = {
       suit: parsed.suit,
       rank: parsed.rank,
-      first: (cols[colIdx('B')] ?? '') || (cols[colIdx('I')] ?? '') || (cols[colIdx('first')] ?? ''),
-      score: parseScore((cols[colIdx('C')] ?? '') || (cols[colIdx('score')] ?? '')),
-      secondary: (cols[colIdx('D')] ?? '') || (cols[colIdx('U')] ?? '') || (cols[colIdx('secondary')] ?? ''),
+      first: (cols[colIdx('first')] ?? '') || (cols[colIdx('B')] ?? '') || (cols[colIdx('I')] ?? ''),
+      score: parseScore((cols[colIdx('score')] ?? '') || (cols[colIdx('C')] ?? '')),
+      secondary: (cols[colIdx('secondary(flip)')] ?? '') || (cols[colIdx('secondary')] ?? '') || (cols[colIdx('D')] ?? '') || (cols[colIdx('U')] ?? ''),
     }
     const result = CardSchema.safeParse(raw)
     if (!result.success) {

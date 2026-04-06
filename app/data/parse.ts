@@ -49,7 +49,7 @@ export function parseWordsTsv(tsv: string) {
     .filter((v): v is NonNullable<typeof v> => v !== null)
 }
 
-/** mark 文字列 (♠️A, ♥️10 等) → { suit, rank } */
+/** mark 文字列 (A♠️, 10♥️, 旧: ♠️A) → { suit, rank } */
 const MARK_SUIT: Record<string, 'S' | 'H' | 'C' | 'D'> = {
   '♠️': 'S',
   '♠': 'S',
@@ -65,6 +65,9 @@ function parseMark(mark: string): { suit: string; rank: string } | null {
   for (const [sym, suit] of Object.entries(MARK_SUIT)) {
     if (mark.startsWith(sym)) {
       return { suit, rank: mark.slice(sym.length) }
+    }
+    if (mark.endsWith(sym)) {
+      return { suit, rank: mark.slice(0, -sym.length) }
     }
   }
   return null
@@ -88,9 +91,9 @@ export function parseCardsTsv(tsv: string) {
       const raw = {
         suit: parsed.suit,
         rank: parsed.rank,
-        first: col(row, 'B') || col(row, 'I') || col(row, 'first'),
-        score: parseScore(col(row, 'C') || col(row, 'score')),
-        secondary: col(row, 'D') || col(row, 'U') || col(row, 'secondary'),
+        first: col(row, 'first') || col(row, 'B') || col(row, 'I'),
+        score: parseScore(col(row, 'score') || col(row, 'C')),
+        secondary: col(row, 'secondary(flip)') || col(row, 'secondary') || col(row, 'D') || col(row, 'U'),
       }
       const result = CardEntrySchema.safeParse(raw)
       if (!result.success) {
