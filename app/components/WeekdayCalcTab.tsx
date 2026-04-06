@@ -8,6 +8,9 @@ import {
   type WeekdayQuestion,
   type WeekdayResult,
 } from '../lib/weekday'
+import type { Record as TestRecord } from '../data/schema'
+import { loadWeekdayRecords, saveWeekdayRecords } from '../data/storage'
+import RecordPanel from './RecordPanel'
 
 type Answer = {
   questionId: string
@@ -91,6 +94,8 @@ function WeekdayCalcTab() {
   const [elapsedMs, setElapsedMs] = useState(0)
   const timerRef = useRef<number | null>(null)
   const [openExplanations, setOpenExplanations] = useState<Record<string, boolean>>({})
+  const [records, setRecords] = useState<TestRecord[]>(loadWeekdayRecords)
+  const [showRecords, setShowRecords] = useState(false)
 
   useEffect(() => {
     if (viewMode === 'test' && quiz.length > 0 && answers.length < quiz.length && quizStartedAt !== null) {
@@ -156,12 +161,38 @@ function WeekdayCalcTab() {
       correct: selected === currentQuestion.result.weekdayIndex,
       elapsedMs: elapsed,
     }
-    setAnswers((prev) => [...prev, nextAnswer])
+    const nextAnswers = [...answers, nextAnswer]
+    setAnswers(nextAnswers)
     setQuestionStartedAt(Date.now())
-  }, [currentQuestion, questionStartedAt, finished])
+
+    if (nextAnswers.length >= quiz.length && quizStartedAt !== null) {
+      const score = nextAnswers.filter((a) => a.correct).length
+      const totalMs = Date.now() - quizStartedAt
+      const record: TestRecord = {
+        date: new Date().toISOString(),
+        score,
+        total: quiz.length,
+        time: Math.round(totalMs / 1000),
+      }
+      const newRecords = [record, ...records].slice(0, 50)
+      setRecords(newRecords)
+      saveWeekdayRecords(newRecords)
+    }
+  }, [currentQuestion, questionStartedAt, finished, answers, quiz, quizStartedAt, records])
 
   const toggleExplanation = useCallback((questionId: string) => {
     setOpenExplanations((prev) => ({ ...prev, [questionId]: !prev[questionId] }))
+  }, [])
+
+  const deleteRecord = useCallback((idx: number) => {
+    const newRecords = records.filter((_, i) => i !== idx)
+    setRecords(newRecords)
+    saveWeekdayRecords(newRecords)
+  }, [records])
+
+  const clearRecords = useCallback(() => {
+    setRecords([])
+    saveWeekdayRecords([])
   }, [])
 
   return (
@@ -184,6 +215,9 @@ function WeekdayCalcTab() {
               onClick={() => setViewMode('test')}
             >
               テスト
+            </button>
+            <button class="rec-btn" onClick={() => setShowRecords(true)}>
+              記録{records.length > 0 ? `(${records.length})` : ''}
             </button>
           </div>
         </div>
@@ -298,6 +332,16 @@ function WeekdayCalcTab() {
           </div>
         )}
       </div>
+
+      {showRecords ? (
+        <RecordPanel
+          title="曜日計算"
+          records={records}
+          onDelete={deleteRecord}
+          onClear={clearRecords}
+          onClose={() => setShowRecords(false)}
+        />
+      ) : null}
     </div>
   )
 }

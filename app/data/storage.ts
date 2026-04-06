@@ -78,3 +78,11 @@ export function loadCardRecords(): Record[] {
 export function saveCardRecords(records: Record[]) {
   saveJson('card999', records)
 }
+
+export function loadWeekdayRecords(): Record[] {
+  return loadJson('weekday999', RecordsSchema, [])
+}
+
+export function saveWeekdayRecords(records: Record[]) {
+  saveJson('weekday999', records)
+}
