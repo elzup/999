@@ -117,7 +117,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const currentOptions = useMemo(() => {
     if (!currentItem) return []
     const distractors = allItems.filter((item) => item.key !== currentItem.key)
-    const picked = shuffle(distractors).slice(0, 3)
+    const picked = shuffle(distractors).slice(0, 5)
     return shuffle([currentItem, ...picked])
   }, [allItems, currentItem])
 
@@ -258,10 +258,10 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
         {/* Matching area */}
         <div class="content" style={{ flex: 1 }}>
-          <div class="cm-quiz-wrap">
+          <div class="cm-quiz-wrap cm-quiz-split">
             {currentItem ? (
               <>
-                <div class="cm-card-prompt">
+                <div class="cm-card-prompt cm-card-prompt-side">
                   <div class="cm-card-order">
                     {checkIdx + 1} / {allItems.length}
                   </div>
@@ -273,7 +273,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
                   </div>
                 </div>
 
-                <div class="cm-choice-list">
+                <div class="cm-choice-list cm-choice-list-side">
                   {currentOptions.map((item, idx) => (
                     <button
                       key={'v-' + item.key}

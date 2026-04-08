@@ -247,6 +247,9 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .cm-choice-btn:active { border-color: var(--accent); background: var(--accent2); color: var(--accent); }
 .cm-choice-index { width: 28px; flex: 0 0 28px; color: var(--text2); font-family: monospace; }
 .cm-choice-value { flex: 1; word-break: break-word; }
+.cm-quiz-split { max-width: 760px; flex-direction: row; align-items: flex-start; gap: 16px; }
+.cm-card-prompt-side { flex: 0 0 40%; position: sticky; top: 8px; }
+.cm-choice-list-side { flex: 1; min-width: 0; }
 
 /* Stats iframe */
 .stats-frame { width: 100%; flex: 1; border: none; background: var(--bg); }
