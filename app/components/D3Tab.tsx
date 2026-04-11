@@ -6,6 +6,8 @@ import { DIGIT_COLORS, D3_LIST } from '../data/constants'
 import { loadD3Records, saveD3Records } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
+import ReviewPanel from './ReviewPanel'
+import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
   numbers: NumberEntry[]
@@ -159,6 +161,8 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [records, setRecords] = useState<TestRecord[]>(loadD3Records)
   const [finished, setFinished] = useState(false)
   const [showRecords, setShowRecords] = useState(false)
+  const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
+  const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
   const [lastAnswers, setLastAnswers] = useState<Map<string, Answer>>(new Map())
   const [elapsed, setElapsed] = useState(0)
   const timerRef = useRef<number | null>(null)
@@ -249,6 +253,21 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
         ansMap.set(a.xy, a)
       }
       setLastAnswers(ansMap)
+
+      // Build review items
+      const items: ReviewItem[] = used.map((a) => {
+        const xyz = D3_LIST[a.idx]
+        const correctDigit = xyz[2]
+        return {
+          label: a.xy,
+          correct: a.correct,
+          userAnswer: a.correct ? undefined : a.digit,
+          rightAnswer: correctDigit,
+        }
+      })
+      setReviewItems(items)
+      setReviewMeta({ score: correctCount, total: used.length, time: elapsed })
+
       setMode('view')
       setFinished(true)
       onCheckingChange?.(false)
@@ -460,6 +479,18 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
           onDelete={deleteRecord}
           onClear={clearRecords}
           onClose={() => setShowRecords(false)}
+        />
+      ) : null}
+
+      {/* Review overlay */}
+      {reviewItems ? (
+        <ReviewPanel
+          title="年コード"
+          score={reviewMeta.score}
+          total={reviewMeta.total}
+          time={reviewMeta.time}
+          items={reviewItems}
+          onClose={() => setReviewItems(null)}
         />
       ) : null}
 

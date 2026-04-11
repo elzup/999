@@ -40,6 +40,8 @@ function filterByEra(era: EraId): YearItem[] {
 import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
+import ReviewPanel from './ReviewPanel'
+import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
   numbers: NumberEntry[]
@@ -193,6 +195,8 @@ function YearTab({
   const [startTime, setStartTime] = useState<number | null>(null)
   const [records, setRecords] = useState<Record[]>(loadYearRecords)
   const [showRecords, setShowRecords] = useState(false)
+  const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
+  const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
   const [elapsed, setElapsed] = useState(0)
   const timerRef = useRef<number | null>(null)
 
@@ -257,10 +261,24 @@ function YearTab({
       const newRecords = [record, ...records].slice(0, 50)
       setRecords(newRecords)
       saveYearRecords(newRecords)
+
+      // Build review items
+      const items: ReviewItem[] = used.map((r) => {
+        const item = checkItems.find((ci) => ci.no === r.no)
+        return {
+          label: item ? `${item.year} ${item.event}` : `#${r.no}`,
+          correct: r.correct,
+          userAnswer: r.correct ? undefined : r.input,
+          rightAnswer: r.xyz,
+        }
+      })
+      setReviewItems(items)
+      setReviewMeta({ score: correctCount, total: used.length, time: el })
+
       setMode('view')
       onCheckingChange?.(false)
     },
-    [startTime, results, records, onCheckingChange]
+    [startTime, results, records, checkItems, onCheckingChange]
   )
 
   const tapDigit = useCallback(
@@ -443,6 +461,16 @@ function YearTab({
           onDelete={deleteRecord}
           onClear={clearRecords}
           onClose={() => setShowRecords(false)}
+        />
+      ) : null}
+      {reviewItems ? (
+        <ReviewPanel
+          title="年号"
+          score={reviewMeta.score}
+          total={reviewMeta.total}
+          time={reviewMeta.time}
+          items={reviewItems}
+          onClose={() => setReviewItems(null)}
         />
       ) : null}
       {mode === 'view' ? (

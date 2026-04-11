@@ -6,6 +6,8 @@ import { PI_DIGITS, DIGIT_COLORS } from '../data/constants'
 import { loadPiRecords, savePiRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
+import ReviewPanel from './ReviewPanel'
+import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
   numbers: NumberEntry[]
@@ -203,6 +205,8 @@ function PiTab({
   const [records, setRecords] = useState<Record[]>(loadPiRecords)
   const [finished, setFinished] = useState(false)
   const [showRecords, setShowRecords] = useState(false)
+  const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
+  const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
 
   const deleteRecord = useCallback(
     (idx: number) => {
@@ -244,6 +248,20 @@ function PiTab({
       const newRecords = [record, ...records].slice(0, 50)
       setRecords(newRecords)
       savePiRecords(newRecords)
+
+      // Build review — group by 3-digit blocks, show only wrong ones individually
+      const items: ReviewItem[] = used.map((a) => {
+        const pos = a.idx + 1
+        return {
+          label: `${pos}桁目`,
+          correct: a.correct,
+          userAnswer: a.correct ? undefined : a.digit,
+          rightAnswer: PI_DIGITS[a.idx],
+        }
+      })
+      setReviewItems(items)
+      setReviewMeta({ score: correctCount, total: used.length, time: elapsed })
+
       setMode('view')
       setFinished(true)
       onCheckingChange && onCheckingChange(false)
@@ -346,6 +364,16 @@ function PiTab({
           onDelete={deleteRecord}
           onClear={clearRecords}
           onClose={() => setShowRecords(false)}
+        />
+      ) : null}
+      {reviewItems ? (
+        <ReviewPanel
+          title="π"
+          score={reviewMeta.score}
+          total={reviewMeta.total}
+          time={reviewMeta.time}
+          items={reviewItems}
+          onClose={() => setReviewItems(null)}
         />
       ) : null}
       <div

@@ -12,6 +12,8 @@ import {
 import { formatCardId, pickCardPrompt } from '../data/cards'
 import CardDetailPanel from './CardDetailPanel'
 import RecordPanel from './RecordPanel'
+import ReviewPanel from './ReviewPanel'
+import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
   cards: CardEntry[]
@@ -111,6 +113,8 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [records, setRecords] = useState<TestRecord[]>(loadCardRecords)
   const [stats, setStats] = useState<CardStats>(loadCardStats)
   const [showRecords, setShowRecords] = useState(false)
+  const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
+  const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
   const timerRef = useRef<number | null>(null)
   const questionStartRef = useRef<number>(0)
 
@@ -206,11 +210,27 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
       setStats(newStats)
       saveCardStats(newStats)
 
+      // Build review items
+      const items: ReviewItem[] = used.map((r) => {
+        const card = allItems.find((item) => item.key === r.key)
+        return {
+          label: card ? formatCardId(card.card) : r.key,
+          correct: r.correct,
+          rightAnswer: card?.value ?? '',
+        }
+      })
+      setReviewItems(items)
+      setReviewMeta({
+        score: correctCount,
+        total: used.length,
+        time: elapsedTime,
+      })
+
       setMode('view')
       setFinished(true)
       onCheckingChange?.(false)
     },
-    [startTime, results, records, stats, onCheckingChange]
+    [startTime, results, records, stats, allItems, onCheckingChange]
   )
 
   const tapChoice = useCallback(
@@ -429,6 +449,18 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
           onDelete={deleteRecord}
           onClear={clearRecords}
           onClose={() => setShowRecords(false)}
+        />
+      ) : null}
+
+      {/* Review overlay */}
+      {reviewItems ? (
+        <ReviewPanel
+          title="カード"
+          score={reviewMeta.score}
+          total={reviewMeta.total}
+          time={reviewMeta.time}
+          items={reviewItems}
+          onClose={() => setReviewItems(null)}
         />
       ) : null}
 
