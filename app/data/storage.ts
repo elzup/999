@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { RecordSchema } from './schema'
+import { RecordSchema, CardStatsSchema } from './schema'
 import { VALID_TABS } from './constants'
-import type { Record } from './schema'
+import type { Record, CardStats } from './schema'
 import type { TabId } from './constants'
 
 function loadJson<T>(key: string, schema: z.ZodType<T>, fallback: T): T {
@@ -77,6 +77,14 @@ export function loadCardRecords(): Record[] {
 
 export function saveCardRecords(records: Record[]) {
   saveJson('card999', records)
+}
+
+export function loadCardStats(): CardStats {
+  return loadJson('cardStats999', CardStatsSchema, {})
+}
+
+export function saveCardStats(stats: CardStats) {
+  saveJson('cardStats999', stats)
 }
 
 export function loadWeekdayRecords(): Record[] {

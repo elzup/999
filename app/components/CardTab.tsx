@@ -1,9 +1,14 @@
 import { h } from 'preact'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'preact/hooks'
-import type { CardEntry } from '../data/schema'
+import type { CardEntry, CardStats } from '../data/schema'
 import type { Record as TestRecord } from '../data/schema'
 import { SUIT_LABEL } from '../data/constants'
-import { loadCardRecords, saveCardRecords } from '../data/storage'
+import {
+  loadCardRecords,
+  saveCardRecords,
+  loadCardStats,
+  saveCardStats,
+} from '../data/storage'
 import { formatCardId, pickCardPrompt } from '../data/cards'
 import CardDetailPanel from './CardDetailPanel'
 import RecordPanel from './RecordPanel'
@@ -34,6 +39,7 @@ type MatchItem = {
 type MatchResult = {
   key: string
   correct: boolean
+  time: number
 }
 
 function shuffle<T>(arr: readonly T[]): T[] {
@@ -55,17 +61,32 @@ function suitColor(suit: string): string {
 type CardCellProps = {
   c: CardEntry
   selected: boolean
+  stat: CardStats[string] | undefined
   onSelect: () => void
 }
 
-function CardCell({ c, selected, onSelect }: CardCellProps) {
+function CardCell({ c, selected, stat, onSelect }: CardCellProps) {
   const id = formatCardId(c)
+  const avgSec =
+    stat && stat.attempts > 0
+      ? (stat.totalTime / stat.attempts / 1000).toFixed(1)
+      : null
   return (
     <div
       class={'card-cell' + (selected ? ' selected' : '')}
       onClick={onSelect}
     >
       <div class={'card-id ' + c.suit}>{id}</div>
+      {stat && stat.attempts > 0 ? (
+        <div class="card-stat">
+          {stat.wrong > 0 ? (
+            <span class="card-stat-wrong">×{stat.wrong}</span>
+          ) : null}
+          {avgSec !== null ? (
+            <span class="card-stat-time">{avgSec}s</span>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -88,8 +109,10 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [elapsed, setElapsed] = useState(0)
   const [finished, setFinished] = useState(false)
   const [records, setRecords] = useState<TestRecord[]>(loadCardRecords)
+  const [stats, setStats] = useState<CardStats>(loadCardStats)
   const [showRecords, setShowRecords] = useState(false)
   const timerRef = useRef<number | null>(null)
+  const questionStartRef = useRef<number>(0)
 
   useEffect(() => {
     if (mode === 'check' && !finished) {
@@ -135,9 +158,10 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
           })
         }
       }
-      setAllItems(items)
+      setAllItems(shuffle(items))
       setCheckIdx(0)
       setResults([])
+      questionStartRef.current = Date.now()
       setStartTime(Date.now())
       setElapsed(0)
       setFinished(false)
@@ -164,20 +188,40 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
       const newRecords = [record, ...records].slice(0, 50)
       setRecords(newRecords)
       saveCardRecords(newRecords)
+
+      // Aggregate per-card stats
+      const newStats: CardStats = { ...stats }
+      for (const r of used) {
+        const prev = newStats[r.key] ?? {
+          attempts: 0,
+          wrong: 0,
+          totalTime: 0,
+        }
+        newStats[r.key] = {
+          attempts: prev.attempts + 1,
+          wrong: prev.wrong + (r.correct ? 0 : 1),
+          totalTime: prev.totalTime + r.time,
+        }
+      }
+      setStats(newStats)
+      saveCardStats(newStats)
+
       setMode('view')
       setFinished(true)
       onCheckingChange?.(false)
     },
-    [startTime, results, records, onCheckingChange]
+    [startTime, results, records, stats, onCheckingChange]
   )
 
   const tapChoice = useCallback(
     (choiceKey: string) => {
       if (!currentItem || finished) return
       const isCorrect = choiceKey === currentItem.key
+      const now = Date.now()
+      const time = now - questionStartRef.current
       const newResults = [
         ...results,
-        { key: currentItem.key, correct: isCorrect },
+        { key: currentItem.key, correct: isCorrect, time },
       ]
       setResults(newResults)
       const nextIdx = checkIdx + 1
@@ -185,6 +229,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
         endCheck(newResults)
         return
       }
+      questionStartRef.current = now
       setCheckIdx(nextIdx)
     },
     [currentItem, finished, results, checkIdx, allItems.length, endCheck]
@@ -404,6 +449,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
                       key={key}
                       c={c}
                       selected={selected === key}
+                      stat={stats[key]}
                       onSelect={() =>
                         setSelected(selected === key ? null : key)
                       }

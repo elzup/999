@@ -45,6 +45,18 @@ export const RecordSchema = z.object({
 
 export type Record = z.infer<typeof RecordSchema>
 
+export const CardStatSchema = z.object({
+  attempts: z.number().default(0),
+  wrong: z.number().default(0),
+  totalTime: z.number().default(0),
+})
+
+export type CardStat = z.infer<typeof CardStatSchema>
+
+export const CardStatsSchema = z.record(z.string(), CardStatSchema)
+
+export type CardStats = z.infer<typeof CardStatsSchema>
+
 export const YearItemSchema = z.object({
   no: z.number(),
   year: z.string(),
