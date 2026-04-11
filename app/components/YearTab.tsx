@@ -1,8 +1,42 @@
 import { h } from 'preact'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'preact/hooks'
-import type { NumberEntry } from '../data/schema'
+import type { NumberEntry, YearItem } from '../data/schema'
 import type { Record } from '../data/schema'
 import { YEAR_DATA, DIGIT_COLORS, XY_TO_Z } from '../data/constants'
+
+type EraId =
+  | 'all'
+  | 'bc'
+  | 'bc500'
+  | 'e0'
+  | 'e500'
+  | 'e1000'
+  | 'e1500'
+  | 'e1800'
+  | 'e1900'
+  | 'e2000'
+
+const ERAS: { id: EraId; label: string; from: number; to: number }[] = [
+  { id: 'all', label: '全て', from: -Infinity, to: Infinity },
+  { id: 'bc', label: '〜-500', from: -Infinity, to: -500 },
+  { id: 'bc500', label: '-500〜0', from: -500, to: 0 },
+  { id: 'e0', label: '0〜500', from: 0, to: 500 },
+  { id: 'e500', label: '500〜1000', from: 500, to: 1000 },
+  { id: 'e1000', label: '1000〜1500', from: 1000, to: 1500 },
+  { id: 'e1500', label: '1500〜1800', from: 1500, to: 1800 },
+  { id: 'e1800', label: '1800〜1900', from: 1800, to: 1900 },
+  { id: 'e1900', label: '1900〜2000', from: 1900, to: 2000 },
+  { id: 'e2000', label: '2000〜', from: 2000, to: Infinity },
+]
+
+function filterByEra(era: EraId): YearItem[] {
+  const found = ERAS.find((e) => e.id === era)
+  if (!found || era === 'all') return YEAR_DATA
+  return YEAR_DATA.filter((item) => {
+    const y = Number(item.year)
+    return y >= found.from && y < found.to
+  })
+}
 import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
@@ -151,6 +185,8 @@ function YearTab({
 }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
+  const [eraFilter, setEraFilter] = useState<EraId>('all')
+  const [checkItems, setCheckItems] = useState<YearItem[]>([])
   const [checkIdx, setCheckIdx] = useState(0)
   const [inputDigits, setInputDigits] = useState<string[]>([])
   const [results, setResults] = useState<CheckResult[]>([])
@@ -188,16 +224,22 @@ function YearTab({
     saveYearRecords([])
   }, [])
 
-  const startCheck = useCallback(() => {
-    setMode('check')
-    setCheckIdx(0)
-    setInputDigits([])
-    setResults([])
-    setStartTime(Date.now())
-    setElapsed(0)
-    setSelected(null)
-    onCheckingChange?.(true)
-  }, [onCheckingChange])
+  const startCheck = useCallback(
+    (era: EraId) => {
+      const items = filterByEra(era)
+      if (items.length === 0) return
+      setCheckItems(items)
+      setMode('check')
+      setCheckIdx(0)
+      setInputDigits([])
+      setResults([])
+      setStartTime(Date.now())
+      setElapsed(0)
+      setSelected(null)
+      onCheckingChange?.(true)
+    },
+    [onCheckingChange]
+  )
 
   const endCheck = useCallback(
     (finalResults?: CheckResult[]) => {
@@ -224,7 +266,8 @@ function YearTab({
   const tapDigit = useCallback(
     (digit: number) => {
       if (mode !== 'check') return
-      const item = YEAR_DATA[checkIdx]
+      const item = checkItems[checkIdx]
+      if (!item) return
       const xyz = getXYZ(item.year)
       const newInput = [...inputDigits, String(digit)]
       setInputDigits(newInput)
@@ -244,14 +287,14 @@ function YearTab({
         setResults(newResults)
         setInputDigits([])
         const nextIdx = checkIdx + 1
-        if (nextIdx >= YEAR_DATA.length) {
+        if (nextIdx >= checkItems.length) {
           endCheck(newResults)
           return
         }
         setCheckIdx(nextIdx)
       }
     },
-    [mode, checkIdx, inputDigits, results, endCheck]
+    [mode, checkItems, checkIdx, inputDigits, results, endCheck]
   )
 
   const selectedNums = useMemo(() => {
@@ -281,7 +324,9 @@ function YearTab({
             年号記憶
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text2)' }}>
-            {YEAR_DATA.length}問 (XYZ 3桁)
+            {mode === 'check'
+              ? `${checkItems.length}問`
+              : `${YEAR_DATA.length}問 (XYZ 3桁)`}
           </div>
           {mode === 'view' && lastRecord ? (
             <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
@@ -330,7 +375,7 @@ function YearTab({
                     minWidth: '60px',
                     padding: '4px 10px',
                   }}
-                  onClick={startCheck}
+                  onClick={() => startCheck(eraFilter)}
                 >
                   テスト
                 </button>
@@ -345,7 +390,7 @@ function YearTab({
                   }}
                 >
                   {elapsed}秒{' '}
-                  {checkIdx + 1}/{YEAR_DATA.length}{' '}
+                  {checkIdx + 1}/{checkItems.length}{' '}
                   {results.filter((r) => r.correct).length}正解
                 </span>
                 <button
@@ -400,10 +445,56 @@ function YearTab({
           onClose={() => setShowRecords(false)}
         />
       ) : null}
+      {mode === 'view' ? (
+        <div
+          class="year-era-row"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '4px',
+            padding: '6px 8px',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--surface)',
+            flexShrink: 0,
+          }}
+        >
+          {ERAS.map((era) => {
+            const count =
+              era.id === 'all'
+                ? YEAR_DATA.length
+                : filterByEra(era.id).length
+            return (
+              <button
+                key={era.id}
+                class={
+                  'filter-btn' + (eraFilter === era.id ? ' active' : '')
+                }
+                style={{
+                  fontSize: '11px',
+                  minWidth: 'auto',
+                  padding: '3px 8px',
+                }}
+                onClick={() => setEraFilter(era.id)}
+              >
+                {era.label}
+                <span
+                  style={{
+                    marginLeft: '4px',
+                    color: 'var(--text2)',
+                    fontSize: '10px',
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
       <div class="content" style={{ flex: 1, paddingBottom: '4px' }}>
         <div class="year-list">
           {mode === 'check'
-            ? YEAR_DATA.map((item, idx) => {
+            ? checkItems.map((item, idx) => {
                 const result = results.find((r) => r.no === item.no)
                 const isCurrent = idx === checkIdx
                 return (
