@@ -535,17 +535,20 @@ function YearTab({
                   />
                 )
               })
-            : YEAR_DATA.map((item, idx) => (
-                <YearViewRow
-                  key={idx}
-                  item={item}
-                  idx={idx}
-                  selected={selected === idx}
-                  onSelect={() =>
-                    setSelected(selected === idx ? null : idx)
-                  }
-                />
-              ))}
+            : filterByEra(eraFilter).map((item) => {
+                const idx = YEAR_DATA.indexOf(item)
+                return (
+                  <YearViewRow
+                    key={item.no}
+                    item={item}
+                    idx={idx}
+                    selected={selected === idx}
+                    onSelect={() =>
+                      setSelected(selected === idx ? null : idx)
+                    }
+                  />
+                )
+              })}
         </div>
       </div>
       {mode === 'check' ? (
