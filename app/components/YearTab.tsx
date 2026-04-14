@@ -31,11 +31,13 @@ const ERAS: { id: EraId; label: string; from: number; to: number }[] = [
 
 function filterByEra(era: EraId): YearItem[] {
   const found = ERAS.find((e) => e.id === era)
-  if (!found || era === 'all') return YEAR_DATA
-  return YEAR_DATA.filter((item) => {
-    const y = Number(item.year)
-    return y >= found.from && y < found.to
-  })
+  if (!found || era === 'all') return [...YEAR_DATA].sort((a, b) => Number(a.year) - Number(b.year))
+  return YEAR_DATA
+    .filter((item) => {
+      const y = Number(item.year)
+      return y >= found.from && y < found.to
+    })
+    .sort((a, b) => Number(a.year) - Number(b.year))
 }
 import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
