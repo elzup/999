@@ -118,6 +118,9 @@ html, body { background: var(--bg); color: var(--text); font-family: -apple-syst
 .np-numkey.zero { grid-column: 2; }
 .np-numkey:active { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
 .np-numkey.active { background: var(--accent2); border-color: var(--accent); color: var(--accent); }
+.np-numkey.np-empty { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
+.np-numkey.np-back { font-size: 20px; color: var(--text2); }
+.np-numkey.np-back.disabled { opacity: 0.3; pointer-events: none; }
 
 /* 2桁タブ mode switch */
 .d2-mode-switch { display: flex; gap: 4px; margin-bottom: 8px; padding: 8px 8px 0; }

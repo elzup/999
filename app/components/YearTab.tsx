@@ -75,11 +75,13 @@ function YearCheckRow({
   result,
   isCurrent,
   inputDigits,
+  onSelect,
 }: {
   item: { no: number; year: string; event: string; desc: string }
   result: CheckResult | undefined
   isCurrent: boolean
   inputDigits: string[]
+  onSelect: () => void
 }) {
   const xyz = getXYZ(item.year)
   const c = getC(item.year)
@@ -90,7 +92,7 @@ function YearCheckRow({
     (isCurrent ? ' current' : '')
 
   return (
-    <div class={cls}>
+    <div class={cls} onClick={result ? undefined : onSelect}>
       <span class="yr-no">{item.no}</span>
       {result ? (
         <>
@@ -306,8 +308,21 @@ function YearTab({
         ]
         setResults(newResults)
         setInputDigits([])
-        const nextIdx = checkIdx + 1
-        if (nextIdx >= checkItems.length) {
+        if (newResults.length >= checkItems.length) {
+          endCheck(newResults)
+          return
+        }
+        // find next unanswered item after current
+        const answeredNos = new Set(newResults.map((r) => r.no))
+        let nextIdx = -1
+        for (let i = 1; i <= checkItems.length; i++) {
+          const idx = (checkIdx + i) % checkItems.length
+          if (!answeredNos.has(checkItems[idx].no)) {
+            nextIdx = idx
+            break
+          }
+        }
+        if (nextIdx === -1) {
           endCheck(newResults)
           return
         }
@@ -315,6 +330,24 @@ function YearTab({
       }
     },
     [mode, checkItems, checkIdx, inputDigits, results, endCheck]
+  )
+
+  const tapBackspace = useCallback(() => {
+    if (mode !== 'check') return
+    if (inputDigits.length === 0) return
+    setInputDigits(inputDigits.slice(0, -1))
+  }, [mode, inputDigits])
+
+  const selectCheckItem = useCallback(
+    (idx: number) => {
+      if (mode !== 'check') return
+      const item = checkItems[idx]
+      if (!item) return
+      if (results.some((r) => r.no === item.no)) return
+      setCheckIdx(idx)
+      setInputDigits([])
+    },
+    [mode, checkItems, results]
   )
 
   const selectedNums = useMemo(() => {
@@ -534,6 +567,7 @@ function YearTab({
                     result={result}
                     isCurrent={isCurrent}
                     inputDigits={inputDigits}
+                    onSelect={() => selectCheckItem(idx)}
                   />
                 )
               })
@@ -573,13 +607,23 @@ function YearTab({
                 {digit}
               </div>
             ))}
+            <div class="np-numkey np-empty" aria-hidden="true" />
             <div
               key={0}
-              class="np-numkey zero"
+              class="np-numkey"
               style={{ color: DIGIT_COLORS[0] }}
               onClick={() => tapDigit(0)}
             >
               0
+            </div>
+            <div
+              class={
+                'np-numkey np-back' +
+                (inputDigits.length === 0 ? ' disabled' : '')
+              }
+              onClick={tapBackspace}
+            >
+              ⌫
             </div>
           </div>
         </div>
