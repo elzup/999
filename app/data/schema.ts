@@ -24,7 +24,6 @@ export const CardEntrySchema = z.object({
   rank: z.string().min(1),
   first: z.string().default(''),
   score: z.number().nullable().default(null),
-  secondary: z.string().default(''),
 })
 
 export type CardEntry = z.infer<typeof CardEntrySchema>

@@ -56,36 +56,49 @@ async function fetchSheet() {
   return text
 }
 
+/** person/action/object からスコア最大のものを選ぶ */
+function pickBest(person, scoreP, action, scoreA, object, scoreO) {
+  const candidates = [
+    { word: person, score: Number(scoreP) || 0 },
+    { word: action, score: Number(scoreA) || 0 },
+    { word: object, score: Number(scoreO) || 0 },
+  ].filter((c) => c.word)
+
+  if (candidates.length === 0) return { first: '', score: '' }
+  candidates.sort((a, b) => b.score - a.score)
+  return { first: candidates[0].word, score: normalizeScore(String(candidates[0].score)) }
+}
+
 function parseSheet(tsv) {
   const { headers, rows } = parseTsvRows(tsv)
   const indexMap = headerIndex(headers)
 
-  const hasModernHeaders =
-    indexMap.has('mark') &&
-    indexMap.has('first') &&
-    indexMap.has('score') &&
-    (indexMap.has('secondary(flip)') || indexMap.has('secondary'))
-
-  if (!hasModernHeaders) {
-    throw new Error(
-      '想定しているヘッダ mark / first / score / secondary(flip) が見つかりません'
-    )
+  const requiredHeaders = ['mark', 'person', 'score_p', 'action', 'score_a', 'object', 'score_o']
+  const missing = requiredHeaders.filter((h) => !indexMap.has(h))
+  if (missing.length > 0) {
+    throw new Error(`想定しているヘッダが見つかりません: ${missing.join(', ')}`)
   }
 
   return rows
-    .map((row) => ({
-      mark: col(row, indexMap, 'mark'),
-      first: col(row, indexMap, 'first'),
-      score: normalizeScore(col(row, indexMap, 'score')),
-      secondary: col(row, indexMap, 'secondary(flip)') || col(row, indexMap, 'secondary'),
-    }))
+    .map((row) => {
+      const mark = col(row, indexMap, 'mark')
+      const best = pickBest(
+        col(row, indexMap, 'person'),
+        col(row, indexMap, 'score_p'),
+        col(row, indexMap, 'action'),
+        col(row, indexMap, 'score_a'),
+        col(row, indexMap, 'object'),
+        col(row, indexMap, 'score_o')
+      )
+      return { mark, first: best.first, score: best.score }
+    })
     .filter((entry) => entry.mark)
 }
 
 function toTsv(entries) {
-  const header = 'mark\tfirst\tscore\tsecondary(flip)'
+  const header = 'mark\tfirst\tscore'
   const rows = entries.map(
-    (entry) => `${entry.mark}\t${entry.first}\t${entry.score}\t${entry.secondary}`
+    (entry) => `${entry.mark}\t${entry.first}\t${entry.score}`
   )
   return [header, ...rows].join('\n') + '\n'
 }
@@ -104,12 +117,10 @@ async function main() {
   const stats = {
     first: entries.filter((entry) => entry.first).length,
     score: entries.filter((entry) => entry.score !== '').length,
-    secondary: entries.filter((entry) => entry.secondary).length,
   }
 
   console.log(`  first: ${stats.first}/${entries.length}`)
   console.log(`  score: ${stats.score}/${entries.length}`)
-  console.log(`  secondary: ${stats.secondary}/${entries.length}`)
 }
 
 main().catch((err) => {

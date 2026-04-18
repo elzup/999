@@ -91,9 +91,8 @@ export function parseCardsTsv(tsv: string) {
       const raw = {
         suit: parsed.suit,
         rank: parsed.rank,
-        first: col(row, 'first') || col(row, 'B') || col(row, 'I'),
-        score: parseScore(col(row, 'score') || col(row, 'C')),
-        secondary: col(row, 'secondary(flip)') || col(row, 'secondary') || col(row, 'D') || col(row, 'U'),
+        first: col(row, 'first'),
+        score: parseScore(col(row, 'score')),
       }
       const result = CardEntrySchema.safeParse(raw)
       if (!result.success) {
