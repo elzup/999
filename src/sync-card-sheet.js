@@ -56,24 +56,11 @@ async function fetchSheet() {
   return text
 }
 
-/** person/action/object からスコア最大のものを選ぶ */
-function pickBest(person, scoreP, action, scoreA, object, scoreO) {
-  const candidates = [
-    { word: person, score: Number(scoreP) || 0 },
-    { word: action, score: Number(scoreA) || 0 },
-    { word: object, score: Number(scoreO) || 0 },
-  ].filter((c) => c.word)
-
-  if (candidates.length === 0) return { first: '', score: '' }
-  candidates.sort((a, b) => b.score - a.score)
-  return { first: candidates[0].word, score: normalizeScore(String(candidates[0].score)) }
-}
-
 function parseSheet(tsv) {
   const { headers, rows } = parseTsvRows(tsv)
   const indexMap = headerIndex(headers)
 
-  const requiredHeaders = ['mark', 'person', 'score_p', 'action', 'score_a', 'object', 'score_o']
+  const requiredHeaders = ['mark', 'person', 'action_p', 'score_p', 'object', 'action_o', 'score_o', 'action', 'score_a']
   const missing = requiredHeaders.filter((h) => !indexMap.has(h))
   if (missing.length > 0) {
     throw new Error(`想定しているヘッダが見つかりません: ${missing.join(', ')}`)
@@ -82,23 +69,26 @@ function parseSheet(tsv) {
   return rows
     .map((row) => {
       const mark = col(row, indexMap, 'mark')
-      const best = pickBest(
-        col(row, indexMap, 'person'),
-        col(row, indexMap, 'score_p'),
-        col(row, indexMap, 'action'),
-        col(row, indexMap, 'score_a'),
-        col(row, indexMap, 'object'),
-        col(row, indexMap, 'score_o')
-      )
-      return { mark, first: best.first, score: best.score }
+      return {
+        mark,
+        person: col(row, indexMap, 'person'),
+        action_p: col(row, indexMap, 'action_p'),
+        score_p: normalizeScore(col(row, indexMap, 'score_p')),
+        object: col(row, indexMap, 'object'),
+        action_o: col(row, indexMap, 'action_o'),
+        score_o: normalizeScore(col(row, indexMap, 'score_o')),
+        action: col(row, indexMap, 'action'),
+        score_a: normalizeScore(col(row, indexMap, 'score_a')),
+      }
     })
     .filter((entry) => entry.mark)
 }
 
 function toTsv(entries) {
-  const header = 'mark\tfirst\tscore'
+  const header = 'mark\tperson\taction_p\tscore_p\tobject\taction_o\tscore_o\taction\tscore_a'
   const rows = entries.map(
-    (entry) => `${entry.mark}\t${entry.first}\t${entry.score}`
+    (entry) =>
+      `${entry.mark}\t${entry.person}\t${entry.action_p}\t${entry.score_p}\t${entry.object}\t${entry.action_o}\t${entry.score_o}\t${entry.action}\t${entry.score_a}`
   )
   return [header, ...rows].join('\n') + '\n'
 }
@@ -115,12 +105,14 @@ async function main() {
   console.log(`Saved ${entries.length} card entries to ${outPath}`)
 
   const stats = {
-    first: entries.filter((entry) => entry.first).length,
-    score: entries.filter((entry) => entry.score !== '').length,
+    person: entries.filter((entry) => entry.person).length,
+    action: entries.filter((entry) => entry.action).length,
+    object: entries.filter((entry) => entry.object).length,
   }
 
-  console.log(`  first: ${stats.first}/${entries.length}`)
-  console.log(`  score: ${stats.score}/${entries.length}`)
+  console.log(`  person: ${stats.person}/${entries.length}`)
+  console.log(`  action: ${stats.action}/${entries.length}`)
+  console.log(`  object: ${stats.object}/${entries.length}`)
 }
 
 main().catch((err) => {

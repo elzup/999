@@ -26,9 +26,14 @@ const NumberSchema = z.object({
 const CardSchema = z.object({
   suit: z.enum(['S', 'H', 'C', 'D']),
   rank: z.string().min(1),
-  first: z.string().default(''),
-  score: z.number().nullable().default(null),
-  secondary: z.string().default(''),
+  person: z.string().default(''),
+  actionP: z.string().default(''),
+  personScore: z.number().nullable().default(null),
+  object: z.string().default(''),
+  actionO: z.string().default(''),
+  objectScore: z.number().nullable().default(null),
+  action: z.string().default(''),
+  actionScore: z.number().nullable().default(null),
 })
 
 // Numbers data
@@ -74,9 +79,14 @@ const cards = cardLines
     const raw = {
       suit: parsed.suit,
       rank: parsed.rank,
-      first: (cols[colIdx('first')] ?? '') || (cols[colIdx('B')] ?? '') || (cols[colIdx('I')] ?? ''),
-      score: parseScore((cols[colIdx('score')] ?? '') || (cols[colIdx('C')] ?? '')),
-      secondary: (cols[colIdx('secondary(flip)')] ?? '') || (cols[colIdx('secondary')] ?? '') || (cols[colIdx('D')] ?? '') || (cols[colIdx('U')] ?? ''),
+      person: cols[colIdx('person')] ?? '',
+      actionP: cols[colIdx('action_p')] ?? '',
+      personScore: parseScore(cols[colIdx('score_p')] ?? ''),
+      object: cols[colIdx('object')] ?? '',
+      actionO: cols[colIdx('action_o')] ?? '',
+      objectScore: parseScore(cols[colIdx('score_o')] ?? ''),
+      action: cols[colIdx('action')] ?? '',
+      actionScore: parseScore(cols[colIdx('score_a')] ?? ''),
     }
     const result = CardSchema.safeParse(raw)
     if (!result.success) {

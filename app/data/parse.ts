@@ -91,8 +91,14 @@ export function parseCardsTsv(tsv: string) {
       const raw = {
         suit: parsed.suit,
         rank: parsed.rank,
-        first: col(row, 'first'),
-        score: parseScore(col(row, 'score')),
+        person: col(row, 'person'),
+        actionP: col(row, 'action_p'),
+        personScore: parseScore(col(row, 'score_p')),
+        object: col(row, 'object'),
+        actionO: col(row, 'action_o'),
+        objectScore: parseScore(col(row, 'score_o')),
+        action: col(row, 'action'),
+        actionScore: parseScore(col(row, 'score_a')),
       }
       const result = CardEntrySchema.safeParse(raw)
       if (!result.success) {
