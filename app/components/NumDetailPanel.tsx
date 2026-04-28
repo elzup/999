@@ -1,5 +1,6 @@
 import type { NumberEntry } from '../data/schema'
 import ScoreBar from './ScoreBar'
+import { parseTaggedItems } from '../lib/tags'
 
 type Props = {
   d: NumberEntry
@@ -11,6 +12,11 @@ type Props = {
 function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
   const bmKey = 'n:' + d.num
   const isBm = bookmarks ? bookmarks.has(bmKey) : false
+  const tagged = [
+    ['人', parseTaggedItems(d.hito)],
+    ['物', parseTaggedItems(d.mono)],
+    ['念', parseTaggedItems(d.gainen)],
+  ] as const
 
   return (
     <div class="detail-panel">
@@ -85,6 +91,25 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
           </div>
         ) : null}
       </div>
+      {tagged.some(([, items]) =>
+        items.some((item) => item.tags.length > 0)
+      ) ? (
+        <div class="detail-tag-row">
+          {tagged.map(([label, items]) =>
+            items
+              .filter((item) => item.tags.length > 0)
+              .map((item) => (
+                <div key={`${label}-${item.label}`} class="detail-tag-chip">
+                  <span class="detail-tag-cat">{label}</span>
+                  <span class="detail-tag-name">{item.base || item.label}</span>
+                  <span class="detail-tag-tags">
+                    {item.tags.map((tag) => `#${tag}`).join(' ')}
+                  </span>
+                </div>
+              ))
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -156,6 +156,33 @@ body {
   overflow: hidden;
   margin-top: 4px;
 }
+.detail-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.detail-tag-chip {
+  background: #13211a;
+  border: 1px solid #1f6f4a;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.detail-tag-cat {
+  color: var(--text2);
+}
+.detail-tag-name {
+  color: var(--text);
+  font-weight: 600;
+}
+.detail-tag-tags {
+  color: var(--accent);
+  font-family: monospace;
+}
 .detail-id {
   font-size: 24px;
   font-weight: bold;
@@ -690,6 +717,163 @@ body {
 .sub-tab-btn.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+}
+
+.tag-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tag-summary-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.tag-summary-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.tag-summary-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: monospace;
+}
+.tag-summary-label {
+  font-size: 12px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.tag-summary-sub {
+  font-size: 12px;
+  color: var(--text2);
+}
+.tag-empty {
+  padding: 16px 8px;
+  color: var(--text2);
+  text-align: center;
+}
+.tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tag-row {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.tag-row.active {
+  border-color: var(--accent);
+  background: var(--accent2);
+}
+.tag-name {
+  font-weight: 700;
+  color: var(--accent);
+}
+.tag-count {
+  font-family: monospace;
+  font-weight: 700;
+}
+.tag-meta {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--text2);
+}
+.tag-detail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tag-detail-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.tag-detail-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.tag-detail-sub {
+  font-size: 12px;
+  color: var(--text2);
+}
+.tag-num-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag-num-chip {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+.tag-occ-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tag-occ-row {
+  display: grid;
+  grid-template-columns: 42px 28px 1fr;
+  gap: 6px 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.tag-occ-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.tag-occ-num {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--accent);
+}
+.tag-occ-cat {
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-align: center;
+  color: var(--text);
+  background: var(--surface2);
+}
+.tag-occ-cat.hito {
+  border: 1px solid #60a5fa44;
+}
+.tag-occ-cat.mono {
+  border: 1px solid #4ade8044;
+}
+.tag-occ-cat.gainen {
+  border: 1px solid #fbbf2444;
+}
+.tag-occ-base {
+  font-weight: 600;
+  color: var(--text);
+}
+.tag-occ-raw {
+  grid-column: 3;
+  font-size: 11px;
+  color: var(--text2);
 }
 
 /* D3 (3桁テスト) */

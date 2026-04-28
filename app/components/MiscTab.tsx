@@ -3,6 +3,7 @@ import { useState, useCallback } from 'preact/hooks'
 import type { NumberEntry, CardEntry } from '../data/schema'
 import BookmarkTab from './BookmarkTab'
 import StorageEstimatePanel from './StorageEstimatePanel'
+import TagPanel from './TagPanel'
 
 type Props = {
   numbers: NumberEntry[]
@@ -11,7 +12,7 @@ type Props = {
   onToggleBm: (key: string) => void
 }
 
-type SubTab = 'bm' | 'stats' | 'storage'
+type SubTab = 'bm' | 'tags' | 'stats' | 'storage'
 
 function MiscTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('bm')
@@ -40,6 +41,12 @@ function MiscTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
           ★ {bmCount > 0 && <span class="bar-badge">{bmCount}</span>}
         </button>
         <button
+          class={'sub-tab-btn' + (sub === 'tags' ? ' active' : '')}
+          onClick={() => handleSub('tags')}
+        >
+          タグ
+        </button>
+        <button
           class={'sub-tab-btn' + (sub === 'stats' ? ' active' : '')}
           onClick={() => handleSub('stats')}
         >
@@ -60,6 +67,7 @@ function MiscTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
           onToggleBm={onToggleBm}
         />
       )}
+      {sub === 'tags' && <TagPanel numbers={numbers} />}
       {sub === 'stats' && <iframe class="stats-frame" src="./stats.html" />}
       {sub === 'storage' && <StorageEstimatePanel />}
     </div>
