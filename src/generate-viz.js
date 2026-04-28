@@ -1,7 +1,13 @@
 import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { loadWords, categoryScore } from './words.js'
+import {
+  loadWords,
+  categoryScore,
+  extractName,
+  isKanaOnly,
+  normalizeForCompare,
+} from './words.js'
 import { score } from './scorer.js'
 import { kataToHira } from './table.js'
 
@@ -17,6 +23,25 @@ function tokenLabel(t) {
     overflow: 'X',
   }
   return labels[t.type] ?? '?'
+}
+
+/** 先頭0省略・オーバーフロー(後ろ余分)を考慮した数字一致判定 */
+function isDigitMatch(actual, num) {
+  if (actual === num) return true
+  if (actual.length < num.length)
+    return actual.padStart(num.length, '0') === num
+  if (actual.length > num.length) return actual.slice(0, num.length) === num
+  return false
+}
+
+function checkKanaHead(name, kanaReading) {
+  if (!name || !kanaReading) return null
+  if (!isKanaOnly(name)) return null
+  const normName = normalizeForCompare(name)
+  const normKana = normalizeForCompare(kanaReading)
+  if (!normName || !normKana) return null
+  if (normName[0] === normKana[0]) return null
+  return { nameHead: normName[0], kanaHead: normKana[0] }
 }
 
 function buildData(filename = 'words.tsv') {
@@ -41,6 +66,13 @@ function buildData(filename = 'words.tsv') {
     for (let d = 0; d <= 9; d++) digits[d] = {}
     return digits
   })
+  const violations = {
+    digitMismatch: [], // エンコード後の数字が登録 num と異なる
+    encodeError: [], // エンコード失敗（未知のかな等）
+    kanaHeadMismatch: [], // 表示語の先頭字とよみ先頭字が一致しない
+    mix: [], // 同じ数字が異なるかなで表されている
+    overflow: [], // 目標桁数を超えるトークンを含む
+  }
 
   const data = entries.map((entry) => {
     const cat = categoryScore(entry)
@@ -89,8 +121,37 @@ function buildData(filename = 'words.tsv') {
         }
         if (s.youon4) youon4Count++
         scoredCount++
-      } catch {
+
+        // 違反チェック: エンコード結果の数字 vs 登録 num（先頭0省略・末尾overflow許容）
+        if (!isDigitMatch(s.digits, entry.num)) {
+          violations.digitMismatch.push({
+            num: entry.num,
+            side: 'w1',
+            kana: entry.w1k,
+            actual: s.digits,
+          })
+        }
+        // mix: 同じ数字が異なるかなで表されている
+        if (s.mix) {
+          violations.mix.push({ num: entry.num, side: 'w1', kana: entry.w1k })
+        }
+        // overflow: 目標桁数を超えるトークンを含む
+        if (s.tokens.some((t) => t.type === 'overflow')) {
+          violations.overflow.push({
+            num: entry.num,
+            side: 'w1',
+            kana: entry.w1k,
+            digits: s.digits,
+          })
+        }
+      } catch (err) {
         row.w1Error = true
+        violations.encodeError.push({
+          num: entry.num,
+          side: 'w1',
+          kana: entry.w1k,
+          message: err.message,
+        })
       }
     }
 
@@ -98,9 +159,56 @@ function buildData(filename = 'words.tsv') {
       try {
         const s2 = score(entry.w2k)
         row.w2Score = s2.score
-      } catch {
+        if (!isDigitMatch(s2.digits, entry.num)) {
+          violations.digitMismatch.push({
+            num: entry.num,
+            side: 'w2',
+            kana: entry.w2k,
+            actual: s2.digits,
+          })
+        }
+        if (s2.mix) {
+          violations.mix.push({ num: entry.num, side: 'w2', kana: entry.w2k })
+        }
+        if (s2.tokens.some((t) => t.type === 'overflow')) {
+          violations.overflow.push({
+            num: entry.num,
+            side: 'w2',
+            kana: entry.w2k,
+            digits: s2.digits,
+          })
+        }
+      } catch (err) {
         row.w2Error = true
+        violations.encodeError.push({
+          num: entry.num,
+          side: 'w2',
+          kana: entry.w2k,
+          message: err.message,
+        })
       }
+    }
+
+    // 表示語先頭 vs よみ先頭の一致チェック（かな名詞のみ）
+    const headW1 = checkKanaHead(extractName(entry.w1), entry.w1k)
+    if (headW1) {
+      violations.kanaHeadMismatch.push({
+        num: entry.num,
+        side: 'w1',
+        word: entry.w1,
+        kana: entry.w1k,
+        ...headW1,
+      })
+    }
+    const headW2 = checkKanaHead(extractName(entry.w2), entry.w2k)
+    if (headW2) {
+      violations.kanaHeadMismatch.push({
+        num: entry.num,
+        side: 'w2',
+        word: entry.w2,
+        kana: entry.w2k,
+        ...headW2,
+      })
     }
 
     return row
@@ -113,6 +221,7 @@ function buildData(filename = 'words.tsv') {
     scoredCount,
     kanaUsage,
     digitKanaAlloc,
+    violations,
   }
   return { data, ruleStats }
 }

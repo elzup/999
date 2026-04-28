@@ -889,6 +889,117 @@ function DigitKanaAlloc({ ruleStats }) {
   `
 }
 
+function ViolationsPanel({ ruleStats }) {
+  const v = ruleStats?.violations
+  if (!v) return html`<div className="vio-empty">違反データなし</div>`
+
+  const sections = [
+    {
+      key: 'digitMismatch',
+      label: '桁数/数字 不一致',
+      severity: 'high',
+      desc: 'よみをエンコードした結果が登録 num と一致しない',
+      items: v.digitMismatch || [],
+      render: (it) => html`
+        <span className="vio-num">${it.num}</span>
+        <span className="vio-side">${it.side}</span>
+        <span className="vio-kana">${it.kana}</span>
+        <span className="vio-arrow">→</span>
+        <span className="vio-actual">${it.actual}</span>
+      `,
+    },
+    {
+      key: 'encodeError',
+      label: 'エンコード失敗',
+      severity: 'high',
+      desc: '未知のかな等によりエンコードが例外を投げた',
+      items: v.encodeError || [],
+      render: (it) => html`
+        <span className="vio-num">${it.num}</span>
+        <span className="vio-side">${it.side}</span>
+        <span className="vio-kana">${it.kana}</span>
+        <span className="vio-msg">${it.message}</span>
+      `,
+    },
+    {
+      key: 'kanaHeadMismatch',
+      label: '表示語↔よみ 先頭ずれ',
+      severity: 'mid',
+      desc: '表示語(かな表記)の先頭文字とよみ先頭が一致しない',
+      items: v.kanaHeadMismatch || [],
+      render: (it) => html`
+        <span className="vio-num">${it.num}</span>
+        <span className="vio-side">${it.side}</span>
+        <span className="vio-word">${it.word}</span>
+        <span className="vio-arrow">/</span>
+        <span className="vio-kana">${it.kana}</span>
+        <span className="vio-msg">[${it.nameHead}≠${it.kanaHead}]</span>
+      `,
+    },
+    {
+      key: 'overflow',
+      label: 'オーバーフロー',
+      severity: 'low',
+      desc: '目標桁数(3)を超えるトークンを含む(スコアにペナルティ計上済み)',
+      items: v.overflow || [],
+      render: (it) => html`
+        <span className="vio-num">${it.num}</span>
+        <span className="vio-side">${it.side}</span>
+        <span className="vio-kana">${it.kana}</span>
+        <span className="vio-arrow">→</span>
+        <span className="vio-actual">${it.digits}</span>
+      `,
+    },
+    {
+      key: 'mix',
+      label: 'mix (同じ数字に異なるかな)',
+      severity: 'low',
+      desc: '同一エントリ内で同じ数字が異なるかなで表されている',
+      items: v.mix || [],
+      render: (it) => html`
+        <span className="vio-num">${it.num}</span>
+        <span className="vio-side">${it.side}</span>
+        <span className="vio-kana">${it.kana}</span>
+      `,
+    },
+  ]
+
+  return html`
+    <div className="vio-grid">
+      ${sections.map(
+        (sec) => html`
+          <div className=${'vio-section vio-' + sec.severity} key=${sec.key}>
+            <div className="vio-head">
+              <span className="vio-label">${sec.label}</span>
+              <span className="vio-count">${sec.items.length}</span>
+            </div>
+            <div className="vio-desc">${sec.desc}</div>
+            ${sec.items.length === 0
+              ? html`<div className="vio-ok">違反なし ✓</div>`
+              : html`
+                  <div className="vio-list">
+                    ${sec.items
+                      .slice(0, 50)
+                      .map(
+                        (it, i) => html`
+                          <div className="vio-row" key=${i}>
+                            ${sec.render(it)}
+                          </div>
+                        `
+                      )}
+                    ${sec.items.length > 50 &&
+                    html`<div className="vio-more">
+                      他 ${sec.items.length - 50} 件
+                    </div>`}
+                  </div>
+                `}
+          </div>
+        `
+      )}
+    </div>
+  `
+}
+
 function Tooltip({ d, x, y }) {
   const ref = useRef(null)
   useLayoutEffect(() => {
@@ -1110,6 +1221,10 @@ function App() {
         各数字(0-9)に対して使われているかなの割り当て分布
       </p>
       <${DigitKanaAlloc} ruleStats=${ruleStats} />
+
+      <h2>Rule Violations</h2>
+      <p className="subtitle">変換ルールに沿っているかのチェック結果</p>
+      <${ViolationsPanel} ruleStats=${ruleStats} />
 
       ${tooltip &&
       html`<${Tooltip} d=${tooltip.d} x=${tooltip.x} y=${tooltip.y} />`}

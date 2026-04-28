@@ -137,6 +137,57 @@
         "8": {},
         "9": {}
       }
-    ]
+    ],
+    "violations": {
+      "digitMismatch": [
+        {
+          "num": "000",
+          "side": "w1",
+          "kana": "ありす",
+          "actual": "86133"
+        },
+        {
+          "num": "001",
+          "side": "w1",
+          "kana": "ぼぶ",
+          "actual": "852"
+        },
+        {
+          "num": "001",
+          "side": "w2",
+          "kana": "いぬ",
+          "actual": "173"
+        },
+        {
+          "num": "002",
+          "side": "w1",
+          "kana": "ねこ",
+          "actual": "795"
+        },
+        {
+          "num": "002",
+          "side": "w2",
+          "kana": "とり",
+          "actual": "1061"
+        }
+      ],
+      "encodeError": [],
+      "kanaHeadMismatch": [],
+      "mix": [
+        {
+          "num": "002",
+          "side": "w2",
+          "kana": "とり"
+        }
+      ],
+      "overflow": [
+        {
+          "num": "000",
+          "side": "w1",
+          "kana": "ありす",
+          "digits": "86133"
+        }
+      ]
+    }
   }
 }
