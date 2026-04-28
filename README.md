@@ -28,6 +28,8 @@ Token Classification Flow と Position × Token Type マトリクス。
 
 ```bash
 nr sync        # Google Sheet からデータ同期
+nr push        # src/data/words.tsv を Google Sheet に書き戻す
+nr push:tags   # BCD列の #tag 一覧を tags シートへ書き出す
 nr score       # 単語スコアリング
 nr check:kana  # かなカバレッジチェック
 nr check:digits # 桁数チェック
@@ -35,6 +37,21 @@ nr check:errors # エラーチェック
 nr viz         # 単語ダッシュボード可視化HTML生成
 nr test        # テスト実行
 ```
+
+## Google Sheet Read/Write
+
+読み取りは公開シートなら `nr sync` で動きます。
+
+書き込みは Google Sheets API を使います。認証は次のどちらかです。
+
+1. 推奨: `gcloud auth application-default login`
+2. または Google Cloud で service account を作成し、JSON を `.config/google-service-account.json` に置く
+3. service account を使う場合は `client_email` を対象スプレッドシートの編集者に追加する
+4. `nr push` を実行する
+
+必要に応じて `SHEET_URL` で対象シート URL を上書きできます。URL には `gid` を含めてください。認証ファイルは `GOOGLE_APPLICATION_CREDENTIALS` / `GOOGLE_SERVICE_ACCOUNT_PATH` / `GOOGLE_SERVICE_ACCOUNT_JSON` でも指定できます。
+
+タグ一覧を別シートに出したい場合は `nr push:tags` を使います。`tags` シートがなければ自動作成し、`hito / mono / gainen` の各セルに含まれる `#tag` を集計して書き込みます。
 
 ## Docs
 

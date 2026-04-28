@@ -1,5 +1,6 @@
 node_modules
 dist
+.config/
 src/data/words.tsv
 src/data/words.json
 src/visualize-words.data.json

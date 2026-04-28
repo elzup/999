@@ -6,6 +6,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "sync": "node src/sync-sheet.js",
+    "push": "node src/push-sheet.js",
+    "push:tags": "node src/push-tags-sheet.js",
     "sync:card": "node src/sync-card-sheet.js",
     "score": "node src/score-words.js",
     "check:kana": "node src/check-kana.js",
