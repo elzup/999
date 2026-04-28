@@ -1,5 +1,13 @@
 /* global React, ReactDOM, htm */
-const { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect, memo } = React
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  useLayoutEffect,
+  memo,
+} = React
 const html = htm.bind(React.createElement)
 
 // ─── Helpers ────────────────────────────────────────────
@@ -121,14 +129,14 @@ const summaryResolvers = {
       t === 0
         ? 'sg-0'
         : t <= 50
-          ? 'sg-1'
-          : t <= 100
-            ? 'sg-2'
-            : t <= 200
-              ? 'sg-3'
-              : t <= 350
-                ? 'sg-4'
-                : 'sg-5'
+        ? 'sg-1'
+        : t <= 100
+        ? 'sg-2'
+        : t <= 200
+        ? 'sg-3'
+        : t <= 350
+        ? 'sg-4'
+        : 'sg-5'
     return { label: t > 0 ? '' + t : '', cls }
   },
   encode: (items) => {
@@ -139,12 +147,12 @@ const summaryResolvers = {
       avg < 15
         ? 'sg-1'
         : avg < 25
-          ? 'sg-2'
-          : avg < 30
-            ? 'sg-3'
-            : avg < 35
-              ? 'sg-4'
-              : 'sg-5'
+        ? 'sg-2'
+        : avg < 30
+        ? 'sg-3'
+        : avg < 35
+        ? 'sg-4'
+        : 'sg-5'
     return { label: avg.toFixed(0), cls }
   },
 }
@@ -155,70 +163,174 @@ const VOWELS = ['あ', 'い', 'う', 'え', 'お']
 
 const KANA_GROUPS = [
   { rows: [{ l: 'あ', k: ['あ', 'い', 'う', 'え', 'お'] }] },
-  { rows: [
-    { l: 'か', k: ['か', 'き', 'く', 'け', 'こ'], y: ['きゃ', 'きゅ', 'きょ'] },
-    { l: 'が', k: ['が', 'ぎ', 'ぐ', 'げ', 'ご'] },
-  ]},
-  { rows: [
-    { l: 'さ', k: ['さ', 'し', 'す', 'せ', 'そ'], y: ['しゃ', 'しゅ', 'しょ'] },
-    { l: 'ざ', k: ['ざ', 'じ', 'ず', 'ぜ', 'ぞ'], y: ['じゃ', 'じゅ', 'じょ'] },
-  ]},
-  { rows: [
-    { l: 'た', k: ['た', 'ち', 'つ', 'て', 'と'], y: ['ちゃ', 'ちゅ', 'ちょ'] },
-    { l: 'だ', k: ['だ', 'ぢ', 'づ', 'で', 'ど'] },
-  ]},
-  { rows: [
-    { l: 'な', k: ['な', 'に', 'ぬ', 'ね', 'の'], y: ['にゃ', 'にゅ', 'にょ'] },
-  ]},
-  { rows: [
-    { l: 'は', k: ['は', 'ひ', 'ふ', 'へ', 'ほ'], y: ['ひゃ', 'ひゅ', 'ひょ'] },
-    { l: 'ば', k: ['ば', 'び', 'ぶ', 'べ', 'ぼ'] },
-    { l: 'ぱ', k: ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'] },
-  ]},
-  { rows: [
-    { l: 'ま', k: ['ま', 'み', 'む', 'め', 'も'], y: ['みゃ', 'みゅ', 'みょ'] },
-  ]},
+  {
+    rows: [
+      {
+        l: 'か',
+        k: ['か', 'き', 'く', 'け', 'こ'],
+        y: ['きゃ', 'きゅ', 'きょ'],
+      },
+      { l: 'が', k: ['が', 'ぎ', 'ぐ', 'げ', 'ご'] },
+    ],
+  },
+  {
+    rows: [
+      {
+        l: 'さ',
+        k: ['さ', 'し', 'す', 'せ', 'そ'],
+        y: ['しゃ', 'しゅ', 'しょ'],
+      },
+      {
+        l: 'ざ',
+        k: ['ざ', 'じ', 'ず', 'ぜ', 'ぞ'],
+        y: ['じゃ', 'じゅ', 'じょ'],
+      },
+    ],
+  },
+  {
+    rows: [
+      {
+        l: 'た',
+        k: ['た', 'ち', 'つ', 'て', 'と'],
+        y: ['ちゃ', 'ちゅ', 'ちょ'],
+      },
+      { l: 'だ', k: ['だ', 'ぢ', 'づ', 'で', 'ど'] },
+    ],
+  },
+  {
+    rows: [
+      {
+        l: 'な',
+        k: ['な', 'に', 'ぬ', 'ね', 'の'],
+        y: ['にゃ', 'にゅ', 'にょ'],
+      },
+    ],
+  },
+  {
+    rows: [
+      {
+        l: 'は',
+        k: ['は', 'ひ', 'ふ', 'へ', 'ほ'],
+        y: ['ひゃ', 'ひゅ', 'ひょ'],
+      },
+      { l: 'ば', k: ['ば', 'び', 'ぶ', 'べ', 'ぼ'] },
+      { l: 'ぱ', k: ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'] },
+    ],
+  },
+  {
+    rows: [
+      {
+        l: 'ま',
+        k: ['ま', 'み', 'む', 'め', 'も'],
+        y: ['みゃ', 'みゅ', 'みょ'],
+      },
+    ],
+  },
   { rows: [{ l: 'や', k: ['や', null, 'ゆ', null, 'よ'] }] },
-  { rows: [
-    { l: 'ら', k: ['ら', 'り', 'る', 'れ', 'ろ'], y: ['りゃ', 'りゅ', 'りょ'] },
-  ]},
+  {
+    rows: [
+      {
+        l: 'ら',
+        k: ['ら', 'り', 'る', 'れ', 'ろ'],
+        y: ['りゃ', 'りゅ', 'りょ'],
+      },
+    ],
+  },
   { rows: [{ l: 'わ', k: ['わ', null, null, null, 'を'] }] },
-  { rows: [
-    { l: 'ん', k: ['ん'] },
-    { l: 'っ', k: ['っ'] },
-  ]},
+  {
+    rows: [
+      { l: 'ん', k: ['ん'] },
+      { l: 'っ', k: ['っ'] },
+    ],
+  },
 ]
 
 const SINGLE_DIGIT_KANA = new Set([
-  'ん', 'い', 'に', 'さ', 'し', 'こ', 'ろ', 'な', 'は', 'き',
-  'お', 'ひ', 'ふ', 'み', 'よ', 'ら', 'る', 'う', 'や', 'く',
-  'れ', 'え', 'あ', 'か',
-  'が', 'ぎ', 'ぐ', 'ご', 'ざ', 'じ', 'ば', 'び', 'ぶ', 'ぱ', 'ぴ', 'ぷ',
+  'ん',
+  'い',
+  'に',
+  'さ',
+  'し',
+  'こ',
+  'ろ',
+  'な',
+  'は',
+  'き',
+  'お',
+  'ひ',
+  'ふ',
+  'み',
+  'よ',
+  'ら',
+  'る',
+  'う',
+  'や',
+  'く',
+  'れ',
+  'え',
+  'あ',
+  'か',
+  'が',
+  'ぎ',
+  'ぐ',
+  'ご',
+  'ざ',
+  'じ',
+  'ば',
+  'び',
+  'ぶ',
+  'ぱ',
+  'ぴ',
+  'ぷ',
 ])
 
 const SHOWN_KANA = new Set()
 KANA_GROUPS.forEach((g) =>
   g.rows.forEach((r) => {
-    r.k.forEach((k) => { if (k) SHOWN_KANA.add(k) })
-    if (r.y) r.y.forEach((k) => { if (k) SHOWN_KANA.add(k) })
+    r.k.forEach((k) => {
+      if (k) SHOWN_KANA.add(k)
+    })
+    if (r.y)
+      r.y.forEach((k) => {
+        if (k) SHOWN_KANA.add(k)
+      })
   })
 )
 
 // ─── Components ─────────────────────────────────────────
 
 function SummaryCards({ stats }) {
-  const { total, hasHito, hasMono, hasGainen, hasWordCount, hasAll, totalCatScore, avgEnc, encErrors } = stats
+  const {
+    total,
+    hasHito,
+    hasMono,
+    hasGainen,
+    hasWordCount,
+    hasAll,
+    totalCatScore,
+    avgEnc,
+    encErrors,
+  } = stats
   const pct = (n) => ((n / total) * 100).toFixed(1) + '%'
   const cards = [
     { label: 'Total', value: total, cls: '' },
     { label: '人', value: hasHito, sub: pct(hasHito), cls: 'blue' },
     { label: '物', value: hasMono, sub: pct(hasMono), cls: 'green' },
     { label: '概念', value: hasGainen, sub: pct(hasGainen), cls: 'yellow' },
-    { label: 'Word', value: hasWordCount, sub: pct(hasWordCount), cls: 'green' },
+    {
+      label: 'Word',
+      value: hasWordCount,
+      sub: pct(hasWordCount),
+      cls: 'green',
+    },
     { label: 'All filled', value: hasAll, sub: pct(hasAll), cls: 'green' },
     { label: 'Cat Score', value: totalCatScore, cls: 'yellow' },
     { label: 'Enc Avg', value: avgEnc, cls: 'green' },
-    { label: 'Enc Errors', value: encErrors, cls: encErrors > 0 ? 'red' : 'green' },
+    {
+      label: 'Enc Errors',
+      value: encErrors,
+      cls: encErrors > 0 ? 'red' : 'green',
+    },
   ]
   return html`
     <div className="summary">
@@ -252,7 +364,10 @@ function ProgressBars({ stats }) {
           <div className="prog-row" key=${p.label}>
             <span className="prog-label">${p.label}</span>
             <div className="prog-bar-bg">
-              <div className=${'prog-bar ' + p.cls} style=${{ width: pct + '%' }}>
+              <div
+                className=${'prog-bar ' + p.cls}
+                style=${{ width: pct + '%' }}
+              >
                 ${pct > 8 ? p.count : ''}
               </div>
             </div>
@@ -268,14 +383,32 @@ function ModeSwitcher({ mode, onChange, prefix = 'mode' }) {
   const p = prefix
   return html`
     <div className="mode-switcher">
-      <input type="radio" name=${p} id=${p + '-comp'} value="completion"
-        checked=${mode === 'completion'} onChange=${() => onChange('completion')} />
+      <input
+        type="radio"
+        name=${p}
+        id=${p + '-comp'}
+        value="completion"
+        checked=${mode === 'completion'}
+        onChange=${() => onChange('completion')}
+      />
       <label htmlFor=${p + '-comp'}>Completion</label>
-      <input type="radio" name=${p} id=${p + '-cat'} value="category"
-        checked=${mode === 'category'} onChange=${() => onChange('category')} />
+      <input
+        type="radio"
+        name=${p}
+        id=${p + '-cat'}
+        value="category"
+        checked=${mode === 'category'}
+        onChange=${() => onChange('category')}
+      />
       <label htmlFor=${p + '-cat'}>Category Score</label>
-      <input type="radio" name=${p} id=${p + '-enc'} value="encode"
-        checked=${mode === 'encode'} onChange=${() => onChange('encode')} />
+      <input
+        type="radio"
+        name=${p}
+        id=${p + '-enc'}
+        value="encode"
+        checked=${mode === 'encode'}
+        onChange=${() => onChange('encode')}
+      />
       <label htmlFor=${p + '-enc'}>Encode Score</label>
     </div>
   `
@@ -296,12 +429,21 @@ function Legend({ items }) {
   `
 }
 
-const MainHeatmap = memo(function MainHeatmap({ byNum, mode, onMouseMove, onMouseLeave }) {
+const MainHeatmap = memo(function MainHeatmap({
+  byNum,
+  mode,
+  onMouseMove,
+  onMouseLeave,
+}) {
   const resolver = modeClassMap[mode]
   const labelFn = modeLabelMap[mode]
   return html`
     <div className="heatmap-wrap">
-      <table className="heatmap heatmap-wide" onMouseMove=${onMouseMove} onMouseLeave=${onMouseLeave}>
+      <table
+        className="heatmap heatmap-wide"
+        onMouseMove=${onMouseMove}
+        onMouseLeave=${onMouseLeave}
+      >
         <tr>
           <th className="corner">X\\YZ</th>
           ${Array.from({ length: 100 }, (_, i) => {
@@ -311,20 +453,32 @@ const MainHeatmap = memo(function MainHeatmap({ byNum, mode, onMouseMove, onMous
             return html`<th key=${i} className=${sep}>${'' + y + z}</th>`
           })}
         </tr>
-        ${Array.from({ length: 10 }, (_, x) => html`
-          <tr key=${x}>
-            <td className="row-header">${x}</td>
-            ${Array.from({ length: 100 }, (_, i) => {
-              const y = Math.floor(i / 10)
-              const z = i % 10
-              const sep = z === 0 ? ' y-separator' : ''
-              const num = '' + x + y + z
-              const d = byNum[num]
-              if (!d) return html`<td key=${i} className=${'comp-0' + sep}>${num}</td>`
-              return html`<td key=${i} className=${resolver(d) + sep} data-num=${num}>${labelFn(d) || num}</td>`
-            })}
-          </tr>
-        `)}
+        ${Array.from(
+          { length: 10 },
+          (_, x) => html`
+            <tr key=${x}>
+              <td className="row-header">${x}</td>
+              ${Array.from({ length: 100 }, (_, i) => {
+                const y = Math.floor(i / 10)
+                const z = i % 10
+                const sep = z === 0 ? ' y-separator' : ''
+                const num = '' + x + y + z
+                const d = byNum[num]
+                if (!d)
+                  return html`<td key=${i} className=${'comp-0' + sep}>
+                    ${num}
+                  </td>`
+                return html`<td
+                  key=${i}
+                  className=${resolver(d) + sep}
+                  data-num=${num}
+                >
+                  ${labelFn(d) || num}
+                </td>`
+              })}
+            </tr>
+          `
+        )}
       </table>
     </div>
   `
@@ -333,20 +487,42 @@ const MainHeatmap = memo(function MainHeatmap({ byNum, mode, onMouseMove, onMous
 function SumModeSwitcher({ sumMode, onChange }) {
   return html`
     <div className="mode-switcher">
-      <input type="radio" name="sumMode" id="sum-xy" value="xy"
-        checked=${sumMode === 'xy'} onChange=${() => onChange('xy')} />
+      <input
+        type="radio"
+        name="sumMode"
+        id="sum-xy"
+        value="xy"
+        checked=${sumMode === 'xy'}
+        onChange=${() => onChange('xy')}
+      />
       <label htmlFor="sum-xy">XY (先頭2桁)</label>
-      <input type="radio" name="sumMode" id="sum-yz" value="yz"
-        checked=${sumMode === 'yz'} onChange=${() => onChange('yz')} />
+      <input
+        type="radio"
+        name="sumMode"
+        id="sum-yz"
+        value="yz"
+        checked=${sumMode === 'yz'}
+        onChange=${() => onChange('yz')}
+      />
       <label htmlFor="sum-yz">YZ (末尾2桁)</label>
-      <input type="radio" name="sumMode" id="sum-both" value="both"
-        checked=${sumMode === 'both'} onChange=${() => onChange('both')} />
+      <input
+        type="radio"
+        name="sumMode"
+        id="sum-both"
+        value="both"
+        checked=${sumMode === 'both'}
+        onChange=${() => onChange('both')}
+      />
       <label htmlFor="sum-both">XY+YZ (合成)</label>
     </div>
   `
 }
 
-const SummaryHeatmapTable = memo(function SummaryHeatmapTable({ byNum, mode, sumMode }) {
+const SummaryHeatmapTable = memo(function SummaryHeatmapTable({
+  byNum,
+  mode,
+  sumMode,
+}) {
   const resolver = summaryResolvers[mode]
 
   function groupItems(row, col) {
@@ -369,26 +545,39 @@ const SummaryHeatmapTable = memo(function SummaryHeatmapTable({ byNum, mode, sum
     return items
   }
 
-  const cornerLabel = sumMode === 'xy' ? 'X\\Y' : sumMode === 'yz' ? 'Y\\Z' : 'R\\C'
-  const rowLabel = sumMode === 'yz' ? (r) => 'Y=' + r : sumMode === 'both' ? (r) => r : (r) => r
-  const colLabel = sumMode === 'yz' ? (c) => c : sumMode === 'both' ? (c) => c : (c) => c
+  const cornerLabel =
+    sumMode === 'xy' ? 'X\\Y' : sumMode === 'yz' ? 'Y\\Z' : 'R\\C'
+  const rowLabel =
+    sumMode === 'yz'
+      ? (r) => 'Y=' + r
+      : sumMode === 'both'
+      ? (r) => r
+      : (r) => r
+  const colLabel =
+    sumMode === 'yz' ? (c) => c : sumMode === 'both' ? (c) => c : (c) => c
 
   return html`
     <div className="heatmap-wrap">
       <table className="heatmap summary-heatmap">
         <tr>
           <th className="corner">${cornerLabel}</th>
-          ${Array.from({ length: 10 }, (_, c) => html`<th key=${c}>${colLabel(c)}</th>`)}
+          ${Array.from(
+            { length: 10 },
+            (_, c) => html`<th key=${c}>${colLabel(c)}</th>`
+          )}
         </tr>
-        ${Array.from({ length: 10 }, (_, r) => html`
-          <tr key=${r}>
-            <td className="row-header">${rowLabel(r)}</td>
-            ${Array.from({ length: 10 }, (_, c) => {
-              const r2 = resolver(groupItems(r, c))
-              return html`<td key=${c} className=${r2.cls}>${r2.label}</td>`
-            })}
-          </tr>
-        `)}
+        ${Array.from(
+          { length: 10 },
+          (_, r) => html`
+            <tr key=${r}>
+              <td className="row-header">${rowLabel(r)}</td>
+              ${Array.from({ length: 10 }, (_, c) => {
+                const r2 = resolver(groupItems(r, c))
+                return html`<td key=${c} className=${r2.cls}>${r2.label}</td>`
+              })}
+            </tr>
+          `
+        )}
       </table>
     </div>
   `
@@ -396,9 +585,15 @@ const SummaryHeatmapTable = memo(function SummaryHeatmapTable({ byNum, mode, sum
 
 function RuleCharts({ ruleStats }) {
   const scored = ruleStats.scoredCount || 1
-  const patEntries = Object.entries(ruleStats.patterns).sort((a, b) => b[1] - a[1])
+  const patEntries = Object.entries(ruleStats.patterns).sort(
+    (a, b) => b[1] - a[1]
+  )
   const patMax = patEntries.length > 0 ? patEntries[0][1] : 1
-  const patClsMap = { 'DD+D': 'pat-dd-d', 'D+DD': 'pat-d-dd', 'D+D+D': 'pat-d-d-d' }
+  const patClsMap = {
+    'DD+D': 'pat-dd-d',
+    'D+DD': 'pat-d-dd',
+    'D+D+D': 'pat-d-d-d',
+  }
 
   const tokOrder = [
     { key: 'double', label: 'double (2桁)', cls: 'tok-double' },
@@ -409,8 +604,12 @@ function RuleCharts({ ruleStats }) {
     { key: 'halfOverflow', label: 'halfOverflow', cls: 'tok-half' },
     { key: 'overflow', label: 'overflow', cls: 'tok-overflow' },
   ]
-  const tokMax = Math.max(...tokOrder.map((t) => ruleStats.tokenTypes[t.key] || 0), 1)
-  const totalTokens = Object.values(ruleStats.tokenTypes).reduce((a, b) => a + b, 0) || 1
+  const tokMax = Math.max(
+    ...tokOrder.map((t) => ruleStats.tokenTypes[t.key] || 0),
+    1
+  )
+  const totalTokens =
+    Object.values(ruleStats.tokenTypes).reduce((a, b) => a + b, 0) || 1
 
   return html`
     <div className="rule-columns">
@@ -426,7 +625,12 @@ function RuleCharts({ ruleStats }) {
               <div className="rule-row" key=${pat}>
                 <span className="rule-label">${pat}</span>
                 <div className="rule-bar-bg">
-                  <div className=${'rule-bar ' + cls} style=${{ width: barW + '%' }}>${barW > 15 ? cnt : ''}</div>
+                  <div
+                    className=${'rule-bar ' + cls}
+                    style=${{ width: barW + '%' }}
+                  >
+                    ${barW > 15 ? cnt : ''}
+                  </div>
                 </div>
                 <span className="rule-count">${cnt} (${pct}%)</span>
               </div>
@@ -435,9 +639,12 @@ function RuleCharts({ ruleStats }) {
           ${ruleStats.youon4Count > 0 &&
           html`
             <div className="rule-row" style=${{ marginTop: '8px' }}>
-              <span className="rule-label" style=${{ color: '#fbbf24' }}>拗音4省略</span>
+              <span className="rule-label" style=${{ color: '#fbbf24' }}
+                >拗音4省略</span
+              >
               <span className="rule-count">
-                ${ruleStats.youon4Count} (${((ruleStats.youon4Count / scored) * 100).toFixed(1)}%)
+                ${ruleStats.youon4Count}
+                (${((ruleStats.youon4Count / scored) * 100).toFixed(1)}%)
               </span>
             </div>
           `}
@@ -456,7 +663,12 @@ function RuleCharts({ ruleStats }) {
               <div className="rule-row" key=${t.key}>
                 <span className="rule-label">${t.label}</span>
                 <div className="rule-bar-bg">
-                  <div className=${'rule-bar ' + t.cls} style=${{ width: barW + '%' }}>${barW > 15 ? cnt : ''}</div>
+                  <div
+                    className=${'rule-bar ' + t.cls}
+                    style=${{ width: barW + '%' }}
+                  >
+                    ${barW > 15 ? cnt : ''}
+                  </div>
                 </div>
                 <span className="rule-count">${cnt} (${pct}%)</span>
               </div>
@@ -490,7 +702,9 @@ function KanaUsage({ ruleStats }) {
   function KanaEntry({ kana }) {
     const c = ku[kana] || 0
     const sd = SINGLE_DIGIT_KANA.has(kana) ? ' ku-sd' : ''
-    return html`<div className=${'ku-entry' + sd}><span className="kc">${kana}</span><span className="kn">${c}</span></div>`
+    return html`<div className=${'ku-entry' + sd}>
+      <span className="kc">${kana}</span><span className="kn">${c}</span>
+    </div>`
   }
 
   const others = Object.keys(ku)
@@ -503,28 +717,42 @@ function KanaUsage({ ruleStats }) {
         <tr>
           <th className="rl"></th>
           ${VOWELS.map((v) => html`<th key=${v}>${v}</th>`)}
-          <th>ゃ</th><th>ゅ</th><th>ょ</th>
+          <th>ゃ</th>
+          <th>ゅ</th>
+          <th>ょ</th>
         </tr>
         ${KANA_GROUPS.map((g, gi) => {
           const label = g.rows.map((r) => r.l)
           return html`
             <tr key=${gi} className=${'kg-row' + (gi > 0 ? ' kg-sep' : '')}>
-              <td className="rl">${label.map((l) => html`<div key=${l}>${l}</div>`)}</td>
+              <td className="rl">
+                ${label.map((l) => html`<div key=${l}>${l}</div>`)}
+              </td>
               ${Array.from({ length: 5 }, (_, vi) => {
-                const entries = g.rows.map((r) => r.k[vi] || null).filter(Boolean)
-                if (entries.length === 0) return html`<td key=${vi} className="ku0"></td>`
+                const entries = g.rows
+                  .map((r) => r.k[vi] || null)
+                  .filter(Boolean)
+                if (entries.length === 0)
+                  return html`<td key=${vi} className="ku0"></td>`
                 return html`
                   <td key=${vi} className=${getCls(cellMax(entries))}>
-                    ${entries.map((k) => html`<${KanaEntry} key=${k} kana=${k} />`)}
+                    ${entries.map(
+                      (k) => html`<${KanaEntry} key=${k} kana=${k} />`
+                    )}
                   </td>
                 `
               })}
               ${[0, 1, 2].map((yi) => {
-                const entries = g.rows.map((r) => r.y ? (r.y[yi] || null) : null).filter(Boolean)
-                if (entries.length === 0) return html`<td key=${'y' + yi} className="ku0"></td>`
+                const entries = g.rows
+                  .map((r) => (r.y ? r.y[yi] || null : null))
+                  .filter(Boolean)
+                if (entries.length === 0)
+                  return html`<td key=${'y' + yi} className="ku0"></td>`
                 return html`
                   <td key=${'y' + yi} className=${getCls(cellMax(entries))}>
-                    ${entries.map((k) => html`<${KanaEntry} key=${k} kana=${k} />`)}
+                    ${entries.map(
+                      (k) => html`<${KanaEntry} key=${k} kana=${k} />`
+                    )}
                   </td>
                 `
               })}
@@ -535,12 +763,15 @@ function KanaUsage({ ruleStats }) {
       ${others.length > 0 &&
       html`
         <div style=${{ marginTop: '12px' }}>
-          <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>その他</h3>
+          <h3 style=${{ color: '#ccc', fontSize: '14px', margin: '0 0 6px' }}>
+            その他
+          </h3>
           <div className="ku-others">
             ${others.map(
               (k) => html`
                 <div key=${k} className=${'ku-chip ' + getCls(ku[k] || 0)}>
-                  <span className="kc">${k}</span><span className="kn">${ku[k] || 0}</span>
+                  <span className="kc">${k}</span
+                  ><span className="kn">${ku[k] || 0}</span>
                 </div>
               `
             )}
@@ -562,12 +793,13 @@ function DigitKanaAllocBar({ alloc, digit, label, colorMap }) {
   const kanaMap = alloc[digit] || {}
   const entries = Object.entries(kanaMap).sort((a, b) => b[1] - a[1])
   const total = entries.reduce((s, [, c]) => s + c, 0)
-  if (total === 0) return html`
-    <div className="da-bar-row">
-      <span className="da-pos-label">${label}</span>
-      <div className="da-stacked-bg"><div className="da-empty">-</div></div>
-    </div>
-  `
+  if (total === 0)
+    return html`
+      <div className="da-bar-row">
+        <span className="da-pos-label">${label}</span>
+        <div className="da-stacked-bg"><div className="da-empty">-</div></div>
+      </div>
+    `
   return html`
     <div className="da-bar-row">
       <span className="da-pos-label">${label}</span>
@@ -576,10 +808,16 @@ function DigitKanaAllocBar({ alloc, digit, label, colorMap }) {
           const pct = (cnt / total) * 100
           const color = colorMap[kana] || '#555'
           return html`
-            <div className="da-seg" key=${kana}
+            <div
+              className="da-seg"
+              key=${kana}
               style=${{ width: pct + '%', background: color }}
               title=${kana + ' ' + cnt + ' (' + pct.toFixed(0) + '%)'}
-            ><span className="da-seg-label">${pct >= 8 ? kana : ''}${pct >= 14 ? ' ' + cnt : ''}</span></div>
+            >
+              <span className="da-seg-label"
+                >${pct >= 8 ? kana : ''}${pct >= 14 ? ' ' + cnt : ''}</span
+              >
+            </div>
           `
         })}
       </div>
@@ -619,16 +857,30 @@ function DigitKanaAlloc({ ruleStats }) {
           <div className="da-digit-group" key=${digit}>
             <div className="da-digit-label">${digit}</div>
             <div className="da-digit-bars">
-              ${posLabels.map((label, p) => html`
-                <${DigitKanaAllocBar} key=${p} alloc=${allocAll[p] || {}} digit=${digit} label=${label} colorMap=${colorMap} />
-              `)}
+              ${posLabels.map(
+                (label, p) => html`
+                  <${DigitKanaAllocBar}
+                    key=${p}
+                    alloc=${allocAll[p] || {}}
+                    digit=${digit}
+                    label=${label}
+                    colorMap=${colorMap}
+                  />
+                `
+              )}
             </div>
             <div className="da-digit-legend">
-              ${legend.map(([kana]) => html`
-                <span className="da-legend-item" key=${kana}>
-                  <span className="da-legend-swatch" style=${{ background: colorMap[kana] }}></span>${kana}
-                </span>
-              `)}
+              ${legend.map(
+                ([kana]) => html`
+                  <span className="da-legend-item" key=${kana}>
+                    <span
+                      className="da-legend-swatch"
+                      style=${{ background: colorMap[kana] }}
+                    ></span
+                    >${kana}
+                  </span>
+                `
+              )}
             </div>
           </div>
         `
@@ -647,37 +899,48 @@ function Tooltip({ d, x, y }) {
     tt.style.left = left + 'px'
     tt.style.top = top + 'px'
     const rect = tt.getBoundingClientRect()
-    if (rect.right > window.innerWidth) tt.style.left = x - rect.width - 8 + 'px'
-    if (rect.bottom > window.innerHeight) tt.style.top = y - rect.height - 8 + 'px'
+    if (rect.right > window.innerWidth)
+      tt.style.left = x - rect.width - 8 + 'px'
+    if (rect.bottom > window.innerHeight)
+      tt.style.top = y - rect.height - 8 + 'px'
   })
   if (!d) return null
   const w1ScoreEl = d.w1Error
     ? html`<span className="tt-red">ERROR</span>`
     : d.w1Score !== null
-      ? html`<span className="tt-green">${d.w1Score}</span>`
-      : html`<span className="tt-gray">-</span>`
+    ? html`<span className="tt-green">${d.w1Score}</span>`
+    : html`<span className="tt-gray">-</span>`
   const w2ScoreEl = d.w2Error
     ? html`<span className="tt-red">ERROR</span>`
     : d.w2Score !== null
-      ? html`<span className="tt-green">${d.w2Score}</span>`
-      : html`<span className="tt-gray">-</span>`
+    ? html`<span className="tt-green">${d.w2Score}</span>`
+    : html`<span className="tt-gray">-</span>`
   return html`
     <div className="tooltip" ref=${ref} style=${{ display: 'block' }}>
       <div className="tt-num">${d.num}</div>
       ${d.hito &&
       html`<div className="tt-row">
-        <span className="tt-label">人: </span><span className="tt-val">${d.hito}</span>
-        ${' '}<span className="tt-label">(${d.hitoCnt}×8=${d.hitoCnt * 8})</span>
+        <span className="tt-label">人: </span
+        ><span className="tt-val">${d.hito}</span> ${' '}<span
+          className="tt-label"
+          >(${d.hitoCnt}×8=${d.hitoCnt * 8})</span
+        >
       </div>`}
       ${d.mono &&
       html`<div className="tt-row">
-        <span className="tt-label">物: </span><span className="tt-val">${d.mono}</span>
-        ${' '}<span className="tt-label">(${d.monoCnt}×10=${d.monoCnt * 10})</span>
+        <span className="tt-label">物: </span
+        ><span className="tt-val">${d.mono}</span> ${' '}<span
+          className="tt-label"
+          >(${d.monoCnt}×10=${d.monoCnt * 10})</span
+        >
       </div>`}
       ${d.gainen &&
       html`<div className="tt-row">
-        <span className="tt-label">概念: </span><span className="tt-val">${d.gainen}</span>
-        ${' '}<span className="tt-label">(${d.gainenCnt}×4=${d.gainenCnt * 4})</span>
+        <span className="tt-label">概念: </span
+        ><span className="tt-val">${d.gainen}</span> ${' '}<span
+          className="tt-label"
+          >(${d.gainenCnt}×4=${d.gainenCnt * 4})</span
+        >
       </div>`}
       <div className="tt-row">
         <span className="tt-label">Cat Score: </span>
@@ -686,23 +949,28 @@ function Tooltip({ d, x, y }) {
       ${d.w1 &&
       html`
         <div className="tt-row">
-          <span className="tt-label">w1: </span><span className="tt-val">${d.w1}</span>
+          <span className="tt-label">w1: </span
+          ><span className="tt-val">${d.w1}</span>
         </div>
         ${d.w1k &&
         html`<div className="tt-row">
-          <span className="tt-label">w1k: </span><span className="tt-kana">${d.w1k}</span>
+          <span className="tt-label">w1k: </span
+          ><span className="tt-kana">${d.w1k}</span>
           ${' → '}${w1ScoreEl}
-          ${d.w1Pattern && html`${' '}<span className="tt-label">[${d.w1Pattern}]</span>`}
+          ${d.w1Pattern &&
+          html`${' '}<span className="tt-label">[${d.w1Pattern}]</span>`}
         </div>`}
       `}
       ${d.w2 &&
       html`
         <div className="tt-row">
-          <span className="tt-label">w2: </span><span className="tt-val">${d.w2}</span>
+          <span className="tt-label">w2: </span
+          ><span className="tt-val">${d.w2}</span>
         </div>
         ${d.w2k &&
         html`<div className="tt-row">
-          <span className="tt-label">w2k: </span><span className="tt-kana">${d.w2k}</span>
+          <span className="tt-label">w2k: </span
+          ><span className="tt-kana">${d.w2k}</span>
           ${' → '}${w2ScoreEl}
         </div>`}
       `}
@@ -750,7 +1018,9 @@ function App() {
     const hasMono = data.filter((d) => d.mono).length
     const hasGainen = data.filter((d) => d.gainen).length
     const hasWordCount = data.filter((d) => hasWord(d)).length
-    const hasAll = data.filter((d) => d.hito && d.mono && d.gainen && hasWord(d)).length
+    const hasAll = data.filter(
+      (d) => d.hito && d.mono && d.gainen && hasWord(d)
+    ).length
     const totalCatScore = data.reduce((s, d) => s + d.catScore, 0)
     const scored = data.map((d) => bestScore(d)).filter((s) => s !== null)
     const avgEnc =
@@ -758,10 +1028,22 @@ function App() {
         ? (scored.reduce((a, b) => a + b, 0) / scored.length).toFixed(1)
         : '-'
     const encErrors = data.filter(
-      (d) => (d.w1k && d.w1Error && !d.w2k) || (d.w2k && d.w2Error && !d.w1k) ||
-             (d.w1k && d.w1Error && d.w2k && d.w2Error)
+      (d) =>
+        (d.w1k && d.w1Error && !d.w2k) ||
+        (d.w2k && d.w2Error && !d.w1k) ||
+        (d.w1k && d.w1Error && d.w2k && d.w2Error)
     ).length
-    return { total, hasHito, hasMono, hasGainen, hasWordCount, hasAll, totalCatScore, avgEnc, encErrors }
+    return {
+      total,
+      hasHito,
+      hasMono,
+      hasGainen,
+      hasWordCount,
+      hasAll,
+      totalCatScore,
+      avgEnc,
+      encErrors,
+    }
   }, [data])
 
   const handleMouseMove = useCallback(
@@ -799,8 +1081,12 @@ function App() {
       <p className="subtitle">各3桁数字のステータスをヒートマップ表示</p>
       <${ModeSwitcher} mode=${mode} onChange=${setMode} />
       <${Legend} items=${LEGENDS[mode]} />
-      <${MainHeatmap} byNum=${byNum} mode=${mode}
-        onMouseMove=${handleMouseMove} onMouseLeave=${handleMouseLeave} />
+      <${MainHeatmap}
+        byNum=${byNum}
+        mode=${mode}
+        onMouseMove=${handleMouseMove}
+        onMouseLeave=${handleMouseLeave}
+      />
 
       <h2>2桁 Summary (10個まとめ)</h2>
       <p className="subtitle">2桁ごとに10個を集約した10×10ヒートマップ</p>
@@ -814,14 +1100,19 @@ function App() {
       <${RuleCharts} ruleStats=${ruleStats} />
 
       <h2>Kana Usage</h2>
-      <p className="subtitle">採用済みエンコードで使用されている各かなの出現回数</p>
+      <p className="subtitle">
+        採用済みエンコードで使用されている各かなの出現回数
+      </p>
       <${KanaUsage} ruleStats=${ruleStats} />
 
       <h2>Digit Kana Allocation</h2>
-      <p className="subtitle">各数字(0-9)に対して使われているかなの割り当て分布</p>
+      <p className="subtitle">
+        各数字(0-9)に対して使われているかなの割り当て分布
+      </p>
       <${DigitKanaAlloc} ruleStats=${ruleStats} />
 
-      ${tooltip && html`<${Tooltip} d=${tooltip.d} x=${tooltip.x} y=${tooltip.y} />`}
+      ${tooltip &&
+      html`<${Tooltip} d=${tooltip.d} x=${tooltip.x} y=${tooltip.y} />`}
     </div>
   `
 }

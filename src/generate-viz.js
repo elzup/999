@@ -122,7 +122,9 @@ function logStats(label, data) {
   const hasAll = data.filter(
     (d) => d.hito && d.mono && d.gainen && d.w1k
   ).length
-  console.log(`${label}: ${data.length} entries  w1k: ${filled}  all: ${hasAll}`)
+  console.log(
+    `${label}: ${data.length} entries  w1k: ${filled}  all: ${hasAll}`
+  )
 }
 
 function main() {

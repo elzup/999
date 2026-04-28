@@ -19,9 +19,7 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
         {d.w1 ? (
           <span class="detail-main-word">
             {d.w1}
-            {d.w1k ? (
-              <span class="detail-sub-word"> {d.w1k}</span>
-            ) : null}
+            {d.w1k ? <span class="detail-sub-word"> {d.w1k}</span> : null}
           </span>
         ) : null}
         {d.w1Score != null ? (
@@ -34,9 +32,7 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
         {d.w2 ? (
           <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
             {d.w2}
-            {d.w2k ? (
-              <span class="detail-sub-word"> {d.w2k}</span>
-            ) : null}
+            {d.w2k ? <span class="detail-sub-word"> {d.w2k}</span> : null}
           </span>
         ) : null}
         {d.w2Score != null ? (

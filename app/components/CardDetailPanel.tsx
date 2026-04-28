@@ -54,9 +54,7 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
         {c.score !== null ? (
           <div class="card-detail-item" key="score">
             <div class="cd-label">Score</div>
-            <div class="cd-val">
-              {c.score}/3
-            </div>
+            <div class="cd-val">{c.score}/3</div>
             <div class="cd-scorebar">
               <div class="cd-scorefill" style={{ width: scoreWidth }} />
             </div>
