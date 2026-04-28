@@ -8,7 +8,7 @@ type Props = {
   onClose?: () => void
 }
 
-type CardValueItem = [label: string, val: string]
+type CardValueItem = [label: string, val: string, score: number]
 
 function suitColor(suit: string): string {
   if (suit === 'H') return '#f87171'
@@ -22,8 +22,7 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
   const isBm = bookmarks.has(bmKey)
 
   const items: CardValueItem[] = cardValues(c)
-  const score = c.score ?? 0
-  const scoreWidth = `${(Math.max(0, Math.min(3, score)) / 3) * 100}%`
+  const maxScore = items.length > 0 ? Math.max(...items.map(([, , s]) => s)) : 0
 
   return (
     <div class="detail-panel">
@@ -51,23 +50,31 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
         </div>
       </div>
       <div class="card-detail-body">
-        {c.score !== null ? (
-          <div class="card-detail-item" key="score">
-            <div class="cd-label">Score</div>
-            <div class="cd-val">{c.score}/3</div>
-            <div class="cd-scorebar">
-              <div class="cd-scorefill" style={{ width: scoreWidth }} />
-            </div>
-          </div>
-        ) : null}
-        {items.map(([label, val]) =>
-          val ? (
-            <div class="card-detail-item" key={label}>
+        {items.map(([label, val, score]) => {
+          const isBest = score === maxScore
+          const scoreWidth = `${(Math.max(0, Math.min(3, score)) / 3) * 100}%`
+          return (
+            <div
+              class="card-detail-item"
+              key={label}
+              style={{ opacity: isBest ? 1 : 0.55 }}
+            >
               <div class="cd-label">{label}</div>
-              <div class="cd-val">{val}</div>
+              <div
+                class="cd-val"
+                style={{ fontWeight: isBest ? 'bold' : 'normal' }}
+              >
+                {val}
+              </div>
+              <div class="cd-scorebar">
+                <div class="cd-scorefill" style={{ width: scoreWidth }} />
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text2)' }}>
+                {score}/3
+              </div>
             </div>
-          ) : null
-        )}
+          )
+        })}
       </div>
     </div>
   )
