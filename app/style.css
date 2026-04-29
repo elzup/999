@@ -2064,42 +2064,24 @@ body {
   font-weight: 700;
 }
 
-/* Pattern label table (horizontal: digit + pattern label) */
-.rules-pattern-table {
-  border-collapse: collapse;
-  font-size: 13px;
-  table-layout: fixed;
-}
-.rules-pattern-table th,
-.rules-pattern-table td {
-  border: 1px solid var(--border);
-  padding: 6px 4px;
-  text-align: center;
-  min-width: 44px;
-}
-.rules-pattern-axis {
-  background: var(--surface2);
-  color: var(--text2);
-  font-weight: 600;
-  font-size: 11px;
-  width: 64px;
-  white-space: nowrap;
-}
-.rules-pattern-digit {
+/* Matrix headers — digit row + pattern label row/col */
+.rules-mx-digit {
   background: var(--surface2);
   color: #60a5fa;
   font-family: ui-monospace, monospace;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
 }
-.rules-pattern-cell {
-  background: var(--surface);
+.rules-mx-label {
+  background: var(--surface2);
   color: var(--text);
   font-family: ui-monospace, monospace;
+  font-size: 11px;
   font-weight: 600;
-  font-size: 12px;
+  white-space: nowrap;
+  padding: 2px 4px !important;
 }
-.rules-pattern-cell.empty {
+.rules-mx-label.empty {
   color: var(--text2);
   opacity: 0.35;
   font-weight: 400;
