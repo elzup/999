@@ -1933,3 +1933,190 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ─── Rules Panel ─── */
+.rules-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 12px;
+  overflow-y: auto;
+}
+.rules-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rules-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.rules-section-desc {
+  font-size: 11px;
+  color: var(--text2);
+}
+.rules-single-table,
+.rules-matrix-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  width: 100%;
+  table-layout: fixed;
+}
+.rules-single-table th,
+.rules-single-table td,
+.rules-matrix-table th,
+.rules-matrix-table td {
+  border: 1px solid var(--border);
+  padding: 4px 2px;
+  text-align: center;
+  min-width: 24px;
+  word-break: break-word;
+}
+.rules-single-table thead th {
+  background: var(--surface2);
+  color: var(--text2);
+  font-weight: 600;
+}
+.rules-tier-head {
+  width: 64px;
+}
+.rules-tier-label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  background: var(--surface2);
+}
+.rules-tier-name {
+  font-weight: 700;
+}
+.rules-tier-score {
+  font-size: 10px;
+  color: var(--text2);
+}
+.rules-tier-cell {
+  font-size: 14px;
+  font-weight: 600;
+}
+.rules-tier-core {
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+}
+.rules-tier-sub {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
+.rules-tier-bad {
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+}
+.rules-matrix-table thead th,
+.rules-matrix-table tbody th {
+  background: var(--surface2);
+  color: var(--text2);
+  font-weight: 600;
+}
+.rules-mx-corner {
+  font-size: 10px;
+}
+.rules-mx-cell {
+  color: var(--text2);
+  background: var(--surface);
+}
+.rules-mx-cell.filled {
+  color: var(--text);
+  background: rgba(96, 165, 250, 0.1);
+  font-weight: 600;
+}
+.rules-weights {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
+}
+.rules-weight-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.rules-weight-row.pos {
+  border-left: 3px solid #4ade80;
+}
+.rules-weight-row.neg {
+  border-left: 3px solid #f87171;
+}
+.rules-weight-key {
+  font-family: ui-monospace, monospace;
+  color: var(--text);
+}
+.rules-weight-row.pos .rules-weight-val {
+  color: #4ade80;
+  font-weight: 700;
+}
+.rules-weight-row.neg .rules-weight-val {
+  color: #f87171;
+  font-weight: 700;
+}
+
+/* Pattern label table (horizontal: digit + pattern label) */
+.rules-pattern-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+.rules-pattern-table th,
+.rules-pattern-table td {
+  border: 1px solid var(--border);
+  padding: 6px 4px;
+  text-align: center;
+  min-width: 44px;
+}
+.rules-pattern-axis {
+  background: var(--surface2);
+  color: var(--text2);
+  font-weight: 600;
+  font-size: 11px;
+  width: 64px;
+  white-space: nowrap;
+}
+.rules-pattern-digit {
+  background: var(--surface2);
+  color: #60a5fa;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 14px;
+}
+.rules-pattern-cell {
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 12px;
+}
+.rules-pattern-cell.empty {
+  color: var(--text2);
+  opacity: 0.35;
+  font-weight: 400;
+}
+
+.rules-toggle-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  width: 100%;
+}
+.rules-toggle-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}

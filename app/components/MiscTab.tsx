@@ -1,20 +1,22 @@
 import { h } from 'preact'
 import { useState, useCallback } from 'preact/hooks'
-import type { NumberEntry, CardEntry } from '../data/schema'
+import type { NumberEntry, CardEntry, RulesData } from '../data/schema'
 import BookmarkTab from './BookmarkTab'
 import StorageEstimatePanel from './StorageEstimatePanel'
 import TagPanel from './TagPanel'
+import RulesPanel from './RulesPanel'
 
 type Props = {
   numbers: NumberEntry[]
   cards: CardEntry[]
+  rules?: RulesData
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
 }
 
-type SubTab = 'bm' | 'tags' | 'stats' | 'storage'
+type SubTab = 'bm' | 'tags' | 'rules' | 'stats' | 'storage'
 
-function MiscTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
+function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('bm')
 
   const handleSub = useCallback((s: SubTab) => {
@@ -47,6 +49,12 @@ function MiscTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
           タグ
         </button>
         <button
+          class={'sub-tab-btn' + (sub === 'rules' ? ' active' : '')}
+          onClick={() => handleSub('rules')}
+        >
+          ルール
+        </button>
+        <button
           class={'sub-tab-btn' + (sub === 'stats' ? ' active' : '')}
           onClick={() => handleSub('stats')}
         >
@@ -68,6 +76,14 @@ function MiscTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
         />
       )}
       {sub === 'tags' && <TagPanel numbers={numbers} />}
+      {sub === 'rules' &&
+        (rules ? (
+          <RulesPanel rules={rules} />
+        ) : (
+          <div class="content" style={{ padding: 16, color: 'var(--text2)' }}>
+            ルールデータが見つかりません
+          </div>
+        ))}
       {sub === 'stats' && <iframe class="stats-frame" src="./stats.html" />}
       {sub === 'storage' && <StorageEstimatePanel />}
     </div>

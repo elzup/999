@@ -46,7 +46,9 @@ export function App() {
 
   if (!data) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text2)' }}>
+      <div
+        style={{ padding: '40px', textAlign: 'center', color: 'var(--text2)' }}
+      >
         Loading...
       </div>
     )
@@ -55,10 +57,20 @@ export function App() {
   return (
     <>
       {tab === 'num' && (
-        <NumGroupTab numbers={data.numbers} bookmarks={bookmarks} onToggleBm={toggleBm} onCheckingChange={setLocked} />
+        <NumGroupTab
+          numbers={data.numbers}
+          bookmarks={bookmarks}
+          onToggleBm={toggleBm}
+          onCheckingChange={setLocked}
+        />
       )}
       {tab === 'card' && (
-        <CardTab cards={data.cards} bookmarks={bookmarks} onToggleBm={toggleBm} onCheckingChange={setLocked} />
+        <CardTab
+          cards={data.cards}
+          bookmarks={bookmarks}
+          onToggleBm={toggleBm}
+          onCheckingChange={setLocked}
+        />
       )}
       {tab === 'pi' && (
         <PiTab
@@ -88,17 +100,57 @@ export function App() {
         <MiscTab
           numbers={data.numbers}
           cards={data.cards}
+          rules={data.rules}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
         />
       )}
-      <div class="bottom-bar" style={locked ? { pointerEvents: 'none', opacity: 0.4 } : {}}>
-        <TabButton id="num" current={tab} onSelect={setTab} icon={<IconNum />} label="数字" />
-        <TabButton id="card" current={tab} onSelect={setTab} icon={<IconCard />} label="カード" />
-        <TabButton id="pi" current={tab} onSelect={setTab} icon={<IconPi />} label="π" />
-        <TabButton id="year" current={tab} onSelect={setTab} icon={<IconYear />} label="年号" />
-        <TabButton id="weekday" current={tab} onSelect={setTab} icon={<IconWeekday />} label="曜日" />
-        <TabButton id="misc" current={tab} onSelect={setTab} icon={<IconStats />} label="その他" />
+      <div
+        class="bottom-bar"
+        style={locked ? { pointerEvents: 'none', opacity: 0.4 } : {}}
+      >
+        <TabButton
+          id="num"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconNum />}
+          label="数字"
+        />
+        <TabButton
+          id="card"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconCard />}
+          label="カード"
+        />
+        <TabButton
+          id="pi"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconPi />}
+          label="π"
+        />
+        <TabButton
+          id="year"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconYear />}
+          label="年号"
+        />
+        <TabButton
+          id="weekday"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconWeekday />}
+          label="曜日"
+        />
+        <TabButton
+          id="misc"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconStats />}
+          label="その他"
+        />
       </div>
     </>
   )
@@ -118,7 +170,10 @@ function TabButton({
   label: preact.ComponentChildren
 }) {
   return (
-    <button class={'bar-tab' + (current === id ? ' active' : '')} onClick={() => onSelect(id)}>
+    <button
+      class={'bar-tab' + (current === id ? ' active' : '')}
+      onClick={() => onSelect(id)}
+    >
       {icon}
       <span>{label}</span>
     </button>

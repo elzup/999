@@ -2,6 +2,8 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
+import { WEIGHTS } from './scorer.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 const publicDir = join(baseDir, '..', 'public')
@@ -52,7 +54,16 @@ const numbers = vizData.data
   .filter(Boolean)
 
 // Cards data
-const MARK_SUIT = { '♠️': 'S', '♠': 'S', '♥️': 'H', '♥': 'H', '♣️': 'C', '♣': 'C', '♦️': 'D', '♦': 'D' }
+const MARK_SUIT = {
+  '♠️': 'S',
+  '♠': 'S',
+  '♥️': 'H',
+  '♥': 'H',
+  '♣️': 'C',
+  '♣': 'C',
+  '♦️': 'D',
+  '♦': 'D',
+}
 
 function parseMark(mark) {
   for (const [sym, suit] of Object.entries(MARK_SUIT)) {
@@ -105,8 +116,49 @@ function parseScore(raw) {
   return Math.max(0, Math.min(3, value))
 }
 
-const out = { numbers, cards }
+// --- Rules data -----------------------------------------------------------
+
+function buildRulesData() {
+  // 1桁: 0..9 ごとに core/sub/bad のかなを集める
+  const singleByDigit = {}
+  for (let d = 0; d <= 9; d++) {
+    singleByDigit[d] = { core: [], sub: [], bad: [] }
+  }
+  for (const [kana, digit] of Object.entries(SINGLE_DIGIT)) {
+    const tier = SINGLE_TIER[kana]
+    if (tier && singleByDigit[digit]?.[tier]) {
+      singleByDigit[digit][tier].push(kana)
+    }
+  }
+
+  // 2桁マトリクス: matrix[row][col] = [kana, ...]
+  const buildMatrix = (digitMap) => {
+    const matrix = Array.from({ length: 10 }, () =>
+      Array.from({ length: 10 }, () => [])
+    )
+    for (const [kana, digits] of Object.entries(digitMap)) {
+      if (digits.length !== 2) continue
+      const r = Number(digits[0])
+      const c = Number(digits[1])
+      if (r >= 0 && r <= 9 && c >= 0 && c <= 9) matrix[r][c].push(kana)
+    }
+    return matrix
+  }
+
+  return {
+    singleByDigit,
+    doubleMatrix: buildMatrix(DOUBLE_DIGIT),
+    longMatrix: buildMatrix(LONG_DIGIT),
+    weights: WEIGHTS,
+  }
+}
+
+const rules = buildRulesData()
+
+const out = { numbers, cards, rules }
 writeFileSync(join(publicDir, 'data.json'), JSON.stringify(out))
 console.log(
-  `Generated public/data.json (${numbers.length} numbers, ${cards.length} cards)`
+  `Generated public/data.json (${numbers.length} numbers, ${
+    cards.length
+  } cards, rules: ${Object.keys(rules.singleByDigit).length} digits)`
 )

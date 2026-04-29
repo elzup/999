@@ -34,9 +34,25 @@ export const CardEntrySchema = z.object({
 
 export type CardEntry = z.infer<typeof CardEntrySchema>
 
+export const TierBucketSchema = z.object({
+  core: z.array(z.string()).default([]),
+  sub: z.array(z.string()).default([]),
+  bad: z.array(z.string()).default([]),
+})
+
+export const RulesDataSchema = z.object({
+  singleByDigit: z.record(z.string(), TierBucketSchema),
+  doubleMatrix: z.array(z.array(z.array(z.string()))),
+  longMatrix: z.array(z.array(z.array(z.string()))),
+  weights: z.record(z.string(), z.number()),
+})
+
+export type RulesData = z.infer<typeof RulesDataSchema>
+
 export const AppDataSchema = z.object({
   numbers: z.array(NumberEntrySchema),
   cards: z.array(CardEntrySchema),
+  rules: RulesDataSchema.optional(),
 })
 
 export type AppData = z.infer<typeof AppDataSchema>
