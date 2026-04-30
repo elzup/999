@@ -1,6 +1,6 @@
 import { h } from 'preact'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'preact/hooks'
-import type { CardEntry, CardStats } from '../data/schema'
+import type { CardEntry, CardStats, CardTrainSettings } from '../data/schema'
 import type { Record as TestRecord } from '../data/schema'
 import { SUIT_LABEL } from '../data/constants'
 import {
@@ -8,6 +8,8 @@ import {
   saveCardRecords,
   loadCardStats,
   saveCardStats,
+  loadCardTrainSettings,
+  saveCardTrainSettings,
 } from '../data/storage'
 import { formatCardId, pickCardPrompt } from '../data/cards'
 import CardDetailPanel from './CardDetailPanel'
@@ -29,7 +31,9 @@ const SUIT_NAME: Record<string, string> = {
   D: 'ダイヤ',
 }
 
-type Mode = 'view' | 'check'
+type Mode = 'view' | 'check' | 'train'
+
+type TrainDirection = CardTrainSettings['direction']
 
 type MatchItem = {
   card: CardEntry
@@ -58,6 +62,18 @@ function suitColor(suit: string): string {
   if (suit === 'C') return '#4ade80'
   if (suit === 'D') return '#60a5fa'
   return '#94a3b8'
+}
+
+function groupCards(
+  cards: CardEntry[],
+  groupSize: CardTrainSettings['groupSize'],
+  _direction: TrainDirection
+): CardEntry[][] {
+  const out: CardEntry[][] = []
+  for (let i = 0; i < cards.length; i += groupSize) {
+    out.push(cards.slice(i, i + groupSize))
+  }
+  return out
 }
 
 type CardCellProps = {
@@ -115,11 +131,15 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [showRecords, setShowRecords] = useState(false)
   const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
+  const [trainSettings, setTrainSettings] =
+    useState<CardTrainSettings>(loadCardTrainSettings)
+  const [trainGroupIdx, setTrainGroupIdx] = useState(0)
   const timerRef = useRef<number | null>(null)
   const questionStartRef = useRef<number>(0)
 
   useEffect(() => {
-    if (mode === 'check' && !finished) {
+    const running = (mode === 'check' && !finished) || mode === 'train'
+    if (running) {
       timerRef.current = window.setInterval(() => {
         setElapsed(startTime ? Math.round((Date.now() - startTime) / 1000) : 0)
       }, 1000)
@@ -148,6 +168,32 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
     return shuffle([currentItem, ...picked])
   }, [allItems, currentItem])
 
+  const trainGroups = useMemo(
+    () => groupCards(cards, trainSettings.groupSize, trainSettings.direction),
+    [cards, trainSettings.groupSize, trainSettings.direction]
+  )
+
+  const currentTrainGroup = useMemo(() => {
+    return trainGroups[trainGroupIdx] ?? null
+  }, [trainGroups, trainGroupIdx])
+
+  const trainForward = trainSettings.direction === 'right' ? -1 : 1
+  const trainAtFirst = trainGroupIdx <= 0
+  const trainAtLast = trainGroupIdx >= trainGroups.length - 1
+  const trainAtEnd =
+    trainSettings.direction === 'right' ? trainAtFirst : trainAtLast
+
+  const updateTrainSettings = useCallback(
+    (patch: Partial<CardTrainSettings>) => {
+      setTrainSettings((prev) => {
+        const next = { ...prev, ...patch }
+        saveCardTrainSettings(next)
+        return next
+      })
+    },
+    []
+  )
+
   const startCheck = useCallback(
     () => {
       const items: MatchItem[] = []
@@ -175,6 +221,16 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
     },
     [cards, onCheckingChange]
   )
+
+  const startTrain = useCallback(() => {
+    if (trainGroups.length === 0) return
+    setTrainGroupIdx(trainSettings.direction === 'right' ? trainGroups.length - 1 : 0)
+    setStartTime(Date.now())
+    setElapsed(0)
+    setMode('train')
+    setSelected(null)
+    onCheckingChange?.(true)
+  }, [trainGroups.length, trainSettings.direction, onCheckingChange])
 
   const endCheck = useCallback(
     (finalResults?: MatchResult[]) => {
@@ -269,6 +325,29 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
     saveCardRecords([])
   }, [])
 
+  const stopTrain = useCallback(() => {
+    setMode('view')
+    onCheckingChange?.(false)
+  }, [onCheckingChange])
+
+  const goTrainPrev = useCallback(() => {
+    setTrainGroupIdx((idx) => Math.max(0, idx - 1))
+  }, [])
+
+  const goTrainNext = useCallback(() => {
+    setTrainGroupIdx((idx) => Math.min(trainGroups.length - 1, idx + 1))
+  }, [trainGroups.length])
+
+  const goTrainForward = useCallback(() => {
+    if (trainForward > 0) goTrainNext()
+    else goTrainPrev()
+  }, [trainForward, goTrainNext, goTrainPrev])
+
+  const goTrainBackward = useCallback(() => {
+    if (trainForward > 0) goTrainPrev()
+    else goTrainNext()
+  }, [trainForward, goTrainNext, goTrainPrev])
+
   const correctCount = results.filter((r) => r.correct).length
   const lastRecord = records.length > 0 ? records[0] : null
   const bestRecord =
@@ -278,6 +357,101 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
           records[0]
         )
       : null
+
+  if (mode === 'train') {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
+        <div class="pi-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div class="pi-header-title">カード訓練</div>
+            <span
+              style={{
+                fontSize: '13px',
+                color: 'var(--accent)',
+                fontFamily: 'monospace',
+              }}
+            >
+              {elapsed}秒
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
+              {Math.min(trainGroupIdx + 1, trainGroups.length)}/{trainGroups.length}
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
+              {trainSettings.groupSize}枚 /{' '}
+              {trainSettings.direction === 'right' ? '右から開始' : '左から開始'}
+            </span>
+            <button
+              class="filter-btn"
+              style={{
+                fontSize: '12px',
+                minWidth: '70px',
+                padding: '4px 10px',
+                marginLeft: 'auto',
+              }}
+              onClick={() => stopTrain()}
+            >
+              {trainAtEnd ? '停止' : '終了'}
+            </button>
+          </div>
+        </div>
+
+        <div class="content" style={{ flex: 1 }}>
+          <div class="cm-train-wrap">
+            <div class="cm-train-head">
+              <div class="cm-train-order">
+                グループ {trainGroupIdx + 1} / {trainGroups.length}
+              </div>
+              <div class="cm-train-note">
+                連想できたら矢印で進む。最後まで行ったら停止。
+              </div>
+            </div>
+
+            <div
+              class="cm-train-grid"
+              style={{
+                gridTemplateColumns: `repeat(${currentTrainGroup?.length ?? trainSettings.groupSize}, minmax(0, 1fr))`,
+              }}
+            >
+              {currentTrainGroup?.map((card) => (
+                <div
+                  key={card.suit + card.rank}
+                  class={'cm-train-card ' + card.suit}
+                  style={{ color: suitColor(card.suit) }}
+                >
+                  {formatCardId(card)}
+                </div>
+              ))}
+            </div>
+
+            <div class="cm-train-nav">
+              <button
+                class="cm-train-arrow"
+                disabled={trainSettings.direction === 'right' ? trainAtLast : trainAtFirst}
+                onClick={goTrainBackward}
+              >
+                戻る
+              </button>
+              <button
+                class="cm-train-arrow"
+                disabled={trainAtEnd}
+                onClick={goTrainForward}
+              >
+                次へ
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (mode === 'check') {
     return (
@@ -395,6 +569,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
             style={{
               marginLeft: 'auto',
               display: 'flex',
+              flexWrap: 'wrap',
               gap: '6px',
               alignItems: 'center',
             }}
@@ -419,9 +594,67 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
                 minWidth: '60px',
                 padding: '4px 10px',
               }}
+              onClick={() => startTrain()}
+            >
+              訓練
+            </button>
+            <button
+              class="filter-btn"
+              style={{
+                fontSize: '12px',
+                minWidth: '60px',
+                padding: '4px 10px',
+              }}
               onClick={() => startCheck()}
             >
               テスト
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-train-settings">
+        <div class="card-train-settings-row">
+          <span class="card-train-settings-label">枚数</span>
+          <div class="card-train-settings-btns">
+            {[2, 3, 4].map((size) => (
+              <button
+                key={size}
+                class={
+                  'd2-mode-btn' +
+                  (trainSettings.groupSize === size ? ' active' : '')
+                }
+                onClick={() =>
+                  updateTrainSettings({
+                    groupSize: size as CardTrainSettings['groupSize'],
+                  })
+                }
+              >
+                {size}枚
+              </button>
+            ))}
+          </div>
+        </div>
+        <div class="card-train-settings-row">
+          <span class="card-train-settings-label">送り</span>
+          <div class="card-train-settings-btns">
+            <button
+              class={
+                'd2-mode-btn' +
+                (trainSettings.direction === 'right' ? ' active' : '')
+              }
+              onClick={() => updateTrainSettings({ direction: 'right' })}
+            >
+              右から
+            </button>
+            <button
+              class={
+                'd2-mode-btn' +
+                (trainSettings.direction === 'left' ? ' active' : '')
+              }
+              onClick={() => updateTrainSettings({ direction: 'left' })}
+            >
+              左から
             </button>
           </div>
         </div>

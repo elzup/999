@@ -78,6 +78,13 @@ export const CardStatsSchema = z.record(z.string(), CardStatSchema)
 
 export type CardStats = z.infer<typeof CardStatsSchema>
 
+export const CardTrainSettingsSchema = z.object({
+  groupSize: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(2),
+  direction: z.enum(['right', 'left']).default('right'),
+})
+
+export type CardTrainSettings = z.infer<typeof CardTrainSettingsSchema>
+
 export const YearItemSchema = z.object({
   no: z.number(),
   year: z.string(),
