@@ -1361,6 +1361,16 @@ body {
   color: var(--text2);
   min-width: 80px;
 }
+.rec-row .rec-mode {
+  color: var(--text2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  min-width: 32px;
+  text-align: center;
+}
 .rec-row .rec-score {
   font-weight: bold;
   min-width: 50px;
@@ -1625,11 +1635,12 @@ body {
 .cm-train-nav {
   display: flex;
   justify-content: center;
+  align-items: stretch;
   gap: 12px;
 }
 .cm-train-arrow {
   width: 88px;
-  height: 56px;
+  height: 64px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
@@ -1640,6 +1651,25 @@ body {
 .cm-train-arrow:disabled {
   opacity: 0.35;
   cursor: default;
+}
+.cm-train-stop {
+  min-width: 110px;
+  height: 64px;
+  padding: 0 16px;
+  border: 1px solid var(--warn, #f97316);
+  border-radius: 14px;
+  background: var(--warn, #f97316);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cm-train-stop:disabled {
+  opacity: 0.45;
+  cursor: default;
+  background: var(--surface);
+  color: var(--text2);
+  border-color: var(--border);
 }
 @media (max-width: 640px) {
   .card-train-settings-row {

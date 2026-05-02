@@ -61,11 +61,14 @@ function RecordList({ records, onDelete }: RecordListProps) {
           <span class="rec-date">
             {r.date.slice(5, 16).replace('T', ' ')}
           </span>
+          <span class="rec-mode">
+            {r.mode === 'train' ? '連想' : '選択'}
+          </span>
           <span
             class="rec-score"
             style={{ color: i === 0 ? 'var(--accent)' : 'var(--text)' }}
           >
-            {r.score}/{r.total}
+            {r.mode === 'train' ? `${r.total}枚` : `${r.score}/${r.total}`}
           </span>
           <span class="rec-time">{r.time}秒</span>
           <button class="rec-del" onClick={() => onDelete(i)}>

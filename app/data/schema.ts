@@ -62,6 +62,7 @@ export const RecordSchema = z.object({
   score: z.number(),
   total: z.number(),
   time: z.number(),
+  mode: z.enum(['check', 'train']).optional(),
 })
 
 export type Record = z.infer<typeof RecordSchema>
