@@ -124,13 +124,14 @@ async function getServiceAccountAccessToken(credentials, scopes) {
   return json.access_token
 }
 
-async function getAuthorizedUserAccessToken(credentials, scopes) {
+async function getAuthorizedUserAccessToken(credentials, _scopes) {
+  // Omit scope param so Google returns a token with the originally granted scopes
+  // (cloud-platform from gcloud auth login covers Sheets API).
   const body = new URLSearchParams({
     client_id: credentials.client_id,
     client_secret: credentials.client_secret,
     refresh_token: credentials.refresh_token,
     grant_type: 'refresh_token',
-    scope: scopes.join(' '),
   })
 
   const res = await fetch(GOOGLE_TOKEN_URL, {
