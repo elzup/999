@@ -1185,6 +1185,12 @@ body {
 .pi-check-cell.pending {
   opacity: 0.3;
 }
+.pi-check-grid.compact .pi-check-cell {
+  min-height: 18px;
+}
+.pi-check-grid.compact .pi-check-cell .pi-digit {
+  font-size: 10px;
+}
 
 /* Year tab */
 .year-layout {

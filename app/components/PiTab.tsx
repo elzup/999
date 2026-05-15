@@ -1,8 +1,8 @@
 import { h } from 'preact'
-import { useState, useCallback, useMemo } from 'preact/hooks'
+import { useState, useCallback, useMemo, useEffect } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import type { Record } from '../data/schema'
-import { PI_DIGITS, DIGIT_COLORS } from '../data/constants'
+import { PI_DIGITS, PI_1000_DIGITS, DIGIT_COLORS } from '../data/constants'
 import { loadPiRecords, savePiRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
@@ -18,17 +18,24 @@ type Props = {
 
 type Answer = { idx: number; digit: string; correct: boolean }
 type Mode = 'view' | 'check'
+type DigitMode = 100 | 1000
 
 function PiCheckGrid({
   answers,
   checkPos,
+  digits,
+  totalDigits,
+  compact,
 }: {
   answers: Answer[]
   checkPos: number
+  digits: string[]
+  totalDigits: number
+  compact?: boolean
 }) {
   return (
-    <div class="pi-check-grid">
-      {PI_DIGITS.slice(1, 101).map((d, j) => {
+    <div class={`pi-check-grid${compact ? ' compact' : ''}`}>
+      {digits.slice(1, totalDigits + 1).map((d, j) => {
         const idx = j + 1
         const answered = answers.find((a) => a.idx === idx)
         const isCurrent = idx === checkPos
@@ -40,8 +47,8 @@ function PiCheckGrid({
               ? ' correct'
               : ' wrong'
             : !answered && idx > checkPos
-              ? ' pending'
-              : '')
+            ? ' pending'
+            : '')
         const cellColor = DIGIT_COLORS[Number(d)]
         return (
           <div key={idx} class={cls}>
@@ -69,30 +76,31 @@ function PiCheckGrid({
 function PiViewGroups({
   selected,
   onSelect,
+  digits,
+  groupCount,
+  pairCount,
 }: {
   selected: number | null
   onSelect: (g: number | null) => void
+  digits: string[]
+  groupCount: number
+  pairCount: number
 }) {
   const renderGroup = (g: number) => {
     const startIdx = 1 + g * 3
-    const groupDigits = PI_DIGITS.slice(
+    const groupDigits = digits.slice(
       startIdx,
-      Math.min(startIdx + 3, PI_DIGITS.length)
+      Math.min(startIdx + 3, digits.length)
     )
     if (groupDigits.length === 0) return null
     const pairOf =
-      selected !== null
-        ? selected % 2 === 0
-          ? selected
-          : selected - 1
-        : -1
+      selected !== null ? (selected % 2 === 0 ? selected : selected - 1) : -1
     const isGroupSelected = g === pairOf || g === pairOf + 1
     return (
       <div
         class={'pi-group' + (isGroupSelected ? ' selected' : '')}
         onClick={() =>
-          groupDigits.length === 3 &&
-          onSelect(selected === g ? null : g)
+          groupDigits.length === 3 && onSelect(selected === g ? null : g)
         }
       >
         {groupDigits.map((d, j) => {
@@ -111,9 +119,9 @@ function PiViewGroups({
   }
 
   const out = []
-  for (let p = 0; p < 37; p += 2) {
+  for (let p = 0; p < groupCount; p += 2) {
     const g1 = renderGroup(p)
-    const g2 = p + 1 < 37 ? renderGroup(p + 1) : null
+    const g2 = p + 1 < groupCount ? renderGroup(p + 1) : null
     out.push(
       <div key={'p' + p} class="pi-pair">
         {g1}
@@ -124,18 +132,30 @@ function PiViewGroups({
   }
 
   // Invisible spacers to left-align the last row with space-between
-  const spacers = Array.from({ length: 6 }, (_, i) => (
+  const spacers = Array.from({ length: Math.min(pairCount, 6) }, (_, i) => (
     <div key={'sp' + i} class="pi-pair spacer" aria-hidden="true">
       <div class="pi-group">
-        <div class="pi-cell"><div class="pi-digit">0</div></div>
-        <div class="pi-cell"><div class="pi-digit">0</div></div>
-        <div class="pi-cell"><div class="pi-digit">0</div></div>
+        <div class="pi-cell">
+          <div class="pi-digit">0</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-digit">0</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-digit">0</div>
+        </div>
       </div>
       <div class="pi-pair-sep" />
       <div class="pi-group">
-        <div class="pi-cell"><div class="pi-digit">0</div></div>
-        <div class="pi-cell"><div class="pi-digit">0</div></div>
-        <div class="pi-cell"><div class="pi-digit">0</div></div>
+        <div class="pi-cell">
+          <div class="pi-digit">0</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-digit">0</div>
+        </div>
+        <div class="pi-cell">
+          <div class="pi-digit">0</div>
+        </div>
       </div>
     </div>
   ))
@@ -191,36 +211,44 @@ function Numpad({
   )
 }
 
-function PiTab({
-  numbers,
-  bookmarks,
-  onToggleBm,
-  onCheckingChange,
-}: Props) {
+function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
+  const [digitMode, setDigitMode] = useState<DigitMode>(100)
   const [checkPos, setCheckPos] = useState(1)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [startTime, setStartTime] = useState<number | null>(null)
-  const [records, setRecords] = useState<Record[]>(loadPiRecords)
+  const storageKey = digitMode === 100 ? 'pi999' : 'pi1000'
+  const [records, setRecords] = useState<Record[]>(() =>
+    loadPiRecords(storageKey)
+  )
   const [finished, setFinished] = useState(false)
   const [showRecords, setShowRecords] = useState(false)
   const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
 
+  useEffect(() => {
+    setRecords(loadPiRecords(storageKey))
+  }, [digitMode])
+
+  const digits = digitMode === 100 ? PI_DIGITS : PI_1000_DIGITS
+  const totalDigits = digitMode
+  const groupCount = Math.ceil((digits.length - 1) / 3)
+  const pairCount = Math.ceil(groupCount / 2)
+
   const deleteRecord = useCallback(
     (idx: number) => {
       const newRecords = records.filter((_, i) => i !== idx)
       setRecords(newRecords)
-      savePiRecords(newRecords)
+      savePiRecords(newRecords, storageKey)
     },
-    [records]
+    [records, storageKey]
   )
 
   const clearRecords = useCallback(() => {
     setRecords([])
-    savePiRecords([])
-  }, [])
+    savePiRecords([], storageKey)
+  }, [storageKey])
 
   const startCheck = useCallback(() => {
     setMode('check')
@@ -247,7 +275,7 @@ function PiTab({
       }
       const newRecords = [record, ...records].slice(0, 50)
       setRecords(newRecords)
-      savePiRecords(newRecords)
+      savePiRecords(newRecords, storageKey)
 
       // Build review — group by 3-digit blocks, show only wrong ones individually
       const items: ReviewItem[] = used.map((a) => {
@@ -256,7 +284,7 @@ function PiTab({
           label: `${pos}桁目`,
           correct: a.correct,
           userAnswer: a.correct ? undefined : a.digit,
-          rightAnswer: PI_DIGITS[a.idx],
+          rightAnswer: digits[a.idx],
         }
       })
       setReviewItems(items)
@@ -266,13 +294,13 @@ function PiTab({
       setFinished(true)
       onCheckingChange && onCheckingChange(false)
     },
-    [startTime, answers, records, onCheckingChange]
+    [startTime, answers, records, storageKey, digits, onCheckingChange]
   )
 
   const tapDigit = useCallback(
     (digit: number) => {
       if (mode !== 'check' || finished) return
-      const expected = PI_DIGITS[checkPos]
+      const expected = digits[checkPos]
       const isCorrect = String(digit) === expected
       const newAnswer = {
         idx: checkPos,
@@ -282,13 +310,13 @@ function PiTab({
       const newAnswers = [...answers, newAnswer]
       setAnswers(newAnswers)
       const nextPos = checkPos + 1
-      if (nextPos > 100) {
+      if (nextPos > totalDigits) {
         endCheck(newAnswers)
         return
       }
       setCheckPos(nextPos)
     },
-    [mode, finished, checkPos, answers, endCheck]
+    [mode, finished, checkPos, answers, endCheck, digits, totalDigits]
   )
 
   const lastRecord = records.length > 0 ? records[0] : null
@@ -306,20 +334,21 @@ function PiTab({
     const result: NumberEntry[] = []
     for (let i = 0; i < 2; i++) {
       const g = pairStart + i
-      if (g >= 37) break
+      if (g >= groupCount) break
       const startIdx = 1 + g * 3
-      const numStr = PI_DIGITS.slice(startIdx, startIdx + 3).join('')
+      const numStr = digits.slice(startIdx, startIdx + 3).join('')
       if (numStr.length < 3) break
       const found = numbers.find((d) => d.num === numStr)
       if (found) result.push(found)
     }
     return result.length > 0 ? result : null
-  }, [selected, numbers])
+  }, [selected, numbers, digits, groupCount])
 
   return (
     <div class="pi-layout">
       <PiHeader
         mode={mode}
+        digitMode={digitMode}
         lastRecord={lastRecord}
         bestRecord={bestRecord}
         finished={finished}
@@ -329,6 +358,7 @@ function PiTab({
         onStartCheck={startCheck}
         onEndCheck={() => endCheck()}
         onShowRecords={() => setShowRecords(true)}
+        onToggleDigitMode={() => setDigitMode((d) => (d === 100 ? 1000 : 100))}
       />
       {mode === 'view' ? (
         <div class="sticky-wrap">
@@ -387,20 +417,31 @@ function PiTab({
         }}
       >
         {mode === 'check' ? (
-          <PiCheckGrid answers={answers} checkPos={checkPos} />
+          <PiCheckGrid
+            answers={answers}
+            checkPos={checkPos}
+            digits={digits}
+            totalDigits={totalDigits}
+            compact={digitMode === 1000}
+          />
         ) : (
-          <PiViewGroups selected={selected} onSelect={setSelected} />
+          <PiViewGroups
+            selected={selected}
+            onSelect={setSelected}
+            digits={digits}
+            groupCount={groupCount}
+            pairCount={pairCount}
+          />
         )}
       </div>
-      {mode === 'check' ? (
-        <Numpad onTapDigit={tapDigit} colored />
-      ) : null}
+      {mode === 'check' ? <Numpad onTapDigit={tapDigit} colored /> : null}
     </div>
   )
 }
 
 type PiHeaderProps = {
   mode: Mode
+  digitMode: DigitMode
   lastRecord: Record | null
   bestRecord: Record | null
   finished: boolean
@@ -410,10 +451,12 @@ type PiHeaderProps = {
   onStartCheck: () => void
   onEndCheck: () => void
   onShowRecords: () => void
+  onToggleDigitMode: () => void
 }
 
 function PiHeader({
   mode,
+  digitMode,
   lastRecord,
   bestRecord,
   finished,
@@ -423,12 +466,16 @@ function PiHeader({
   onStartCheck,
   onEndCheck,
   onShowRecords,
+  onToggleDigitMode,
 }: PiHeaderProps) {
+  const decimalCount = digitMode === 100 ? 111 : 1000
   return (
     <div class="pi-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div class="pi-header-title">π 円周率</div>
-        <div class="pi-header-sub">111桁 (テスト100桁)</div>
+        <div class="pi-header-sub">
+          {decimalCount}桁 (テスト{digitMode}桁)
+        </div>
         {mode === 'view' && (lastRecord || finished) ? (
           <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
             {lastRecord ? (
@@ -460,6 +507,17 @@ function PiHeader({
         >
           {mode === 'view' ? (
             <>
+              <button
+                class="filter-btn"
+                style={{
+                  fontSize: '11px',
+                  minWidth: '40px',
+                  padding: '4px 8px',
+                }}
+                onClick={onToggleDigitMode}
+              >
+                {digitMode === 100 ? '1000' : '100'}
+              </button>
               {records.length > 0 ? (
                 <button
                   class="filter-btn"
@@ -494,8 +552,8 @@ function PiHeader({
                   fontFamily: 'monospace',
                 }}
               >
-                {checkPos - 1}桁目{' '}
-                {answers.filter((a) => a.correct).length}/{answers.length}
+                {checkPos - 1}桁目 {answers.filter((a) => a.correct).length}/
+                {answers.length}
               </span>
               <button
                 class="filter-btn"

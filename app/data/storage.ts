@@ -51,12 +51,12 @@ export function saveTab(tab: TabId) {
 // Records
 const RecordsSchema = z.array(RecordSchema)
 
-export function loadPiRecords(): Record[] {
-  return loadJson('pi999', RecordsSchema, [])
+export function loadPiRecords(key = 'pi999'): Record[] {
+  return loadJson(key, RecordsSchema, [])
 }
 
-export function savePiRecords(records: Record[]) {
-  saveJson('pi999', records)
+export function savePiRecords(records: Record[], key = 'pi999') {
+  saveJson(key, records)
 }
 
 export function loadYearRecords(): Record[] {
