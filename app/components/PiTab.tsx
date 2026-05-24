@@ -1,8 +1,8 @@
 import { h } from 'preact'
-import { useState, useCallback, useMemo, useEffect } from 'preact/hooks'
+import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import type { Record } from '../data/schema'
-import { PI_DIGITS, PI_1000_DIGITS, DIGIT_COLORS } from '../data/constants'
+import { PI_1000_DIGITS, DIGIT_COLORS } from '../data/constants'
 import { loadPiRecords, savePiRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
@@ -18,7 +18,6 @@ type Props = {
 
 type Answer = { idx: number; digit: string; correct: boolean }
 type Mode = 'view' | 'check'
-type DigitMode = 100 | 1000
 
 function PiCheckGrid({
   answers,
@@ -33,139 +32,177 @@ function PiCheckGrid({
   totalDigits: number
   compact?: boolean
 }) {
+  const decimalDigits = digits.slice(1, totalDigits + 1)
+  const blockSize = compact ? 100 : totalDigits
+  const blocks: { start: number; digits: string[] }[] = []
+  for (let s = 0; s < decimalDigits.length; s += blockSize) {
+    blocks.push({ start: s, digits: decimalDigits.slice(s, s + blockSize) })
+  }
+
   return (
     <div class={`pi-check-grid${compact ? ' compact' : ''}`}>
-      {digits.slice(1, totalDigits + 1).map((d, j) => {
-        const idx = j + 1
-        const answered = answers.find((a) => a.idx === idx)
-        const isCurrent = idx === checkPos
-        const cls =
-          'pi-check-cell' +
-          (isCurrent ? ' current' : '') +
-          (answered
-            ? answered.correct
-              ? ' correct'
-              : ' wrong'
-            : !answered && idx > checkPos
-            ? ' pending'
-            : '')
-        const cellColor = DIGIT_COLORS[Number(d)]
-        return (
-          <div key={idx} class={cls}>
-            {answered ? (
-              <div
-                class="pi-digit"
-                style={{
-                  color: answered.correct ? cellColor : '#f87171',
-                }}
-              >
-                {answered.correct ? d : answered.digit}
-              </div>
-            ) : (
-              <div class="pi-digit" style={{ color: 'var(--border)' }}>
-                {isCurrent ? '_' : '\u00b7'}
-              </div>
-            )}
+      {blocks.map((block) => (
+        <div key={block.start}>
+          {blocks.length > 1 && (
+            <div class="pi-block-label">
+              {String(block.start + 1).padStart(3, '0')}–
+              {String(block.start + block.digits.length).padStart(3, '0')}
+            </div>
+          )}
+          <div class="pi-block-grid">
+            {block.digits.map((d, j) => {
+              const idx = block.start + j + 1
+              const answered = answers.find((a) => a.idx === idx)
+              const isCurrent = idx === checkPos
+              const cls =
+                'pi-check-cell' +
+                (isCurrent ? ' current' : '') +
+                (answered
+                  ? answered.correct
+                    ? ' correct'
+                    : ' wrong'
+                  : !answered && idx > checkPos
+                  ? ' pending'
+                  : '')
+              const cellColor = DIGIT_COLORS[Number(d)]
+              return (
+                <div key={idx} class={cls}>
+                  {answered ? (
+                    <div
+                      class="pi-digit"
+                      style={{
+                        color: answered.correct ? cellColor : '#f87171',
+                      }}
+                    >
+                      {answered.correct ? d : answered.digit}
+                    </div>
+                  ) : (
+                    <div class="pi-digit" style={{ color: 'var(--border)' }}>
+                      {isCurrent ? '_' : '\u00b7'}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
-        )
-      })}
+        </div>
+      ))}
     </div>
   )
 }
+
+type RowSeg = { gi: number; offset: number; count: number }
 
 function PiViewGroups({
   selected,
   onSelect,
   digits,
-  groupCount,
-  pairCount,
 }: {
   selected: number | null
   onSelect: (g: number | null) => void
   digits: string[]
-  groupCount: number
-  pairCount: number
 }) {
-  const renderGroup = (g: number) => {
-    const startIdx = 1 + g * 3
-    const groupDigits = digits.slice(
-      startIdx,
-      Math.min(startIdx + 3, digits.length)
-    )
-    if (groupDigits.length === 0) return null
-    const pairOf =
-      selected !== null ? (selected % 2 === 0 ? selected : selected - 1) : -1
-    const isGroupSelected = g === pairOf || g === pairOf + 1
-    return (
-      <div
-        class={'pi-group' + (isGroupSelected ? ' selected' : '')}
-        onClick={() =>
-          groupDigits.length === 3 && onSelect(selected === g ? null : g)
-        }
-      >
-        {groupDigits.map((d, j) => {
-          const idx = startIdx + j
-          const cellColor = DIGIT_COLORS[Number(d)]
-          return (
-            <div key={idx} class="pi-cell">
-              <div class="pi-digit" style={{ color: cellColor }}>
-                {d}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
+  const decimalDigits = digits.slice(1)
 
-  const out = []
-  for (let p = 0; p < groupCount; p += 2) {
-    const g1 = renderGroup(p)
-    const g2 = p + 1 < groupCount ? renderGroup(p + 1) : null
-    out.push(
-      <div key={'p' + p} class="pi-pair">
-        {g1}
-        {g2 ? <div class="pi-pair-sep" /> : null}
-        {g2}
-      </div>
-    )
-  }
+  const rowPatterns: RowSeg[][] = [
+    // line1: 3x8 + 1
+    [
+      ...Array.from({ length: 8 }, () => ({ gi: 0, offset: 0, count: 3 })),
+      { gi: 0, offset: 0, count: 1 },
+    ],
+    // line2: 2 + 3x7 + 2
+    [
+      { gi: 0, offset: 0, count: 2 },
+      ...Array.from({ length: 7 }, () => ({ gi: 0, offset: 0, count: 3 })),
+      { gi: 0, offset: 0, count: 2 },
+    ],
+    // line3: 1 + 3x8
+    [
+      { gi: 0, offset: 0, count: 1 },
+      ...Array.from({ length: 8 }, () => ({ gi: 0, offset: 0, count: 3 })),
+    ],
+  ]
 
-  // Invisible spacers to left-align the last row with space-between
-  const spacers = Array.from({ length: Math.min(pairCount, 6) }, (_, i) => (
-    <div key={'sp' + i} class="pi-pair spacer" aria-hidden="true">
-      <div class="pi-group">
-        <div class="pi-cell">
-          <div class="pi-digit">0</div>
-        </div>
-        <div class="pi-cell">
-          <div class="pi-digit">0</div>
-        </div>
-        <div class="pi-cell">
-          <div class="pi-digit">0</div>
-        </div>
-      </div>
-      <div class="pi-pair-sep" />
-      <div class="pi-group">
-        <div class="pi-cell">
-          <div class="pi-digit">0</div>
-        </div>
-        <div class="pi-cell">
-          <div class="pi-digit">0</div>
-        </div>
-        <div class="pi-cell">
-          <div class="pi-digit">0</div>
-        </div>
-      </div>
-    </div>
-  ))
+  const rows: {
+    segs: { gi: number; digits: { idx: number; digit: string }[] }[]
+    isSectionEnd: boolean
+  }[] = []
+  let di = 0
+  let gi = 0
+  let offsetInGroup = 0
+  while (di < decimalDigits.length) {
+    const ri = rows.length
+    const pattern = rowPatterns[ri % 3]
+    const segs: { gi: number; digits: { idx: number; digit: string }[] }[] = []
+    for (const p of pattern) {
+      const need = p.count
+      const remaining = 3 - offsetInGroup
+      const take = Math.min(need, remaining, decimalDigits.length - di)
+      if (take <= 0) continue
+      segs.push({
+        gi,
+        digits: Array.from({ length: take }, (_, j) => ({
+          idx: di + j + 1,
+          digit: decimalDigits[di + j],
+        })),
+      })
+      di += take
+      offsetInGroup += take
+      if (offsetInGroup >= 3) {
+        gi++
+        offsetInGroup = 0
+      }
+    }
+    rows.push({
+      segs,
+      isSectionEnd: di % 100 === 0 && di < decimalDigits.length,
+    })
+  }
 
   return (
     <div>
       <div class="pi-dot-cell">3.</div>
-      <div class="pi-groups">
-        {out}
-        {spacers}
+      <div class="pi-view-grid">
+        {rows.map((row, ri) => (
+          <div key={ri}>
+            <div class="pi-view-row">
+              {row.segs.map((seg, si) => {
+                const n = seg.digits.length
+                const spanCls = n === 3 ? 'full' : 'p' + n
+                const isSelected =
+                  selected !== null &&
+                  Math.floor(selected / 2) === Math.floor(seg.gi / 2)
+                return (
+                  <div
+                    key={si}
+                    class={
+                      'pi-view-seg ' + spanCls + (isSelected ? ' selected' : '')
+                    }
+                    onClick={() => {
+                      const g = seg.gi
+                      if (selected === g || (g > 0 && selected === g - 1)) {
+                        onSelect(Math.floor(g / 2) * 2)
+                      } else {
+                        onSelect(g)
+                      }
+                    }}
+                  >
+                    {seg.digits.map((c) => (
+                      <span
+                        key={c.idx}
+                        class="pi-view-d"
+                        style={{ color: DIGIT_COLORS[Number(c.digit)] }}
+                      >
+                        {c.digit}
+                      </span>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+            {row.isSectionEnd && <div class="pi-section-divider" />}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -214,11 +251,10 @@ function Numpad({
 function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
-  const [digitMode, setDigitMode] = useState<DigitMode>(100)
   const [checkPos, setCheckPos] = useState(1)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [startTime, setStartTime] = useState<number | null>(null)
-  const storageKey = digitMode === 100 ? 'pi999' : 'pi1000'
+  const storageKey = 'pi1000'
   const [records, setRecords] = useState<Record[]>(() =>
     loadPiRecords(storageKey)
   )
@@ -227,14 +263,8 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
 
-  useEffect(() => {
-    setRecords(loadPiRecords(storageKey))
-  }, [digitMode])
-
-  const digits = digitMode === 100 ? PI_DIGITS : PI_1000_DIGITS
-  const totalDigits = digitMode
-  const groupCount = Math.ceil((digits.length - 1) / 3)
-  const pairCount = Math.ceil(groupCount / 2)
+  const digits = PI_1000_DIGITS
+  const totalDigits = 1000
 
   const deleteRecord = useCallback(
     (idx: number) => {
@@ -334,7 +364,6 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     const result: NumberEntry[] = []
     for (let i = 0; i < 2; i++) {
       const g = pairStart + i
-      if (g >= groupCount) break
       const startIdx = 1 + g * 3
       const numStr = digits.slice(startIdx, startIdx + 3).join('')
       if (numStr.length < 3) break
@@ -342,13 +371,12 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
       if (found) result.push(found)
     }
     return result.length > 0 ? result : null
-  }, [selected, numbers, digits, groupCount])
+  }, [selected, numbers, digits])
 
   return (
     <div class="pi-layout">
       <PiHeader
         mode={mode}
-        digitMode={digitMode}
         lastRecord={lastRecord}
         bestRecord={bestRecord}
         finished={finished}
@@ -358,7 +386,6 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
         onStartCheck={startCheck}
         onEndCheck={() => endCheck()}
         onShowRecords={() => setShowRecords(true)}
-        onToggleDigitMode={() => setDigitMode((d) => (d === 100 ? 1000 : 100))}
       />
       {mode === 'view' ? (
         <div class="sticky-wrap">
@@ -413,7 +440,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
           paddingBottom: '4px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-end',
+          justifyContent: mode === 'check' ? 'flex-end' : 'flex-start',
         }}
       >
         {mode === 'check' ? (
@@ -422,15 +449,13 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
             checkPos={checkPos}
             digits={digits}
             totalDigits={totalDigits}
-            compact={digitMode === 1000}
+            compact
           />
         ) : (
           <PiViewGroups
             selected={selected}
             onSelect={setSelected}
             digits={digits}
-            groupCount={groupCount}
-            pairCount={pairCount}
           />
         )}
       </div>
@@ -441,7 +466,6 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
 type PiHeaderProps = {
   mode: Mode
-  digitMode: DigitMode
   lastRecord: Record | null
   bestRecord: Record | null
   finished: boolean
@@ -451,12 +475,10 @@ type PiHeaderProps = {
   onStartCheck: () => void
   onEndCheck: () => void
   onShowRecords: () => void
-  onToggleDigitMode: () => void
 }
 
 function PiHeader({
   mode,
-  digitMode,
   lastRecord,
   bestRecord,
   finished,
@@ -466,16 +488,12 @@ function PiHeader({
   onStartCheck,
   onEndCheck,
   onShowRecords,
-  onToggleDigitMode,
 }: PiHeaderProps) {
-  const decimalCount = digitMode === 100 ? 111 : 1000
   return (
     <div class="pi-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div class="pi-header-title">π 円周率</div>
-        <div class="pi-header-sub">
-          {decimalCount}桁 (テスト{digitMode}桁)
-        </div>
+        <div class="pi-header-sub">1000桁</div>
         {mode === 'view' && (lastRecord || finished) ? (
           <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
             {lastRecord ? (
@@ -507,17 +525,6 @@ function PiHeader({
         >
           {mode === 'view' ? (
             <>
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '11px',
-                  minWidth: '40px',
-                  padding: '4px 8px',
-                }}
-                onClick={onToggleDigitMode}
-              >
-                {digitMode === 100 ? '1000' : '100'}
-              </button>
               {records.length > 0 ? (
                 <button
                   class="filter-btn"

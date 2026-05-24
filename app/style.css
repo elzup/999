@@ -1080,65 +1080,60 @@ body {
   font-size: 12px;
   color: var(--text2);
 }
-.pi-groups {
+.pi-view-grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px 0;
-  justify-content: space-between;
-}
-.pi-pair.spacer {
-  visibility: hidden;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-.pi-pair {
-  display: flex;
+  flex-direction: column;
   gap: 2px;
 }
-.pi-pair-sep {
-  width: 1px;
-  background: var(--border);
+.pi-view-row {
+  display: grid;
+  grid-template-columns: repeat(25, 1fr);
+  gap: 1px;
 }
-.pi-group {
-  display: flex;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  overflow: hidden;
-  cursor: pointer;
-  height: 30px;
-}
-.pi-group.selected {
-  border-color: var(--accent);
-}
-.pi-cell {
-  padding: 1px 1px;
-  min-width: 15px;
+.pi-view-seg {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-evenly;
+  cursor: pointer;
+  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 22px;
 }
-.pi-cell .pi-digit {
-  font-size: 14px;
+.pi-view-seg.full {
+  grid-column: span 3;
+}
+.pi-view-seg.p1 {
+  grid-column: span 1;
+}
+.pi-view-seg.p2 {
+  grid-column: span 2;
+}
+.pi-view-seg:hover {
+  background: var(--surface2);
+}
+.pi-view-seg.selected {
+  background: var(--accent2);
+  border-color: var(--accent);
+}
+.pi-view-d {
+  font-size: 11px;
   font-weight: bold;
   font-family: monospace;
+  line-height: 1.2;
+  text-align: center;
 }
-.pi-cell.current {
-  background: var(--accent2);
-}
-.pi-cell.correct {
-  background: #166534;
-}
-.pi-cell.wrong {
-  background: #7f1d1d;
+.pi-section-divider {
+  height: 4px;
+  margin: 2px 0;
+  background: var(--border);
+  border-radius: 2px;
 }
 .pi-dot-cell {
   font-size: 18px;
   font-weight: bold;
   color: var(--text2);
-  padding: 0 2px;
+  padding: 0 2px 4px;
   display: flex;
   align-items: center;
   height: 30px;
@@ -1154,9 +1149,26 @@ body {
   font-family: monospace;
 }
 .pi-check-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+.pi-block-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text2);
+  font-family: monospace;
+  padding: 4px 0 2px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.pi-block-grid {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(25, 1fr);
+  gap: 1px;
 }
 .pi-check-cell {
   background: var(--surface);
@@ -1185,11 +1197,15 @@ body {
 .pi-check-cell.pending {
   opacity: 0.3;
 }
+.pi-check-grid.compact .pi-block-grid {
+  gap: 1px;
+}
 .pi-check-grid.compact .pi-check-cell {
-  min-height: 18px;
+  min-height: 16px;
+  border-radius: 2px;
 }
 .pi-check-grid.compact .pi-check-cell .pi-digit {
-  font-size: 10px;
+  font-size: 9px;
 }
 
 /* Year tab */
