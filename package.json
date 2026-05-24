@@ -24,10 +24,19 @@
     "preview:raw": "vite preview",
     "build:preview": "node src/generate-preview-data.js && cp src/visualize-words.html public/stats.html && cp src/visualize-words.css public/ && cp src/viz-client.js public/ && cp src/visualize-words.data.json public/",
     "deploy:legacy": "npm run build:preview && firebase deploy --only hosting",
-    "deploy": "npm run build:preview && npm run build && firebase deploy --only hosting"
+    "deploy": "npm run build:preview && npm run build && firebase deploy --only hosting",
+    "postinstall": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,md,html,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.3",
+    "lint-staged": "^17.0.5",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0",
