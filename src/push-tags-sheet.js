@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  getSheetValuesByTitle,
   overwriteSheetValuesByTitle,
   parseSpreadsheetUrl,
 } from './google-sheets.js'
@@ -18,6 +19,9 @@ function showHelp() {
 
 src/data/words.tsv から BCD 列 (hito / mono / gainen) の #tag を集計し、
 スプレッドシート内の "${TAG_SHEET_TITLE}" シートへ一覧を書き込みます。
+
+B 列 (title) は複数人が手で編集する列なので、既存シートの値を
+tag ごとに読み取って引き継ぎます (新規 tag は空欄)。
 
 認証:
   - 推奨: gcloud auth application-default login
@@ -109,12 +113,40 @@ function collectTags(entries) {
   })
 }
 
-function buildValues(rows) {
-  const header = ['tag', 'count', 'hito', 'mono', 'gainen', 'nums', 'labels']
+// B 列 (title) は手動メンテ列。既存シートから tag -> title を読み取り引き継ぐ。
+function buildTitleMap(existingValues) {
+  const map = new Map()
+  if (!existingValues || existingValues.length === 0) return map
+
+  const header = existingValues[0].map((cell) => String(cell).trim())
+  const tagIndex = header.indexOf('tag')
+  const titleIndex = header.indexOf('title')
+  if (tagIndex === -1 || titleIndex === -1) return map
+
+  for (const row of existingValues.slice(1)) {
+    const tag = String(row[tagIndex] ?? '').trim()
+    const title = String(row[titleIndex] ?? '').trim()
+    if (tag) map.set(tag, title)
+  }
+  return map
+}
+
+function buildValues(rows, titleMap) {
+  const header = [
+    'tag',
+    'title',
+    'count',
+    'hito',
+    'mono',
+    'gainen',
+    'nums',
+    'labels',
+  ]
   return [
     header,
     ...rows.map((row) => [
       row.tag,
+      titleMap.get(row.tag) || '',
       String(row.count),
       String(row.hito),
       String(row.mono),
@@ -137,9 +169,18 @@ async function main() {
 
   const entries = parseTsv(readFileSync(WORDS_TSV_PATH, 'utf8'))
   const tags = collectTags(entries)
-  const values = buildValues(tags)
 
-  console.log(`Uploading ${tags.length} tags to sheet "${title}"...`)
+  // 書き込み前に既存の手動 title 列を読み取り保護する
+  const existingValues = await getSheetValuesByTitle({
+    spreadsheetId,
+    title,
+  }).catch(() => [])
+  const titleMap = buildTitleMap(existingValues)
+  const values = buildValues(tags, titleMap)
+
+  console.log(
+    `Uploading ${tags.length} tags to sheet "${title}" (preserving ${titleMap.size} titles)...`
+  )
   const result = await overwriteSheetValuesByTitle({
     spreadsheetId,
     title,

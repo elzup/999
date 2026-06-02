@@ -53,6 +53,8 @@ nr test        # テスト実行
 
 タグ一覧を別シートに出したい場合は `nr push:tags` を使います。`tags` シートがなければ自動作成し、`hito / mono / gainen` の各セルに含まれる `#tag` を集計して書き込みます。
 
+列構成は `tag / title / count / hito / mono / gainen / nums / labels` です。B 列の `title` は複数人が手で編集する列のため、書き込み前に既存シートの `tag → title` を読み取って引き継ぎます（新規 tag は空欄、上書きしない）。
+
 ## Docs
 
 - [かな数字対応表](docs/kana-number-table.md) - 対応表・桁数判定ルール・スコア計算

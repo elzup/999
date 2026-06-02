@@ -244,6 +244,14 @@ export async function ensureSheetByTitle(spreadsheetId, title) {
   return data.replies?.[0]?.addSheet?.properties || null
 }
 
+export async function getSheetValuesByTitle({ spreadsheetId, title, range }) {
+  const fullRange = range ? `${title}!${range}` : title
+  const data = await sheetsApi(
+    `/${spreadsheetId}/values/${encodeURIComponent(fullRange)}`
+  )
+  return data?.values || []
+}
+
 export async function overwriteSheetValues({ spreadsheetId, gid, values }) {
   const title = await getSheetTitleByGid(spreadsheetId, gid)
   return overwriteSheetValuesByTitle({ spreadsheetId, title, values })
