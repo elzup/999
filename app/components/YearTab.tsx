@@ -3,6 +3,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'preact/hooks'
 import type { NumberEntry, YearItem } from '../data/schema'
 import type { Record } from '../data/schema'
 import { YEAR_DATA, DIGIT_COLORS, XY_TO_Z } from '../data/constants'
+import { vibrate } from '../lib/haptics'
 
 type EraId =
   | 'all'
@@ -31,13 +32,12 @@ const ERAS: { id: EraId; label: string; from: number; to: number }[] = [
 
 function filterByEra(era: EraId): YearItem[] {
   const found = ERAS.find((e) => e.id === era)
-  if (!found || era === 'all') return [...YEAR_DATA].sort((a, b) => Number(a.year) - Number(b.year))
-  return YEAR_DATA
-    .filter((item) => {
-      const y = Number(item.year)
-      return y >= found.from && y < found.to
-    })
-    .sort((a, b) => Number(a.year) - Number(b.year))
+  if (!found || era === 'all')
+    return [...YEAR_DATA].sort((a, b) => Number(a.year) - Number(b.year))
+  return YEAR_DATA.filter((item) => {
+    const y = Number(item.year)
+    return y >= found.from && y < found.to
+  }).sort((a, b) => Number(a.year) - Number(b.year))
 }
 import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
@@ -134,9 +134,7 @@ function YearCheckRow({
       ) : (
         <>
           <span class="yr-c">{c}</span>
-          <span class="yr-xyz hidden">
-            {'\u00b7\u00b7\u00b7'}
-          </span>
+          <span class="yr-xyz hidden">{'\u00b7\u00b7\u00b7'}</span>
         </>
       )}
       <span class="yr-event">{item.event}</span>
@@ -160,10 +158,7 @@ function YearViewRow({
   const xy = xyz.slice(0, 2)
   const z = XY_TO_Z[xy]
   return (
-    <div
-      class={'year-row' + (selected ? ' selected' : '')}
-      onClick={onSelect}
-    >
+    <div class={'year-row' + (selected ? ' selected' : '')} onClick={onSelect}>
       <span class="yr-no">{item.no}</span>
       <span class="yr-year">
         <span class="yr-c">{c}</span>
@@ -183,12 +178,7 @@ function YearViewRow({
   )
 }
 
-function YearTab({
-  numbers,
-  bookmarks,
-  onToggleBm,
-  onCheckingChange,
-}: Props) {
+function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
   const [eraFilter, setEraFilter] = useState<EraId>('all')
@@ -252,9 +242,7 @@ function YearTab({
   const endCheck = useCallback(
     (finalResults?: CheckResult[]) => {
       const used = finalResults ?? results
-      const el = startTime
-        ? Math.round((Date.now() - startTime) / 1000)
-        : 0
+      const el = startTime ? Math.round((Date.now() - startTime) / 1000) : 0
       const correctCount = used.filter((r) => r.correct).length
       const record = {
         date: new Date().toISOString(),
@@ -288,6 +276,7 @@ function YearTab({
   const tapDigit = useCallback(
     (digit: number) => {
       if (mode !== 'check') return
+      vibrate()
       const item = checkItems[checkIdx]
       if (!item) return
       const xyz = getXYZ(item.year)
@@ -335,6 +324,7 @@ function YearTab({
   const tapBackspace = useCallback(() => {
     if (mode !== 'check') return
     if (inputDigits.length === 0) return
+    vibrate()
     setInputDigits(inputDigits.slice(0, -1))
   }, [mode, inputDigits])
 
@@ -370,12 +360,8 @@ function YearTab({
   return (
     <div class="year-layout">
       <div class="year-header">
-        <div
-          style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
-        >
-          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-            年号記憶
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>年号記憶</div>
           <div style={{ fontSize: '12px', color: 'var(--text2)' }}>
             {mode === 'check'
               ? `${checkItems.length}問`
@@ -442,8 +428,7 @@ function YearTab({
                     fontFamily: 'monospace',
                   }}
                 >
-                  {elapsed}秒{' '}
-                  {checkIdx + 1}/{checkItems.length}{' '}
+                  {elapsed}秒 {checkIdx + 1}/{checkItems.length}{' '}
                   {results.filter((r) => r.correct).length}正解
                 </span>
                 <button
@@ -523,15 +508,11 @@ function YearTab({
         >
           {ERAS.map((era) => {
             const count =
-              era.id === 'all'
-                ? YEAR_DATA.length
-                : filterByEra(era.id).length
+              era.id === 'all' ? YEAR_DATA.length : filterByEra(era.id).length
             return (
               <button
                 key={era.id}
-                class={
-                  'filter-btn' + (eraFilter === era.id ? ' active' : '')
-                }
+                class={'filter-btn' + (eraFilter === era.id ? ' active' : '')}
                 style={{
                   fontSize: '11px',
                   minWidth: 'auto',
@@ -579,9 +560,7 @@ function YearTab({
                     item={item}
                     idx={idx}
                     selected={selected === idx}
-                    onSelect={() =>
-                      setSelected(selected === idx ? null : idx)
-                    }
+                    onSelect={() => setSelected(selected === idx ? null : idx)}
                   />
                 )
               })}

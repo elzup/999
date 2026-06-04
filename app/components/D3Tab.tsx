@@ -4,6 +4,7 @@ import type { NumberEntry } from '../data/schema'
 import type { Record as TestRecord } from '../data/schema'
 import { DIGIT_COLORS, D3_LIST } from '../data/constants'
 import { loadD3Records, saveD3Records } from '../data/storage'
+import { vibrate } from '../lib/haptics'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
@@ -35,7 +36,13 @@ const Z_GROUPS: [string, string[]][] = (() => {
 
 // core kana for digits 0-6
 const Z_KANA: Record<string, string> = {
-  '0': 'ん', '1': 'い', '2': 'に', '3': 'さ', '4': 'し', '5': 'こ', '6': 'ろ',
+  '0': 'ん',
+  '1': 'い',
+  '2': 'に',
+  '3': 'さ',
+  '4': 'し',
+  '5': 'こ',
+  '6': 'ろ',
 }
 
 function shuffle<T>(arr: readonly T[]): T[] {
@@ -47,11 +54,7 @@ function shuffle<T>(arr: readonly T[]): T[] {
   return a
 }
 
-function D3Numpad({
-  onTapDigit,
-}: {
-  onTapDigit: (digit: number) => void
-}) {
+function D3Numpad({ onTapDigit }: { onTapDigit: (digit: number) => void }) {
   return (
     <div
       style={{
@@ -118,8 +121,8 @@ function D3CheckGrid({
               ? ' correct'
               : ' wrong'
             : i > checkIdx
-              ? ' pending'
-              : '')
+            ? ' pending'
+            : '')
         return (
           <div key={xyz} class={cls}>
             <span class="d3-check-xy">{xy}</span>
@@ -127,18 +130,13 @@ function D3CheckGrid({
               <span
                 class="d3-check-z"
                 style={{
-                  color: answered.correct
-                    ? DIGIT_COLORS[Number(z)]
-                    : '#f87171',
+                  color: answered.correct ? DIGIT_COLORS[Number(z)] : '#f87171',
                 }}
               >
                 {answered.correct ? z : answered.digit}
               </span>
             ) : (
-              <span
-                class="d3-check-z"
-                style={{ color: 'var(--border)' }}
-              >
+              <span class="d3-check-z" style={{ color: 'var(--border)' }}>
                 {isCurrent ? '_' : '\u00b7'}
               </span>
             )}
@@ -278,6 +276,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const tapDigit = useCallback(
     (digit: number) => {
       if (mode !== 'check' || finished) return
+      vibrate()
       const xyz = order[checkIdx]
       const expected = xyz[2]
       const isCorrect = String(digit) === expected
@@ -419,8 +418,8 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
                     fontFamily: 'monospace',
                   }}
                 >
-                  {elapsed}秒{' '}
-                  {answers.filter((a) => a.correct).length}/{answers.length}
+                  {elapsed}秒 {answers.filter((a) => a.correct).length}/
+                  {answers.length}
                 </span>
                 <button
                   class="filter-btn"
@@ -446,12 +445,22 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
             <div>
               <div class="d2-detail-header">
                 <span class="detail-id">{selected.slice(0, 2)}</span>
-                <span style={{ fontSize: '20px', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                <span
+                  style={{
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    fontFamily: 'monospace',
+                  }}
+                >
                   → {selected[2]}
                 </span>
                 <button
                   class="d2-mode-btn"
-                  style={{ padding: '4px 10px', flex: 'none', marginLeft: 'auto' }}
+                  style={{
+                    padding: '4px 10px',
+                    flex: 'none',
+                    marginLeft: 'auto',
+                  }}
                   onClick={() => setSelected(null)}
                 >
                   ×
@@ -501,7 +510,11 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
           flex: 1,
           paddingBottom: '4px',
           ...(mode === 'check'
-            ? { display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }
+            ? {
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-end',
+              }
             : {}),
         }}
       >
@@ -532,9 +545,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
               </div>
             </div>
             {viewMode === 'seq' ? (
-              <div class="d3-grid">
-                {D3_LIST.map((xyz) => renderCell(xyz))}
-              </div>
+              <div class="d3-grid">{D3_LIST.map((xyz) => renderCell(xyz))}</div>
             ) : (
               <div class="d3-groups">
                 {Z_GROUPS.map(([z, items]) => {
@@ -548,10 +559,18 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
                         <span style={{ color: DIGIT_COLORS[Number(z)] }}>
                           {z}
                         </span>
-                        <span style={{ color: 'var(--text2)', marginLeft: '4px' }}>
+                        <span
+                          style={{ color: 'var(--text2)', marginLeft: '4px' }}
+                        >
                           {Z_KANA[z]}
                         </span>
-                        <span style={{ color: 'var(--text2)', marginLeft: '4px', fontSize: '11px' }}>
+                        <span
+                          style={{
+                            color: 'var(--text2)',
+                            marginLeft: '4px',
+                            fontSize: '11px',
+                          }}
+                        >
                           ({items.length})
                         </span>
                       </div>
@@ -578,9 +597,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
       </div>
 
       {/* Numpad (check mode only, digits 0-6) */}
-      {mode === 'check' ? (
-        <D3Numpad onTapDigit={tapDigit} />
-      ) : null}
+      {mode === 'check' ? <D3Numpad onTapDigit={tapDigit} /> : null}
     </div>
   )
 }
