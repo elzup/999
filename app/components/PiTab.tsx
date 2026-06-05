@@ -23,6 +23,7 @@ type Props = {
 type Answer = { idx: number; digit: string; correct: boolean }
 type ChoiceAnswer = { idx: number; picked: string; correct: boolean }
 type Mode = 'view' | 'check' | 'choice'
+type RecordKind = 'check' | 'choice' | 'masked'
 
 function PiCheckGrid({
   answers,
@@ -96,52 +97,74 @@ function PiCheckGrid({
   )
 }
 
-const CHOICE_WINDOW = 12
-
-function PiChoiceProgress({
+// テストモードと同じ 25 列グリッドで、3 桁チャンク単位の正誤を桁ごとに色付け表示
+function PiChoiceGrid({
   answers,
   choicePos,
-  chunkAt,
+  digits,
   chunkCount,
 }: {
   answers: ChoiceAnswer[]
   choicePos: number
-  chunkAt: (i: number) => string
+  digits: string[]
   chunkCount: number
 }) {
-  // 現在位置の周辺だけ表示 (333 チャンク全部は見せない)
-  const start = Math.max(0, Math.min(choicePos - 4, chunkCount - CHOICE_WINDOW))
-  const items = Array.from(
-    { length: Math.min(CHOICE_WINDOW, chunkCount - start) },
-    (_, j) => start + j
-  )
+  const totalDigits = chunkCount * 3
+  const decimalDigits = digits.slice(1, totalDigits + 1)
+  const blockSize = 100
+  const blocks: { start: number; digits: string[] }[] = []
+  for (let s = 0; s < decimalDigits.length; s += blockSize) {
+    blocks.push({ start: s, digits: decimalDigits.slice(s, s + blockSize) })
+  }
 
   return (
-    <div class="pi-choice-progress">
-      {items.map((i) => {
-        const answered = answers.find((a) => a.idx === i)
-        const isCurrent = i === choicePos
-        const right = chunkAt(i)
-        const cls =
-          'pi-choice-chunk' +
-          (isCurrent ? ' current' : '') +
-          (answered ? (answered.correct ? ' correct' : ' wrong') : '') +
-          (!answered && !isCurrent ? ' pending' : '')
-        return (
-          <div key={i} class={cls}>
-            <span class="pi-choice-pos">{i * 3 + 1}</span>
-            <span class="pi-choice-val">
-              {answered
-                ? answered.correct
-                  ? right
-                  : answered.picked
-                : isCurrent
-                ? '?'
-                : '···'}
-            </span>
+    <div class="pi-check-grid compact">
+      {blocks.map((block) => (
+        <div key={block.start}>
+          <div class="pi-block-label">
+            {String(block.start + 1).padStart(3, '0')}–
+            {String(block.start + block.digits.length).padStart(3, '0')}
           </div>
-        )
-      })}
+          <div class="pi-block-grid">
+            {block.digits.map((d, j) => {
+              const idx = block.start + j + 1
+              const chunk = Math.floor((idx - 1) / 3)
+              const posInChunk = (idx - 1) % 3
+              const answered = answers.find((a) => a.idx === chunk)
+              const isCurrent = chunk === choicePos
+              const cls =
+                'pi-check-cell' +
+                (isCurrent ? ' current' : '') +
+                (answered
+                  ? answered.correct
+                    ? ' correct'
+                    : ' wrong'
+                  : !answered && chunk > choicePos
+                  ? ' pending'
+                  : '')
+              const cellColor = DIGIT_COLORS[Number(d)]
+              return (
+                <div key={idx} class={cls}>
+                  {answered ? (
+                    <div
+                      class="pi-digit"
+                      style={{
+                        color: answered.correct ? cellColor : '#f87171',
+                      }}
+                    >
+                      {answered.correct ? d : answered.picked[posInChunk]}
+                    </div>
+                  ) : (
+                    <div class="pi-digit" style={{ color: 'var(--border)' }}>
+                      {isCurrent ? '_' : '·'}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -149,9 +172,13 @@ function PiChoiceProgress({
 function PiChoiceOptions({
   options,
   onPick,
+  onBack,
+  backDisabled,
 }: {
   options: ChoiceOption[]
   onPick: (value: string) => void
+  onBack: () => void
+  backDisabled: boolean
 }) {
   return (
     <div
@@ -180,6 +207,16 @@ function PiChoiceOptions({
           </button>
         ))}
       </div>
+      <button
+        class="pi-choice-back"
+        disabled={backDisabled}
+        onClick={() => {
+          vibrate()
+          onBack()
+        }}
+      >
+        ⌫ 戻る
+      </button>
     </div>
   )
 }
@@ -309,15 +346,19 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [startTime, setStartTime] = useState<number | null>(null)
   const storageKey = 'pi1000'
   const choiceStorageKey = 'pi1000choice'
+  const maskedStorageKey = 'pi1000masked'
   const [records, setRecords] = useState<Record[]>(() =>
     loadPiRecords(storageKey)
   )
   const [choiceRecords, setChoiceRecords] = useState<Record[]>(() =>
     loadPiRecords(choiceStorageKey)
   )
+  const [maskedRecords, setMaskedRecords] = useState<Record[]>(() =>
+    loadPiRecords(maskedStorageKey)
+  )
   const [finished, setFinished] = useState(false)
   const [showRecords, setShowRecords] = useState(false)
-  const [recordsKind, setRecordsKind] = useState<'check' | 'choice'>('check')
+  const [recordsKind, setRecordsKind] = useState<RecordKind>('check')
   const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
 
@@ -336,24 +377,47 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     [digits]
   )
 
+  const storeOf = useCallback(
+    (kind: RecordKind) => {
+      if (kind === 'masked')
+        return {
+          key: maskedStorageKey,
+          list: maskedRecords,
+          set: setMaskedRecords,
+        }
+      if (kind === 'choice')
+        return {
+          key: choiceStorageKey,
+          list: choiceRecords,
+          set: setChoiceRecords,
+        }
+      return { key: storageKey, list: records, set: setRecords }
+    },
+    [
+      records,
+      choiceRecords,
+      maskedRecords,
+      storageKey,
+      choiceStorageKey,
+      maskedStorageKey,
+    ]
+  )
+
   const deleteRecord = useCallback(
     (idx: number) => {
-      const key = recordsKind === 'choice' ? choiceStorageKey : storageKey
-      const src = recordsKind === 'choice' ? choiceRecords : records
-      const newRecords = src.filter((_, i) => i !== idx)
-      if (recordsKind === 'choice') setChoiceRecords(newRecords)
-      else setRecords(newRecords)
-      savePiRecords(newRecords, key)
+      const store = storeOf(recordsKind)
+      const newRecords = store.list.filter((_, i) => i !== idx)
+      store.set(newRecords)
+      savePiRecords(newRecords, store.key)
     },
-    [recordsKind, records, choiceRecords, storageKey, choiceStorageKey]
+    [recordsKind, storeOf]
   )
 
   const clearRecords = useCallback(() => {
-    const key = recordsKind === 'choice' ? choiceStorageKey : storageKey
-    if (recordsKind === 'choice') setChoiceRecords([])
-    else setRecords([])
-    savePiRecords([], key)
-  }, [recordsKind, storageKey, choiceStorageKey])
+    const store = storeOf(recordsKind)
+    store.set([])
+    savePiRecords([], store.key)
+  }, [recordsKind, storeOf])
 
   const startCheck = useCallback(() => {
     setMode('check')
@@ -430,9 +494,11 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
         total: used.length,
         time: elapsed,
       }
-      const newRecords = [record, ...choiceRecords].slice(0, 50)
-      setChoiceRecords(newRecords)
-      savePiRecords(newRecords, choiceStorageKey)
+      // 4択(full) と 虫食い(masked) は別々に記録を残す
+      const store = storeOf(choiceVariant === 'masked' ? 'masked' : 'choice')
+      const newRecords = [record, ...store.list].slice(0, 50)
+      store.set(newRecords)
+      savePiRecords(newRecords, store.key)
 
       const items: ReviewItem[] = used.map((a) => {
         const pos = a.idx * 3 + 1
@@ -453,8 +519,8 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     [
       startTime,
       choiceAnswers,
-      choiceRecords,
-      choiceStorageKey,
+      choiceVariant,
+      storeOf,
       chunkAt,
       onCheckingChange,
     ]
@@ -490,6 +556,16 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     setAnswers(answers.slice(0, -1))
     setCheckPos(last.idx)
   }, [mode, finished, answers])
+
+  // 4択も直前の選択を1つ取り消して戻れる (お堅いテストではないので)
+  const choiceBack = useCallback(() => {
+    if (mode !== 'choice' || finished) return
+    if (choiceAnswers.length === 0) return
+    const last = choiceAnswers[choiceAnswers.length - 1]
+    setChoiceAnswers(choiceAnswers.slice(0, -1))
+    setChoicePos(last.idx)
+    setChoiceOptions(genChoiceOptions(chunkAt(last.idx), choiceVariant))
+  }, [mode, finished, choiceAnswers, chunkAt, choiceVariant])
 
   const pickChoice = useCallback(
     (value: string) => {
@@ -544,10 +620,12 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     return result.length > 0 ? result : null
   }, [selected, numbers, digits])
 
-  const openRecords = useCallback((kind: 'check' | 'choice') => {
+  const openRecords = useCallback((kind: RecordKind) => {
     setRecordsKind(kind)
     setShowRecords(true)
   }, [])
+
+  const recordTitle = { check: 'π', choice: 'π 4択', masked: 'π 虫食い' }
 
   return (
     <div class="pi-layout">
@@ -558,6 +636,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
         finished={finished}
         hasRecords={records.length > 0}
         hasChoiceRecords={choiceRecords.length > 0}
+        hasMaskedRecords={maskedRecords.length > 0}
         checkPos={checkPos}
         answers={answers}
         choicePos={choicePos}
@@ -569,6 +648,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
         onEndChoice={() => endChoice()}
         onShowRecords={() => openRecords('check')}
         onShowChoiceRecords={() => openRecords('choice')}
+        onShowMaskedRecords={() => openRecords('masked')}
       />
       {mode === 'view' ? (
         <div class="sticky-wrap">
@@ -599,8 +679,8 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
       ) : null}
       {showRecords ? (
         <RecordPanel
-          title={recordsKind === 'choice' ? 'π 4択' : 'π'}
-          records={recordsKind === 'choice' ? choiceRecords : records}
+          title={recordTitle[recordsKind]}
+          records={storeOf(recordsKind).list}
           onDelete={deleteRecord}
           onClear={clearRecords}
           onClose={() => setShowRecords(false)}
@@ -635,10 +715,10 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
             compact
           />
         ) : mode === 'choice' ? (
-          <PiChoiceProgress
+          <PiChoiceGrid
             answers={choiceAnswers}
             choicePos={choicePos}
-            chunkAt={chunkAt}
+            digits={digits}
             chunkCount={chunkCount}
           />
         ) : (
@@ -657,7 +737,12 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
           backspaceDisabled={answers.length === 0}
         />
       ) : mode === 'choice' ? (
-        <PiChoiceOptions options={choiceOptions} onPick={pickChoice} />
+        <PiChoiceOptions
+          options={choiceOptions}
+          onPick={pickChoice}
+          onBack={choiceBack}
+          backDisabled={choiceAnswers.length === 0}
+        />
       ) : null}
     </div>
   )
@@ -670,6 +755,7 @@ type PiHeaderProps = {
   finished: boolean
   hasRecords: boolean
   hasChoiceRecords: boolean
+  hasMaskedRecords: boolean
   checkPos: number
   answers: Answer[]
   choicePos: number
@@ -681,6 +767,7 @@ type PiHeaderProps = {
   onEndChoice: () => void
   onShowRecords: () => void
   onShowChoiceRecords: () => void
+  onShowMaskedRecords: () => void
 }
 
 function PiHeader({
@@ -690,6 +777,7 @@ function PiHeader({
   finished,
   hasRecords,
   hasChoiceRecords,
+  hasMaskedRecords,
   checkPos,
   answers,
   choicePos,
@@ -701,6 +789,7 @@ function PiHeader({
   onEndChoice,
   onShowRecords,
   onShowChoiceRecords,
+  onShowMaskedRecords,
 }: PiHeaderProps) {
   return (
     <div class="pi-header">
@@ -738,65 +827,41 @@ function PiHeader({
         >
           {mode === 'view' ? (
             <>
-              {hasRecords ? (
-                <button
-                  class="filter-btn"
-                  style={{
-                    fontSize: '11px',
-                    minWidth: '40px',
-                    padding: '4px 8px',
-                  }}
-                  onClick={onShowRecords}
-                >
-                  記録
-                </button>
-              ) : null}
-              {hasChoiceRecords ? (
-                <button
-                  class="filter-btn"
-                  style={{
-                    fontSize: '11px',
-                    minWidth: '40px',
-                    padding: '4px 8px',
-                  }}
-                  onClick={onShowChoiceRecords}
-                >
-                  4択記録
-                </button>
-              ) : null}
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '12px',
-                  minWidth: '50px',
-                  padding: '4px 10px',
-                }}
-                onClick={() => onStartChoice('full')}
-              >
-                4択
-              </button>
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '12px',
-                  minWidth: '56px',
-                  padding: '4px 10px',
-                }}
-                onClick={() => onStartChoice('masked')}
-              >
-                虫食い
-              </button>
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '12px',
-                  minWidth: '60px',
-                  padding: '4px 10px',
-                }}
-                onClick={onStartCheck}
-              >
-                テスト
-              </button>
+              {[
+                {
+                  label: 'テスト',
+                  onStart: onStartCheck,
+                  hasRec: hasRecords,
+                  onRec: onShowRecords,
+                },
+                {
+                  label: '4択',
+                  onStart: () => onStartChoice('full'),
+                  hasRec: hasChoiceRecords,
+                  onRec: onShowChoiceRecords,
+                },
+                {
+                  label: '虫食い',
+                  onStart: () => onStartChoice('masked'),
+                  hasRec: hasMaskedRecords,
+                  onRec: onShowMaskedRecords,
+                },
+              ].map((m) => (
+                <div key={m.label} class="pi-mode-group">
+                  <button class="pi-mode-start" onClick={m.onStart}>
+                    {m.label}
+                  </button>
+                  {m.hasRec ? (
+                    <button
+                      class="pi-mode-rec"
+                      title={`${m.label}の記録`}
+                      onClick={m.onRec}
+                    >
+                      記録
+                    </button>
+                  ) : null}
+                </div>
+              ))}
             </>
           ) : mode === 'check' ? (
             <>
