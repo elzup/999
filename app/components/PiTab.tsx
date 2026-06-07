@@ -793,7 +793,15 @@ function PiHeader({
 }: PiHeaderProps) {
   return (
     <div class="pi-header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'wrap',
+          rowGap: '6px',
+        }}
+      >
         <div class="pi-header-title">π 円周率</div>
         <div class="pi-header-sub">1000桁</div>
         {mode === 'view' && (lastRecord || finished) ? (

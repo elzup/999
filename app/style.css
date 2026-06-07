@@ -1112,6 +1112,14 @@ body {
 .pi-mode-rec:active {
   color: var(--accent);
 }
+@media (max-width: 640px) {
+  .pi-mode-start {
+    padding: 4px 9px;
+  }
+  .pi-mode-rec {
+    padding: 4px 6px;
+  }
+}
 .pi-view-grid {
   display: flex;
   flex-direction: column;
