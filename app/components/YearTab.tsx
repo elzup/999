@@ -328,6 +328,18 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     setInputDigits(inputDigits.slice(0, -1))
   }, [mode, inputDigits])
 
+  // 1問戻って回答し直す: 直前に確定した問題の結果を取り消して入力位置を戻す
+  const prevQuestion = useCallback(() => {
+    if (mode !== 'check') return
+    if (results.length === 0) return
+    vibrate()
+    const last = results[results.length - 1]
+    const idx = checkItems.findIndex((ci) => ci.no === last.no)
+    setResults(results.slice(0, -1))
+    setInputDigits([])
+    if (idx >= 0) setCheckIdx(idx)
+  }, [mode, results, checkItems])
+
   const selectCheckItem = useCallback(
     (idx: number) => {
       if (mode !== 'check') return
@@ -575,6 +587,26 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
             padding: '8px 12px',
           }}
         >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginBottom: '8px',
+            }}
+          >
+            <button
+              class="filter-btn"
+              style={{
+                fontSize: '12px',
+                padding: '4px 12px',
+                opacity: results.length === 0 ? 0.4 : 1,
+              }}
+              disabled={results.length === 0}
+              onClick={prevQuestion}
+            >
+              ← 1問戻る
+            </button>
+          </div>
           <div class="np-numpad">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
               <div
