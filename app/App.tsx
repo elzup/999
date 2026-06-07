@@ -26,7 +26,6 @@ export function App() {
   }, [])
   const [data, setData] = useState<AppData | null>(null)
   const [bookmarks, setBookmarks] = useState(loadBookmarks)
-  const [locked, setLocked] = useState(false)
 
   useEffect(() => {
     fetch('./data.json')
@@ -61,7 +60,6 @@ export function App() {
           numbers={data.numbers}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
-          onCheckingChange={setLocked}
         />
       )}
       {tab === 'card' && (
@@ -69,7 +67,6 @@ export function App() {
           cards={data.cards}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
-          onCheckingChange={setLocked}
         />
       )}
       {tab === 'pi' && (
@@ -77,7 +74,6 @@ export function App() {
           numbers={data.numbers}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
-          onCheckingChange={setLocked}
         />
       )}
       {tab === 'year' && (
@@ -85,7 +81,6 @@ export function App() {
           numbers={data.numbers}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
-          onCheckingChange={setLocked}
         />
       )}
       {tab === 'weekday' && (
@@ -93,7 +88,6 @@ export function App() {
           numbers={data.numbers}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
-          onCheckingChange={setLocked}
         />
       )}
       {tab === 'misc' && (
@@ -105,10 +99,7 @@ export function App() {
           onToggleBm={toggleBm}
         />
       )}
-      <div
-        class="bottom-bar"
-        style={locked ? { pointerEvents: 'none', opacity: 0.4 } : {}}
-      >
+      <div class="bottom-bar">
         <TabButton
           id="num"
           current={tab}

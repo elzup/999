@@ -14,7 +14,6 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  onCheckingChange?: (checking: boolean) => void
 }
 
 type RevealState = Record<string, boolean>
@@ -147,7 +146,7 @@ function D3CheckGrid({
   )
 }
 
-function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
+function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
   const [revealed, setRevealed] = useState<RevealState>({})
   const [selected, setSelected] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('group')
@@ -227,8 +226,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     setStartTime(Date.now())
     setFinished(false)
     setSelected(null)
-    onCheckingChange?.(true)
-  }, [onCheckingChange])
+  }, [])
 
   const endCheck = useCallback(
     (finalAnswers?: Answer[]) => {
@@ -268,9 +266,8 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
       setMode('view')
       setFinished(true)
-      onCheckingChange?.(false)
     },
-    [startTime, answers, records, onCheckingChange]
+    [startTime, answers, records]
   )
 
   const tapDigit = useCallback(
@@ -340,6 +337,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
   return (
     <div
+      class={mode !== 'view' ? 'test-screen' : undefined}
       style={{
         display: 'flex',
         flexDirection: 'column',

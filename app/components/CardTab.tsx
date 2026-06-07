@@ -21,7 +21,6 @@ type Props = {
   cards: CardEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  onCheckingChange?: (checking: boolean) => void
 }
 
 const SUIT_NAME: Record<string, string> = {
@@ -90,10 +89,7 @@ function CardCell({ c, selected, stat, onSelect }: CardCellProps) {
       ? (stat.totalTime / stat.attempts / 1000).toFixed(1)
       : null
   return (
-    <div
-      class={'card-cell' + (selected ? ' selected' : '')}
-      onClick={onSelect}
-    >
+    <div class={'card-cell' + (selected ? ' selected' : '')} onClick={onSelect}>
       <div class={'card-id ' + c.suit}>{id}</div>
       {stat && stat.attempts > 0 ? (
         <div class="card-stat">
@@ -115,7 +111,7 @@ function pickCardValue(c: CardEntry): { value: string; label: string } | null {
 
 const SUITS = ['S', 'H', 'C', 'D'] as const
 
-function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
+function CardTab({ cards, bookmarks, onToggleBm }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>('view')
 
@@ -132,8 +128,9 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const [showRecords, setShowRecords] = useState(false)
   const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
-  const [trainSettings, setTrainSettings] =
-    useState<CardTrainSettings>(loadCardTrainSettings)
+  const [trainSettings, setTrainSettings] = useState<CardTrainSettings>(
+    loadCardTrainSettings
+  )
   const [trainGroupIdx, setTrainGroupIdx] = useState(0)
   const [trainStopped, setTrainStopped] = useState(false)
   const timerRef = useRef<number | null>(null)
@@ -197,46 +194,43 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
     )
   }, [cards, trainSettings.groupSize, trainSettings.direction])
 
-  const startCheck = useCallback(
-    () => {
-      const items: MatchItem[] = []
-      for (const c of cards) {
-        const picked = pickCardValue(c)
-        if (picked) {
-          items.push({
-            card: c,
-            key: c.suit + c.rank,
-            value: picked.value,
-            label: picked.label,
-          })
-        }
+  const startCheck = useCallback(() => {
+    const items: MatchItem[] = []
+    for (const c of cards) {
+      const picked = pickCardValue(c)
+      if (picked) {
+        items.push({
+          card: c,
+          key: c.suit + c.rank,
+          value: picked.value,
+          label: picked.label,
+        })
       }
-      setAllItems(shuffle(items))
-      setCheckIdx(0)
-      setResults([])
-      questionStartRef.current = Date.now()
-      setStartTime(Date.now())
-      setElapsed(0)
-      setFinished(false)
-      setMode('check')
-      setSelected(null)
-      onCheckingChange?.(true)
-    },
-    [cards, onCheckingChange]
-  )
+    }
+    setAllItems(shuffle(items))
+    setCheckIdx(0)
+    setResults([])
+    questionStartRef.current = Date.now()
+    setStartTime(Date.now())
+    setElapsed(0)
+    setFinished(false)
+    setMode('check')
+    setSelected(null)
+  }, [cards])
 
   const startTrain = useCallback(() => {
     const groups = buildTrainGroups()
     if (groups.length === 0) return
     setTrainGroups(groups)
-    setTrainGroupIdx(trainSettings.direction === 'right' ? groups.length - 1 : 0)
+    setTrainGroupIdx(
+      trainSettings.direction === 'right' ? groups.length - 1 : 0
+    )
     setStartTime(Date.now())
     setElapsed(0)
     setTrainStopped(false)
     setMode('train')
     setSelected(null)
-    onCheckingChange?.(true)
-  }, [buildTrainGroups, trainSettings.direction, onCheckingChange])
+  }, [buildTrainGroups, trainSettings.direction])
 
   const endCheck = useCallback(
     (finalResults?: MatchResult[]) => {
@@ -291,9 +285,8 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
       setMode('view')
       setFinished(true)
-      onCheckingChange?.(false)
     },
-    [startTime, results, records, stats, allItems, onCheckingChange]
+    [startTime, results, records, stats, allItems]
   )
 
   const tapChoice = useCallback(
@@ -334,8 +327,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
   const stopTrain = useCallback(() => {
     setMode('view')
-    onCheckingChange?.(false)
-  }, [onCheckingChange])
+  }, [])
 
   const stopTrainTimer = useCallback(() => {
     setTrainStopped((prev) => {
@@ -379,6 +371,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
   if (mode === 'train') {
     return (
       <div
+        class="test-screen"
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -400,11 +393,14 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
               {elapsed}秒{trainStopped ? ' (停止)' : ''}
             </span>
             <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-              {Math.min(trainGroupIdx + 1, trainGroups.length)}/{trainGroups.length}
+              {Math.min(trainGroupIdx + 1, trainGroups.length)}/
+              {trainGroups.length}
             </span>
             <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
               {trainSettings.groupSize}枚 /{' '}
-              {trainSettings.direction === 'right' ? '右から開始' : '左から開始'}
+              {trainSettings.direction === 'right'
+                ? '右から開始'
+                : '左から開始'}
             </span>
             <button
               class="filter-btn"
@@ -435,7 +431,9 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
             <div
               class="cm-train-grid"
               style={{
-                gridTemplateColumns: `repeat(${currentTrainGroup?.length ?? trainSettings.groupSize}, minmax(0, 1fr))`,
+                gridTemplateColumns: `repeat(${
+                  currentTrainGroup?.length ?? trainSettings.groupSize
+                }, minmax(0, 1fr))`,
               }}
             >
               {currentTrainGroup?.map((card) => (
@@ -623,7 +621,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
               }}
               onClick={() => startTrain()}
             >
-                連想テスト
+              連想テスト
             </button>
             <button
               class="filter-btn"
@@ -634,7 +632,7 @@ function CardTab({ cards, bookmarks, onToggleBm, onCheckingChange }: Props) {
               }}
               onClick={() => startCheck()}
             >
-                選択テスト
+              選択テスト
             </button>
           </div>
         </div>

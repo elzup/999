@@ -8,18 +8,19 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  onCheckingChange?: (checking: boolean) => void
 }
 
 type SubTab = 'code' | 'calc'
 
-function WeekdayTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
+function WeekdayTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('code')
 
   const handleSub = useCallback((next: SubTab) => {
     setSub(next)
   }, [])
 
+  // 年コードテスト中は D3Tab のテスト画面 (.test-screen) がこのサブタブ切り替えごと
+  // 覆い隠すので、ここでは常に表示しておけばよい (状態の引き回し不要)。
   return (
     <div
       style={{
@@ -49,7 +50,6 @@ function WeekdayTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props)
           numbers={numbers}
           bookmarks={bookmarks}
           onToggleBm={onToggleBm}
-          onCheckingChange={onCheckingChange}
         />
       ) : (
         <WeekdayCalcTab />

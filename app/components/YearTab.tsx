@@ -49,7 +49,6 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  onCheckingChange?: (checking: boolean) => void
 }
 
 type CheckResult = {
@@ -178,7 +177,7 @@ function YearViewRow({
   )
 }
 
-function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
+function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
   const [eraFilter, setEraFilter] = useState<EraId>('all')
@@ -222,22 +221,18 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     saveYearRecords([])
   }, [])
 
-  const startCheck = useCallback(
-    (era: EraId) => {
-      const items = filterByEra(era)
-      if (items.length === 0) return
-      setCheckItems(items)
-      setMode('check')
-      setCheckIdx(0)
-      setInputDigits([])
-      setResults([])
-      setStartTime(Date.now())
-      setElapsed(0)
-      setSelected(null)
-      onCheckingChange?.(true)
-    },
-    [onCheckingChange]
-  )
+  const startCheck = useCallback((era: EraId) => {
+    const items = filterByEra(era)
+    if (items.length === 0) return
+    setCheckItems(items)
+    setMode('check')
+    setCheckIdx(0)
+    setInputDigits([])
+    setResults([])
+    setStartTime(Date.now())
+    setElapsed(0)
+    setSelected(null)
+  }, [])
 
   const endCheck = useCallback(
     (finalResults?: CheckResult[]) => {
@@ -268,9 +263,8 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
       setReviewMeta({ score: correctCount, total: used.length, time: el })
 
       setMode('view')
-      onCheckingChange?.(false)
     },
-    [startTime, results, records, checkItems, onCheckingChange]
+    [startTime, results, records, checkItems]
   )
 
   const tapDigit = useCallback(
@@ -370,7 +364,7 @@ function YearTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
       : null
 
   return (
-    <div class="year-layout">
+    <div class={'year-layout' + (mode !== 'view' ? ' test-screen' : '')}>
       <div class="year-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ fontSize: '16px', fontWeight: 'bold' }}>年号記憶</div>

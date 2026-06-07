@@ -32,6 +32,15 @@ body {
   overflow: hidden;
   padding-bottom: calc(var(--bar-h) + var(--safe-bottom));
 }
+/* テスト画面: NavBar の上に重なる独立した全画面。各タブが mode!=='view' のとき
+   ルートにこのクラスを付ける。App 側に状態を持たせず、画面で覆って入力を奪う。 */
+.test-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  padding-bottom: var(--safe-bottom);
+}
 
 /* Top bar */
 .top-bar {

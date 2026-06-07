@@ -8,12 +8,11 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  onCheckingChange?: (checking: boolean) => void
 }
 
 type SubTab = 'all' | 'd2'
 
-function NumGroupTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
+function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('all')
 
   const handleSub = useCallback((s: SubTab) => {
@@ -45,10 +44,18 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props
         </button>
       </div>
       {sub === 'all' && (
-        <NumberTab numbers={numbers} bookmarks={bookmarks} onToggleBm={onToggleBm} />
+        <NumberTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
       )}
       {sub === 'd2' && (
-        <DigitTab numbers={numbers} bookmarks={bookmarks} onToggleBm={onToggleBm} />
+        <DigitTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
       )}
     </div>
   )

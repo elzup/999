@@ -17,7 +17,6 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  onCheckingChange?: (checking: boolean) => void
 }
 
 type Answer = { idx: number; digit: string; correct: boolean }
@@ -338,7 +337,7 @@ function PiViewGroups({
   )
 }
 
-function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
+function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
   const [checkPos, setCheckPos] = useState(1)
@@ -426,8 +425,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
     setStartTime(Date.now())
     setFinished(false)
     setSelected(null)
-    onCheckingChange && onCheckingChange(true)
-  }, [onCheckingChange])
+  }, [])
 
   const startChoice = useCallback(
     (variant: ChoiceVariant) => {
@@ -439,9 +437,8 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
       setStartTime(Date.now())
       setFinished(false)
       setSelected(null)
-      onCheckingChange && onCheckingChange(true)
     },
-    [chunkAt, onCheckingChange]
+    [chunkAt]
   )
 
   const endCheck = useCallback(
@@ -476,9 +473,8 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
       setMode('view')
       setFinished(true)
-      onCheckingChange && onCheckingChange(false)
     },
-    [startTime, answers, records, storageKey, digits, onCheckingChange]
+    [startTime, answers, records, storageKey, digits]
   )
 
   const endChoice = useCallback(
@@ -514,16 +510,8 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
 
       setMode('view')
       setFinished(true)
-      onCheckingChange && onCheckingChange(false)
     },
-    [
-      startTime,
-      choiceAnswers,
-      choiceVariant,
-      storeOf,
-      chunkAt,
-      onCheckingChange,
-    ]
+    [startTime, choiceAnswers, choiceVariant, storeOf, chunkAt]
   )
 
   const tapDigit = useCallback(
@@ -628,7 +616,7 @@ function PiTab({ numbers, bookmarks, onToggleBm, onCheckingChange }: Props) {
   const recordTitle = { check: 'π', choice: 'π 4択', masked: 'π 虫食い' }
 
   return (
-    <div class="pi-layout">
+    <div class={'pi-layout' + (mode !== 'view' ? ' test-screen' : '')}>
       <PiHeader
         mode={mode}
         lastRecord={lastRecord}
