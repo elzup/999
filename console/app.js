@@ -16,13 +16,15 @@ const FILTERS = [
 async function loadState() {
   try {
     const res = await fetch('/api/state')
-    if (!res.ok) throw new Error('no api')
+    const ct = res.headers.get('content-type') || ''
+    if (!res.ok || !ct.includes('application/json')) throw new Error('no api')
     readOnly = false
-    return res.json()
+    return await res.json()
   } catch {
+    // 静的ホスト(bayalhost)では /api/state が HTML を返すのでここに来る
     readOnly = true
     const res = await fetch('./state.json')
-    return res.json()
+    return await res.json()
   }
 }
 

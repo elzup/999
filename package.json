@@ -8,6 +8,7 @@
     "sync": "node src/sync-sheet.js",
     "push": "node src/push-sheet.js",
     "push:tags": "node src/push-tags-sheet.js",
+    "images:search": "node src/search-word-images.js",
     "images:fetch": "node src/fetch-word-images.js",
     "images:redo": "node src/fetch-word-images.js --redo-only",
     "console": "node console/server.js",
