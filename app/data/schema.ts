@@ -15,6 +15,8 @@ export const NumberEntrySchema = z.object({
   w1Error: z.union([z.boolean(), z.string()]).optional(),
   w2Score: z.number().nullable().default(null),
   w2Error: z.union([z.boolean(), z.string()]).optional(),
+  w1Img: z.string().optional(),
+  w2Img: z.string().optional(),
 })
 
 export type NumberEntry = z.infer<typeof NumberEntrySchema>

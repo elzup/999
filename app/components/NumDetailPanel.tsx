@@ -22,6 +22,14 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
     <div class="detail-panel">
       <div class="detail-row1">
         <span class="detail-id">{d.num}</span>
+        {d.w1Img ? (
+          <img
+            class="detail-word-img"
+            loading="lazy"
+            src={d.w1Img}
+            alt={d.w1}
+          />
+        ) : null}
         {d.w1 ? (
           <span class="detail-main-word">
             {d.w1}
@@ -33,6 +41,14 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
             label={'W1' + (d.w1Pattern ? ' [' + d.w1Pattern + ']' : '')}
             score={d.w1Score}
             error={d.w1Error}
+          />
+        ) : null}
+        {d.w2Img ? (
+          <img
+            class="detail-word-img"
+            loading="lazy"
+            src={d.w2Img}
+            alt={d.w2}
           />
         ) : null}
         {d.w2 ? (

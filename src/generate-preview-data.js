@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
@@ -23,6 +23,8 @@ const NumberSchema = z.object({
   w1Error: z.union([z.boolean(), z.string()]).optional(),
   w2Score: z.number().nullable().default(null),
   w2Error: z.union([z.boolean(), z.string()]).optional(),
+  w1Img: z.string().optional(),
+  w2Img: z.string().optional(),
 })
 
 const CardSchema = z.object({
@@ -154,6 +156,18 @@ function buildRulesData() {
 }
 
 const rules = buildRulesData()
+
+// 画像 manifest (word-images.json) があれば w1Img/w2Img を merge
+const imagesPath = join(baseDir, 'data', 'word-images.json')
+if (existsSync(imagesPath)) {
+  const { images } = JSON.parse(readFileSync(imagesPath, 'utf8'))
+  for (const n of numbers) {
+    const slots = images?.[n.num]
+    if (!slots) continue
+    if (slots.w1?.url) n.w1Img = slots.w1.url
+    if (slots.w2?.url) n.w2Img = slots.w2.url
+  }
+}
 
 const out = { numbers, cards, rules }
 writeFileSync(join(publicDir, 'data.json'), JSON.stringify(out))
