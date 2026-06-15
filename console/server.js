@@ -1,0 +1,135 @@
+// 画像管理コンソールのローカル API サーバ。
+//   GET  /api/state        words + manifest + candidates + redo を merge して返す
+//   POST /api/redo {num,slot,on}  word-images-redo.json を更新
+//   静的: console/index.html, console/app.js
+// ※ ファイル書込が必要なので静的ホスティング(bayalhost)では動かない。ローカル運用専用。
+
+import { createReadStream, readFileSync } from 'node:fs'
+import { createServer } from 'node:http'
+import { dirname, extname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  PATHS,
+  loadCandidates,
+  loadManifest,
+  loadRedo,
+  writeJson,
+  slotKey,
+} from '../src/images/store.js'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const wordsPath = join(here, '..', 'src', 'data', 'words.tsv')
+const PORT = Number(process.env.PORT || 5999)
+
+const MIME = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+}
+
+function loadWords() {
+  const text = readFileSync(wordsPath, 'utf-8')
+  const lines = text.split('\n').filter((l) => l.trim() !== '')
+  const header = lines[0].split('\t')
+  return lines.slice(1).map((line) => {
+    const cols = line.split('\t')
+    const e = {}
+    header.forEach((k, i) => {
+      e[k] = cols[i]?.trim() || ''
+    })
+    return e
+  })
+}
+
+/** gallery 用の state を組み立てる (静的ビルドからも再利用) */
+export function buildState() {
+  const words = loadWords().filter((w) => w.w1 || w.w2)
+  const manifest = loadManifest()
+  const candidates = loadCandidates()
+  const redo = loadRedo()
+  return {
+    words: words.map((w) => ({
+      num: w.num,
+      w1: w.w1,
+      w1k: w.w1k,
+      w2: w.w2,
+      w2k: w.w2k,
+    })),
+    images: manifest.images || {},
+    candidates: candidates.items || {},
+    redo: redo.redo || {},
+  }
+}
+
+function sendJson(res, code, obj) {
+  const body = JSON.stringify(obj)
+  res.writeHead(code, { 'content-type': 'application/json' })
+  res.end(body)
+}
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let data = ''
+    req.on('data', (c) => (data += c))
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(data || '{}'))
+      } catch {
+        resolve({})
+      }
+    })
+  })
+}
+
+function setRedo({ num, slot, on, reason }) {
+  const redo = loadRedo()
+  const key = slotKey(num, slot)
+  if (on) {
+    redo.redo[key] = {
+      flaggedAt: new Date().toISOString(),
+      reason: reason || '',
+    }
+  } else {
+    delete redo.redo[key]
+  }
+  writeJson(PATHS.redo, redo)
+  return redo.redo
+}
+
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url, `http://localhost:${PORT}`)
+
+  if (req.method === 'GET' && url.pathname === '/api/state') {
+    return sendJson(res, 200, buildState())
+  }
+  if (req.method === 'POST' && url.pathname === '/api/redo') {
+    const body = await readBody(req)
+    if (!body.num || !body.slot)
+      return sendJson(res, 400, { error: 'num/slot required' })
+    return sendJson(res, 200, { redo: setRedo(body) })
+  }
+
+  // static
+  const name = url.pathname === '/' ? '/index.html' : url.pathname
+  const file = join(here, name)
+  if (!file.startsWith(here)) {
+    res.writeHead(403)
+    return res.end('forbidden')
+  }
+  const stream = createReadStream(file)
+  stream.on('error', () => {
+    res.writeHead(404)
+    res.end('not found')
+  })
+  res.writeHead(200, {
+    'content-type': MIME[extname(file)] || 'application/octet-stream',
+  })
+  stream.pipe(res)
+})
+
+// 直接実行時のみ listen (build-static.js から import される時は起動しない)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  server.listen(PORT, () => {
+    console.log(`console: http://localhost:${PORT}`)
+  })
+}

@@ -8,6 +8,10 @@
     "sync": "node src/sync-sheet.js",
     "push": "node src/push-sheet.js",
     "push:tags": "node src/push-tags-sheet.js",
+    "images:fetch": "node src/fetch-word-images.js",
+    "images:redo": "node src/fetch-word-images.js --redo-only",
+    "console": "node console/server.js",
+    "gallery:build": "node console/build-static.js",
     "sync:card": "node src/sync-card-sheet.js",
     "score": "node src/score-words.js",
     "check:kana": "node src/check-kana.js",
@@ -34,8 +38,10 @@
     "*.{ts,tsx,js,jsx,json,css,md,html,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
+    "@google-cloud/storage": "^7.21.0",
     "@preact/preset-vite": "^2.10.3",
     "lint-staged": "^17.0.5",
+    "sharp": "^0.35.1",
     "simple-git-hooks": "^2.13.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
