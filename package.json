@@ -25,7 +25,7 @@
     "dev": "portless run vite",
     "dev:raw": "vite",
     "build": "npm run build:data && vite build",
-    "build:data": "node src/generate-preview-data.js",
+    "build:data": "node src/generate-viz.js && node src/generate-preview-data.js",
     "start": "npx serve src",
     "preview:legacy": "npx serve public",
     "preview": "portless run vite preview",

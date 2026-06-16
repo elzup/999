@@ -69,17 +69,28 @@
       }
       .card {
         background: var(--card);
-        border-radius: 8px;
-        padding: 8px;
+        border: 1px solid #313640;
+        border-radius: 10px;
+        padding: 0 8px 8px;
+        overflow: hidden;
       }
       .card-num {
-        font-weight: 700;
-        font-size: 13px;
-        color: var(--text2);
-        margin-bottom: 6px;
+        font-weight: 800;
+        font-size: 16px;
+        letter-spacing: 1px;
+        color: var(--text);
+        text-align: center;
+        background: #2a2f38;
+        margin: 0 -8px 8px;
+        padding: 5px 0;
       }
       .slot {
         margin-bottom: 8px;
+        padding-bottom: 8px;
+      }
+      /* 同じ数字グループ内の w1/w2 を区切る */
+      .slot:not(:last-child) {
+        border-bottom: 1px dashed #313640;
       }
       .thumb {
         width: 100%;
@@ -138,9 +149,10 @@
         background: none;
         border: none;
         cursor: pointer;
-        font-size: 13px;
-        padding: 0 2px;
-        margin-left: 4px;
+        font-size: 20px;
+        line-height: 1;
+        padding: 2px 4px;
+        margin-left: 6px;
       }
       .icon-btn:first-of-type {
         margin-left: auto;
