@@ -11,6 +11,8 @@ import {
   loadCandidates,
   loadManifest,
   loadRedo,
+  loadKeep,
+  isKept,
   writeJson,
   slotKey,
 } from './images/store.js'
@@ -43,6 +45,7 @@ async function main() {
   const candidates = loadCandidates()
   const manifest = loadManifest()
   const redo = loadRedo()
+  const keep = loadKeep()
 
   const items = Object.values(candidates.items || {})
   let done = 0
@@ -55,6 +58,12 @@ async function main() {
 
     if (REDO_ONLY && !flaggedRedo) continue
     if (item.status !== 'found' || !item.imageUrl) continue
+
+    // ロックされた画像は (明示 redo でない限り) 絶対に上書きしない
+    if (isKept(keep, item.num, item.slot) && !flaggedRedo) {
+      skipped++
+      continue
+    }
 
     // 既処理でも、候補の元画像URLが変わっていれば (retag 等) 再処理する
     const cur = manifest.images?.[item.num]?.[item.slot]

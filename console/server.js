@@ -14,6 +14,7 @@ import {
   loadCandidates,
   loadManifest,
   loadRedo,
+  loadKeep,
   writeJson,
   slotKey,
 } from '../src/images/store.js'
@@ -49,6 +50,7 @@ export function buildState() {
   const manifest = loadManifest()
   const candidates = loadCandidates()
   const redo = loadRedo()
+  const keep = loadKeep()
   return {
     words: words.map((w) => ({
       num: w.num,
@@ -60,7 +62,17 @@ export function buildState() {
     images: manifest.images || {},
     candidates: candidates.items || {},
     redo: redo.redo || {},
+    keep: keep.keep || {},
   }
+}
+
+function setKeep({ num, slot, on }) {
+  const keep = loadKeep()
+  const key = slotKey(num, slot)
+  if (on) keep.keep[key] = true
+  else delete keep.keep[key]
+  writeJson(PATHS.keep, keep)
+  return keep.keep
 }
 
 function sendJson(res, code, obj) {
@@ -141,6 +153,12 @@ const server = createServer(async (req, res) => {
     if (!body.num || !body.slot)
       return sendJson(res, 400, { error: 'num/slot required' })
     return sendJson(res, 200, redoNow(body))
+  }
+  if (req.method === 'POST' && url.pathname === '/api/keep') {
+    const body = await readBody(req)
+    if (!body.num || !body.slot)
+      return sendJson(res, 400, { error: 'num/slot required' })
+    return sendJson(res, 200, { keep: setKeep(body) })
   }
 
   // static

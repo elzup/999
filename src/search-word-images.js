@@ -18,6 +18,8 @@ import {
   PATHS,
   loadCandidates,
   loadRedo,
+  loadKeep,
+  isKept,
   writeJson,
   slotKey,
 } from './images/store.js'
@@ -108,6 +110,7 @@ async function main() {
   const words = loadWords()
   const candidates = loadCandidates()
   const redo = loadRedo()
+  const keep = loadKeep()
 
   // 処理対象 (num, slot, word) を組み立て
   const jobs = []
@@ -119,6 +122,8 @@ async function main() {
       const k = slotKey(w.num, slot)
       const flagged = Boolean(redo.redo?.[k])
       if (REDO_ONLY && !flagged) continue
+      // ロック画像は (明示 redo でない限り) 再検索しない
+      if (isKept(keep, w.num, slot) && !flagged) continue
       // --retag: タグ展開で検索語が変わる語だけ対象 (改善見込みのある分)
       if (RETAG) {
         const changed =

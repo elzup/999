@@ -13,6 +13,7 @@
     "images:retag": "node src/search-word-images.js --retag --slot both --limit 999",
     "images:fetch": "node src/fetch-word-images.js",
     "images:redo": "node src/fetch-word-images.js --redo-only",
+    "images:keep-all": "node src/keep-all.js",
     "console": "node console/server.js",
     "gallery:build": "node console/build-static.js",
     "sync:card": "node src/sync-card-sheet.js",

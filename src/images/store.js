@@ -10,6 +10,7 @@ export const PATHS = {
   candidates: join(dataDir, 'word-images.candidates.json'),
   manifest: join(dataDir, 'word-images.json'),
   redo: join(dataDir, 'word-images-redo.json'),
+  keep: join(dataDir, 'word-images-keep.json'),
 }
 
 export function readJson(path, fallback) {
@@ -37,6 +38,15 @@ export function loadManifest() {
 
 export function loadRedo() {
   return readJson(PATHS.redo, { version: 1, redo: {} })
+}
+
+// ロック: 気に入った画像を一括処理から保護する ("<num>:<slot>" -> true)
+export function loadKeep() {
+  return readJson(PATHS.keep, { version: 1, keep: {} })
+}
+
+export function isKept(keep, num, slot) {
+  return Boolean(keep.keep?.[slotKey(num, slot)])
 }
 
 export const slotKey = (num, slot) => `${num}:${slot}`
