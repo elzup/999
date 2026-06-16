@@ -68,8 +68,7 @@ async function toggleRedo(num, slot) {
 // その場で再検索→再取得し、画像を差し替える
 async function redoNow(num, slot, btn) {
   if (readOnly) return
-  const old = btn.textContent
-  btn.textContent = '⏳'
+  btn.textContent = '⌛'
   btn.disabled = true
   try {
     const res = await fetch('/api/redo-now', {
@@ -77,15 +76,16 @@ async function redoNow(num, slot, btn) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ num, slot }),
     })
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' (サーバを再起動?)')
     const data = await res.json()
-    if (data.image) {
-      if (!state.images[num]) state.images[num] = {}
-      state.images[num][slot] = data.image
-    }
+    if (!data.ok || !data.image) throw new Error(data.error || '画像取得に失敗')
+    if (!state.images[num]) state.images[num] = {}
+    state.images[num][slot] = data.image
     delete state.redo[`${num}:${slot}`]
     render()
-  } catch {
+  } catch (e) {
     btn.textContent = '⚠️'
+    btn.title = String(e.message || e) // 失敗理由をツールチップに
     btn.disabled = false
   }
 }

@@ -152,13 +152,21 @@ const server = createServer(async (req, res) => {
   }
   const stream = createReadStream(file)
   stream.on('error', () => {
-    res.writeHead(404)
-    res.end('not found')
+    // ファイルが無い等。ヘッダ未送信なら 404 (二重送信を防ぐ)
+    if (!res.headersSent) {
+      res.writeHead(404)
+      res.end('not found')
+    } else {
+      res.destroy()
+    }
   })
-  res.writeHead(200, {
-    'content-type': MIME[extname(file)] || 'application/octet-stream',
+  // ファイルが開けてからヘッダを書く (open 後なら error は来ない)
+  stream.on('open', () => {
+    res.writeHead(200, {
+      'content-type': MIME[extname(file)] || 'application/octet-stream',
+    })
+    stream.pipe(res)
   })
-  stream.pipe(res)
 })
 
 // 直接実行時のみ listen (build-static.js から import される時は起動しない)
