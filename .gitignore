@@ -6,6 +6,7 @@ src/data/words.json
 src/data/word-images.json
 src/data/word-images.candidates.json
 src/data/word-images-redo.json
+src/data/tags.json
 dist-gallery/
 src/visualize-words.data.json
 .firebase/

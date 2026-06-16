@@ -31,6 +31,20 @@ describe('buildSearchWord', () => {
   })
 })
 
+describe('buildSearchWord with tagMap', () => {
+  const map = { pr: 'プリコネ', bl: 'ブルアカ', ｽﾀﾚ: 'スタレ' }
+  it('略語タグを正式名に展開', () => {
+    expect(buildSearchWord('ミミ#pr', map)).toBe('ミミ プリコネ')
+    expect(buildSearchWord('ヒナ#bl', map)).toBe('ヒナ ブルアカ')
+  })
+  it('末尾 -suffix 付きタグも展開', () => {
+    expect(buildSearchWord('ブローニャ#ｽﾀﾚ -a', map)).toBe('ブローニャ スタレ')
+  })
+  it('map に無いタグはそのまま', () => {
+    expect(buildSearchWord('マオ#コードギアス', map)).toBe('マオ コードギアス')
+  })
+})
+
 describe('buildQuery', () => {
   it('title は付与しない (語のみ)', () => {
     expect(buildQuery('マオ#コードギアス')).toBe('マオ コードギアス')

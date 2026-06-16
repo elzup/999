@@ -31,9 +31,16 @@ function arg(flag, def) {
 const SLOT = arg('--slot', 'w1') // w1 | w2 | both
 const LIMIT = Number(arg('--limit', '90'))
 const REDO_ONLY = process.argv.includes('--redo')
+const RETAG = process.argv.includes('--retag') // タグ展開で検索語が変わる分を再検索
 const PROVIDER = arg('--provider', 'ddg') // ddg (キー不要) | cse
 const NUMS = arg('--nums', '') // "008,017,025" のように対象を絞る (テスト用)
 const numSet = NUMS ? new Set(NUMS.split(',').map((s) => s.trim())) : null
+
+function loadTagMap() {
+  const p = join(dataDir, 'tags.json')
+  return existsSync(p) ? JSON.parse(readFileSync(p, 'utf-8')) : {}
+}
+const tagMap = loadTagMap()
 
 function readKey() {
   if (process.env.CSE_API_KEY) return process.env.CSE_API_KEY
@@ -111,9 +118,16 @@ async function main() {
       const k = slotKey(w.num, slot)
       const flagged = Boolean(redo.redo?.[k])
       if (REDO_ONLY && !flagged) continue
+      // --retag: タグ展開で検索語が変わる語だけ対象 (改善見込みのある分)
+      if (RETAG) {
+        const changed =
+          buildSearchWord(word, tagMap) !== buildSearchWord(word, {})
+        if (!changed) continue
+      }
       const existing = candidates.items[k]
-      // 既に found 済み & redo でないなら skip
-      if (!REDO_ONLY && existing?.status === 'found' && !flagged) continue
+      // 既に found 済み & redo/retag でないなら skip
+      if (!REDO_ONLY && !RETAG && existing?.status === 'found' && !flagged)
+        continue
       jobs.push({ num: w.num, slot, word, key: k })
     }
   }
@@ -124,7 +138,7 @@ async function main() {
   for (const job of jobs) {
     if (n >= LIMIT) break
     n++
-    const query = buildSearchWord(job.word)
+    const query = buildSearchWord(job.word, tagMap)
     try {
       const r = await searchOne(query, ctx)
       const prev = candidates.items[job.key]

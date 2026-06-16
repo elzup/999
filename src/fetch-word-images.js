@@ -56,8 +56,10 @@ async function main() {
     if (REDO_ONLY && !flaggedRedo) continue
     if (item.status !== 'found' || !item.imageUrl) continue
 
-    const alreadyDone = Boolean(manifest.images?.[item.num]?.[item.slot])
-    if (alreadyDone && !flaggedRedo) {
+    // 既処理でも、候補の元画像URLが変わっていれば (retag 等) 再処理する
+    const cur = manifest.images?.[item.num]?.[item.slot]
+    const sameSource = cur && cur.sourceImageUrl === item.imageUrl
+    if (cur && sameSource && !flaggedRedo) {
       skipped++
       continue
     }
