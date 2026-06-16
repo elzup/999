@@ -93,6 +93,7 @@
         border-bottom: 1px dashed #313640;
       }
       .thumb {
+        position: relative;
         width: 100%;
         aspect-ratio: 1;
         border-radius: 6px;
@@ -162,6 +163,23 @@
       }
       .thumb.kept {
         border-color: var(--green);
+      }
+      /* 未確定 = 画像はあるが未ロック */
+      .thumb.unconfirmed {
+        border-color: #3d4350;
+        border-style: dashed;
+      }
+      .unconfirmed-tag {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        background: rgba(210, 153, 34, 0.95);
+        color: #14161a;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 1px 5px;
+        border-radius: 4px;
+        pointer-events: none;
       }
     </style>
   </head>

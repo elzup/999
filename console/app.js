@@ -8,10 +8,10 @@ let filter = 'all'
 const SLOTS = ['w1', 'w2']
 const FILTERS = [
   ['all', 'すべて'],
-  ['has', '画像あり'],
+  ['unconfirmed', '未確定'],
+  ['kept', '🔒確定'],
   ['missing', '未取得'],
   ['flagged', 'redo'],
-  ['kept', '🔒ロック'],
 ]
 
 async function loadState() {
@@ -49,6 +49,8 @@ function cardMatchesFilter(w) {
     if (filter === 'missing') return st === 'missing' || st === 'error'
     if (filter === 'flagged') return st === 'flagged'
     if (filter === 'kept') return Boolean(state.keep?.[`${w.num}:${slot}`])
+    if (filter === 'unconfirmed')
+      return st === 'has' && !state.keep?.[`${w.num}:${slot}`]
     return true
   })
 }
@@ -116,13 +118,25 @@ function slotEl(w, slot) {
   const wrap = document.createElement('div')
   wrap.className = 'slot'
 
+  const kept = Boolean(state.keep?.[`${num}:${slot}`])
+  const unconfirmed = Boolean(img) && !kept
+
   const thumb = document.createElement('div')
   thumb.className = 'thumb' + (st === 'flagged' ? ' flagged' : '')
+  if (kept) thumb.classList.add('kept')
+  if (unconfirmed) thumb.classList.add('unconfirmed')
   if (img) {
     const i = document.createElement('img')
     i.loading = 'lazy'
     i.src = img.url
     thumb.appendChild(i)
+    // 未確定 (画像はあるが未ロック) を一目でわかるように
+    if (unconfirmed) {
+      const tag = document.createElement('span')
+      tag.className = 'unconfirmed-tag'
+      tag.textContent = '未確定'
+      thumb.appendChild(tag)
+    }
   } else {
     thumb.textContent = st === 'error' ? '取得失敗' : '未取得'
   }
@@ -136,8 +150,6 @@ function slotEl(w, slot) {
   wspanText(wspan, slot, word)
   const badge = document.createElement('span')
   badge.className = 'badge b-' + st
-  const kept = Boolean(state.keep?.[`${num}:${slot}`])
-  if (kept) thumb.classList.add('kept')
   label.appendChild(wspan)
   if (!readOnly && img) {
     const lock = document.createElement('button')
@@ -207,10 +219,11 @@ function renderStats() {
       if (state.keep?.[`${w.num}:${slot}`]) kept++
     }
   }
+  const unconfirmed = has - kept
   const note = readOnly ? ' <span class="readonly-note">(閲覧専用)</span>' : ''
   document.getElementById(
     'stats'
-  ).innerHTML = `画像 ${has}/${total} ・ 🔒 ${kept} ・ redo ${flagged}${note}`
+  ).innerHTML = `画像 ${has}/${total} ・ 🔒確定 ${kept} ・ 未確定 ${unconfirmed} ・ redo ${flagged}${note}`
 }
 
 function renderFilters() {
