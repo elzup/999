@@ -23,7 +23,7 @@ async function loadState() {
   } catch {
     // 静的ホスト(bayalhost)では /api/state が HTML を返すのでここに来る
     readOnly = true
-    const res = await fetch('./state.json')
+    const res = await fetch('./state.json', { cache: 'no-store' })
     return await res.json()
   }
 }
@@ -65,6 +65,31 @@ async function toggleRedo(num, slot) {
   render()
 }
 
+// その場で再検索→再取得し、画像を差し替える
+async function redoNow(num, slot, btn) {
+  if (readOnly) return
+  const old = btn.textContent
+  btn.textContent = '⏳'
+  btn.disabled = true
+  try {
+    const res = await fetch('/api/redo-now', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ num, slot }),
+    })
+    const data = await res.json()
+    if (data.image) {
+      if (!state.images[num]) state.images[num] = {}
+      state.images[num][slot] = data.image
+    }
+    delete state.redo[`${num}:${slot}`]
+    render()
+  } catch {
+    btn.textContent = '⚠️'
+    btn.disabled = false
+  }
+}
+
 function slotEl(w, slot) {
   const num = w.num
   const word = w[slot]
@@ -95,6 +120,17 @@ function slotEl(w, slot) {
   const badge = document.createElement('span')
   badge.className = 'badge b-' + st
   label.appendChild(wspan)
+  if (!readOnly) {
+    const rerun = document.createElement('button')
+    rerun.className = 'rerun-btn'
+    rerun.textContent = '🔄'
+    rerun.title = '別の画像で取り直す'
+    rerun.onclick = (e) => {
+      e.stopPropagation()
+      redoNow(num, slot, rerun)
+    }
+    label.appendChild(rerun)
+  }
   label.appendChild(badge)
   wrap.appendChild(label)
   return wrap

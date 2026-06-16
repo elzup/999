@@ -93,9 +93,9 @@ function targetSlots() {
   return SLOT === 'both' ? ['w1', 'w2'] : [SLOT]
 }
 
-async function searchOne(query, ctx) {
+async function searchOne(query, ctx, rejected = []) {
   if (PROVIDER === 'cse') return searchImage(query, ctx.key, ctx.cx)
-  return ddgSearchImage(query)
+  return ddgSearchImage(query, rejected)
 }
 
 async function main() {
@@ -140,12 +140,12 @@ async function main() {
     n++
     const query = buildSearchWord(job.word, tagMap)
     try {
-      const r = await searchOne(query, ctx)
       const prev = candidates.items[job.key]
       const rejected = prev?.rejectedUrls || []
       if (job.key in (redo.redo || {}) && prev?.imageUrl) {
         rejected.push(prev.imageUrl) // redo: 前回 URL を除外履歴へ
       }
+      const r = await searchOne(query, ctx, rejected)
       candidates.items[job.key] = {
         num: job.num,
         slot: job.slot,

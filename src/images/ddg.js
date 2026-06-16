@@ -18,8 +18,12 @@ async function getVqd(query) {
   return m ? m[1] : null
 }
 
-/** @returns {Promise<{imageUrl:string, sourcePage:string}|null>} */
-export async function ddgSearchImage(query) {
+/**
+ * @param {string} query
+ * @param {string[]} rejected  redo 時に避ける既出URL
+ * @returns {Promise<{imageUrl:string, sourcePage:string}|null>}
+ */
+export async function ddgSearchImage(query, rejected = []) {
   const vqd = await getVqd(query)
   if (!vqd) return null
   const url =
@@ -31,10 +35,12 @@ export async function ddgSearchImage(query) {
   })
   if (!res.ok) throw new Error(`DDG ${res.status}`)
   const data = await res.json()
-  const results = data.results || []
+  const rej = new Set(rejected)
+  const results = (data.results || []).filter(
+    (r) => r.image && !rej.has(r.image)
+  )
   const pick =
-    results.find((r) => /\.(jpe?g|png|webp)(\?|$)/i.test(r.image || '')) ||
-    results[0]
+    results.find((r) => /\.(jpe?g|png|webp)(\?|$)/i.test(r.image)) || results[0]
   if (!pick) return null
   return { imageUrl: pick.image, sourcePage: pick.url || '' }
 }

@@ -4,6 +4,7 @@
 //   静的: console/index.html, console/app.js
 // ※ ファイル書込が必要なので静的ホスティング(bayalhost)では動かない。ローカル運用専用。
 
+import { spawnSync } from 'node:child_process'
 import { createReadStream, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { dirname, extname, join } from 'node:path'
@@ -18,7 +19,8 @@ import {
 } from '../src/images/store.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const wordsPath = join(here, '..', 'src', 'data', 'words.tsv')
+const repoRoot = join(here, '..')
+const wordsPath = join(repoRoot, 'src', 'data', 'words.tsv')
 const PORT = Number(process.env.PORT || 5999)
 
 const MIME = {
@@ -96,6 +98,32 @@ function setRedo({ num, slot, on, reason }) {
   return redo.redo
 }
 
+/** その語だけ redo フラグ→再検索(前回URL除外)→再取得し、新しい画像を返す */
+function redoNow({ num, slot }) {
+  setRedo({ num, slot, on: true })
+  const run = (script, args) =>
+    spawnSync('node', [join('src', script), ...args], {
+      cwd: repoRoot,
+      encoding: 'utf-8',
+    })
+  // 1. 再検索 (--redo は flag 付きのみ、--nums/--slot で対象を絞る)
+  run('search-word-images.js', [
+    '--redo',
+    '--nums',
+    num,
+    '--slot',
+    slot,
+    '--limit',
+    '5',
+  ])
+  // 2. 再取得 (--redo-only。成功で redo フラグは自動クリア)
+  run('fetch-word-images.js', ['--redo-only'])
+
+  const img = loadManifest().images?.[num]?.[slot] || null
+  const stillFlagged = Boolean(loadRedo().redo?.[slotKey(num, slot)])
+  return { image: img, ok: Boolean(img) && !stillFlagged }
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
 
@@ -107,6 +135,12 @@ const server = createServer(async (req, res) => {
     if (!body.num || !body.slot)
       return sendJson(res, 400, { error: 'num/slot required' })
     return sendJson(res, 200, { redo: setRedo(body) })
+  }
+  if (req.method === 'POST' && url.pathname === '/api/redo-now') {
+    const body = await readBody(req)
+    if (!body.num || !body.slot)
+      return sendJson(res, 400, { error: 'num/slot required' })
+    return sendJson(res, 200, redoNow(body))
   }
 
   // static
