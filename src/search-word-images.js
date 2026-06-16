@@ -33,6 +33,7 @@ const LIMIT = Number(arg('--limit', '90'))
 const REDO_ONLY = process.argv.includes('--redo')
 const RETAG = process.argv.includes('--retag') // タグ展開で検索語が変わる分を再検索
 const PROVIDER = arg('--provider', 'ddg') // ddg (キー不要) | cse
+const SAFE = !process.argv.includes('--unsafe') // セーフサーチ (既定 ON)
 const NUMS = arg('--nums', '') // "008,017,025" のように対象を絞る (テスト用)
 const numSet = NUMS ? new Set(NUMS.split(',').map((s) => s.trim())) : null
 
@@ -95,7 +96,7 @@ function targetSlots() {
 
 async function searchOne(query, ctx, rejected = []) {
   if (PROVIDER === 'cse') return searchImage(query, ctx.key, ctx.cx)
-  return ddgSearchImage(query, rejected)
+  return ddgSearchImage(query, rejected, SAFE)
 }
 
 async function main() {
@@ -142,8 +143,10 @@ async function main() {
     try {
       const prev = candidates.items[job.key]
       const rejected = prev?.rejectedUrls || []
-      if (job.key in (redo.redo || {}) && prev?.imageUrl) {
-        rejected.push(prev.imageUrl) // redo: 前回 URL を除外履歴へ
+      // redo / DL失敗(error) の再取得時は前回URLを除外して別画像を狙う
+      const retrying = job.key in (redo.redo || {}) || prev?.status === 'error'
+      if (retrying && prev?.imageUrl && !rejected.includes(prev.imageUrl)) {
+        rejected.push(prev.imageUrl)
       }
       const r = await searchOne(query, ctx, rejected)
       candidates.items[job.key] = {

@@ -21,15 +21,18 @@ async function getVqd(query) {
 /**
  * @param {string} query
  * @param {string[]} rejected  redo 時に避ける既出URL
+ * @param {boolean} safe  セーフサーチ (既定 ON)
  * @returns {Promise<{imageUrl:string, sourcePage:string}|null>}
  */
-export async function ddgSearchImage(query, rejected = []) {
+export async function ddgSearchImage(query, rejected = [], safe = true) {
   const vqd = await getVqd(query)
   if (!vqd) return null
+  // p=1: strict / p=-1: off
+  const p = safe ? '1' : '-1'
   const url =
     `https://duckduckgo.com/i.js?l=jp-jp&o=json&q=${encodeURIComponent(
       query
-    )}` + `&vqd=${vqd}&f=,,,,,&p=-1`
+    )}` + `&vqd=${vqd}&f=,,,,,&p=${p}`
   const res = await fetch(url, {
     headers: { 'user-agent': UA, referer: 'https://duckduckgo.com/' },
   })
