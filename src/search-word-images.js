@@ -34,6 +34,7 @@ const SLOT = arg('--slot', 'w1') // w1 | w2 | both
 const LIMIT = Number(arg('--limit', '90'))
 const REDO_ONLY = process.argv.includes('--redo')
 const RETAG = process.argv.includes('--retag') // タグ展開で検索語が変わる分を再検索
+const REQUERY = process.argv.includes('--requery') // 保存済みクエリと変わった語を再検索
 const PROVIDER = arg('--provider', 'ddg') // ddg (キー不要) | cse
 const SAFE = !process.argv.includes('--unsafe') // セーフサーチ (既定 ON)
 const NUMS = arg('--nums', '') // "008,017,025" のように対象を絞る (テスト用)
@@ -131,8 +132,18 @@ async function main() {
         if (!changed) continue
       }
       const existing = candidates.items[k]
-      // 既に found 済み & redo/retag でないなら skip
-      if (!REDO_ONLY && !RETAG && existing?.status === 'found' && !flagged)
+      // --requery: 保存済みクエリと現在の生成クエリが変わった語だけ対象
+      if (REQUERY) {
+        if (buildSearchWord(word, tagMap) === existing?.query) continue
+      }
+      // 既に found 済み & redo/retag/requery でないなら skip
+      if (
+        !REDO_ONLY &&
+        !RETAG &&
+        !REQUERY &&
+        existing?.status === 'found' &&
+        !flagged
+      )
         continue
       jobs.push({ num: w.num, slot, word, key: k })
     }

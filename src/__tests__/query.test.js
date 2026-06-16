@@ -10,12 +10,13 @@ describe('buildSearchWord', () => {
     expect(buildSearchWord('ヒナ#プリコネ#bl')).toBe('ヒナ プリコネ bl')
   })
 
-  it('(注釈) を除去', () => {
-    expect(buildSearchWord('麻衣(先輩)')).toBe('麻衣')
+  it('括弧の中も検索文脈として残す', () => {
+    expect(buildSearchWord('麻衣(先輩)')).toBe('麻衣 先輩')
+    expect(buildSearchWord('四季(真賀田)')).toBe('四季 真賀田')
   })
 
-  it('comma は先頭のみ採用', () => {
-    expect(buildSearchWord('麻衣(先輩),まい,レイ#pr')).toBe('麻衣')
+  it('comma は先頭のみ採用 (括弧の中は残す)', () => {
+    expect(buildSearchWord('麻衣(先輩),まい,レイ#pr')).toBe('麻衣 先輩')
   })
 
   it(' -suffix を除去', () => {

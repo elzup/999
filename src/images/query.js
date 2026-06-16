@@ -7,7 +7,8 @@
  * tagMap があれば略語タグを正式名に展開する (例: pr -> プリコネ)。
  * 例: 'マオ#コードギアス' -> 'マオ コードギアス'
  *     'ミミ#pr' (tagMap{pr:'プリコネ'}) -> 'ミミ プリコネ'
- *     '麻衣(先輩),まい' -> '麻衣'
+ *     '麻衣(先輩),まい' -> '麻衣 先輩'
+ *     '四季(真賀田)' -> '四季 真賀田'
  */
 export function buildSearchWord(w, tagMap = {}) {
   if (!w) return ''
@@ -20,7 +21,11 @@ export function buildSearchWord(w, tagMap = {}) {
   const expanded = [head, ...tags].filter(Boolean).join(' ')
   const noSuffix = expanded.replace(/\s+-\w+$/g, '').trim()
   const firstItem = noSuffix.split(',')[0].trim()
-  return firstItem.replace(/\([^)]*\)/g, '').trim()
+  // 括弧の中も検索文脈として残す (例: 四季(真賀田) -> 四季 真賀田)
+  return firstItem
+    .replace(/\(([^)]*)\)/g, ' $1')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /**
