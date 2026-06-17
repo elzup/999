@@ -4,6 +4,13 @@
 let state = null
 let readOnly = false
 let filter = 'all'
+let lockView = 'all' // all | hide-locked | only-locked (Triple toggle)
+
+const LOCK_VIEWS = [
+  ['all', '全部'],
+  ['hide-locked', '確定を隠す'],
+  ['only-locked', '確定のみ'],
+]
 
 // 優先順位順。w1_2/w2_2 は片方が空のときだけ値が入る (2枠目の穴埋め)
 const SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
@@ -82,7 +89,17 @@ async function toggleKeep(num, slot) {
   })
   const data = await res.json()
   state.keep = data.keep
-  render()
+  // 即時には消さない: そのスロットの見た目だけ更新 (再フィルタは次の render で)
+  refreshSlot(num, slot)
+  renderStats()
+}
+
+// 1スロットだけ DOM を作り直す (グリッドのフィルタは再適用しない)
+function refreshSlot(num, slot) {
+  const old = document.querySelector(`.slot[data-key="${num}:${slot}"]`)
+  if (!old) return
+  const w = state.words.find((x) => x.num === num)
+  if (w) old.replaceWith(slotEl(w, slot))
 }
 
 // その場で再検索→再取得し、画像を差し替える
@@ -118,6 +135,7 @@ function slotEl(w, slot) {
 
   const wrap = document.createElement('div')
   wrap.className = 'slot'
+  wrap.dataset.key = `${num}:${slot}`
 
   const kept = Boolean(state.keep?.[`${num}:${slot}`])
   const unconfirmed = Boolean(img) && !kept
@@ -186,20 +204,27 @@ function wspanText(span, slot, word) {
   span.textContent = `${slot}: ${word}`
 }
 
+// Triple toggle: ロック状態でスロットを表示するか
+function slotVisible(num, slot) {
+  if (lockView === 'all') return true
+  const kept = Boolean(state.keep?.[`${num}:${slot}`])
+  return lockView === 'only-locked' ? kept : !kept
+}
+
 function render() {
   const grid = document.getElementById('grid')
   grid.innerHTML = ''
   const cards = state.words.filter(cardMatchesFilter)
   for (const w of cards) {
+    const slots = SLOTS.filter((slot) => w[slot] && slotVisible(w.num, slot))
+    if (slots.length === 0) continue // 表示するスロットが無いカードは省く
     const card = document.createElement('div')
     card.className = 'card'
     const num = document.createElement('div')
     num.className = 'card-num'
     num.textContent = w.num
     card.appendChild(num)
-    for (const slot of SLOTS) {
-      if (w[slot]) card.appendChild(slotEl(w, slot))
-    }
+    for (const slot of slots) card.appendChild(slotEl(w, slot))
     grid.appendChild(card)
   }
   renderStats()
@@ -242,9 +267,31 @@ function renderFilters() {
     box.appendChild(b)
   }
 }
+// Triple toggle switch (ロック表示切替)
+function renderLockView() {
+  const box = document.getElementById('lockview')
+  if (!box) return
+  box.innerHTML = ''
+  const sw = document.createElement('div')
+  sw.className = 'tri-switch'
+  for (const [key, label] of LOCK_VIEWS) {
+    const seg = document.createElement('button')
+    seg.className = 'tri-seg' + (key === lockView ? ' active' : '')
+    seg.textContent = label
+    seg.onclick = () => {
+      lockView = key
+      renderLockView()
+      render()
+    }
+    sw.appendChild(seg)
+  }
+  box.appendChild(sw)
+}
+
 async function main() {
   state = await loadState()
   renderFilters()
+  renderLockView()
   render()
 }
 main()

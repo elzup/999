@@ -57,6 +57,31 @@
         font-size: 13px;
         margin-left: auto;
       }
+      /* Triple toggle switch (ロック表示) */
+      .tri-switch {
+        display: inline-flex;
+        border: 1px solid #3a4150;
+        border-radius: 7px;
+        overflow: hidden;
+      }
+      .tri-seg {
+        background: var(--card);
+        color: var(--text2);
+        border: none;
+        border-left: 1px solid #3a4150;
+        padding: 5px 10px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tri-seg:first-child {
+        border-left: none;
+      }
+      .tri-seg.active {
+        background: var(--green);
+        color: #14161a;
+        font-weight: 700;
+      }
       .readonly-note {
         color: var(--amber);
         font-size: 12px;
@@ -191,6 +216,7 @@
     <header>
       <h1>語呂 999 画像コンソール</h1>
       <div class="filters" id="filters"></div>
+      <div class="lockview" id="lockview"></div>
       <div class="stats" id="stats"></div>
     </header>
     <div class="grid" id="grid"></div>
