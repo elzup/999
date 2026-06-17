@@ -18,6 +18,9 @@ import {
   writeJson,
   slotKey,
 } from '../src/images/store.js'
+import { downloadImage } from '../src/images/download.js'
+import { toWebpTop, hashKey } from '../src/images/process.js'
+import { uploadWebp } from '../src/images/upload.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
@@ -138,6 +141,39 @@ function redoNow({ num, slot }) {
   return { image: img, ok: Boolean(img) && !stillFlagged }
 }
 
+/** 元画像(sourceImageUrl)から上寄せでクロップし直して差し替える */
+async function recropTop({ num, slot }) {
+  const manifest = loadManifest()
+  const cur = manifest.images?.[num]?.[slot]
+  if (!cur?.sourceImageUrl) return { ok: false, error: '元画像URLが無い' }
+  try {
+    const { buffer } = await downloadImage(cur.sourceImageUrl)
+    const webp = await toWebpTop(buffer)
+    const { hash, key } = hashKey(webp)
+    const { url } = await uploadWebp(webp, key)
+    if (!manifest.images[num]) manifest.images[num] = {}
+    manifest.images[num][slot] = {
+      ...cur,
+      url,
+      hash,
+      uploadedAt: new Date().toISOString(),
+    }
+    writeJson(PATHS.manifest, manifest)
+    return { ok: true, image: manifest.images[num][slot] }
+  } catch (err) {
+    return { ok: false, error: String(err.message || err).slice(0, 200) }
+  }
+}
+
+/** manifest の画像を指定のものに差し替える (2択の戻し用) */
+function setImage({ num, slot, image }) {
+  const manifest = loadManifest()
+  if (!manifest.images[num]) manifest.images[num] = {}
+  manifest.images[num][slot] = image
+  writeJson(PATHS.manifest, manifest)
+  return { ok: true, image }
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
 
@@ -161,6 +197,18 @@ const server = createServer(async (req, res) => {
     if (!body.num || !body.slot)
       return sendJson(res, 400, { error: 'num/slot required' })
     return sendJson(res, 200, { keep: setKeep(body) })
+  }
+  if (req.method === 'POST' && url.pathname === '/api/recrop') {
+    const body = await readBody(req)
+    if (!body.num || !body.slot)
+      return sendJson(res, 400, { error: 'num/slot required' })
+    return sendJson(res, 200, await recropTop(body))
+  }
+  if (req.method === 'POST' && url.pathname === '/api/set-image') {
+    const body = await readBody(req)
+    if (!body.num || !body.slot || !body.image)
+      return sendJson(res, 400, { error: 'num/slot/image required' })
+    return sendJson(res, 200, setImage(body))
   }
 
   // static

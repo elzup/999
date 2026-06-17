@@ -107,9 +107,10 @@ function refreshSlot(num, slot) {
   if (w) old.replaceWith(slotEl(w, slot))
 }
 
-// その場で再検索→再取得し、画像を差し替える
+// その場で再検索→再取得し、今の画像と2択で選ばせる
 async function redoNow(num, slot, btn) {
   if (readOnly) return
+  const oldImg = state.images?.[num]?.[slot] || null
   btn.textContent = '⌛'
   btn.disabled = true
   try {
@@ -122,14 +123,82 @@ async function redoNow(num, slot, btn) {
     const data = await res.json()
     if (!data.ok || !data.image) throw new Error(data.error || '画像取得に失敗')
     if (!state.images[num]) state.images[num] = {}
-    state.images[num][slot] = data.image
+    state.images[num][slot] = data.image // 新を一旦採用
     delete state.redo[`${num}:${slot}`]
-    render()
+    if (oldImg && oldImg.url !== data.image.url) {
+      showChooser(num, slot, oldImg, data.image) // 今の画像と2択
+    } else {
+      refreshSlot(num, slot)
+    }
   } catch (e) {
     btn.textContent = '⚠️'
     btn.title = String(e.message || e) // 失敗理由をツールチップに
     btn.disabled = false
   }
+}
+
+// 元画像から上寄せでクロップし直す (固定アクション)
+async function recropTop(num, slot, btn) {
+  if (readOnly) return
+  btn.textContent = '⌛'
+  btn.disabled = true
+  try {
+    const res = await fetch('/api/recrop', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ num, slot }),
+    })
+    const data = await res.json()
+    if (!data.ok || !data.image) throw new Error(data.error || '失敗')
+    if (!state.images[num]) state.images[num] = {}
+    state.images[num][slot] = data.image
+    refreshSlot(num, slot)
+  } catch (e) {
+    btn.textContent = '⚠️'
+    btn.title = String(e.message || e)
+    btn.disabled = false
+  }
+}
+
+// 「新しい方 / 今までの方」を選ぶ UI (そのスロットだけ差し替え)
+function showChooser(num, slot, oldImg, newImg) {
+  const el = document.querySelector(`.slot[data-key="${num}:${slot}"]`)
+  if (!el) return
+  const box = document.createElement('div')
+  box.className = 'slot'
+  box.dataset.key = `${num}:${slot}`
+  const title = document.createElement('div')
+  title.className = 'choose-title'
+  title.textContent = 'どっちにする?'
+  box.appendChild(title)
+  const opt = (label, img, onPick) => {
+    const o = document.createElement('div')
+    o.className = 'choose-opt'
+    const im = document.createElement('img')
+    im.src = img.url
+    im.loading = 'lazy'
+    const b = document.createElement('button')
+    b.className = 'act-btn'
+    b.textContent = label
+    b.onclick = onPick
+    o.appendChild(im)
+    o.appendChild(b)
+    return o
+  }
+  // 新は既に採用済み → 確定するだけ
+  box.appendChild(opt('✓ 新しい方', newImg, () => refreshSlot(num, slot)))
+  box.appendChild(
+    opt('↩ 今までの方', oldImg, async () => {
+      await fetch('/api/set-image', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ num, slot, image: oldImg }),
+      })
+      state.images[num][slot] = oldImg
+      refreshSlot(num, slot)
+    })
+  )
+  el.replaceWith(box)
 }
 
 function slotEl(w, slot) {
@@ -180,7 +249,7 @@ function slotEl(w, slot) {
     const actions = document.createElement('div')
     actions.className = 'slot-actions'
     const lock = document.createElement('button')
-    lock.className = 'act-btn'
+    lock.className = 'act-btn primary'
     lock.textContent = kept ? '🔒 解除' : '👍 確定'
     lock.onclick = (e) => {
       e.stopPropagation()
@@ -188,10 +257,19 @@ function slotEl(w, slot) {
     }
     actions.appendChild(lock)
     if (!kept) {
+      const crop = document.createElement('button')
+      crop.className = 'act-btn'
+      crop.textContent = '✂️上'
+      crop.title = '元画像を上寄せでクロップし直す'
+      crop.onclick = (e) => {
+        e.stopPropagation()
+        recropTop(num, slot, crop)
+      }
+      actions.appendChild(crop)
       const rerun = document.createElement('button')
       rerun.className = 'act-btn'
       rerun.textContent = '🔄'
-      rerun.title = '別の画像で取り直す'
+      rerun.title = '別の画像で取り直す (今のと2択)'
       rerun.onclick = (e) => {
         e.stopPropagation()
         redoNow(num, slot, rerun)

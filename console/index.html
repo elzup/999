@@ -199,12 +199,14 @@
       /* 操作ボタン: 大きく押しやすい独立行 */
       .slot-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
         margin-top: 6px;
       }
       .act-btn {
-        flex: 1;
-        min-height: 40px;
+        flex: 1 1 0;
+        min-width: 40px;
+        min-height: 38px;
         background: #2a2f38;
         color: var(--text);
         border: 1px solid #3a4150;
@@ -213,8 +215,33 @@
         font-weight: 700;
         cursor: pointer;
       }
+      .act-btn.primary {
+        flex-basis: 100%;
+      }
       .act-btn:active {
         background: #353b46;
+      }
+      /* 2択チューザー */
+      .choose-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        margin: 2px 0 6px;
+        color: var(--amber);
+      }
+      .choose-opt {
+        margin-bottom: 8px;
+      }
+      .choose-opt img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 6px;
+        display: block;
+        margin-bottom: 4px;
+      }
+      .choose-opt .act-btn {
+        width: 100%;
       }
       .thumb.kept {
         border-color: var(--green);

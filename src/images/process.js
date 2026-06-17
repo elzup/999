@@ -17,6 +17,14 @@ export async function toWebp(input) {
     .toBuffer()
 }
 
+/** 上寄せで 400x400 にクロップ (顔が上にある画像の救済用) */
+export async function toWebpTop(input) {
+  return sharp(input)
+    .resize(IMG_SIZE, IMG_SIZE, { fit: 'cover', position: 'top' })
+    .webp({ quality: 82 })
+    .toBuffer()
+}
+
 /** content-addressed なキー words/<sha256先頭20hex>.webp */
 export function hashKey(webpBuffer) {
   const hex = createHash('sha256').update(webpBuffer).digest('hex').slice(0, 20)
