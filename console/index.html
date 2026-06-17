@@ -83,6 +83,14 @@
         color: #14161a;
         font-weight: 700;
       }
+      /* ② 下書き = 自動遷移専用 (クリック不可) */
+      .tri-seg.auto {
+        cursor: default;
+        color: var(--text2);
+      }
+      .tri-seg.auto.active {
+        background: var(--amber);
+      }
       .readonly-note {
         color: var(--amber);
         font-size: 12px;

@@ -4,13 +4,10 @@
 let state = null
 let readOnly = false
 let filter = 'all'
-let lockView = 'all' // all | hide-locked | only-locked (Triple toggle)
-
-const LOCK_VIEWS = [
-  ['all', '全部'],
-  ['hide-locked', '確定を隠す'],
-  ['only-locked', '確定のみ'],
-]
+// Triple toggle: all(全部) | draft(下書き=未確定+今回ロック) | unconf(未確定のみ)
+// クリックで切れるのは all / unconf のみ。draft は unconf でロックすると自動遷移。
+let lockView = 'all'
+const sessionLocks = new Set() // 今回のレビューでロックしたキー (下書き表示用)
 
 // 優先順位順。w1_2/w2_2 は片方が空のときだけ値が入る (2枠目の穴埋め)
 const SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
@@ -89,8 +86,16 @@ async function toggleKeep(num, slot) {
   })
   const data = await res.json()
   state.keep = data.keep
+  if (on) {
+    sessionLocks.add(key)
+    // 未確定のみ表示中にロック → 自動で下書きへ (ロックした画像は残す)
+    if (lockView === 'unconf') lockView = 'draft'
+  } else {
+    sessionLocks.delete(key)
+  }
   // 即時には消さない: そのスロットの見た目だけ更新 (再フィルタは次の render で)
   refreshSlot(num, slot)
+  renderLockView()
   renderStats()
 }
 
@@ -206,8 +211,11 @@ function wspanText(span, slot, word) {
 // Triple toggle: ロック状態でスロットを表示するか
 function slotVisible(num, slot) {
   if (lockView === 'all') return true
-  const kept = Boolean(state.keep?.[`${num}:${slot}`])
-  return lockView === 'only-locked' ? kept : !kept
+  const key = `${num}:${slot}`
+  const kept = Boolean(state.keep?.[key])
+  // unconf: 未確定のみ (ロック全部非表示) / draft: 未確定 + 今回ロック分
+  if (lockView === 'draft') return !kept || sessionLocks.has(key)
+  return !kept
 }
 
 function render() {
@@ -266,21 +274,35 @@ function renderFilters() {
     box.appendChild(b)
   }
 }
-// Triple toggle switch (ロック表示切替)
+// Triple toggle switch。② 下書き はクリック不可 (自動遷移専用)
 function renderLockView() {
   const box = document.getElementById('lockview')
   if (!box) return
   box.innerHTML = ''
   const sw = document.createElement('div')
   sw.className = 'tri-switch'
-  for (const [key, label] of LOCK_VIEWS) {
+  const draftLabel = sessionLocks.size
+    ? `下書き(${sessionLocks.size})`
+    : '下書き'
+  const views = [
+    ['all', '全部', true],
+    ['draft', draftLabel, false],
+    ['unconf', '未確定のみ', true],
+  ]
+  for (const [key, label, clickable] of views) {
     const seg = document.createElement('button')
-    seg.className = 'tri-seg' + (key === lockView ? ' active' : '')
+    seg.className =
+      'tri-seg' +
+      (key === lockView ? ' active' : '') +
+      (clickable ? '' : ' auto')
     seg.textContent = label
-    seg.onclick = () => {
-      lockView = key
-      renderLockView()
-      render()
+    if (clickable) {
+      seg.onclick = () => {
+        lockView = key
+        sessionLocks.clear() // 全部/未確定のみ へ移ると下書きは確定 (非表示)
+        renderLockView()
+        render()
+      }
     }
     sw.appendChild(seg)
   }
