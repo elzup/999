@@ -58,6 +58,8 @@ export function buildState() {
       w1k: w.w1k,
       w2: w.w2,
       w2k: w.w2k,
+      w1_2: w.w1_2,
+      w2_2: w.w2_2,
     })),
     images: manifest.images || {},
     candidates: candidates.items || {},

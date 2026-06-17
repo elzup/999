@@ -60,6 +60,33 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
         {d.w2Score != null ? (
           <ScoreBar label="W2" score={d.w2Score} error={d.w2Error} />
         ) : null}
+        {/* 2枠目の穴埋め: w2が空なら人の2人目、w1が空ならモノの2つ目 */}
+        {!d.w2 && d.w1_2Img ? (
+          <img
+            class="detail-word-img"
+            loading="lazy"
+            src={d.w1_2Img}
+            alt={d.w1_2}
+          />
+        ) : null}
+        {!d.w2 && d.w1_2 ? (
+          <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
+            {d.w1_2}
+          </span>
+        ) : null}
+        {!d.w1 && d.w2_2Img ? (
+          <img
+            class="detail-word-img"
+            loading="lazy"
+            src={d.w2_2Img}
+            alt={d.w2_2}
+          />
+        ) : null}
+        {!d.w1 && d.w2_2 ? (
+          <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
+            {d.w2_2}
+          </span>
+        ) : null}
         {d.catScore ? (
           <div class="detail-chip cat">
             <span class="dc-label">Cat</span>

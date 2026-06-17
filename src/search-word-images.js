@@ -93,8 +93,11 @@ async function searchImage(query, key, cx) {
   return { imageUrl: pick.link, sourcePage: pick.image?.contextLink || '' }
 }
 
+const ALL_SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
 function targetSlots() {
-  return SLOT === 'both' ? ['w1', 'w2'] : [SLOT]
+  if (SLOT === 'all') return ALL_SLOTS
+  if (SLOT === 'both') return ['w1', 'w2']
+  return [SLOT]
 }
 
 async function searchOne(query, ctx, rejected = []) {

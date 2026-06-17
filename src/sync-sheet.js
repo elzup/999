@@ -75,17 +75,34 @@ function parseTsv(tsv) {
     const w2 = cols[w2Idx]?.trim() || ''
     const w2k = cols[w2kIdx]?.trim() || ''
 
-    entries.push({ num, hito, mono, gainen, w1, w1k, w2, w2k })
+    // 2枠目の穴埋め用: 片方が空のとき、もう一方の2項目目を派生させる
+    // w2(モノ)が空 -> 人の2人目を w1_2 へ / w1(人)が空 -> モノの2つ目を w2_2 へ
+    const w1_2 = !w2 ? secondItem(hito, w1) : ''
+    const w2_2 = !w1 ? secondItem(mono, w2) : ''
+
+    entries.push({ num, hito, mono, gainen, w1, w1k, w2, w2k, w1_2, w2_2 })
   }
 
   return entries
 }
 
+/** col のカンマ区切り項目から、w と異なる最初の項目 (通常2番目) を返す */
+function secondItem(col, w) {
+  const items = (col || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const rest = items.filter((it) => it !== w)
+  return rest.length ? rest[0] : ''
+}
+
 function toTsv(entries) {
-  const header = 'num\thito\tmono\tgainen\tw1\tw1k\tw2\tw2k'
+  const header = 'num\thito\tmono\tgainen\tw1\tw1k\tw2\tw2k\tw1_2\tw2_2'
   const rows = entries.map(
     (e) =>
-      `${e.num}\t${e.hito}\t${e.mono}\t${e.gainen}\t${e.w1}\t${e.w1k}\t${e.w2}\t${e.w2k}`
+      `${e.num}\t${e.hito}\t${e.mono}\t${e.gainen}\t${e.w1}\t${e.w1k}\t${
+        e.w2
+      }\t${e.w2k}\t${e.w1_2 || ''}\t${e.w2_2 || ''}`
   )
   return [header, ...rows].join('\n') + '\n'
 }

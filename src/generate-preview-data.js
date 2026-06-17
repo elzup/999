@@ -157,15 +157,36 @@ function buildRulesData() {
 
 const rules = buildRulesData()
 
-// 画像 manifest (word-images.json) があれば w1Img/w2Img を merge
+// words.tsv から 2枠目穴埋め用の w1_2/w2_2 (語) を取り込む
+const wordsPath = join(baseDir, 'data', 'words.tsv')
+const sub = {}
+if (existsSync(wordsPath)) {
+  const lines = readFileSync(wordsPath, 'utf8').split('\n').filter(Boolean)
+  const header = lines[0].split('\t')
+  const i12 = header.indexOf('w1_2')
+  const i22 = header.indexOf('w2_2')
+  for (const line of lines.slice(1)) {
+    const c = line.split('\t')
+    sub[c[0]] = { w1_2: c[i12]?.trim() || '', w2_2: c[i22]?.trim() || '' }
+  }
+}
+
+// 画像 manifest (word-images.json) があれば各スロットの画像URLを merge
 const imagesPath = join(baseDir, 'data', 'word-images.json')
 if (existsSync(imagesPath)) {
   const { images } = JSON.parse(readFileSync(imagesPath, 'utf8'))
   for (const n of numbers) {
     const slots = images?.[n.num]
+    const s = sub[n.num]
+    if (s) {
+      if (s.w1_2) n.w1_2 = s.w1_2
+      if (s.w2_2) n.w2_2 = s.w2_2
+    }
     if (!slots) continue
     if (slots.w1?.url) n.w1Img = slots.w1.url
     if (slots.w2?.url) n.w2Img = slots.w2.url
+    if (slots.w1_2?.url) n.w1_2Img = slots.w1_2.url
+    if (slots.w2_2?.url) n.w2_2Img = slots.w2_2.url
   }
 }
 

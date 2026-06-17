@@ -5,7 +5,8 @@ let state = null
 let readOnly = false
 let filter = 'all'
 
-const SLOTS = ['w1', 'w2']
+// 優先順位順。w1_2/w2_2 は片方が空のときだけ値が入る (2枠目の穴埋め)
+const SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
 const FILTERS = [
   ['all', 'すべて'],
   ['unconfirmed', '未確定'],
