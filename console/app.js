@@ -149,13 +149,6 @@ function slotEl(w, slot) {
     i.loading = 'lazy'
     i.src = img.url
     thumb.appendChild(i)
-    // 未確定 (画像はあるが未ロック) を一目でわかるように
-    if (unconfirmed) {
-      const tag = document.createElement('span')
-      tag.className = 'unconfirmed-tag'
-      tag.textContent = '未確定'
-      thumb.appendChild(tag)
-    }
   } else {
     thumb.textContent = st === 'error' ? '取得失敗' : '未取得'
   }
@@ -163,39 +156,45 @@ function slotEl(w, slot) {
   thumb.onclick = () => toggleRedo(num, slot)
   wrap.appendChild(thumb)
 
+  // 画像の下: 語 + 状態ラベル (画像には被せない)
   const label = document.createElement('div')
   label.className = 'slot-label'
   const wspan = document.createElement('span')
   wspanText(wspan, slot, word)
-  const badge = document.createElement('span')
-  badge.className = 'badge b-' + st
   label.appendChild(wspan)
+  if (img) {
+    const stat = document.createElement('span')
+    stat.className = 'slot-stat ' + (kept ? 'is-kept' : 'is-unconf')
+    stat.textContent = kept ? '🔒確定' : '未確定'
+    label.appendChild(stat)
+  }
+  wrap.appendChild(label)
+
+  // 操作ボタン (大きめ・押しやすい独立行)
   if (!readOnly && img) {
+    const actions = document.createElement('div')
+    actions.className = 'slot-actions'
     const lock = document.createElement('button')
-    lock.className = 'icon-btn'
-    lock.textContent = kept ? '🔒' : '👍'
-    lock.title = kept
-      ? 'ロック中 (クリックで解除)'
-      : 'この画像をロック (上書き防止)'
+    lock.className = 'act-btn'
+    lock.textContent = kept ? '🔒 解除' : '👍 確定'
     lock.onclick = (e) => {
       e.stopPropagation()
       toggleKeep(num, slot)
     }
-    label.appendChild(lock)
-  }
-  if (!readOnly && !kept) {
-    const rerun = document.createElement('button')
-    rerun.className = 'icon-btn'
-    rerun.textContent = '🔄'
-    rerun.title = '別の画像で取り直す'
-    rerun.onclick = (e) => {
-      e.stopPropagation()
-      redoNow(num, slot, rerun)
+    actions.appendChild(lock)
+    if (!kept) {
+      const rerun = document.createElement('button')
+      rerun.className = 'act-btn'
+      rerun.textContent = '🔄'
+      rerun.title = '別の画像で取り直す'
+      rerun.onclick = (e) => {
+        e.stopPropagation()
+        redoNow(num, slot, rerun)
+      }
+      actions.appendChild(rerun)
     }
-    label.appendChild(rerun)
+    wrap.appendChild(actions)
   }
-  label.appendChild(badge)
-  wrap.appendChild(label)
   return wrap
 }
 
