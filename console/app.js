@@ -160,6 +160,38 @@ async function recropTop(num, slot, btn) {
   }
 }
 
+// 検索ワードを指定して取得 (未取得スロットの救済 / 任意の語で取り直し)
+async function customSearch(num, slot, btn) {
+  if (readOnly) return
+  const w = state.words.find((x) => x.num === num)
+  const def = state.candidates?.[`${num}:${slot}`]?.query || (w && w[slot]) || ''
+  const q = window.prompt('検索ワードを指定', def)
+  if (q == null) return // キャンセル
+  const oldImg = state.images?.[num]?.[slot] || null
+  btn.textContent = '⌛'
+  btn.disabled = true
+  try {
+    const res = await fetch('/api/search-custom', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ num, slot, query: q }),
+    })
+    const data = await res.json()
+    if (!data.ok || !data.image) throw new Error(data.error || '失敗')
+    if (!state.images[num]) state.images[num] = {}
+    state.images[num][slot] = data.image
+    if (oldImg && oldImg.url !== data.image.url) {
+      showChooser(num, slot, oldImg, data.image)
+    } else {
+      refreshSlot(num, slot)
+    }
+  } catch (e) {
+    btn.textContent = '⚠️'
+    btn.title = String(e.message || e)
+    btn.disabled = false
+  }
+}
+
 // 「新しい方 / 今までの方」を選ぶ UI (そのスロットだけ差し替え)
 function showChooser(num, slot, oldImg, newImg) {
   const el = document.querySelector(`.slot[data-key="${num}:${slot}"]`)
@@ -185,8 +217,7 @@ function showChooser(num, slot, oldImg, newImg) {
     o.appendChild(b)
     return o
   }
-  // 新は既に採用済み → 確定するだけ
-  box.appendChild(opt('✓ 新しい方', newImg, () => refreshSlot(num, slot)))
+  // 今までの方を上、新しい方を下に
   box.appendChild(
     opt('↩ 今までの方', oldImg, async () => {
       await fetch('/api/set-image', {
@@ -198,6 +229,8 @@ function showChooser(num, slot, oldImg, newImg) {
       refreshSlot(num, slot)
     })
   )
+  // 新は既に採用済み → 確定するだけ
+  box.appendChild(opt('✓ 新しい方', newImg, () => refreshSlot(num, slot)))
   el.replaceWith(box)
 }
 
@@ -244,37 +277,44 @@ function slotEl(w, slot) {
   }
   wrap.appendChild(label)
 
-  // 操作ボタン (大きめ・押しやすい独立行)
-  if (!readOnly && img) {
+  // 操作ボタン
+  if (!readOnly) {
     const actions = document.createElement('div')
     actions.className = 'slot-actions'
-    const lock = document.createElement('button')
-    lock.className = 'act-btn primary'
-    lock.textContent = kept ? '🔒 解除' : '👍 確定'
-    lock.onclick = (e) => {
-      e.stopPropagation()
-      toggleKeep(num, slot)
+    const mk = (cls, text, title, fn) => {
+      const b = document.createElement('button')
+      b.className = cls
+      b.textContent = text
+      if (title) b.title = title
+      b.onclick = (e) => {
+        e.stopPropagation()
+        fn(b)
+      }
+      actions.appendChild(b)
     }
-    actions.appendChild(lock)
-    if (!kept) {
-      const crop = document.createElement('button')
-      crop.className = 'act-btn'
-      crop.textContent = '✂️上'
-      crop.title = '元画像を上寄せでクロップし直す'
-      crop.onclick = (e) => {
-        e.stopPropagation()
-        recropTop(num, slot, crop)
+    if (img) {
+      mk('act-btn primary', kept ? '🔒 解除' : '👍 確定', '', () =>
+        toggleKeep(num, slot)
+      )
+      if (!kept) {
+        mk('act-btn', '✂️上', '元画像を上寄せでクロップ', (b) =>
+          recropTop(num, slot, b)
+        )
+        mk('act-btn', '🔄', '別の画像で取り直す (今のと2択)', (b) =>
+          redoNow(num, slot, b)
+        )
+        mk('act-btn', '✏️', '検索ワードを指定して取得', (b) =>
+          customSearch(num, slot, b)
+        )
       }
-      actions.appendChild(crop)
-      const rerun = document.createElement('button')
-      rerun.className = 'act-btn'
-      rerun.textContent = '🔄'
-      rerun.title = '別の画像で取り直す (今のと2択)'
-      rerun.onclick = (e) => {
-        e.stopPropagation()
-        redoNow(num, slot, rerun)
-      }
-      actions.appendChild(rerun)
+    } else {
+      // 未取得スロットでも操作できるように
+      mk('act-btn primary', '🔍 取得', '自動で画像を探す', (b) =>
+        redoNow(num, slot, b)
+      )
+      mk('act-btn', '✏️ 指定', '検索ワードを指定して取得', (b) =>
+        customSearch(num, slot, b)
+      )
     }
     wrap.appendChild(actions)
   }

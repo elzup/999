@@ -19,8 +19,9 @@ import {
   slotKey,
 } from '../src/images/store.js'
 import { downloadImage } from '../src/images/download.js'
-import { toWebpTop, hashKey } from '../src/images/process.js'
+import { toWebp, toWebpTop, hashKey } from '../src/images/process.js'
 import { uploadWebp } from '../src/images/upload.js'
+import { ddgSearchImage } from '../src/images/ddg.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
@@ -165,6 +166,32 @@ async function recropTop({ num, slot }) {
   }
 }
 
+/** 任意の検索ワードで画像を取得して差し替える (未取得スロットの救済にも) */
+async function searchCustom({ num, slot, query }) {
+  if (!query || !query.trim()) return { ok: false, error: '検索ワードが空' }
+  try {
+    const r = await ddgSearchImage(query.trim(), [], true)
+    if (!r?.imageUrl) return { ok: false, error: '見つからない' }
+    const { buffer } = await downloadImage(r.imageUrl)
+    const webp = await toWebp(buffer)
+    const { hash, key } = hashKey(webp)
+    const { url } = await uploadWebp(webp, key)
+    const manifest = loadManifest()
+    if (!manifest.images[num]) manifest.images[num] = {}
+    manifest.images[num][slot] = {
+      url,
+      hash,
+      sourcePage: r.sourcePage || '',
+      sourceImageUrl: r.imageUrl,
+      uploadedAt: new Date().toISOString(),
+    }
+    writeJson(PATHS.manifest, manifest)
+    return { ok: true, image: manifest.images[num][slot] }
+  } catch (err) {
+    return { ok: false, error: String(err.message || err).slice(0, 200) }
+  }
+}
+
 /** manifest の画像を指定のものに差し替える (2択の戻し用) */
 function setImage({ num, slot, image }) {
   const manifest = loadManifest()
@@ -209,6 +236,12 @@ const server = createServer(async (req, res) => {
     if (!body.num || !body.slot || !body.image)
       return sendJson(res, 400, { error: 'num/slot/image required' })
     return sendJson(res, 200, setImage(body))
+  }
+  if (req.method === 'POST' && url.pathname === '/api/search-custom') {
+    const body = await readBody(req)
+    if (!body.num || !body.slot)
+      return sendJson(res, 400, { error: 'num/slot required' })
+    return sendJson(res, 200, await searchCustom(body))
   }
 
   // static
