@@ -69,6 +69,19 @@ function getC(year: string): string {
   return year.length >= 4 ? year.slice(0, -3) : ''
 }
 
+/** 現在位置から次の未回答問題の index を返す。全て回答済みなら -1 */
+function findNextIdx(
+  items: YearItem[],
+  current: number,
+  answeredNos: Set<number>
+): number {
+  for (let i = 1; i <= items.length; i++) {
+    const idx = (current + i) % items.length
+    if (!answeredNos.has(items[idx].no)) return idx
+  }
+  return -1
+}
+
 function YearCheckRow({
   item,
   result,
@@ -102,7 +115,7 @@ function YearCheckRow({
               color: result.correct ? 'var(--accent)' : '#f87171',
             }}
           >
-            {result.correct ? xyz : result.input}
+            {result.correct ? xyz : result.input || 'パス'}
           </span>
           {!result.correct ? (
             <span style={{ fontSize: '12px', color: 'var(--text2)' }}>
@@ -255,7 +268,7 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
         return {
           label: item ? `${item.year} ${item.event}` : `#${r.no}`,
           correct: r.correct,
-          userAnswer: r.correct ? undefined : r.input,
+          userAnswer: r.correct ? undefined : r.input || 'パス',
           rightAnswer: r.xyz,
         }
       })
@@ -265,6 +278,26 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
       setMode('view')
     },
     [startTime, results, records, checkItems]
+  )
+
+  // 結果を確定し、次の未回答問題へ進む（全問終了なら集計へ）
+  const commitAndAdvance = useCallback(
+    (newResults: CheckResult[]) => {
+      setResults(newResults)
+      setInputDigits([])
+      if (newResults.length >= checkItems.length) {
+        endCheck(newResults)
+        return
+      }
+      const answeredNos = new Set(newResults.map((r) => r.no))
+      const nextIdx = findNextIdx(checkItems, checkIdx, answeredNos)
+      if (nextIdx === -1) {
+        endCheck(newResults)
+        return
+      }
+      setCheckIdx(nextIdx)
+    },
+    [checkItems, checkIdx, endCheck]
   )
 
   const tapDigit = useCallback(
@@ -279,41 +312,26 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
 
       if (newInput.length >= 3) {
         const inputStr = newInput.join('')
-        const isCorrect = inputStr === xyz
-        const newResults = [
+        commitAndAdvance([
           ...results,
-          {
-            no: item.no,
-            input: inputStr,
-            xyz,
-            correct: isCorrect,
-          },
-        ]
-        setResults(newResults)
-        setInputDigits([])
-        if (newResults.length >= checkItems.length) {
-          endCheck(newResults)
-          return
-        }
-        // find next unanswered item after current
-        const answeredNos = new Set(newResults.map((r) => r.no))
-        let nextIdx = -1
-        for (let i = 1; i <= checkItems.length; i++) {
-          const idx = (checkIdx + i) % checkItems.length
-          if (!answeredNos.has(checkItems[idx].no)) {
-            nextIdx = idx
-            break
-          }
-        }
-        if (nextIdx === -1) {
-          endCheck(newResults)
-          return
-        }
-        setCheckIdx(nextIdx)
+          { no: item.no, input: inputStr, xyz, correct: inputStr === xyz },
+        ])
       }
     },
-    [mode, checkItems, checkIdx, inputDigits, results, endCheck]
+    [mode, checkItems, checkIdx, inputDigits, results, commitAndAdvance]
   )
+
+  // この問題を諦める（パス）。不正解として記録し次へ進む
+  const skipQuestion = useCallback(() => {
+    if (mode !== 'check') return
+    const item = checkItems[checkIdx]
+    if (!item) return
+    vibrate()
+    commitAndAdvance([
+      ...results,
+      { no: item.no, input: '', xyz: getXYZ(item.year), correct: false },
+    ])
+  }, [mode, checkItems, checkIdx, results, commitAndAdvance])
 
   const tapBackspace = useCallback(() => {
     if (mode !== 'check') return
@@ -584,7 +602,7 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
           <div
             style={{
               display: 'flex',
-              justifyContent: 'flex-end',
+              justifyContent: 'space-between',
               marginBottom: '8px',
             }}
           >
@@ -599,6 +617,13 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
               onClick={prevQuestion}
             >
               ← 1問戻る
+            </button>
+            <button
+              class="filter-btn"
+              style={{ fontSize: '12px', padding: '4px 12px' }}
+              onClick={skipQuestion}
+            >
+              スキップ →
             </button>
           </div>
           <div class="np-numpad">
