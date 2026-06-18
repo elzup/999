@@ -19,6 +19,7 @@ const baked = {
   images: state.images,
   candidates: {},
   redo: {},
+  keep: state.keep,
 }
 
 writeFileSync(join(outDir, 'state.json'), JSON.stringify(baked) + '\n')
