@@ -93,7 +93,15 @@ function secondItem(col, w) {
     .map((s) => s.trim())
     .filter(Boolean)
   const rest = items.filter((it) => it !== w)
-  return rest.length ? rest[0] : ''
+  if (!rest.length) return ''
+  const pick = rest[0]
+  // base 省略記法: "#tag" だけの項目は先頭項目の base (同一人物) を継承する
+  // 例: "ニーナ#ｺｰﾄﾞｷﾞｱｽ,#res" の 2 人目 -> "ニーナ#res"
+  if (pick.startsWith('#')) {
+    const base = items[0].split('#')[0].trim()
+    if (base) return base + pick
+  }
+  return pick
 }
 
 function toTsv(entries) {

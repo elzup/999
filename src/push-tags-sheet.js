@@ -62,6 +62,8 @@ function parseTsv(tsv) {
 
 function parseTaggedItems(raw) {
   if (!raw) return []
+  // base 省略記法: "ニーナ#a,#b" の "#b" は直前項目の base を継承する
+  let lastBase = ''
   return raw
     .split(',')
     .map((part) => part.trim())
@@ -69,7 +71,9 @@ function parseTaggedItems(raw) {
     .map((label) => {
       const tags = [...label.matchAll(TAG_RE)].map((match) => match[1])
       const uniqueTags = [...new Set(tags)]
-      const base = label.replace(TAG_RE, '').trim()
+      const ownBase = label.replace(TAG_RE, '').trim()
+      if (ownBase) lastBase = ownBase
+      const base = ownBase || lastBase
       return { label, base, tags: uniqueTags }
     })
 }

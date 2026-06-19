@@ -23,6 +23,15 @@ describe('parseTaggedItems', () => {
       { label: 'nameB#tag3', base: 'nameB', tags: ['tag3'] },
     ])
   })
+
+  // base 省略記法: "ニーナ#a,#b,#c" の 2 項目目以降は直前の base を継承する
+  test('inherits base for bare #tag continuation items', () => {
+    expect(parseTaggedItems('ニーナ#ｺｰﾄﾞｷﾞｱｽ,#res,#meme')).toEqual([
+      { label: 'ニーナ#ｺｰﾄﾞｷﾞｱｽ', base: 'ニーナ', tags: ['ｺｰﾄﾞｷﾞｱｽ'] },
+      { label: '#res', base: 'ニーナ', tags: ['res'] },
+      { label: '#meme', base: 'ニーナ', tags: ['meme'] },
+    ])
+  })
 })
 
 describe('collectNumberTags', () => {
