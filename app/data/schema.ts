@@ -1,5 +1,16 @@
 import { z } from 'zod'
 
+const GoroSlotSchema = z.object({ k: z.string(), d: z.string() }).nullable()
+
+export const GoroAllocSchema = z.object({
+  t1: GoroSlotSchema,
+  t2: GoroSlotSchema,
+  h1: GoroSlotSchema,
+  h2: GoroSlotSchema,
+})
+
+export type GoroAlloc = z.infer<typeof GoroAllocSchema>
+
 export const NumberEntrySchema = z.object({
   num: z.string().regex(/^\d{3}$/),
   w1: z.string().default(''),
@@ -21,6 +32,7 @@ export const NumberEntrySchema = z.object({
   w2_2: z.string().optional(),
   w1_2Img: z.string().optional(),
   w2_2Img: z.string().optional(),
+  ga: GoroAllocSchema.optional(),
 })
 
 export type NumberEntry = z.infer<typeof NumberEntrySchema>

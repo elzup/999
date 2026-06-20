@@ -5,7 +5,7 @@ import BookmarkTab from './BookmarkTab'
 import StorageEstimatePanel from './StorageEstimatePanel'
 import TagPanel from './TagPanel'
 import RulesPanel from './RulesPanel'
-import RecallTreePanel from './RecallTreePanel'
+import RecallTab from './RecallTab'
 
 type Props = {
   numbers: NumberEntry[]
@@ -93,7 +93,7 @@ function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
         ))}
       {sub === 'recall' &&
         (rules ? (
-          <RecallTreePanel numbers={numbers} rules={rules} />
+          <RecallTab numbers={numbers} rules={rules} />
         ) : (
           <div class="content" style={{ padding: 16, color: 'var(--text2)' }}>
             ルールデータが見つかりません

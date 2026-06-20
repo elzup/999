@@ -20,6 +20,7 @@
     "sync:card": "node src/sync-card-sheet.js",
     "score": "node src/score-words.js",
     "stats:goro": "node src/analyze-goro-stats.js",
+    "graph:alloc": "node src/generate-allocation-graph.js",
     "check:kana": "node src/check-kana.js",
     "check:digits": "node src/check-digits.js",
     "check:errors": "node src/check-errors.js",

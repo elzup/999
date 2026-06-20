@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
 import { WEIGHTS } from './scorer.js'
+import { classify } from './goro-extract.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 const publicDir = join(baseDir, '..', 'public')
@@ -54,6 +55,21 @@ const numbers = vizData.data
     return result.data
   })
   .filter(Boolean)
+
+// 各番号のゴロ分類を事前計算（割り当てグラフ用）。
+// t=下2桁[1,2] / h=上2桁[0,1]、1=w1k / 2=w2k。{ k: key, d: kind } か null。
+const cls = (kana, P) => {
+  const g = classify(kana, P)
+  return g ? { k: g.key, d: g.kind } : null
+}
+for (const n of numbers) {
+  n.ga = {
+    t1: cls(n.w1k, [1, 2]),
+    t2: cls(n.w2k, [1, 2]),
+    h1: cls(n.w1k, [0, 1]),
+    h2: cls(n.w2k, [0, 1]),
+  }
+}
 
 // Cards data
 const MARK_SUIT = {
