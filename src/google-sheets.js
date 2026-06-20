@@ -252,6 +252,24 @@ export async function getSheetValuesByTitle({ spreadsheetId, title, range }) {
   return data?.values || []
 }
 
+/** 指定範囲のみを更新する（他のセルは保持）。values は majorDimension に従う */
+export async function updateSheetValuesRange({
+  spreadsheetId,
+  range,
+  values,
+  majorDimension = 'ROWS',
+}) {
+  return sheetsApi(
+    `/${spreadsheetId}/values/${encodeURIComponent(
+      range
+    )}?valueInputOption=RAW`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ majorDimension, values }),
+    }
+  )
+}
+
 export async function overwriteSheetValues({ spreadsheetId, gid, values }) {
   const title = await getSheetTitleByGid(spreadsheetId, gid)
   return overwriteSheetValuesByTitle({ spreadsheetId, title, values })
