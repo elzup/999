@@ -50,30 +50,78 @@ export function tokenize(w1k) {
 
 /**
  * 位置集合 P（固定2桁）を覆うゴロを抽出し、種別も返す。
+ * スロットに触れる全トークンを読みとして連結し、各トークンが枠外へはみ出す側に
+ * ブラケットを付けて融合を表す: 手前(min より左)へはみ出す = 'K]' / 後ろ(max より右)
+ * へはみ出す = '[K' / 両側 = と][ま のように内側で隣接。
  * kind: 'double'(2文字1トークン) | 'single'(1文字x2) | 'partial'(先頭0省略) | 'fused'
  */
 export function extractGoro(toks, P) {
   const pset = new Set(P)
-  const collected = []
-  const covered = new Set()
+  const minP = Math.min(...P)
+  const maxP = Math.max(...P)
+  const items = [] // { text, pos, span }
+  const filled = new Set()
+  let fused = false
 
-  for (const t of toks) {
-    const inN = []
-    for (let p = t.start; p <= t.end && p <= 2; p++) {
-      covered.add(p)
-      inN.push(p)
+  const spanIn = (start, end) => {
+    let span = 0
+    for (let p = start; p <= end; p++) {
+      if (pset.has(p)) {
+        filled.add(p)
+        span++
+      }
     }
-    const inP = inN.filter((p) => pset.has(p))
-    const outP = inN.filter((p) => !pset.has(p))
-    if (inP.length === 0) continue
-    // 固定2桁の片側が枠外の桁と1トークンに融合 → そのカナで分類
-    if (outP.length > 0) return { key: `融合:${t.kana}`, kind: 'fused' }
-    collected.push(t.kana)
+    return span
   }
 
-  const omitted = P.filter((p) => !covered.has(p)).length
-  const key = (omitted ? '_'.repeat(omitted) : '') + collected.join('')
-  const kind = omitted ? 'partial' : collected.length === 1 ? 'double' : 'single'
+  for (const t of toks) {
+    let touches = false
+    for (let p = t.start; p <= t.end; p++) {
+      if (pset.has(p)) {
+        touches = true
+        break
+      }
+    }
+    if (!touches) continue
+
+    const chars = [...t.kana]
+    const valLen = t.end - t.start + 1
+    const fullyIn = t.start >= minP && t.end <= maxP
+
+    if (fullyIn) {
+      // 枠内に収まるユニット（ま=00, ふん=20 等）はそのまま
+      items.push({ text: t.kana, pos: t.start, span: spanIn(t.start, t.end) })
+    } else if (chars.length === valLen) {
+      // カナ数=桁数で分割可能 → 枠内の文字だけ採用（枠外は捨てる、ブラケット無し）
+      chars.forEach((ch, i) => {
+        const pos = t.start + i
+        if (pset.has(pos)) {
+          filled.add(pos)
+          items.push({ text: ch, pos, span: 1 })
+        }
+      })
+    } else {
+      // 1カナ=複数桁で分割不能。枠をまたぐ向きにブラケットを付けて丸ごと表示
+      let text = t.kana
+      if (t.start < minP) text = `${text}]` // 手前(左)へはみ出す
+      if (t.end > maxP) text = `[${text}` // 後ろ(右)へはみ出す
+      items.push({ text, pos: t.start, span: spanIn(t.start, t.end) })
+      fused = true
+    }
+  }
+
+  const omitted = P.filter((p) => !filled.has(p)).length
+  items.sort((a, b) => a.pos - b.pos)
+  const key =
+    (omitted ? '_'.repeat(omitted) : '') + items.map((i) => i.text).join('')
+
+  const kind = fused
+    ? 'fused'
+    : omitted
+    ? 'partial'
+    : items.length === 1 && items[0].span === 2
+    ? 'double'
+    : 'single'
   return { key, kind }
 }
 

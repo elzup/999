@@ -7,6 +7,8 @@ import { buildRecallTree } from '../lib/recallTree'
 type Props = {
   numbers: NumberEntry[]
   rules: RulesData
+  initialNum?: string
+  onBack?: () => void
 }
 
 function KanaChip({ part }: { part: ReadingPart }) {
@@ -43,8 +45,8 @@ function ComboRow({ combo }: { combo: Combo }) {
   )
 }
 
-function RecallTreePanel({ numbers, rules }: Props) {
-  const [input, setInput] = useState('200')
+function RecallTreePanel({ numbers, rules, initialNum, onBack }: Props) {
+  const [input, setInput] = useState(initialNum ?? '200')
   const tree = useMemo(
     () => buildRecallTree(input, rules, numbers),
     [input, rules, numbers]
@@ -53,6 +55,11 @@ function RecallTreePanel({ numbers, rules }: Props) {
   return (
     <div class="content recall-panel">
       <div class="recall-input-row">
+        {onBack && (
+          <button class="recall-back" onClick={onBack}>
+            ← 一覧
+          </button>
+        )}
         <label class="recall-input-label">番号</label>
         <input
           class="recall-input"

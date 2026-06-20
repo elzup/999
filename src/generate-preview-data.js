@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
 import { WEIGHTS } from './scorer.js'
 import { classify } from './goro-extract.js'
+import { extractName, isKanaOnly, toHiragana } from './words.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 const publicDir = join(baseDir, '..', 'public')
@@ -55,21 +56,6 @@ const numbers = vizData.data
     return result.data
   })
   .filter(Boolean)
-
-// 各番号のゴロ分類を事前計算（割り当てグラフ用）。
-// t=下2桁[1,2] / h=上2桁[0,1]、1=w1k / 2=w2k。{ k: key, d: kind } か null。
-const cls = (kana, P) => {
-  const g = classify(kana, P)
-  return g ? { k: g.key, d: g.kind } : null
-}
-for (const n of numbers) {
-  n.ga = {
-    t1: cls(n.w1k, [1, 2]),
-    t2: cls(n.w2k, [1, 2]),
-    h1: cls(n.w1k, [0, 1]),
-    h2: cls(n.w2k, [0, 1]),
-  }
-}
 
 // Cards data
 const MARK_SUIT = {
@@ -203,6 +189,35 @@ if (existsSync(imagesPath)) {
     if (slots.w2?.url) n.w2Img = slots.w2.url
     if (slots.w1_2?.url) n.w1_2Img = slots.w1_2.url
     if (slots.w2_2?.url) n.w2_2Img = slots.w2_2.url
+  }
+}
+
+// 各番号のゴロ分類を事前計算（割り当てグラフ用）。
+// t=下2桁[1,2] / h=上2桁[0,1]、1=w1k 2=w2k 3=w1_2 4=w2_2。{ k, d } か null。
+const cls = (kana, P) => {
+  const g = classify(kana, P)
+  return g ? { k: g.key, d: g.kind } : null
+}
+// 予備語はかな化できる語のみ読みにする（漢字は除外）
+const kanaOf = (word) => {
+  const name = extractName(word || '')
+  return name && isKanaOnly(name) ? toHiragana(name) : ''
+}
+for (const n of numbers) {
+  const s = sub[n.num] || {}
+  if (s.w1_2) n.w1_2 = s.w1_2
+  if (s.w2_2) n.w2_2 = s.w2_2
+  const w12k = kanaOf(s.w1_2)
+  const w22k = kanaOf(s.w2_2)
+  n.ga = {
+    t1: cls(n.w1k, [1, 2]),
+    t2: cls(n.w2k, [1, 2]),
+    t3: cls(w12k, [1, 2]),
+    t4: cls(w22k, [1, 2]),
+    h1: cls(n.w1k, [0, 1]),
+    h2: cls(n.w2k, [0, 1]),
+    h3: cls(w12k, [0, 1]),
+    h4: cls(w22k, [0, 1]),
   }
 }
 

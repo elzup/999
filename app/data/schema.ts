@@ -5,8 +5,12 @@ const GoroSlotSchema = z.object({ k: z.string(), d: z.string() }).nullable()
 export const GoroAllocSchema = z.object({
   t1: GoroSlotSchema,
   t2: GoroSlotSchema,
+  t3: GoroSlotSchema.optional(),
+  t4: GoroSlotSchema.optional(),
   h1: GoroSlotSchema,
   h2: GoroSlotSchema,
+  h3: GoroSlotSchema.optional(),
+  h4: GoroSlotSchema.optional(),
 })
 
 export type GoroAlloc = z.infer<typeof GoroAllocSchema>
