@@ -31,6 +31,7 @@ nr sync        # Google Sheet からデータ同期
 nr push        # src/data/words.tsv を Google Sheet に書き戻す
 nr push:tags   # BCD列の #tag 一覧を tags シートへ書き出す
 nr score       # 単語スコアリング
+nr stats:goro  # ゴロ割り当て分布統計 (docs/goro-stats.md) を生成
 nr check:kana  # かなカバレッジチェック
 nr check:digits # 桁数チェック
 nr check:errors # エラーチェック
@@ -57,4 +58,5 @@ nr test        # テスト実行
 
 ## Docs
 
-- [かな数字対応表](docs/kana-number-table.md) - 対応表・桁数判定ルール・スコア計算
+- [かな数字対応表](docs/kana-number-table.md) - 対応表・桁数判定ルール・想起ツリー・スコア計算
+- [ゴロ割り当て分布統計](docs/goro-stats.md) - `_YZ` / `XY_` / `X_Z` の2桁ゴロ分布（`nr stats:goro` で再生成）
