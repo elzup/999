@@ -5,6 +5,7 @@ import BookmarkTab from './BookmarkTab'
 import StorageEstimatePanel from './StorageEstimatePanel'
 import TagPanel from './TagPanel'
 import RulesPanel from './RulesPanel'
+import RecallTreePanel from './RecallTreePanel'
 
 type Props = {
   numbers: NumberEntry[]
@@ -14,7 +15,7 @@ type Props = {
   onToggleBm: (key: string) => void
 }
 
-type SubTab = 'bm' | 'tags' | 'rules' | 'stats' | 'storage'
+type SubTab = 'bm' | 'tags' | 'rules' | 'recall' | 'stats' | 'storage'
 
 function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('bm')
@@ -55,6 +56,12 @@ function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
           ルール
         </button>
         <button
+          class={'sub-tab-btn' + (sub === 'recall' ? ' active' : '')}
+          onClick={() => handleSub('recall')}
+        >
+          想起
+        </button>
+        <button
           class={'sub-tab-btn' + (sub === 'stats' ? ' active' : '')}
           onClick={() => handleSub('stats')}
         >
@@ -79,6 +86,14 @@ function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
       {sub === 'rules' &&
         (rules ? (
           <RulesPanel rules={rules} />
+        ) : (
+          <div class="content" style={{ padding: 16, color: 'var(--text2)' }}>
+            ルールデータが見つかりません
+          </div>
+        ))}
+      {sub === 'recall' &&
+        (rules ? (
+          <RecallTreePanel numbers={numbers} rules={rules} />
         ) : (
           <div class="content" style={{ padding: 16, color: 'var(--text2)' }}>
             ルールデータが見つかりません

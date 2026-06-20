@@ -2366,3 +2366,181 @@ body {
   color: var(--text);
   border-color: var(--accent);
 }
+
+/* --- Recall tree (想起ツリー) --- */
+.recall-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  overflow-y: auto;
+}
+.recall-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.recall-input-label {
+  font-size: 12px;
+  color: var(--text2);
+}
+.recall-input {
+  width: 96px;
+  font-size: 20px;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 4px;
+  text-align: center;
+  padding: 6px 8px;
+  background: var(--surface, #1a1d27);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.recall-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.recall-empty {
+  color: var(--text2);
+  font-size: 13px;
+  padding: 12px 0;
+}
+.recall-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.recall-num {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  color: var(--text);
+  letter-spacing: 2px;
+}
+.recall-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.recall-assigned-k {
+  margin-left: 6px;
+  color: var(--text2);
+  font-family: ui-monospace, monospace;
+}
+.recall-section-title {
+  font-size: 13px;
+  color: var(--accent);
+  margin-top: 4px;
+}
+.recall-dist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.recall-dist-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 12px;
+}
+.recall-dist-kana {
+  font-family: ui-monospace, monospace;
+  color: var(--text);
+}
+.recall-dist-count {
+  font-weight: 700;
+  color: var(--accent);
+}
+.recall-dist-item.other .recall-dist-count,
+.recall-dist-item.none .recall-dist-count {
+  color: var(--text2);
+}
+.recall-dist-item.other,
+.recall-dist-item.none {
+  color: var(--text2);
+}
+.recall-combo-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.recall-combo {
+  display: grid;
+  grid-template-columns: 80px 64px 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-top: 1px solid var(--border);
+  min-height: 30px;
+}
+.recall-combo:first-child {
+  border-top: none;
+}
+.recall-combo.head {
+  font-size: 11px;
+  color: var(--text2);
+  background: var(--surface2, #1a1d27);
+}
+.recall-combo.has-ex {
+  background: rgba(74, 222, 128, 0.05);
+}
+.recall-combo-kana {
+  display: flex;
+  gap: 2px;
+  font-family: ui-monospace, monospace;
+}
+.recall-chip {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 15px;
+}
+.recall-chip-double {
+  background: rgba(96, 165, 250, 0.16);
+  color: #60a5fa;
+}
+.recall-combo-flags {
+  display: flex;
+  gap: 3px;
+}
+.recall-flag {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.recall-flag.dbl {
+  background: rgba(96, 165, 250, 0.16);
+  color: #60a5fa;
+}
+.recall-flag.mix {
+  background: rgba(248, 113, 113, 0.16);
+  color: #f87171;
+}
+.recall-combo-ex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 12px;
+}
+.recall-ex {
+  color: var(--text);
+}
+.recall-ex-num {
+  margin-left: 3px;
+  font-size: 10px;
+  color: var(--text2);
+  font-family: ui-monospace, monospace;
+}
+.recall-ex-none {
+  color: var(--border);
+}
