@@ -48,6 +48,22 @@ export function saveTab(tab: TabId) {
   localStorage.setItem('tab999', tab)
 }
 
+// Sub-tab (親タブごとの選択状態を記憶する)
+export function loadSubTab<T extends string>(
+  key: string,
+  valid: readonly T[],
+  fallback: T
+): T {
+  const saved = localStorage.getItem(key)
+  return (valid as readonly string[]).includes(saved ?? '')
+    ? (saved as T)
+    : fallback
+}
+
+export function saveSubTab(key: string, value: string) {
+  localStorage.setItem(key, value)
+}
+
 // Records
 const RecordsSchema = z.array(RecordSchema)
 

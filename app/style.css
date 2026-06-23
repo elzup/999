@@ -2887,3 +2887,130 @@ body {
   border-radius: 5px;
   font-size: 12px;
 }
+
+/* 年コード 2次元マップ */
+.ymap-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+.ymap-grid {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+.ymap-cell {
+  position: relative;
+  border: 2.5px solid var(--ymap-c);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ymap-c) 22%, var(--surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ymap-c) 40%, transparent);
+  padding: 1px;
+  min-width: 0;
+  overflow: hidden;
+}
+.ymap-cell.empty {
+  background: color-mix(in srgb, var(--ymap-c) 8%, var(--surface));
+  border-style: dashed;
+  box-shadow: none;
+}
+.ymap-cell-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: bold;
+  color: #0f1117;
+  background: var(--ymap-c);
+  font-family: ui-monospace, monospace;
+  padding: 0 4px;
+  border-radius: 0 0 5px 0;
+  pointer-events: none;
+}
+.ymap-tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--ymap-w), 1fr);
+  gap: 1px;
+  align-content: start;
+}
+.ymap-tile {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--surface2, #22262f);
+  overflow: hidden;
+  cursor: pointer;
+}
+.ymap-tile.sel {
+  outline: 2px solid var(--accent, #4ade80);
+  outline-offset: -1px;
+}
+.ymap-tile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ymap-tile-noimg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--surface2, #22262f);
+}
+.ymap-tile-num {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  font-size: 9px;
+  line-height: 1;
+  font-family: ui-monospace, monospace;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+  padding: 1px 2px;
+  border-top-left-radius: 4px;
+}
+.ymap-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.ymap-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 4px;
+}
+.ymap-pick-label {
+  font-size: 11px;
+  color: var(--text2);
+}
+.ymap-pick-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface, #1a1d27);
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.ymap-pick-btn img {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.ymap-pick-btn.active {
+  border-color: var(--accent, #4ade80);
+  color: var(--text, #e5e7eb);
+}

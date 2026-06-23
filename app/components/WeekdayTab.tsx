@@ -3,6 +3,8 @@ import { useCallback, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import D3Tab from './D3Tab'
 import WeekdayCalcTab from './WeekdayCalcTab'
+import YearMapTab from './YearMapTab'
+import { loadSubTab, saveSubTab } from '../data/storage'
 
 type Props = {
   numbers: NumberEntry[]
@@ -10,12 +12,17 @@ type Props = {
   onToggleBm: (key: string) => void
 }
 
-type SubTab = 'code' | 'calc'
+const SUB_TABS = ['code', 'map', 'calc'] as const
+type SubTab = (typeof SUB_TABS)[number]
+const SUB_TAB_KEY = 'subtab.weekday'
 
 function WeekdayTab({ numbers, bookmarks, onToggleBm }: Props) {
-  const [sub, setSub] = useState<SubTab>('code')
+  const [sub, setSub] = useState<SubTab>(() =>
+    loadSubTab(SUB_TAB_KEY, SUB_TABS, 'code')
+  )
 
   const handleSub = useCallback((next: SubTab) => {
+    saveSubTab(SUB_TAB_KEY, next)
     setSub(next)
   }, [])
 
@@ -39,21 +46,29 @@ function WeekdayTab({ numbers, bookmarks, onToggleBm }: Props) {
           年コード
         </button>
         <button
+          class={'sub-tab-btn' + (sub === 'map' ? ' active' : '')}
+          onClick={() => handleSub('map')}
+        >
+          年マップ
+        </button>
+        <button
           class={'sub-tab-btn' + (sub === 'calc' ? ' active' : '')}
           onClick={() => handleSub('calc')}
         >
           曜日計算
         </button>
       </div>
-      {sub === 'code' ? (
-        <D3Tab
+      {sub === 'code' && (
+        <D3Tab numbers={numbers} bookmarks={bookmarks} onToggleBm={onToggleBm} />
+      )}
+      {sub === 'map' && (
+        <YearMapTab
           numbers={numbers}
           bookmarks={bookmarks}
           onToggleBm={onToggleBm}
         />
-      ) : (
-        <WeekdayCalcTab />
       )}
+      {sub === 'calc' && <WeekdayCalcTab />}
     </div>
   )
 }
