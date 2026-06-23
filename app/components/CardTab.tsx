@@ -18,6 +18,7 @@ import ReviewPanel from './ReviewPanel'
 import TestNavBar from './TestNavBar'
 import type { ReviewItem } from './ReviewPanel'
 import { vibrate } from '../lib/haptics'
+import TestFeatureList from './TestFeatureList'
 
 type Props = {
   cards: CardEntry[]
@@ -631,28 +632,23 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
                 記録
               </button>
             ) : null}
-            <button
-              class="filter-btn"
-              style={{
-                fontSize: '12px',
-                minWidth: '60px',
-                padding: '4px 10px',
-              }}
-              onClick={() => startTrain()}
-            >
-              連想テスト
-            </button>
-            <button
-              class="filter-btn"
-              style={{
-                fontSize: '12px',
-                minWidth: '60px',
-                padding: '4px 10px',
-              }}
-              onClick={() => startCheck()}
-            >
-              選択テスト
-            </button>
+            <TestFeatureList
+              compact
+              features={[
+                {
+                  id: 'card-train',
+                  title: '連想テスト',
+                  inputMethod: 'advance',
+                  onStart: startTrain,
+                },
+                {
+                  id: 'card-choice',
+                  title: '選択テスト',
+                  inputMethod: 'choice',
+                  onStart: startCheck,
+                },
+              ]}
+            />
           </div>
         </div>
       </div>

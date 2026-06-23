@@ -627,6 +627,83 @@ body {
 .test-nav-btn:disabled {
   opacity: 0.4;
 }
+.test-feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: stretch;
+}
+.test-feature-item {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.test-feature-start {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: var(--accent2);
+  color: var(--accent);
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.test-feature-title {
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.test-feature-method {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 5px;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--text2);
+  background: var(--surface);
+  white-space: nowrap;
+}
+.test-feature-method.number {
+  color: #60a5fa;
+}
+.test-feature-method.choice {
+  color: #4ade80;
+}
+.test-feature-method.advance {
+  color: #fbbf24;
+}
+.test-feature-records {
+  border: none;
+  border-left: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  padding: 5px 7px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.test-feature-start:active,
+.test-feature-records:active {
+  filter: brightness(1.2);
+}
+.test-feature-list.compact .test-feature-start {
+  padding: 4px 8px;
+}
+.test-feature-list.compact .test-feature-title {
+  font-size: 12px;
+}
+.test-feature-list.compact .test-feature-method {
+  font-size: 9px;
+}
+@media (max-width: 640px) {
+  .test-feature-start {
+    padding: 4px 7px;
+  }
+  .test-feature-method {
+    display: none;
+  }
+}
 /* Shared numpad (pi/year test) */
 .np-numpad {
   display: grid;

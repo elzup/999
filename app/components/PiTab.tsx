@@ -12,6 +12,7 @@ import Numpad from './Numpad'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
 import type { ReviewItem } from './ReviewPanel'
+import TestFeatureList from './TestFeatureList'
 
 type Props = {
   numbers: NumberEntry[]
@@ -822,43 +823,35 @@ function PiHeader({
           }}
         >
           {mode === 'view' ? (
-            <>
-              {[
+            <TestFeatureList
+              compact
+              features={[
                 {
-                  label: 'テスト',
+                  id: 'pi-check',
+                  title: 'テスト',
+                  inputMethod: 'number',
                   onStart: onStartCheck,
-                  hasRec: hasRecords,
-                  onRec: onShowRecords,
+                  hasRecords,
+                  onShowRecords,
                 },
                 {
-                  label: '4択',
+                  id: 'pi-choice',
+                  title: '4択',
+                  inputMethod: 'choice',
                   onStart: () => onStartChoice('full'),
-                  hasRec: hasChoiceRecords,
-                  onRec: onShowChoiceRecords,
+                  hasRecords: hasChoiceRecords,
+                  onShowRecords: onShowChoiceRecords,
                 },
                 {
-                  label: '虫食い',
+                  id: 'pi-masked',
+                  title: '虫食い',
+                  inputMethod: 'choice',
                   onStart: () => onStartChoice('masked'),
-                  hasRec: hasMaskedRecords,
-                  onRec: onShowMaskedRecords,
+                  hasRecords: hasMaskedRecords,
+                  onShowRecords: onShowMaskedRecords,
                 },
-              ].map((m) => (
-                <div key={m.label} class="pi-mode-group">
-                  <button class="pi-mode-start" onClick={m.onStart}>
-                    {m.label}
-                  </button>
-                  {m.hasRec ? (
-                    <button
-                      class="pi-mode-rec"
-                      title={`${m.label}の記録`}
-                      onClick={m.onRec}
-                    >
-                      記録
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-            </>
+              ]}
+            />
           ) : mode === 'check' ? (
             <>
               <span
