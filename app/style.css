@@ -605,6 +605,28 @@ body {
   background: var(--accent2);
   border-color: var(--accent);
 }
+/* Shared test footer (1問戻る / スキップ + 入力UI) */
+.test-footer {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.test-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.test-nav-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+}
+.test-nav-btn:disabled {
+  opacity: 0.4;
+}
 /* Shared numpad (pi/year test) */
 .np-numpad {
   display: grid;
@@ -1008,6 +1030,17 @@ body {
 .d3-check-z {
   font-size: 12px;
   font-weight: bold;
+}
+/* 不正解時に併記する正解の数字 */
+.d3-check-ans {
+  font-size: 9px;
+  margin-left: 2px;
+  vertical-align: super;
+}
+.d3-check-ans::before {
+  content: '→';
+  color: var(--text2);
+  margin-right: 1px;
 }
 /* D3 numpad (0-6 only) */
 .d3-numpad {

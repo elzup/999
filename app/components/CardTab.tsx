@@ -15,7 +15,9 @@ import { formatCardId, pickCardPrompt } from '../data/cards'
 import CardDetailPanel from './CardDetailPanel'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
+import TestNavBar from './TestNavBar'
 import type { ReviewItem } from './ReviewPanel'
+import { vibrate } from '../lib/haptics'
 
 type Props = {
   cards: CardEntry[]
@@ -311,6 +313,15 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
     [currentItem, finished, results, checkIdx, allItems.length, endCheck]
   )
 
+  // 直前の回答を取り消して1問前に戻る（選択ミスの救済）
+  const prevQuestion = useCallback(() => {
+    if (results.length === 0) return
+    vibrate()
+    questionStartRef.current = Date.now()
+    setCheckIdx(results.length - 1)
+    setResults(results.slice(0, -1))
+  }, [results])
+
   const deleteRecord = useCallback(
     (idx: number) => {
       const newRecords = records.filter((_, i) => i !== idx)
@@ -554,6 +565,14 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
               </>
             ) : null}
           </div>
+        </div>
+
+        {/* Footer: 1問戻る */}
+        <div class="test-footer">
+          <TestNavBar
+            onPrev={prevQuestion}
+            prevDisabled={results.length === 0}
+          />
         </div>
       </div>
     )

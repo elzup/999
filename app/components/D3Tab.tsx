@@ -8,6 +8,7 @@ import { vibrate } from '../lib/haptics'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
+import TestNavBar from './TestNavBar'
 import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
@@ -55,33 +56,24 @@ function shuffle<T>(arr: readonly T[]): T[] {
 
 function D3Numpad({ onTapDigit }: { onTapDigit: (digit: number) => void }) {
   return (
-    <div
-      style={{
-        flexShrink: 0,
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: '8px 12px',
-      }}
-    >
-      <div class="d3-numpad">
-        {[1, 2, 3, 4, 5, 6].map((digit) => (
-          <div
-            key={digit}
-            class="np-numkey"
-            style={{ color: DIGIT_COLORS[digit] }}
-            onClick={() => onTapDigit(digit)}
-          >
-            {digit}
-          </div>
-        ))}
+    <div class="d3-numpad">
+      {[1, 2, 3, 4, 5, 6].map((digit) => (
         <div
-          key={0}
+          key={digit}
           class="np-numkey"
-          style={{ color: DIGIT_COLORS[0], gridColumn: '1' }}
-          onClick={() => onTapDigit(0)}
+          style={{ color: DIGIT_COLORS[digit] }}
+          onClick={() => onTapDigit(digit)}
         >
-          0
+          {digit}
         </div>
+      ))}
+      <div
+        key={0}
+        class="np-numkey"
+        style={{ color: DIGIT_COLORS[0], gridColumn: '1' }}
+        onClick={() => onTapDigit(0)}
+      >
+        0
       </div>
     </div>
   )
@@ -126,14 +118,21 @@ function D3CheckGrid({
           <div key={xyz} class={cls}>
             <span class="d3-check-xy">{xy}</span>
             {answered ? (
-              <span
-                class="d3-check-z"
-                style={{
-                  color: answered.correct ? DIGIT_COLORS[Number(z)] : '#f87171',
-                }}
-              >
-                {answered.correct ? z : answered.digit}
-              </span>
+              answered.correct ? (
+                <span class="d3-check-z" style={{ color: DIGIT_COLORS[Number(z)] }}>
+                  {z}
+                </span>
+              ) : (
+                <span class="d3-check-z" style={{ color: '#f87171' }}>
+                  {answered.digit}
+                  <span
+                    class="d3-check-ans"
+                    style={{ color: DIGIT_COLORS[Number(z)] }}
+                  >
+                    {z}
+                  </span>
+                </span>
+              )
             ) : (
               <span class="d3-check-z" style={{ color: 'var(--border)' }}>
                 {isCurrent ? '_' : '\u00b7'}
@@ -294,6 +293,14 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     },
     [mode, finished, checkIdx, answers, order, endCheck]
   )
+
+  // 直前の回答を取り消して1問前に戻る（即確定式のミスタップ救済）
+  const prevQuestion = useCallback(() => {
+    if (answers.length === 0) return
+    vibrate()
+    setCheckIdx(answers.length - 1)
+    setAnswers(answers.slice(0, -1))
+  }, [answers])
 
   const selectedPrefixEntry = useMemo(() => {
     if (selected === null) return null
@@ -594,8 +601,16 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
         )}
       </div>
 
-      {/* Numpad (check mode only, digits 0-6) */}
-      {mode === 'check' ? <D3Numpad onTapDigit={tapDigit} /> : null}
+      {/* Footer (check mode only): 1問戻る + テンキー 0-6 */}
+      {mode === 'check' ? (
+        <div class="test-footer">
+          <TestNavBar
+            onPrev={prevQuestion}
+            prevDisabled={answers.length === 0}
+          />
+          <D3Numpad onTapDigit={tapDigit} />
+        </div>
+      ) : null}
     </div>
   )
 }

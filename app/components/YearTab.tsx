@@ -43,6 +43,7 @@ import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
+import TestNavBar from './TestNavBar'
 import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
@@ -591,41 +592,12 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
         </div>
       </div>
       {mode === 'check' ? (
-        <div
-          style={{
-            flexShrink: 0,
-            background: 'var(--surface)',
-            borderTop: '1px solid var(--border)',
-            padding: '8px 12px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '8px',
-            }}
-          >
-            <button
-              class="filter-btn"
-              style={{
-                fontSize: '12px',
-                padding: '4px 12px',
-                opacity: results.length === 0 ? 0.4 : 1,
-              }}
-              disabled={results.length === 0}
-              onClick={prevQuestion}
-            >
-              ← 1問戻る
-            </button>
-            <button
-              class="filter-btn"
-              style={{ fontSize: '12px', padding: '4px 12px' }}
-              onClick={skipQuestion}
-            >
-              スキップ →
-            </button>
-          </div>
+        <div class="test-footer">
+          <TestNavBar
+            onPrev={prevQuestion}
+            prevDisabled={results.length === 0}
+            onSkip={skipQuestion}
+          />
           <div class="np-numpad">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
               <div
