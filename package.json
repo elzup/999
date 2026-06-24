@@ -15,6 +15,7 @@
     "images:fetch": "node src/fetch-word-images.js",
     "images:redo": "node src/fetch-word-images.js --redo-only",
     "images:keep-all": "node src/keep-all.js",
+    "images:avatar-i": "node src/avatar-i-images.js",
     "console": "node console/server.js",
     "gallery:build": "node console/build-static.js",
     "sync:card": "node src/sync-card-sheet.js",
