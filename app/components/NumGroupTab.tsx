@@ -3,6 +3,7 @@ import { useState, useCallback } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumberTab from './NumberTab'
 import DigitTab from './DigitTab'
+import NumMapTab from './NumMapTab'
 
 type Props = {
   numbers: NumberEntry[]
@@ -10,7 +11,7 @@ type Props = {
   onToggleBm: (key: string) => void
 }
 
-type SubTab = 'all' | 'd2'
+type SubTab = 'all' | 'd2' | 'map'
 
 function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('all')
@@ -42,6 +43,12 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
         >
           2桁
         </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'map' ? ' active' : '')}
+          onClick={() => handleSub('map')}
+        >
+          マップ
+        </button>
       </div>
       {sub === 'all' && (
         <NumberTab
@@ -52,6 +59,13 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
       )}
       {sub === 'd2' && (
         <DigitTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
+      {sub === 'map' && (
+        <NumMapTab
           numbers={numbers}
           bookmarks={bookmarks}
           onToggleBm={onToggleBm}

@@ -50,7 +50,11 @@ export function parseLabel(label: string): {
 } {
   const dash = label.indexOf('-')
   if (dash < 0) return { group: label, order: null }
-  return { group: label.slice(0, dash), order: Number(label.slice(dash + 1)) }
+  const after = label.slice(dash + 1)
+  return {
+    group: label.slice(0, dash),
+    order: /^\d+$/.test(after) ? Number(after) : null,
+  }
 }
 
 /** マップ全体のグリッド範囲 (CSS grid の列数・行数算出に使う) */
@@ -114,13 +118,17 @@ function cellOrder(a: RenderedCell, b: RenderedCell): number {
   return a.y - b.y || a.x - b.x
 }
 
-function toTile(
-  xy: string,
+/**
+ * 3桁番号からタイルを作る。xy は表示用の下2桁、num は採用候補の解決に使う。
+ * 年マップ・数字マップ共通。
+ */
+export function tileFromNum(
+  num: string,
   byNum: Map<string, NumberEntry>,
   overrides: Record<string, Slot>
 ): MapTile {
-  const z = XY_TO_Z[xy] ?? '?'
-  const num = '0' + xy // 年コード番号 000-099
+  const xy = num.slice(1)
+  const z = XY_TO_Z[xy] ?? ''
   const entry = byNum.get(num)
   if (!entry) return { xy, z, num, slot: null }
   const slot = resolveSlot(entry, overrides)
@@ -132,9 +140,7 @@ function toTile(
 function evenSplit(total: number, k: number): number[] {
   const sizes: number[] = []
   for (let i = 0; i < k; i++) {
-    sizes.push(
-      Math.floor(((i + 1) * total) / k) - Math.floor((i * total) / k)
-    )
+    sizes.push(Math.floor(((i + 1) * total) / k) - Math.floor((i * total) / k))
   }
   return sizes
 }
@@ -164,17 +170,14 @@ function distribute(total: number, caps: number[]): number[] {
 }
 
 /**
- * レイアウト各矩形に member を割り当てる。
- * 同一グループ内では order 順に、均等割 (容量考慮) で 1-1 から連続して詰める。
+ * レイアウト各矩形に tile を割り当てる汎用ロジック。
+ * 同一グループ (label のダッシュ前) 内では order 順に、均等割 (容量考慮) で
+ * 連続して詰める。getTiles(group) がそのグループの tile 列を順序付きで返す。
  */
-export function buildYearMap(
-  numbers: NumberEntry[],
-  overrides: Record<string, Slot> = {},
-  layout: LayoutCell[] = YEAR_MAP_LAYOUT
+export function assignToLayout(
+  layout: LayoutCell[],
+  getTiles: (group: GroupKey) => MapTile[]
 ): RenderedCell[] {
-  const byNum = new Map(numbers.map((n) => [n.num, n]))
-  const members = membersByGroup()
-
   const cells: RenderedCell[] = layout.map((c) => {
     const { group, order } = parseLabel(c.label)
     return { ...c, group, order, tiles: [] }
@@ -183,9 +186,7 @@ export function buildYearMap(
   const groups = new Set(cells.map((c) => c.group))
   for (const g of groups) {
     const groupCells = cells.filter((c) => c.group === g).sort(cellOrder)
-    const list = (members.get(g) ?? []).map((xy) =>
-      toTile(xy, byNum, overrides)
-    )
+    const list = getTiles(g)
     const sizes = distribute(
       list.length,
       groupCells.map((c) => c.w * c.h)
@@ -198,4 +199,17 @@ export function buildYearMap(
   }
 
   return cells
+}
+
+/** 年コード 2次元マップ (000-099, 末尾グループ + up/down) を組む */
+export function buildYearMap(
+  numbers: NumberEntry[],
+  overrides: Record<string, Slot> = {},
+  layout: LayoutCell[] = YEAR_MAP_LAYOUT
+): RenderedCell[] {
+  const byNum = new Map(numbers.map((n) => [n.num, n]))
+  const members = membersByGroup()
+  return assignToLayout(layout, (g) =>
+    (members.get(g) ?? []).map((xy) => tileFromNum('0' + xy, byNum, overrides))
+  )
 }
