@@ -431,5 +431,6 @@ export const VALID_TABS = [
   'year',
   'weekday',
   'misc',
+  'edit',
 ] as const
 export type TabId = typeof VALID_TABS[number]

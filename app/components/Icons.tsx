@@ -2,12 +2,7 @@ import { h } from 'preact'
 
 export function IconNum() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M4 17l2-8h1l2 8" />
       <path d="M5 14h3" />
       <path d="M14 9c-1.5 0-2 1-2 2s.5 2 2 2 2 1 2 2-.5 2-2 2" />
@@ -18,12 +13,7 @@ export function IconNum() {
 
 export function IconD2() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7" rx="1" />
       <rect x="14" y="3" width="7" height="7" rx="1" />
       <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -34,12 +24,7 @@ export function IconD2() {
 
 export function IconCard() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="2" width="18" height="20" rx="2" />
       <path d="M12 8v8" />
       <path d="M8 12h8" />
@@ -57,12 +42,7 @@ export function IconStar() {
 
 export function IconStats() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M18 20V10" />
       <path d="M12 20V4" />
       <path d="M6 20v-6" />
@@ -72,12 +52,7 @@ export function IconStats() {
 
 export function IconPi() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M6 5h12" />
       <path d="M10 5v14" />
       <path d="M16 5v10c0 2.2 1.8 4 4 4" />
@@ -87,12 +62,7 @@ export function IconPi() {
 
 export function IconD3() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7" rx="1" />
       <rect x="14" y="3" width="7" height="7" rx="1" />
       <rect x="8.5" y="14" width="7" height="7" rx="1" />
@@ -102,12 +72,7 @@ export function IconD3() {
 
 export function IconYear() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4" />
       <path d="M8 2v4" />
@@ -121,12 +86,7 @@ export function IconYear() {
 
 export function IconWeekday() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <path d="M7 2v4" />
       <path d="M17 2v4" />
@@ -134,6 +94,15 @@ export function IconWeekday() {
       <path d="M7 14h2" />
       <path d="M11 14h2" />
       <path d="M15 14h2" />
+    </svg>
+  )
+}
+
+export function IconEdit() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   )
 }

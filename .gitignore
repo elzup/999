@@ -11,6 +11,8 @@ src/data/tags.json
 dist-gallery/
 src/visualize-words.data.json
 .firebase/
+functions/.env
+functions/.secret.local
 public/visualize-words.data.json
 public/visualize-words.css
 public/viz-client.js

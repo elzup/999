@@ -9,6 +9,9 @@ import PiTab from './components/PiTab'
 import YearTab from './components/YearTab'
 import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
+import EditorTab from './components/EditorTab'
+import { consumeEditorTokenFromUrl } from './lib/editorAuth'
+import { fetchEditorWords } from './lib/editorApi'
 import {
   IconNum,
   IconCard,
@@ -16,10 +19,12 @@ import {
   IconYear,
   IconWeekday,
   IconStats,
+  IconEdit,
 } from './components/Icons'
 
 export function App() {
   const [tab, _setTab] = useState<TabId>(loadTab)
+  const [editorToken] = useState(consumeEditorTokenFromUrl)
   const setTab = useCallback((t: TabId) => {
     saveTab(t)
     _setTab(t)
@@ -30,8 +35,22 @@ export function App() {
   useEffect(() => {
     fetch('./data.json')
       .then((r) => r.json())
-      .then((raw) => setData(validateAppData(raw)))
-  }, [])
+      .then(async (raw) => {
+        const initialData = validateAppData(raw)
+        setData(initialData)
+
+        if (!editorToken) return
+        try {
+          const liveWords = await fetchEditorWords(editorToken)
+          setData({
+            ...initialData,
+            numbers: mergeNumberEntries(initialData.numbers, liveWords),
+          })
+        } catch {
+          // Static data remains usable when the editor API is not deployed yet.
+        }
+      })
+  }, [editorToken])
 
   const toggleBm = useCallback((key: string) => {
     setBookmarks((prev) => {
@@ -99,6 +118,26 @@ export function App() {
           onToggleBm={toggleBm}
         />
       )}
+      {tab === 'edit' && (
+        <EditorTab
+          numbers={data.numbers}
+          token={editorToken}
+          onSaved={(entry) =>
+            setData((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    numbers: prev.numbers.map((current) =>
+                      current.num === entry.num
+                        ? { ...current, ...entry }
+                        : current
+                    ),
+                  }
+                : prev
+            )
+          }
+        />
+      )}
       <div class="bottom-bar">
         <TabButton
           id="num"
@@ -142,9 +181,29 @@ export function App() {
           icon={<IconStats />}
           label="その他"
         />
+        {editorToken && (
+          <TabButton
+            id="edit"
+            current={tab}
+            onSelect={setTab}
+            icon={<IconEdit />}
+            label="編集"
+          />
+        )}
       </div>
     </>
   )
+}
+
+function mergeNumberEntries(
+  current: AppData['numbers'],
+  live: AppData['numbers']
+): AppData['numbers'] {
+  const liveByNum = new Map(live.map((entry) => [entry.num, entry]))
+  return current.map((entry) => ({
+    ...entry,
+    ...(liveByNum.get(entry.num) || {}),
+  }))
 }
 
 function TabButton({

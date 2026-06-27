@@ -4,11 +4,24 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   logLevel: 'warn',
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:5001/anoz-memosupo/asia-northeast1/api',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
   plugins: [
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'android-chrome-*.png'],
+      includeAssets: [
+        'favicon.ico',
+        'apple-touch-icon.png',
+        'android-chrome-*.png',
+      ],
       manifest: {
         name: '999 暗記',
         short_name: '999',
