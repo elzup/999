@@ -2,6 +2,7 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
+import { candidatesOf } from '../lib/choice'
 
 type Props = {
   numbers: NumberEntry[]
@@ -100,8 +101,7 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [specialSel, setSpecialSel] = useState<SpecialSel>(null)
 
   const detail = useMemo(() => {
-    if (specialSel)
-      return d2BmFilter(numbers, specialSel.type, specialSel.val)
+    if (specialSel) return d2BmFilter(numbers, specialSel.type, specialSel.val)
     if (selected === null) return null
     if (mode === 'upper')
       return numbers.filter((d) => d.num.slice(0, 2) === selected)
@@ -117,7 +117,7 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
   const filledSet = useMemo(() => {
     const s = new Set<string>()
     for (const d of numbers) {
-      if (d.w1 || d.w2) {
+      if (candidatesOf(d).length > 0) {
         s.add('u:' + d.num.slice(0, 2))
         s.add('l:' + d.num.slice(1))
       }
@@ -128,8 +128,7 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
   const modeKey = mode === 'upper' ? 'u:' : 'l:'
 
   const bmKey = useMemo(() => {
-    if (specialSel)
-      return 'd2:' + specialSel.type + ':' + specialSel.val
+    if (specialSel) return 'd2:' + specialSel.type + ':' + specialSel.val
     if (selected !== null)
       return 'd2:' + (mode === 'upper' ? 'u:' : 'l:') + selected
     return null
@@ -141,8 +140,7 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
       .filter((k) => k.startsWith('d2:'))
       .map((k) => ({ key: k, type: k[3], val: k.slice(5) }))
       .sort(
-        (a, b) =>
-          a.type.localeCompare(b.type) || a.val.localeCompare(b.val)
+        (a, b) => a.type.localeCompare(b.type) || a.val.localeCompare(b.val)
       )
   }, [bookmarks])
 
@@ -151,20 +149,17 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
     setSpecialSel(null)
   }, [])
 
-  const handleSelectFav = useCallback(
-    (f: FavItem) => {
-      const isSpecial = f.type === 'm' || f.type === 'd'
-      if (isSpecial) {
-        setSelected(null)
-        setSpecialSel({ type: f.type, val: f.val })
-      } else {
-        setSpecialSel(null)
-        setMode(f.type === 'u' ? 'upper' : 'lower')
-        setSelected(f.val)
-      }
-    },
-    []
-  )
+  const handleSelectFav = useCallback((f: FavItem) => {
+    const isSpecial = f.type === 'm' || f.type === 'd'
+    if (isSpecial) {
+      setSelected(null)
+      setSpecialSel({ type: f.type, val: f.val })
+    } else {
+      setSpecialSel(null)
+      setMode(f.type === 'u' ? 'upper' : 'lower')
+      setSelected(f.val)
+    }
+  }, [])
 
   return (
     <div
@@ -265,9 +260,7 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
                 }
                 onClick={() => {
                   setSpecialSel(null)
-                  setSelected(
-                    selected === v && !specialSel ? null : v
-                  )
+                  setSelected(selected === v && !specialSel ? null : v)
                 }}
               >
                 {label}

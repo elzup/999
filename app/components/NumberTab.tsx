@@ -2,6 +2,7 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
+import { candidatesOf } from '../lib/choice'
 
 type Props = {
   numbers: NumberEntry[]
@@ -21,18 +22,15 @@ type NumCellProps = {
 }
 
 function NumCell({ d, selected, onSelect }: NumCellProps) {
-  const hasWord = d.w1 || d.w2
+  const hasWord = candidatesOf(d).length > 0
   const sc = d.w1Score != null ? d.w1Score : d.w2Score
   const color = scoreColor(sc)
-  const borderStyle =
-    color && !selected ? { borderColor: color + '66' } : {}
+  const borderStyle = color && !selected ? { borderColor: color + '66' } : {}
 
   return (
     <div
       class={
-        'num-cell' +
-        (selected ? ' selected' : '') +
-        (!hasWord ? ' empty' : '')
+        'num-cell' + (selected ? ' selected' : '') + (!hasWord ? ' empty' : '')
       }
       style={borderStyle}
       onClick={onSelect}
@@ -65,9 +63,7 @@ function DigitFilterRows({
           {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <div
               key={digit}
-              class={
-                'df-key' + (df[pos] === String(digit) ? ' active' : '')
-              }
+              class={'df-key' + (df[pos] === String(digit) ? ' active' : '')}
               onClick={() => onTapDigit(pos, String(digit))}
             >
               {digit}
@@ -105,8 +101,7 @@ function DigitFilterPads({
               <div
                 key={digit}
                 class={
-                  'df-pad-key' +
-                  (df[pos] === String(digit) ? ' active' : '')
+                  'df-pad-key' + (df[pos] === String(digit) ? ' active' : '')
                 }
                 onClick={() => onTapDigit(pos, String(digit))}
               >
@@ -114,19 +109,14 @@ function DigitFilterPads({
               </div>
             ))}
             <div
-              class={
-                'df-pad-key' + (df[pos] === null ? ' active' : '')
-              }
+              class={'df-pad-key' + (df[pos] === null ? ' active' : '')}
               style={{ fontSize: '10px' }}
               onClick={() => onClearPos(pos)}
             >
               *
             </div>
             <div
-              class={
-                'df-pad-key zero' +
-                (df[pos] === '0' ? ' active' : '')
-              }
+              class={'df-pad-key zero' + (df[pos] === '0' ? ' active' : '')}
               onClick={() => onTapDigit(pos, '0')}
             >
               0
@@ -207,7 +197,11 @@ function NumberTab({ numbers, bookmarks, onToggleBm }: Props) {
             <span>番号を選択</span>
             <button
               class="filter-btn"
-              style={{ fontSize: '12px', padding: '4px 10px', marginLeft: '12px' }}
+              style={{
+                fontSize: '12px',
+                padding: '4px 10px',
+                marginLeft: '12px',
+              }}
               onClick={() => setShowFilter(!showFilter)}
             >
               {showFilter ? '閉じる' : '検索'}
@@ -251,9 +245,7 @@ function NumberTab({ numbers, bookmarks, onToggleBm }: Props) {
           {filtered.map((d, i) => {
             const hundred = Math.floor(Number(d.num) / 100)
             const prevHundred =
-              i > 0
-                ? Math.floor(Number(filtered[i - 1].num) / 100)
-                : -1
+              i > 0 ? Math.floor(Number(filtered[i - 1].num) / 100) : -1
             const band =
               hundred !== prevHundred ? (
                 <div class="num-band" key={'b' + hundred}>
@@ -288,18 +280,14 @@ function NumberTab({ numbers, bookmarks, onToggleBm }: Props) {
           >
             <div style={{ display: 'flex', gap: '4px' }}>
               <button
-                class={
-                  'filter-btn' + (filterMode === 'rows' ? ' active' : '')
-                }
+                class={'filter-btn' + (filterMode === 'rows' ? ' active' : '')}
                 style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
                 onClick={() => setFilterMode('rows')}
               >
                 3段
               </button>
               <button
-                class={
-                  'filter-btn' + (filterMode === 'pads' ? ' active' : '')
-                }
+                class={'filter-btn' + (filterMode === 'pads' ? ' active' : '')}
                 style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
                 onClick={() => setFilterMode('pads')}
               >

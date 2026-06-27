@@ -2,6 +2,26 @@ import { z } from 'zod'
 
 const GoroSlotSchema = z.object({ k: z.string(), d: z.string() }).nullable()
 
+const CandidateSlotSchema = {
+  word: z.string().default(''),
+  kana: z.string().default(''),
+  image: z.string().optional(),
+}
+
+function buildCandidateSlotShape(prefix: 'wh' | 'wm') {
+  return {
+    [`${prefix}1`]: CandidateSlotSchema.word,
+    [`${prefix}1k`]: CandidateSlotSchema.kana,
+    [`${prefix}1Img`]: CandidateSlotSchema.image,
+    [`${prefix}2`]: CandidateSlotSchema.word,
+    [`${prefix}2k`]: CandidateSlotSchema.kana,
+    [`${prefix}2Img`]: CandidateSlotSchema.image,
+    [`${prefix}3`]: CandidateSlotSchema.word,
+    [`${prefix}3k`]: CandidateSlotSchema.kana,
+    [`${prefix}3Img`]: CandidateSlotSchema.image,
+  }
+}
+
 export const GoroAllocSchema = z.object({
   t1: GoroSlotSchema,
   t2: GoroSlotSchema,
@@ -36,6 +56,8 @@ export const NumberEntrySchema = z.object({
   w2_2: z.string().optional(),
   w1_2Img: z.string().optional(),
   w2_2Img: z.string().optional(),
+  ...buildCandidateSlotShape('wh'),
+  ...buildCandidateSlotShape('wm'),
   ga: GoroAllocSchema.optional(),
 })
 

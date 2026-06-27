@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import { NumberEntrySchema, CardEntrySchema, AppDataSchema } from './schema'
 import type { AppData } from './schema'
 
@@ -26,6 +25,25 @@ export function parseWordsTsv(tsv: string) {
   const idx = headerIndex(headers)
 
   const col = (row: string[], name: string) => row[idx.get(name) ?? -1] ?? ''
+  const slotValue = (
+    row: string[],
+    prefix: 'wh' | 'wm',
+    index: number,
+    legacy?: string
+  ) => col(row, `${prefix}${index}`) || (legacy ? col(row, legacy) : '')
+  const slotKana = (
+    row: string[],
+    prefix: 'wh' | 'wm',
+    index: number,
+    legacy?: string
+  ) => col(row, `${prefix}${index}k`) || (legacy ? col(row, `${legacy}k`) : '')
+  const slotImage = (
+    row: string[],
+    prefix: 'wh' | 'wm',
+    index: number,
+    legacy?: string
+  ) =>
+    col(row, `${prefix}${index}Img`) || (legacy ? col(row, `${legacy}Img`) : '')
 
   return rows
     .map((row) => {
@@ -38,10 +56,37 @@ export function parseWordsTsv(tsv: string) {
         hito: col(row, 'hito'),
         mono: col(row, 'mono'),
         gainen: col(row, 'gainen'),
+        w1Img: col(row, 'w1Img'),
+        w2Img: col(row, 'w2Img'),
+        w1_2: col(row, 'w1_2'),
+        w2_2: col(row, 'w2_2'),
+        w1_2Img: col(row, 'w1_2Img'),
+        w2_2Img: col(row, 'w2_2Img'),
+        wh1: slotValue(row, 'wh', 1, 'w1'),
+        wh1k: slotKana(row, 'wh', 1, 'w1'),
+        wh1Img: slotImage(row, 'wh', 1, 'w1'),
+        wh2: slotValue(row, 'wh', 2, 'w1_2'),
+        wh2k: slotKana(row, 'wh', 2, 'w1_2'),
+        wh2Img: slotImage(row, 'wh', 2, 'w1_2'),
+        wh3: slotValue(row, 'wh', 3),
+        wh3k: slotKana(row, 'wh', 3),
+        wh3Img: slotImage(row, 'wh', 3),
+        wm1: slotValue(row, 'wm', 1, 'w2'),
+        wm1k: slotKana(row, 'wm', 1, 'w2'),
+        wm1Img: slotImage(row, 'wm', 1, 'w2'),
+        wm2: slotValue(row, 'wm', 2, 'w2_2'),
+        wm2k: slotKana(row, 'wm', 2, 'w2_2'),
+        wm2Img: slotImage(row, 'wm', 2, 'w2_2'),
+        wm3: slotValue(row, 'wm', 3),
+        wm3k: slotKana(row, 'wm', 3),
+        wm3Img: slotImage(row, 'wm', 3),
       }
       const result = NumberEntrySchema.safeParse(raw)
       if (!result.success) {
-        console.warn(`Skip invalid number entry: ${raw.num}`, result.error.issues)
+        console.warn(
+          `Skip invalid number entry: ${raw.num}`,
+          result.error.issues
+        )
         return null
       }
       return result.data
