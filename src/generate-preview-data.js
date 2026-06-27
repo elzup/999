@@ -5,10 +5,20 @@ import { z } from 'zod'
 import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
 import { WEIGHTS } from './scorer.js'
 import { classify } from './goro-extract.js'
-import { extractName, isKanaOnly, toHiragana } from './words.js'
+import { extractName, isKanaOnly, loadWords, toHiragana } from './words.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 const publicDir = join(baseDir, '..', 'public')
+
+function buildCandidateSlotShape(prefix) {
+  const shape = {}
+  for (let i = 1; i <= 3; i++) {
+    shape[`${prefix}${i}`] = z.string().default('')
+    shape[`${prefix}${i}k`] = z.string().default('')
+    shape[`${prefix}${i}Img`] = z.string().optional()
+  }
+  return shape
+}
 
 const NumberSchema = z.object({
   num: z.string().regex(/^\d{3}$/),
@@ -27,6 +37,8 @@ const NumberSchema = z.object({
   w2Error: z.union([z.boolean(), z.string()]).optional(),
   w1Img: z.string().optional(),
   w2Img: z.string().optional(),
+  ...buildCandidateSlotShape('wh'),
+  ...buildCandidateSlotShape('wm'),
 })
 
 const CardSchema = z.object({
@@ -159,17 +171,12 @@ function buildRulesData() {
 
 const rules = buildRulesData()
 
-// words.tsv から 2枠目穴埋め用の w1_2/w2_2 (語) を取り込む
+// words.tsv から予備語の補完を取り込む (新旧どちらの列名でも動く)
 const wordsPath = join(baseDir, 'data', 'words.tsv')
 const sub = {}
 if (existsSync(wordsPath)) {
-  const lines = readFileSync(wordsPath, 'utf8').split('\n').filter(Boolean)
-  const header = lines[0].split('\t')
-  const i12 = header.indexOf('w1_2')
-  const i22 = header.indexOf('w2_2')
-  for (const line of lines.slice(1)) {
-    const c = line.split('\t')
-    sub[c[0]] = { w1_2: c[i12]?.trim() || '', w2_2: c[i22]?.trim() || '' }
+  for (const entry of loadWords('words.tsv')) {
+    sub[entry.num] = { w1_2: entry.w1_2 || '', w2_2: entry.w2_2 || '' }
   }
 }
 
@@ -193,7 +200,7 @@ if (existsSync(imagesPath)) {
 }
 
 // 各番号のゴロ分類を事前計算（割り当てグラフ用）。
-// t=下2桁[1,2] / h=上2桁[0,1]、1=w1k 2=w2k 3=w1_2 4=w2_2。{ k, d } か null。
+// t=下2桁[1,2] / h=上2桁[0,1]、1=w1k 2=w2k 3=w1_2。{ k, d } か null。
 const cls = (kana, P) => {
   const g = classify(kana, P)
   return g ? { k: g.key, d: g.kind } : null

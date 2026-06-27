@@ -1,6 +1,4 @@
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { loadWords, parseTaggedItems } from './words.js'
 import {
   getSheetValuesByTitle,
   overwriteSheetValuesByTitle,
@@ -10,9 +8,6 @@ import {
 const SHEET_URL =
   'https://docs.google.com/spreadsheets/d/1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM/edit?gid=0#gid=0'
 const TAG_SHEET_TITLE = 'tags'
-const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
-const WORDS_TSV_PATH = join(dataDir, 'words.tsv')
-const TAG_RE = /#([^\s#,]+)/g
 
 function showHelp() {
   console.log(`Usage: npm run push:tags
@@ -39,43 +34,6 @@ service account を使う場合:
   SHEET_URL
   TAG_SHEET_TITLE
 `)
-}
-
-function parseTsv(tsv) {
-  const lines = tsv
-    .replace(/\r\n/g, '\n')
-    .split('\n')
-    .filter((line) => line.trim() !== '')
-
-  if (lines.length === 0) throw new Error(`${WORDS_TSV_PATH} が空です`)
-
-  const headers = lines[0].split('\t').map((cell) => cell.trim())
-  return lines.slice(1).map((line) => {
-    const cols = line.split('\t')
-    const entry = {}
-    headers.forEach((key, index) => {
-      entry[key] = cols[index]?.trim() || ''
-    })
-    return entry
-  })
-}
-
-function parseTaggedItems(raw) {
-  if (!raw) return []
-  // base 省略記法: "ニーナ#a,#b" の "#b" は直前項目の base を継承する
-  let lastBase = ''
-  return raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((label) => {
-      const tags = [...label.matchAll(TAG_RE)].map((match) => match[1])
-      const uniqueTags = [...new Set(tags)]
-      const ownBase = label.replace(TAG_RE, '').trim()
-      if (ownBase) lastBase = ownBase
-      const base = ownBase || lastBase
-      return { label, base, tags: uniqueTags }
-    })
 }
 
 function collectTags(entries) {
@@ -171,7 +129,7 @@ async function main() {
   const title = process.env.TAG_SHEET_TITLE || TAG_SHEET_TITLE
   const { spreadsheetId } = parseSpreadsheetUrl(sheetUrl)
 
-  const entries = parseTsv(readFileSync(WORDS_TSV_PATH, 'utf8'))
+  const entries = loadWords('words.tsv')
   const tags = collectTags(entries)
 
   // 書き込み前に既存の手動 title 列を読み取り保護する

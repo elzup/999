@@ -77,14 +77,7 @@ function buildData(filename = 'words.tsv') {
   const data = entries.map((entry) => {
     const cat = categoryScore(entry)
     const row = {
-      num: entry.num,
-      hito: entry.hito,
-      mono: entry.mono,
-      gainen: entry.gainen,
-      w1: entry.w1,
-      w1k: entry.w1k,
-      w2: entry.w2,
-      w2k: entry.w2k,
+      ...entry,
       ...cat,
       w1Score: null,
       w1Error: false,
