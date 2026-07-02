@@ -48,23 +48,32 @@ function loadWords() {
   })
 }
 
+// 多候補スキーマ (wh1-3=人 / wm1-3=物) を console 旧スロット (w1/w2/w1_2/w2_2)
+// にマップする。keep/manifest は旧キーで保存済みのため、その対応を維持する。
+// 注意: wh3/wm3 (3 候補目) は現状の旧 4 枠模型には載らないため未表示。
+function toLegacySlots(w) {
+  return {
+    num: w.num,
+    w1: w.w1 || w.wh1,
+    w1k: w.w1k || w.wh1k,
+    w2: w.w2 || w.wm1,
+    w2k: w.w2k || w.wm1k,
+    w1_2: w.w1_2 || w.wh2,
+    w2_2: w.w2_2 || w.wm2,
+  }
+}
+
 /** gallery 用の state を組み立てる (静的ビルドからも再利用) */
 export function buildState() {
-  const words = loadWords().filter((w) => w.w1 || w.w2)
+  const words = loadWords()
+    .map(toLegacySlots)
+    .filter((w) => w.w1 || w.w2)
   const manifest = loadManifest()
   const candidates = loadCandidates()
   const redo = loadRedo()
   const keep = loadKeep()
   return {
-    words: words.map((w) => ({
-      num: w.num,
-      w1: w.w1,
-      w1k: w.w1k,
-      w2: w.w2,
-      w2k: w.w2k,
-      w1_2: w.w1_2,
-      w2_2: w.w2_2,
-    })),
+    words,
     images: manifest.images || {},
     candidates: candidates.items || {},
     redo: redo.redo || {},
