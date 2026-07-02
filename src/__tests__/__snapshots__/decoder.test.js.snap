@@ -3,43 +3,43 @@
 exports[`decodeRanked > 154 の候補一覧 1`] = `
 [
   {
-    "score": 40,
+    "score": 4,
     "word": "いふぉ",
   },
   {
-    "score": 38,
+    "score": 3.8,
     "word": "ひふぉ",
   },
   {
-    "score": 30,
+    "score": 3,
     "word": "いこし",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "いこよ",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "いらし",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "ひこし",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "いらよ",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "ひこよ",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "ひらし",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "ひらよ",
   },
 ]
@@ -48,99 +48,99 @@ exports[`decodeRanked > 154 の候補一覧 1`] = `
 exports[`decodeRanked > 629 の候補一覧 1`] = `
 [
   {
-    "score": 40,
+    "score": 4,
     "word": "ろつぇ",
   },
   {
-    "score": 40,
+    "score": 4,
     "word": "ろちぇ",
   },
   {
-    "score": 38,
+    "score": 3.8,
     "word": "るつぇ",
   },
   {
-    "score": 38,
+    "score": 3.8,
     "word": "るちぇ",
   },
   {
-    "score": 36,
+    "score": 3.6,
     "word": "えつぇ",
   },
   {
-    "score": 36,
+    "score": 3.6,
     "word": "えちぇ",
   },
   {
-    "score": 30,
+    "score": 3,
     "word": "ろにき",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "ろにく",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "ろふき",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "るにき",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "ろにか",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "ろふく",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "るにく",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "るふき",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "えにき",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "ろふか",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "るにか",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "るふく",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "えにく",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "えふき",
   },
   {
-    "score": 22,
+    "score": 2.2,
     "word": "るふか",
   },
   {
-    "score": 22,
+    "score": 2.2,
     "word": "えにか",
   },
   {
-    "score": 22,
+    "score": 2.2,
     "word": "えふく",
   },
   {
-    "score": 20,
+    "score": 2,
     "word": "えふか",
   },
 ]
@@ -149,75 +149,75 @@ exports[`decodeRanked > 629 の候補一覧 1`] = `
 exports[`decodeRanked > 784 の候補一覧 1`] = `
 [
   {
-    "score": 40,
+    "score": 4,
     "word": "うぁし",
   },
   {
-    "score": 40,
+    "score": 4,
     "word": "にゃし",
   },
   {
-    "score": 40,
+    "score": 4,
     "word": "なーし",
   },
   {
-    "score": 38,
+    "score": 3.8,
     "word": "うぁよ",
   },
   {
-    "score": 38,
+    "score": 3.8,
     "word": "にゃよ",
   },
   {
-    "score": 38,
+    "score": 3.8,
     "word": "なーよ",
   },
   {
-    "score": 30,
+    "score": 3,
     "word": "なはし",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "なはよ",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "なやし",
   },
   {
-    "score": 28,
+    "score": 2.8,
     "word": "うはし",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "なやよ",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "なあし",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "うはよ",
   },
   {
-    "score": 26,
+    "score": 2.6,
     "word": "うやし",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "なあよ",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "うやよ",
   },
   {
-    "score": 24,
+    "score": 2.4,
     "word": "うあし",
   },
   {
-    "score": 22,
+    "score": 2.2,
     "word": "うあよ",
   },
 ]

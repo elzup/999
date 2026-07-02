@@ -1,22 +1,46 @@
 import { encode } from './encoder.js'
 import { SINGLE_TIER, normalizeDakuten, kataToHira } from './table.js'
 
-/** スコア重み */
+/**
+ * スコア重み（1/10 スケール）
+ * シート検索で 2 桁以上の数字が誤ヒットしないよう、旧整数点（core=10 等）を
+ * すべて 1/10 にした。相対順序は不変なのでソート性は保たれる。
+ */
 export const WEIGHTS = {
-  core: 10,
-  sub: 8,
-  bad: 6,
-  double: 30,
-  sokuon: 20,
-  halfOverflow: 4,
-  overflowPerChar: -10,
-  youon4Omission: -5,
-  leadingZeroOmission: 15,
-  mix: -7,
+  core: 1,
+  sub: 0.8,
+  bad: 0.6,
+  double: 3,
+  sokuon: 2,
+  halfOverflow: 0.4,
+  overflowPerChar: -1,
+  youon4Omission: -0.5,
+  leadingZeroOmission: 1.5,
+  mix: -0.7,
+  labelPenalty: -1,
+}
+
+/** 小数第1位に丸めて浮動小数点の桁あふれ（2.2000000000000002 等）を消す */
+const round1 = (n) => Math.round(n * 10) / 10
+
+export const LABEL_PENALTIES = {
+  '-x': WEIGHTS.labelPenalty,
+  '-s': WEIGHTS.labelPenalty,
+  '-n': WEIGHTS.labelPenalty,
 }
 
 function isSokuon(kana) {
   return kana === 'っ' || kana === 'ッ'
+}
+
+export function getLabelPenalty(label) {
+  const text = String(label || '')
+  const tags = Object.keys(LABEL_PENALTIES).filter((tag) => {
+    const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(^|\\s)${escaped}(?=\\s|#|,|$)`).test(text)
+  })
+  const penalty = tags.reduce((sum, tag) => sum + LABEL_PENALTIES[tag], 0)
+  return { tags, penalty }
 }
 
 /** 同じ数字が異なるかなで表されているか判定（促音は除外） */
@@ -62,13 +86,23 @@ export function score(input, targetDigits = 3) {
     const fullyOut = startPos >= targetDigits
 
     if (fullyOut) {
-      return { ...t, type: 'overflow', tier: null, score: WEIGHTS.overflowPerChar }
+      return {
+        ...t,
+        type: 'overflow',
+        tier: null,
+        score: WEIGHTS.overflowPerChar,
+      }
     }
     if (isSokuon(t.kana)) {
       return { ...t, type: 'sokuon', tier: null, score: WEIGHTS.sokuon }
     }
     if (!fullyIn && isDouble) {
-      return { ...t, type: 'halfOverflow', tier: null, score: WEIGHTS.halfOverflow }
+      return {
+        ...t,
+        type: 'halfOverflow',
+        tier: null,
+        score: WEIGHTS.halfOverflow,
+      }
     }
     if (isDouble) {
       return { ...t, type: 'double', tier: null, score: WEIGHTS.double }
@@ -92,6 +126,16 @@ export function score(input, targetDigits = 3) {
     youon4,
     leadingZeroOmission: digits.length < targetDigits,
     mix: hasMix,
-    score: tokenScore + youon4Penalty + leadingZeroBonus + mixPenalty,
+    score: round1(tokenScore + youon4Penalty + leadingZeroBonus + mixPenalty),
+  }
+}
+
+export function scoreWithLabel(input, label, targetDigits = 3) {
+  const result = score(input, targetDigits)
+  const labelPenalty = getLabelPenalty(label)
+  return {
+    ...result,
+    labelPenalty,
+    score: round1(result.score + labelPenalty.penalty),
   }
 }

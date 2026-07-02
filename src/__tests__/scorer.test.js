@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { score, getTier } from '../scorer.js'
+import { score, scoreWithLabel, getLabelPenalty, getTier } from '../scorer.js'
 
 describe('getTier', () => {
   it('core かな', () => {
@@ -43,33 +43,33 @@ describe('score', () => {
     expect(result.digits).toBe('901')
     expect(result.digitCount).toBe(3)
     expect(result.leadingZeroOmission).toBe(false)
-    // き(core 10) + れ(bad 6) + い(core 10) = 26
-    expect(result.score).toBe(26)
+    // き(core 1) + れ(bad 0.6) + い(core 1) = 2.6
+    expect(result.score).toBe(2.6)
   })
 
   it('さとう: core + double(半はみ出し) + overflow', () => {
     const result = score('さとう')
     expect(result.digits).toBe('3107')
     expect(result.digitCount).toBe(4)
-    // さ(core 10) + と(double at pos 1-2, fully in, 30) + う(pos 3, overflow -10)
-    expect(result.score).toBe(10 + 30 + -10)
+    // さ(core 1) + と(double at pos 1-2, fully in, 3) + う(pos 3, overflow -1)
+    expect(result.score).toBe(1 + 3 + -1)
   })
 
   it('からす: bad + sub + double(半はみ出し), 4桁', () => {
     const result = score('からす')
     expect(result.digits).toBe('9533')
     expect(result.digitCount).toBe(4)
-    // か(bad 6) + ら(sub 8) + す(double at pos 2-3, halfOverflow 4)
-    expect(result.score).toBe(6 + 8 + 4)
+    // か(bad 0.6) + ら(sub 0.8) + す(double at pos 2-3, halfOverflow 0.4)
+    expect(result.score).toBe(1.8)
   })
 
-  it('にし: 2桁、先頭0省略ボーナス +15', () => {
+  it('にし: 2桁、先頭0省略ボーナス +1.5', () => {
     const result = score('にし')
     expect(result.digits).toBe('24')
     expect(result.digitCount).toBe(2)
     expect(result.leadingZeroOmission).toBe(true)
-    // に(core 10) + し(core 10) + 先頭0省略(15) = 35
-    expect(result.score).toBe(35)
+    // に(core 1) + し(core 1) + 先頭0省略(1.5) = 3.5
+    expect(result.score).toBe(3.5)
   })
 
   it('きゃく: double + sub, 3桁, mix(9)', () => {
@@ -77,16 +77,16 @@ describe('score', () => {
     expect(result.digits).toBe('989')
     expect(result.digitCount).toBe(3)
     expect(result.mix).toBe(true)
-    // きゃ(double 30) + く(sub 8) + mix(-7) = 31
-    expect(result.score).toBe(31)
+    // きゃ(double 3) + く(sub 0.8) + mix(-0.7) = 3.1
+    expect(result.score).toBe(3.1)
   })
 
   it('tokens に type と tier が含まれる', () => {
     const result = score('さとう')
     expect(result.tokens).toEqual([
-      { kana: 'さ', value: '3', type: 'single', tier: 'core', score: 10 },
-      { kana: 'と', value: '10', type: 'double', tier: null, score: 30 },
-      { kana: 'う', value: '7', type: 'overflow', tier: null, score: -10 },
+      { kana: 'さ', value: '3', type: 'single', tier: 'core', score: 1 },
+      { kana: 'と', value: '10', type: 'double', tier: null, score: 3 },
+      { kana: 'う', value: '7', type: 'overflow', tier: null, score: -1 },
     ])
   })
 
@@ -94,8 +94,8 @@ describe('score', () => {
     const result = score('はっぴ')
     expect(result.digits).toBe('811')
     expect(result.digitCount).toBe(3)
-    // は(core 10) + っ(sokuon 20) + ぴ(sub 8) = 38
-    expect(result.score).toBe(38)
+    // は(core 1) + っ(sokuon 2) + ぴ(sub 0.8) = 3.8
+    expect(result.score).toBe(3.8)
     expect(result.tokens[1].type).toBe('sokuon')
   })
 
@@ -103,42 +103,42 @@ describe('score', () => {
     const result = score('カット')
     expect(result.digits).toBe('91010')
     expect(result.digitCount).toBe(5)
-    // カ(bad 6) + ッ(sokuon 20) + ト(overflow -10)
-    expect(result.score).toBe(16)
+    // カ(bad 0.6) + ッ(sokuon 2) + ト(overflow -1) = 1.6
+    expect(result.score).toBe(1.6)
   })
 
-  it('じょんき: 拗音4ルール, double + core + 省略(-5)', () => {
+  it('じょんき: 拗音4ルール, double + core + 省略(-0.5)', () => {
     const result = score('じょんき')
     expect(result.digits).toBe('649')
     expect(result.digitCount).toBe(3)
     expect(result.youon4).toBe(true)
-    // じょ(double 30) + き(core 10) + youon4省略(-5) = 35
-    expect(result.score).toBe(35)
+    // じょ(double 3) + き(core 1) + youon4省略(-0.5) = 3.5
+    expect(result.score).toBe(3.5)
   })
 
-  it('きゅうし: 拗音4ルール, double + core + 省略(-5)', () => {
+  it('きゅうし: 拗音4ルール, double + core + 省略(-0.5)', () => {
     const result = score('きゅうし')
     expect(result.digits).toBe('974')
     expect(result.digitCount).toBe(3)
     expect(result.youon4).toBe(true)
-    // きゅ(double 30) + し(core 10) + youon4省略(-5) = 35
-    expect(result.score).toBe(35)
+    // きゅ(double 3) + し(core 1) + youon4省略(-0.5) = 3.5
+    expect(result.score).toBe(3.5)
   })
 
   it('きかい: き(core) + かい(double) + mix(9) 減点', () => {
     const result = score('きかい')
     expect(result.digits).toBe('991')
     expect(result.mix).toBe(true)
-    // き(core 10) + かい(double 30) + mix(-7) = 33
-    expect(result.score).toBe(33)
+    // き(core 1) + かい(double 3) + mix(-0.7) = 3.3
+    expect(result.score).toBe(3.3)
   })
 
   it('なの: 同じ数字7が な と の で mix減点', () => {
     const result = score('なの')
     expect(result.digits).toBe('775')
     expect(result.mix).toBe(true)
-    // な(core 10) + の(double 30) + mix(-7) = 33
-    expect(result.score).toBe(33)
+    // な(core 1) + の(double 3) + mix(-0.7) = 3.3
+    expect(result.score).toBe(3.3)
   })
 
   it('きれい: mixなし', () => {
@@ -149,14 +149,33 @@ describe('score', () => {
   it('はっぴ: 促音はmix判定から除外', () => {
     const result = score('はっぴ')
     expect(result.mix).toBe(false)
-    expect(result.score).toBe(38)
+    expect(result.score).toBe(3.8)
   })
 
   it('targetDigits を変更可能', () => {
     const result = score('きれい', 4)
-    // 3桁だが target=4 → い は pos 2 で fullyIn + 先頭0省略(15)
+    // 3桁だが target=4 → い は pos 2 で fullyIn + 先頭0省略(1.5)
     expect(result.digitCount).toBe(3)
     expect(result.leadingZeroOmission).toBe(true)
-    expect(result.score).toBe(26 + 15)
+    expect(result.score).toBe(2.6 + 1.5)
+  })
+})
+
+describe('scoreWithLabel', () => {
+  it('ラベルの -x/-s/-n をそれぞれ -1 する', () => {
+    expect(scoreWithLabel('きれい', 'キレイ -x').score).toBe(1.6)
+    expect(scoreWithLabel('きれい', 'キレイ -s').score).toBe(1.6)
+    expect(scoreWithLabel('きれい', 'キレイ -n').score).toBe(1.6)
+  })
+
+  it('タグ記法の # の直前にある -n も検出する', () => {
+    const result = getLabelPenalty('茶湯 -n#g')
+    expect(result).toEqual({ tags: ['-n'], penalty: -1 })
+  })
+
+  it('複数の対象ラベルがあれば合算する', () => {
+    const result = scoreWithLabel('きれい', 'キレイ -x -s')
+    expect(result.labelPenalty).toEqual({ tags: ['-x', '-s'], penalty: -2 })
+    expect(result.score).toBe(0.6)
   })
 })

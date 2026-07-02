@@ -8,7 +8,7 @@ import {
   isKanaOnly,
   normalizeForCompare,
 } from './words.js'
-import { score } from './scorer.js'
+import { scoreWithLabel } from './scorer.js'
 import { kataToHira } from './table.js'
 
 const srcDir = dirname(fileURLToPath(import.meta.url))
@@ -88,7 +88,7 @@ function buildData(filename = 'words.tsv') {
 
     if (entry.w1k) {
       try {
-        const s = score(entry.w1k)
+        const s = scoreWithLabel(entry.w1k, entry.w1)
         row.w1Score = s.score
         const pat = s.tokens.map(tokenLabel).join('+')
         row.w1Pattern = pat
@@ -150,7 +150,7 @@ function buildData(filename = 'words.tsv') {
 
     if (entry.w2k) {
       try {
-        const s2 = score(entry.w2k)
+        const s2 = scoreWithLabel(entry.w2k, entry.w2)
         row.w2Score = s2.score
         if (!isDigitMatch(s2.digits, entry.num)) {
           violations.digitMismatch.push({

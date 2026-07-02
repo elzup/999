@@ -37,7 +37,7 @@
       "monoCnt": 1,
       "gainenCnt": 0,
       "catScore": 18,
-      "w1Score": 26,
+      "w1Score": 2.6,
       "w1Error": false,
       "w1Pattern": "D+DD+X",
       "w2Score": null,
@@ -80,10 +80,10 @@
       "monoCnt": 2,
       "gainenCnt": 0,
       "catScore": 36,
-      "w1Score": 38,
+      "w1Score": 3.8,
       "w1Error": false,
       "w1Pattern": "DD+D",
-      "w2Score": 40,
+      "w2Score": 4,
       "w2Error": false
     },
     {
@@ -123,10 +123,10 @@
       "monoCnt": 3,
       "gainenCnt": 0,
       "catScore": 30,
-      "w1Score": 40,
+      "w1Score": 4,
       "w1Error": false,
       "w1Pattern": "DD+D",
-      "w2Score": 27,
+      "w2Score": 2.7,
       "w2Error": false
     }
   ],

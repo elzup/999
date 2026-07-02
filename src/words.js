@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { score } from './scorer.js'
+import { scoreWithLabel } from './scorer.js'
 import { kataToHira, normalizeDakuten, normalizeSmallVowel } from './table.js'
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
@@ -196,7 +196,7 @@ export function scoreEntry(entry) {
 
   if (entry.w1k) {
     try {
-      const s = score(entry.w1k)
+      const s = scoreWithLabel(entry.w1k, entry.w1)
       results.w1k = entry.w1k
       results.w1Score = s.score
       results.w1Digits = s.digits
@@ -209,7 +209,7 @@ export function scoreEntry(entry) {
 
   if (entry.w2k) {
     try {
-      const s = score(entry.w2k)
+      const s = scoreWithLabel(entry.w2k, entry.w2)
       results.w2k = entry.w2k
       results.w2Score = s.score
       results.w2Digits = s.digits
