@@ -244,10 +244,16 @@ export async function ensureSheetByTitle(spreadsheetId, title) {
   return data.replies?.[0]?.addSheet?.properties || null
 }
 
-export async function getSheetValuesByTitle({ spreadsheetId, title, range }) {
+export async function getSheetValuesByTitle({
+  spreadsheetId,
+  title,
+  range,
+  valueRenderOption,
+}) {
   const fullRange = range ? `${title}!${range}` : title
+  const qs = valueRenderOption ? `?valueRenderOption=${valueRenderOption}` : ''
   const data = await sheetsApi(
-    `/${spreadsheetId}/values/${encodeURIComponent(fullRange)}`
+    `/${spreadsheetId}/values/${encodeURIComponent(fullRange)}${qs}`
   )
   return data?.values || []
 }
@@ -268,6 +274,18 @@ export async function updateSheetValuesRange({
       body: JSON.stringify({ majorDimension, values }),
     }
   )
+}
+
+/** 複数の個別セル/範囲を一括更新する（他セルは保持） */
+export async function batchUpdateValues({
+  spreadsheetId,
+  data,
+  valueInputOption = 'RAW',
+}) {
+  return sheetsApi(`/${spreadsheetId}/values:batchUpdate`, {
+    method: 'POST',
+    body: JSON.stringify({ valueInputOption, data }),
+  })
 }
 
 export async function overwriteSheetValues({ spreadsheetId, gid, values }) {
