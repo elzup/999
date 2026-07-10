@@ -152,11 +152,14 @@ body {
   padding: 8px 12px;
 }
 .detail-row1 {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   height: 32px;
   overflow: hidden;
+  /* ★/× のアクション分の幅を右に確保し、語やScoreBarが溢れても見切れないようにする */
+  padding-right: 60px;
 }
 .detail-row2 {
   display: flex;
@@ -226,6 +229,16 @@ body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+}
+/* 番号パネルの row1 は横に溢れやすいので、★/× を右端に固定して見切れを防ぐ */
+.detail-row1 .detail-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+  padding-left: 8px;
+  background: var(--surface);
 }
 .detail-body {
   display: flex;
@@ -1828,6 +1841,184 @@ body {
   min-width: 0;
 }
 
+/* 九九タブ browse view */
+.kuku-header {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kuku-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.kuku-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text2);
+  margin-left: 4px;
+}
+.kuku-tiers {
+  display: flex;
+  gap: 6px;
+}
+.kuku-tier-btn {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kuku-tier-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent2);
+}
+.kuku-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.kuku-desc {
+  font-size: 12px;
+  color: var(--text2);
+  min-width: 0;
+}
+.kuku-views {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.kuku-view-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.kuku-view-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.kuku-content {
+  padding: 10px 12px;
+}
+.kuku-group {
+  margin-bottom: 14px;
+}
+.kuku-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding: 2px 0;
+}
+.kuku-group-head code {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: monospace;
+}
+.kuku-group-n {
+  font-size: 11px;
+  color: var(--text2);
+}
+.kuku-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.kuku-expr {
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.kuku-yomi {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+  word-break: break-word;
+}
+.kuku-lyrics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kuku-lyric-line {
+  font-size: 15px;
+  color: var(--text);
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--surface);
+  line-height: 1.7;
+}
+
+/* 九九 読みテスト (choice) - cm-* を流用しつつ正誤フィードバックを追加 */
+.kuku-quiz-face {
+  font-family: monospace;
+  font-size: clamp(40px, 12vw, 68px);
+}
+.cm-choice-btn.is-correct {
+  border-color: #4ade80;
+  background: color-mix(in srgb, #4ade80 18%, var(--surface));
+  color: var(--text);
+}
+.cm-choice-btn.is-wrong {
+  border-color: #f87171;
+  background: color-mix(in srgb, #f87171 18%, var(--surface));
+  color: var(--text);
+}
+.cm-choice-btn:disabled {
+  cursor: default;
+}
+.kuku-test {
+  margin-top: 6px;
+}
+.kuku-record-line {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.kuku-record-line b {
+  color: var(--accent);
+}
+/* 共有クイズ(ChoiceQuiz)の結果画面 */
+.quiz-result {
+  align-items: center;
+  text-align: center;
+  gap: 24px;
+  padding-top: 32px;
+}
+.quiz-result-score {
+  font-size: 44px;
+  font-weight: 900;
+  font-family: monospace;
+  color: var(--accent);
+}
+.quiz-result-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .card-train-settings {
   display: flex;
   flex-direction: column;
@@ -2990,23 +3181,30 @@ body {
 }
 .ymap-grid {
   display: grid;
-  gap: 4px;
+  gap: 0;
   width: 100%;
 }
-.ymap-cell {
+.ymap-unit {
   position: relative;
-  border: 2.5px solid var(--ymap-c);
-  border-radius: 6px;
+  border-width: 2.5px;
+  border-style: solid;
+  border-color: var(--ymap-c);
   background: color-mix(in srgb, var(--ymap-c) 22%, var(--surface));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ymap-c) 40%, transparent);
-  padding: 1px;
   min-width: 0;
   overflow: hidden;
+  display: flex;
+  align-items: stretch;
 }
-.ymap-cell.empty {
+.ymap-unit.empty {
   background: color-mix(in srgb, var(--ymap-c) 8%, var(--surface));
   border-style: dashed;
-  box-shadow: none;
+}
+.ymap-cell-label-wrap {
+  position: relative;
+  pointer-events: none;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
 }
 .ymap-cell-label {
   position: absolute;
@@ -3023,19 +3221,12 @@ body {
   border-radius: 0 0 5px 0;
   pointer-events: none;
 }
-.ymap-tiles {
-  display: grid;
-  grid-template-columns: repeat(var(--ymap-w), 1fr);
-  gap: 1px;
-  align-content: start;
-}
 .ymap-tile {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  height: 100%;
   padding: 0;
   border: none;
-  border-radius: 3px;
   background: var(--surface2, #22262f);
   overflow: hidden;
   cursor: pointer;
