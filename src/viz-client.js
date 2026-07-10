@@ -25,6 +25,12 @@ function compCount(d) {
   return n
 }
 
+// Score scale: w1Score/w2Score are rescaled to 1/10 in src/score-words.js
+// (range ~1..5). Keep these thresholds in sync if that scale changes — they
+// drive both the per-cell heatmap color and the summary-group average color.
+const ENC_T = { low: 2, mid: 3, high: 4 } // bestScore: <low / <mid / <high / >=high
+const ENC_AVG_T = { t1: 1.5, t2: 2.5, t3: 3, t4: 3.5 } // group avg buckets
+
 const modeClassMap = {
   completion: (d) => 'comp-' + compCount(d),
   category: (d) => {
@@ -42,9 +48,9 @@ const modeClassMap = {
       if ((d.w1k && d.w1Error) || (d.w2k && d.w2Error)) return 'enc-err'
       return 'enc-none'
     }
-    if (s < 20) return 'enc-low'
-    if (s < 30) return 'enc-mid'
-    if (s < 40) return 'enc-high'
+    if (s < ENC_T.low) return 'enc-low'
+    if (s < ENC_T.mid) return 'enc-mid'
+    if (s < ENC_T.high) return 'enc-high'
     return 'enc-max'
   },
 }
@@ -72,10 +78,10 @@ const LEGENDS = {
     { cls: 'cat-0', label: '0' },
   ],
   encode: [
-    { cls: 'enc-max', label: '40+ (max)' },
-    { cls: 'enc-high', label: '30-39' },
-    { cls: 'enc-mid', label: '20-29' },
-    { cls: 'enc-low', label: '<20' },
+    { cls: 'enc-max', label: '4+ (max)' },
+    { cls: 'enc-high', label: '3-3.9' },
+    { cls: 'enc-mid', label: '2-2.9' },
+    { cls: 'enc-low', label: '<2' },
     { cls: 'enc-err', label: 'Error' },
     { cls: 'enc-none', label: 'No word' },
   ],
@@ -99,11 +105,11 @@ const SUMMARY_LEGENDS = {
     { cls: 'sg-0', label: '0' },
   ],
   encode: [
-    { cls: 'sg-5', label: '35+' },
-    { cls: 'sg-4', label: '30-34' },
-    { cls: 'sg-3', label: '25-29' },
-    { cls: 'sg-2', label: '15-24' },
-    { cls: 'sg-1', label: '<15' },
+    { cls: 'sg-5', label: '3.5+' },
+    { cls: 'sg-4', label: '3-3.4' },
+    { cls: 'sg-3', label: '2.5-2.9' },
+    { cls: 'sg-2', label: '1.5-2.4' },
+    { cls: 'sg-1', label: '<1.5' },
     { cls: 'sg-0', label: 'None' },
   ],
 }
@@ -144,16 +150,16 @@ const summaryResolvers = {
     if (scored.length === 0) return { label: '', cls: 'sg-0' }
     const avg = scored.reduce((a, b) => a + b, 0) / scored.length
     const cls =
-      avg < 15
+      avg < ENC_AVG_T.t1
         ? 'sg-1'
-        : avg < 25
+        : avg < ENC_AVG_T.t2
         ? 'sg-2'
-        : avg < 30
+        : avg < ENC_AVG_T.t3
         ? 'sg-3'
-        : avg < 35
+        : avg < ENC_AVG_T.t4
         ? 'sg-4'
         : 'sg-5'
-    return { label: avg.toFixed(0), cls }
+    return { label: avg.toFixed(1), cls }
   },
 }
 

@@ -21,10 +21,7 @@ type CardCellProps = {
 function CardCell({ c, selected, onSelect }: CardCellProps) {
   const id = formatCardId(c)
   return (
-    <div
-      class={'card-cell' + (selected ? ' selected' : '')}
-      onClick={onSelect}
-    >
+    <div class={'card-cell' + (selected ? ' selected' : '')} onClick={onSelect}>
       <div class={'card-id ' + c.suit}>{id}</div>
     </div>
   )
@@ -32,7 +29,7 @@ function CardCell({ c, selected, onSelect }: CardCellProps) {
 
 function scoreColor(score: number | null): string | null {
   if (score === null || score === undefined) return null
-  return score >= 35 ? '#4ade80' : score >= 25 ? '#fbbf24' : '#f87171'
+  return score >= 3.5 ? '#4ade80' : score >= 2.5 ? '#fbbf24' : '#f87171'
 }
 
 type NumCellProps = {
@@ -45,15 +42,12 @@ function NumCell({ d, selected, onSelect }: NumCellProps) {
   const hasWord = d.w1 || d.w2
   const sc = d.w1Score != null ? d.w1Score : d.w2Score
   const color = scoreColor(sc)
-  const borderStyle =
-    color && !selected ? { borderColor: color + '66' } : {}
+  const borderStyle = color && !selected ? { borderColor: color + '66' } : {}
 
   return (
     <div
       class={
-        'num-cell' +
-        (selected ? ' selected' : '') +
-        (!hasWord ? ' empty' : '')
+        'num-cell' + (selected ? ' selected' : '') + (!hasWord ? ' empty' : '')
       }
       style={borderStyle}
       onClick={onSelect}
@@ -141,9 +135,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
                   d={d}
                   selected={selected === 'n:' + d.num}
                   onSelect={() =>
-                    setSelected(
-                      selected === 'n:' + d.num ? null : 'n:' + d.num
-                    )
+                    setSelected(selected === 'n:' + d.num ? null : 'n:' + d.num)
                   }
                 />
               ))}
@@ -170,9 +162,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
                     c={c}
                     selected={selected === 'c:' + key}
                     onSelect={() =>
-                      setSelected(
-                        selected === 'c:' + key ? null : 'c:' + key
-                      )
+                      setSelected(selected === 'c:' + key ? null : 'c:' + key)
                     }
                   />
                 )

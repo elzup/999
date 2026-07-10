@@ -12,7 +12,7 @@ type Props = {
 
 function scoreColor(score: number | null): string | null {
   if (score === null || score === undefined) return null
-  return score >= 35 ? '#4ade80' : score >= 25 ? '#fbbf24' : '#f87171'
+  return score >= 3.5 ? '#4ade80' : score >= 2.5 ? '#fbbf24' : '#f87171'
 }
 
 type NumCellProps = {

@@ -620,7 +620,7 @@ function getKanaMetrics(
 
 function scoreClass(score: number | null | undefined) {
   if (score === null || score === undefined) return 'editor-score empty'
-  return 'editor-score' + (score < 30 ? ' warn' : '')
+  return 'editor-score' + (score < 3 ? ' warn' : '')
 }
 
 function getPatternLabel(kana: string) {
