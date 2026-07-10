@@ -136,6 +136,9 @@
         padding: 10px;
         box-shadow: var(--shadow);
         transition: border-color 0.15s;
+        /* 画面外のカードは描画・レイアウトを丸ごとスキップ (大量グリッドの高速化) */
+        content-visibility: auto;
+        contain-intrinsic-size: auto 320px;
       }
       .card:hover {
         border-color: var(--line2);

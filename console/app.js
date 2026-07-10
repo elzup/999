@@ -164,7 +164,8 @@ async function recropTop(num, slot, btn) {
 async function customSearch(num, slot, btn) {
   if (readOnly) return
   const w = state.words.find((x) => x.num === num)
-  const def = state.candidates?.[`${num}:${slot}`]?.query || (w && w[slot]) || ''
+  const def =
+    state.candidates?.[`${num}:${slot}`]?.query || (w && w[slot]) || ''
   const q = window.prompt('検索ワードを指定', def)
   if (q == null) return // キャンセル
   const oldImg = state.images?.[num]?.[slot] || null
@@ -207,8 +208,9 @@ function showChooser(num, slot, oldImg, newImg) {
     const o = document.createElement('div')
     o.className = 'choose-opt'
     const im = document.createElement('img')
-    im.src = img.url
     im.loading = 'lazy'
+    im.decoding = 'async'
+    im.src = img.url
     const b = document.createElement('button')
     b.className = 'act-btn'
     b.textContent = label
@@ -254,6 +256,7 @@ function slotEl(w, slot) {
   if (img) {
     const i = document.createElement('img')
     i.loading = 'lazy'
+    i.decoding = 'async'
     i.src = img.url
     thumb.appendChild(i)
   } else {
