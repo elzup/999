@@ -430,6 +430,7 @@ export const VALID_TABS = [
   'pi',
   'year',
   'weekday',
+  'kuku',
   'misc',
   'edit',
 ] as const

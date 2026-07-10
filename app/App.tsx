@@ -9,6 +9,7 @@ import PiTab from './components/PiTab'
 import YearTab from './components/YearTab'
 import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
+import KukuTab from './components/KukuTab'
 import EditorTab from './components/EditorTab'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { fetchEditorWords } from './lib/editorApi'
@@ -18,6 +19,7 @@ import {
   IconPi,
   IconYear,
   IconWeekday,
+  IconKuku,
   IconStats,
   IconEdit,
 } from './components/Icons'
@@ -109,6 +111,7 @@ export function App() {
           onToggleBm={toggleBm}
         />
       )}
+      {tab === 'kuku' && <KukuTab />}
       {tab === 'misc' && (
         <MiscTab
           numbers={data.numbers}
@@ -173,6 +176,13 @@ export function App() {
           onSelect={setTab}
           icon={<IconWeekday />}
           label="曜日"
+        />
+        <TabButton
+          id="kuku"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconKuku />}
+          label="九九"
         />
         <TabButton
           id="misc"

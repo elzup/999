@@ -1,0 +1,4300 @@
+[
+  {
+    "tier": "easy",
+    "expr": "51x2=102",
+    "label": "Ji·G0",
+    "yomi": "こいんにとに",
+    "prob": "こいんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "52x2=104",
+    "label": "Ji·G0",
+    "yomi": "こにんにとし",
+    "prob": "こにんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "21x5=105",
+    "label": "Ji·G0",
+    "yomi": "ふぃんことら",
+    "prob": "ふぃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "53x2=106",
+    "label": "Ji·G0",
+    "yomi": "こさんにとろ",
+    "prob": "こさんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "54x2=108",
+    "label": "Ji·G0",
+    "yomi": "ふぉんにとぱ",
+    "prob": "ふぉんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "51x4=204",
+    "label": "Ji·G0",
+    "yomi": "こいんしぶんし",
+    "prob": "こいんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "41x5=205",
+    "label": "Ji·G0",
+    "yomi": "しいんこぶんご",
+    "prob": "しいんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "52x4=208",
+    "label": "Ji·G0",
+    "yomi": "こにんしにんば",
+    "prob": "こにんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x5=305",
+    "label": "Ji·G0",
+    "yomi": "りんこみんご",
+    "prob": "りんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "51x6=306",
+    "label": "Ji·G0",
+    "yomi": "こいんろさんる",
+    "prob": "こいんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x5=405",
+    "label": "Ji·G0",
+    "yomi": "はいんこしんご",
+    "prob": "はいんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "51x8=408",
+    "label": "Ji·G0",
+    "yomi": "こいんはしんや",
+    "prob": "こいんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x2=122",
+    "label": "Ji",
+    "yomi": "りんにいち",
+    "prob": "りんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "41x3=123",
+    "label": "Ji",
+    "yomi": "しいんさひふみ",
+    "prob": "しいんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "31x4=124",
+    "label": "Ji",
+    "yomi": "さいんしいちょ",
+    "prob": "さいんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "62x2=124",
+    "label": "Ji",
+    "yomi": "ろにんにいちょ",
+    "prob": "ろにんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "21x6=126",
+    "label": "Ji",
+    "yomi": "ふぃんろいふる",
+    "prob": "ふぃんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "42x3=126",
+    "label": "Ji",
+    "yomi": "しにんさいふる",
+    "prob": "しにんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "63x2=126",
+    "label": "Ji",
+    "yomi": "むんにいふる",
+    "prob": "むんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "32x4=128",
+    "label": "Ji",
+    "yomi": "さにんしいにば",
+    "prob": "さにんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "64x2=128",
+    "label": "Ji",
+    "yomi": "りょんにいにば",
+    "prob": "りょんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "43x3=129",
+    "label": "Ji",
+    "yomi": "ゆんさいぶき",
+    "prob": "ゆんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x2=142",
+    "label": "Ji",
+    "yomi": "うぃんにびょに",
+    "prob": "うぃんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "72x2=144",
+    "label": "Ji",
+    "yomi": "なにんにいしし",
+    "prob": "なにんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "73x2=146",
+    "label": "Ji",
+    "yomi": "ぬんにいじる",
+    "prob": "ぬんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "21x7=147",
+    "label": "Ji",
+    "yomi": "ふぃんないしな",
+    "prob": "ふぃんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "74x2=148",
+    "label": "Ji",
+    "yomi": "にょんにいしば",
+    "prob": "にょんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "51x3=153",
+    "label": "Ji",
+    "yomi": "こいんさぴらみ",
+    "prob": "こいんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "31x5=155",
+    "label": "Ji",
+    "yomi": "さいんこいだ",
+    "prob": "さいんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "52x3=156",
+    "label": "Ji",
+    "yomi": "こにんさひころ",
+    "prob": "こにんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "53x3=159",
+    "label": "Ji",
+    "yomi": "こさんさびで",
+    "prob": "こさんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x2=162",
+    "label": "Ji",
+    "yomi": "はいんにいろち",
+    "prob": "はいんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "41x4=164",
+    "label": "Ji",
+    "yomi": "しいんしひろし",
+    "prob": "しいんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "82x2=164",
+    "label": "Ji",
+    "yomi": "はにんにひろし",
+    "prob": "はにんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "83x2=166",
+    "label": "Ji",
+    "yomi": "はさんにいるる",
+    "prob": "はさんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "21x8=168",
+    "label": "Ji",
+    "yomi": "ふぃんはいろは",
+    "prob": "ふぃんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "42x4=168",
+    "label": "Ji",
+    "yomi": "しにんしいろは",
+    "prob": "しにんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "84x2=168",
+    "label": "Ji",
+    "yomi": "はしんにいろは",
+    "prob": "はしんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x2=182",
+    "label": "Ji",
+    "yomi": "きいんにいぱつ",
+    "prob": "きいんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x3=183",
+    "label": "Ji",
+    "yomi": "りんさいやみ",
+    "prob": "りんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "92x2=184",
+    "label": "Ji",
+    "yomi": "きにんにいやし",
+    "prob": "きにんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "31x6=186",
+    "label": "Ji",
+    "yomi": "さいんろいばる",
+    "prob": "さいんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "62x3=186",
+    "label": "Ji",
+    "yomi": "ろにんさいばる",
+    "prob": "ろにんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "93x2=186",
+    "label": "Ji",
+    "yomi": "きさんにいばる",
+    "prob": "きさんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "94x2=188",
+    "label": "Ji",
+    "yomi": "きょんにいわ",
+    "prob": "きょんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "21x9=189",
+    "label": "Ji",
+    "yomi": "ふぃんきひやく",
+    "prob": "ふぃんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "63x3=189",
+    "label": "Ji",
+    "yomi": "むんさひやく",
+    "prob": "むんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x3=213",
+    "label": "Ji",
+    "yomi": "うぃんさにいさ",
+    "prob": "うぃんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "72x3=216",
+    "label": "Ji",
+    "yomi": "なにんさふぃる",
+    "prob": "なにんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "31x7=217",
+    "label": "Ji",
+    "yomi": "さいんなにいな",
+    "prob": "さいんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "73x3=219",
+    "label": "Ji",
+    "yomi": "ぬんさついき",
+    "prob": "ぬんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x3=243",
+    "label": "Ji",
+    "yomi": "はいんさふゆ",
+    "prob": "はいんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x4=244",
+    "label": "Ji",
+    "yomi": "りんしふしょ",
+    "prob": "りんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "41x6=246",
+    "label": "Ji",
+    "yomi": "しいんろぶしろ",
+    "prob": "しいんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "82x3=246",
+    "label": "Ji",
+    "yomi": "はにんさぶしろ",
+    "prob": "はにんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "31x8=248",
+    "label": "Ji",
+    "yomi": "さいんはふじや",
+    "prob": "さいんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "62x4=248",
+    "label": "Ji",
+    "yomi": "ろにんしふじや",
+    "prob": "ろにんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "83x3=249",
+    "label": "Ji",
+    "yomi": "はさんさふじき",
+    "prob": "はさんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "51x5=255",
+    "label": "Ji",
+    "yomi": "こいんこぶた",
+    "prob": "こいんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x3=273",
+    "label": "Ji",
+    "yomi": "きいんさふなさ",
+    "prob": "きいんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "92x3=276",
+    "label": "Ji",
+    "yomi": "きにんさぷうる",
+    "prob": "きにんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "31x9=279",
+    "label": "Ji",
+    "yomi": "さいんきふね",
+    "prob": "さいんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "93x3=279",
+    "label": "Ji",
+    "yomi": "きさんさふね",
+    "prob": "きさんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x4=284",
+    "label": "Ji",
+    "yomi": "うぃんしちゃゆ",
+    "prob": "うぃんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "41x7=287",
+    "label": "Ji",
+    "yomi": "しいんなちゃう",
+    "prob": "しいんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "72x4=288",
+    "label": "Ji",
+    "yomi": "なにんしにっぱ",
+    "prob": "なにんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x4=324",
+    "label": "Ji",
+    "yomi": "はいんしみによ",
+    "prob": "はいんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "41x8=328",
+    "label": "Ji",
+    "yomi": "しいんはみつは",
+    "prob": "しいんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "82x4=328",
+    "label": "Ji",
+    "yomi": "はにんしみつは",
+    "prob": "はにんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x5=355",
+    "label": "Ji",
+    "yomi": "うぃんこみた",
+    "prob": "うぃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "51x7=357",
+    "label": "Ji",
+    "yomi": "こいんなそな",
+    "prob": "こいんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x4=364",
+    "label": "Ji",
+    "yomi": "きいんしすりゅ",
+    "prob": "きいんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x6=366",
+    "label": "Ji",
+    "yomi": "りんろみるる",
+    "prob": "りんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "92x4=368",
+    "label": "Ji",
+    "yomi": "きにんしさるや",
+    "prob": "きにんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "41x9=369",
+    "label": "Ji",
+    "yomi": "しいんきさめ",
+    "prob": "しいんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x6=426",
+    "label": "Ji",
+    "yomi": "うぃんろしぶる",
+    "prob": "うぃんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x7=427",
+    "label": "Ji",
+    "yomi": "りんなしちゅ",
+    "prob": "りんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x5=455",
+    "label": "Ji",
+    "yomi": "きいんこしだ",
+    "prob": "きいんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "51x9=459",
+    "label": "Ji",
+    "yomi": "こいんきしごく",
+    "prob": "こいんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x6=486",
+    "label": "Ji",
+    "yomi": "はいんろしゃろ",
+    "prob": "はいんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x8=488",
+    "label": "Ji",
+    "yomi": "りんはじっぱ",
+    "prob": "りんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x7=497",
+    "label": "Ji",
+    "yomi": "うぃんなしぐな",
+    "prob": "うぃんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x6=546",
+    "label": "Ji",
+    "yomi": "きいんろこじろ",
+    "prob": "きいんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "61x9=549",
+    "label": "Ji",
+    "yomi": "りんきこゆき",
+    "prob": "りんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x7=567",
+    "label": "Ji",
+    "yomi": "はいんなこじゅ",
+    "prob": "はいんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x8=568",
+    "label": "Ji",
+    "yomi": "うぃんはごむば",
+    "prob": "うぃんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x7=637",
+    "label": "Ji",
+    "yomi": "きいんなむう",
+    "prob": "きいんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "71x9=639",
+    "label": "Ji",
+    "yomi": "うぃんきろせ",
+    "prob": "うぃんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x8=648",
+    "label": "Ji",
+    "yomi": "はいんはじょば",
+    "prob": "はいんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x8=728",
+    "label": "Ji",
+    "yomi": "きいんはなつは",
+    "prob": "きいんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "81x9=729",
+    "label": "Ji",
+    "yomi": "はいんきなつき",
+    "prob": "はいんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "91x9=819",
+    "label": "Ji",
+    "yomi": "きいんきばいく",
+    "prob": "きいんき"
+  },
+  {
+    "tier": "easy",
+    "expr": "22x5=110",
+    "label": "JI·E0·G0",
+    "yomi": "ちんこいと",
+    "prob": "ちんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "55x2=110",
+    "label": "JI·E0·G0",
+    "yomi": "たんにいと",
+    "prob": "たんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "24x5=120",
+    "label": "JI·E0·G0",
+    "yomi": "ちょんこひにん",
+    "prob": "ちょんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "26x5=130",
+    "label": "JI·E0·G0",
+    "yomi": "にろんこいさん",
+    "prob": "にろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "28x5=140",
+    "label": "JI·E0·G0",
+    "yomi": "ちゃんこひょん",
+    "prob": "ちゃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "42x5=210",
+    "label": "JI·E0·G0",
+    "yomi": "しにんこぶど",
+    "prob": "しにんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "44x5=220",
+    "label": "JI·E0·G0",
+    "yomi": "しょんこぶぶん",
+    "prob": "しょんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "55x4=220",
+    "label": "JI·E0·G0",
+    "yomi": "たんしぶぶん",
+    "prob": "たんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "46x5=230",
+    "label": "JI·E0·G0",
+    "yomi": "しろんこつみれ",
+    "prob": "しろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "48x5=240",
+    "label": "JI·E0·G0",
+    "yomi": "しゃんこふしん",
+    "prob": "しゃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "62x5=310",
+    "label": "JI·E0·G0",
+    "yomi": "ろにんこさと",
+    "prob": "ろにんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "64x5=320",
+    "label": "JI·E0·G0",
+    "yomi": "りょんこさぶん",
+    "prob": "りょんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "55x6=330",
+    "label": "JI·E0·G0",
+    "yomi": "たんろすお",
+    "prob": "たんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "66x5=330",
+    "label": "JI·E0·G0",
+    "yomi": "ろろんこすお",
+    "prob": "ろろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "68x5=340",
+    "label": "JI·E0·G0",
+    "yomi": "りゃんこみしん",
+    "prob": "りゃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "82x5=410",
+    "label": "JI·E0·G0",
+    "yomi": "はにんこしと",
+    "prob": "はにんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "84x5=420",
+    "label": "JI·E0·G0",
+    "yomi": "はしんこよぶん",
+    "prob": "はしんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "86x5=430",
+    "label": "JI·E0·G0",
+    "yomi": "はろんこじさん",
+    "prob": "はろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "55x8=440",
+    "label": "JI·E0·G0",
+    "yomi": "たんはしょお",
+    "prob": "たんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "88x5=440",
+    "label": "JI·E0·G0",
+    "yomi": "わんこしょお",
+    "prob": "わんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "56x2=112",
+    "label": "JI·G0",
+    "yomi": "ころんにびてぃ",
+    "prob": "ころんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "57x2=114",
+    "label": "JI·G0",
+    "yomi": "てゅんにいいし",
+    "prob": "てゅんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "23x5=115",
+    "label": "JI·G0",
+    "yomi": "つんこびいこ",
+    "prob": "つんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "58x2=116",
+    "label": "JI·G0",
+    "yomi": "ふぁんにいいろ",
+    "prob": "ふぁんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "59x2=118",
+    "label": "JI·G0",
+    "yomi": "てんにびいば",
+    "prob": "てんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "25x5=125",
+    "label": "JI·G0",
+    "yomi": "にこんこてぃら",
+    "prob": "にこんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "27x5=135",
+    "label": "JI·G0",
+    "yomi": "ちゅんこいそ",
+    "prob": "ちゅんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "29x5=145",
+    "label": "JI·G0",
+    "yomi": "つぇんこひよこ",
+    "prob": "つぇんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "53x4=212",
+    "label": "JI·G0",
+    "yomi": "こさんしにぃに",
+    "prob": "こさんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "43x5=215",
+    "label": "JI·G0",
+    "yomi": "ゆんこにいご",
+    "prob": "ゆんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "54x4=216",
+    "label": "JI·G0",
+    "yomi": "ふぉんしふぃる",
+    "prob": "ふぉんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "56x4=224",
+    "label": "JI·G0",
+    "yomi": "ころんしちよ",
+    "prob": "ころんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "45x5=225",
+    "label": "JI·G0",
+    "yomi": "しこんこちこ",
+    "prob": "しこんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "57x4=228",
+    "label": "JI·G0",
+    "yomi": "てゅんしちば",
+    "prob": "てゅんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "58x4=232",
+    "label": "JI·G0",
+    "yomi": "ふぁんしつぶ",
+    "prob": "ふぁんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "47x5=235",
+    "label": "JI·G0",
+    "yomi": "しゅんこつらら",
+    "prob": "しゅんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "59x4=236",
+    "label": "JI·G0",
+    "yomi": "てんしつる",
+    "prob": "てんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "49x5=245",
+    "label": "JI·G0",
+    "yomi": "しぇんこちょこ",
+    "prob": "しぇんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "52x6=312",
+    "label": "JI·G0",
+    "yomi": "こにんろさいふ",
+    "prob": "こにんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "63x5=315",
+    "label": "JI·G0",
+    "yomi": "むんこみしろ",
+    "prob": "むんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "53x6=318",
+    "label": "JI·G0",
+    "yomi": "こさんろさいば",
+    "prob": "こさんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "54x6=324",
+    "label": "JI·G0",
+    "yomi": "ふぉんろみによ",
+    "prob": "ふぉんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "65x5=325",
+    "label": "JI·G0",
+    "yomi": "もんこみにこ",
+    "prob": "もんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "67x5=335",
+    "label": "JI·G0",
+    "yomi": "りゅんこささご",
+    "prob": "りゅんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "56x6=336",
+    "label": "JI·G0",
+    "yomi": "ころんろすろ",
+    "prob": "ころんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "57x6=342",
+    "label": "JI·G0",
+    "yomi": "てゅんろみしつ",
+    "prob": "てゅんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "69x5=345",
+    "label": "JI·G0",
+    "yomi": "めんこさよこ",
+    "prob": "めんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "58x6=348",
+    "label": "JI·G0",
+    "yomi": "ふぁんろさしゃ",
+    "prob": "ふぁんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "59x6=354",
+    "label": "JI·G0",
+    "yomi": "てんろそし",
+    "prob": "てんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "83x5=415",
+    "label": "JI·G0",
+    "yomi": "はさんこよいこ",
+    "prob": "はさんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "52x8=416",
+    "label": "JI·G0",
+    "yomi": "こにんはしいる",
+    "prob": "こにんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "53x8=424",
+    "label": "JI·G0",
+    "yomi": "こさんはしちょ",
+    "prob": "こさんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "85x5=425",
+    "label": "JI·G0",
+    "yomi": "ほんこゆにこ",
+    "prob": "ほんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "54x8=432",
+    "label": "JI·G0",
+    "yomi": "ふぉんはゆに",
+    "prob": "ふぉんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "87x5=435",
+    "label": "JI·G0",
+    "yomi": "はなんこしそ",
+    "prob": "はなんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "89x5=445",
+    "label": "JI·G0",
+    "yomi": "へんこしょこ",
+    "prob": "へんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "56x8=448",
+    "label": "JI·G0",
+    "yomi": "ころんはししゃ",
+    "prob": "ころんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "57x8=456",
+    "label": "JI·G0",
+    "yomi": "てゅんはさいこ",
+    "prob": "てゅんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "58x8=464",
+    "label": "JI·G0",
+    "yomi": "ふぁんはしろじ",
+    "prob": "ふぁんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "59x8=472",
+    "label": "JI·G0",
+    "yomi": "てんはしゅに",
+    "prob": "てんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "15x2=030",
+    "label": "jI·E0",
+    "yomi": "いこんにさん",
+    "prob": "いこんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "25x2=050",
+    "label": "jI·E0",
+    "yomi": "にこんにこ",
+    "prob": "にこんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "12x5=060",
+    "label": "jI·E0",
+    "yomi": "てぃんころん",
+    "prob": "てぃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "15x4=060",
+    "label": "jI·E0",
+    "yomi": "いこんしろん",
+    "prob": "いこんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "14x5=070",
+    "label": "jI·E0",
+    "yomi": "ひょんこなお",
+    "prob": "ひょんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "35x2=070",
+    "label": "jI·E0",
+    "yomi": "そんになお",
+    "prob": "そんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "16x5=080",
+    "label": "jI·E0",
+    "yomi": "いろんこはれ",
+    "prob": "いろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "15x6=090",
+    "label": "jI·E0",
+    "yomi": "いこんろくれ",
+    "prob": "いこんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "18x5=090",
+    "label": "jI·E0",
+    "yomi": "ひゃんこくれ",
+    "prob": "ひゃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "45x2=090",
+    "label": "jI·E0",
+    "yomi": "しこんにくれ",
+    "prob": "しこんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "16x2=032",
+    "label": "jI",
+    "yomi": "いろんにみに",
+    "prob": "いろんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "17x2=034",
+    "label": "jI",
+    "yomi": "ひゅんにさじ",
+    "prob": "ひゅんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "18x2=036",
+    "label": "jI",
+    "yomi": "ひゃんにみろ",
+    "prob": "ひゃんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "19x2=038",
+    "label": "jI",
+    "yomi": "いきんにさや",
+    "prob": "いきんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "14x3=042",
+    "label": "jI",
+    "yomi": "ひょんさじぶ",
+    "prob": "ひょんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "15x3=045",
+    "label": "jI",
+    "yomi": "いこんさしこ",
+    "prob": "いこんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "16x3=048",
+    "label": "jI",
+    "yomi": "いろんさしば",
+    "prob": "いろんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "17x3=051",
+    "label": "jI",
+    "yomi": "ひゅんさこい",
+    "prob": "ひゅんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "13x4=052",
+    "label": "jI",
+    "yomi": "いさんしこぶ",
+    "prob": "いさんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "26x2=052",
+    "label": "jI",
+    "yomi": "にろんにこぶ",
+    "prob": "にろんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "18x3=054",
+    "label": "jI",
+    "yomi": "ひゃんさこし",
+    "prob": "ひゃんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "27x2=054",
+    "label": "jI",
+    "yomi": "ちゅんにこし",
+    "prob": "ちゅんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "14x4=056",
+    "label": "jI",
+    "yomi": "ひょんしころ",
+    "prob": "ひょんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "28x2=056",
+    "label": "jI",
+    "yomi": "ちゃんにころ",
+    "prob": "ちゃんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "19x3=057",
+    "label": "jI",
+    "yomi": "いきんさこな",
+    "prob": "いきんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "29x2=058",
+    "label": "jI",
+    "yomi": "つぇんにこば",
+    "prob": "つぇんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "16x4=064",
+    "label": "jI",
+    "yomi": "いろんしろし",
+    "prob": "いろんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "13x5=065",
+    "label": "jI",
+    "yomi": "いさんころこ",
+    "prob": "いさんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "17x4=068",
+    "label": "jI",
+    "yomi": "ひゅんしろば",
+    "prob": "ひゅんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "12x6=072",
+    "label": "jI",
+    "yomi": "てぃんろうに",
+    "prob": "てぃんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "18x4=072",
+    "label": "jI",
+    "yomi": "ひゃんしうに",
+    "prob": "ひゃんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "24x3=072",
+    "label": "jI",
+    "yomi": "ちょんさうに",
+    "prob": "ちょんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "36x2=072",
+    "label": "jI",
+    "yomi": "さろんにうに",
+    "prob": "さろんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "37x2=074",
+    "label": "jI",
+    "yomi": "みゅんになし",
+    "prob": "みゅんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "15x5=075",
+    "label": "jI",
+    "yomi": "いこんこなこ",
+    "prob": "いこんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "25x3=075",
+    "label": "jI",
+    "yomi": "にこんさなこ",
+    "prob": "にこんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "19x4=076",
+    "label": "jI",
+    "yomi": "いきんしなる",
+    "prob": "いきんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "38x2=076",
+    "label": "jI",
+    "yomi": "みゃんになる",
+    "prob": "みゃんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "13x6=078",
+    "label": "jI",
+    "yomi": "いさんろなは",
+    "prob": "いさんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "26x3=078",
+    "label": "jI",
+    "yomi": "にろんさなは",
+    "prob": "にろんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "39x2=078",
+    "label": "jI",
+    "yomi": "せんになは",
+    "prob": "せんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "27x3=081",
+    "label": "jI",
+    "yomi": "ちゅんさはい",
+    "prob": "ちゅんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "12x7=084",
+    "label": "jI",
+    "yomi": "てぃんなはし",
+    "prob": "てぃんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "14x6=084",
+    "label": "jI",
+    "yomi": "ひょんろはし",
+    "prob": "ひょんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "28x3=084",
+    "label": "jI",
+    "yomi": "ちゃんさはし",
+    "prob": "ちゃんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "17x5=085",
+    "label": "jI",
+    "yomi": "ひゅんこはこ",
+    "prob": "ひゅんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "29x3=087",
+    "label": "jI",
+    "yomi": "つぇんさはな",
+    "prob": "つぇんさ"
+  },
+  {
+    "tier": "easy",
+    "expr": "13x7=091",
+    "label": "jI",
+    "yomi": "いさんなくい",
+    "prob": "いさんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "23x4=092",
+    "label": "jI",
+    "yomi": "つんしくに",
+    "prob": "つんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "46x2=092",
+    "label": "jI",
+    "yomi": "しろんにくに",
+    "prob": "しろんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "47x2=094",
+    "label": "jI",
+    "yomi": "しゅんにきし",
+    "prob": "しゅんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "19x5=095",
+    "label": "jI",
+    "yomi": "いきんこぎこ",
+    "prob": "いきんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "12x8=096",
+    "label": "jI",
+    "yomi": "てぃんはきろ",
+    "prob": "てぃんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "16x6=096",
+    "label": "jI",
+    "yomi": "いろんろきろ",
+    "prob": "いろんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "24x4=096",
+    "label": "jI",
+    "yomi": "ちょんしきろ",
+    "prob": "ちょんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "48x2=096",
+    "label": "jI",
+    "yomi": "しゃんにきろ",
+    "prob": "しゃんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "14x7=098",
+    "label": "jI",
+    "yomi": "ひょんなきば",
+    "prob": "ひょんな"
+  },
+  {
+    "tier": "easy",
+    "expr": "49x2=098",
+    "label": "jI",
+    "yomi": "しぇんにきば",
+    "prob": "しぇんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "65x2=130",
+    "label": "JI·E0",
+    "yomi": "もんにいさん",
+    "prob": "もんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "35x4=140",
+    "label": "JI·E0",
+    "yomi": "そんしひょん",
+    "prob": "そんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "25x6=150",
+    "label": "JI·E0",
+    "yomi": "にこんろいられ",
+    "prob": "にこんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "75x2=150",
+    "label": "JI·E0",
+    "yomi": "のんにいられ",
+    "prob": "のんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "32x5=160",
+    "label": "JI·E0",
+    "yomi": "さにんこひるま",
+    "prob": "さにんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "34x5=170",
+    "label": "JI·E0",
+    "yomi": "みょんこひなん",
+    "prob": "みょんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "85x2=170",
+    "label": "JI·E0",
+    "yomi": "ほんにひなん",
+    "prob": "ほんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "36x5=180",
+    "label": "JI·E0",
+    "yomi": "さろんこいはん",
+    "prob": "さろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "45x4=180",
+    "label": "JI·E0",
+    "yomi": "しこんしいはん",
+    "prob": "しこんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "38x5=190",
+    "label": "JI·E0",
+    "yomi": "みゃんこひぐれ",
+    "prob": "みゃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "95x2=190",
+    "label": "JI·E0",
+    "yomi": "きこんにひぐれ",
+    "prob": "きこんに"
+  },
+  {
+    "tier": "easy",
+    "expr": "52x5=260",
+    "label": "JI·E0",
+    "yomi": "こにんこぶろお",
+    "prob": "こにんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "65x4=260",
+    "label": "JI·E0",
+    "yomi": "もんしぶろお",
+    "prob": "もんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "45x6=270",
+    "label": "JI·E0",
+    "yomi": "しこんろちゅお",
+    "prob": "しこんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "54x5=270",
+    "label": "JI·E0",
+    "yomi": "ふぉんこちゅお",
+    "prob": "ふぉんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "35x8=280",
+    "label": "JI·E0",
+    "yomi": "そんはちゃん",
+    "prob": "そんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "56x5=280",
+    "label": "JI·E0",
+    "yomi": "ころんこちゃん",
+    "prob": "ころんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "58x5=290",
+    "label": "JI·E0",
+    "yomi": "ふぁんこちぇん",
+    "prob": "ふぁんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "85x4=340",
+    "label": "JI·E0",
+    "yomi": "ほんしみしん",
+    "prob": "ほんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "45x8=360",
+    "label": "JI·E0",
+    "yomi": "しこんはさろん",
+    "prob": "しこんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "72x5=360",
+    "label": "JI·E0",
+    "yomi": "なにんこさろん",
+    "prob": "なにんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "74x5=370",
+    "label": "JI·E0",
+    "yomi": "にょんこさなん",
+    "prob": "にょんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "76x5=380",
+    "label": "JI·E0",
+    "yomi": "なろんこみゃお",
+    "prob": "なろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "95x4=380",
+    "label": "JI·E0",
+    "yomi": "きこんしみゃお",
+    "prob": "きこんし"
+  },
+  {
+    "tier": "easy",
+    "expr": "65x6=390",
+    "label": "JI·E0",
+    "yomi": "もんろせん",
+    "prob": "もんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "78x5=390",
+    "label": "JI·E0",
+    "yomi": "うぁんこせん",
+    "prob": "うぁんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "75x6=450",
+    "label": "JI·E0",
+    "yomi": "のんろよごれ",
+    "prob": "のんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "92x5=460",
+    "label": "JI·E0",
+    "yomi": "きにんこじろん",
+    "prob": "きにんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "94x5=470",
+    "label": "JI·E0",
+    "yomi": "きょんこしゅれ",
+    "prob": "きょんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "96x5=480",
+    "label": "JI·E0",
+    "yomi": "きろんこしゃれ",
+    "prob": "きろんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "98x5=490",
+    "label": "JI·E0",
+    "yomi": "きゃんこしぐれ",
+    "prob": "きゃんこ"
+  },
+  {
+    "tier": "easy",
+    "expr": "95x6=570",
+    "label": "JI·E0",
+    "yomi": "きこんろこなん",
+    "prob": "きこんろ"
+  },
+  {
+    "tier": "easy",
+    "expr": "85x8=680",
+    "label": "JI·E0",
+    "yomi": "ほんはろはん",
+    "prob": "ほんは"
+  },
+  {
+    "tier": "easy",
+    "expr": "95x8=760",
+    "label": "JI·E0",
+    "yomi": "きこんはうろん",
+    "prob": "きこんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "22x6=132",
+    "label": "JI",
+    "yomi": "ちんろいみふ",
+    "prob": "ちんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "33x4=132",
+    "label": "JI",
+    "yomi": "すんしいみふ",
+    "prob": "すんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "44x3=132",
+    "label": "JI",
+    "yomi": "しょんさいみふ",
+    "prob": "しょんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "66x2=132",
+    "label": "JI",
+    "yomi": "ろろんにいみふ",
+    "prob": "ろろんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "67x2=134",
+    "label": "JI",
+    "yomi": "りゅんにひざし",
+    "prob": "りゅんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "45x3=135",
+    "label": "JI",
+    "yomi": "しこんさいそ",
+    "prob": "しこんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "34x4=136",
+    "label": "JI",
+    "yomi": "みょんしぴさろ",
+    "prob": "みょんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "68x2=136",
+    "label": "JI",
+    "yomi": "りゃんにぴさろ",
+    "prob": "りゃんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "23x6=138",
+    "label": "JI",
+    "yomi": "つんろいさや",
+    "prob": "つんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "46x3=138",
+    "label": "JI",
+    "yomi": "しろんさいさや",
+    "prob": "しろんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "69x2=138",
+    "label": "JI",
+    "yomi": "めんにいさや",
+    "prob": "めんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "47x3=141",
+    "label": "JI",
+    "yomi": "しゅんさいしい",
+    "prob": "しゅんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "24x6=144",
+    "label": "JI",
+    "yomi": "ちょんろいしし",
+    "prob": "ちょんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "36x4=144",
+    "label": "JI",
+    "yomi": "さろんしいしし",
+    "prob": "さろんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "48x3=144",
+    "label": "JI",
+    "yomi": "しゃんさいしし",
+    "prob": "しゃんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "49x3=147",
+    "label": "JI",
+    "yomi": "しぇんさいしな",
+    "prob": "しぇんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "37x4=148",
+    "label": "JI",
+    "yomi": "みゅんしいしば",
+    "prob": "みゅんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "38x4=152",
+    "label": "JI",
+    "yomi": "みゃんしぴらふ",
+    "prob": "みゃんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "76x2=152",
+    "label": "JI",
+    "yomi": "なろんにぴらふ",
+    "prob": "なろんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "22x7=154",
+    "label": "JI",
+    "yomi": "ちんなひこし",
+    "prob": "ちんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "77x2=154",
+    "label": "JI",
+    "yomi": "にゅんにひこし",
+    "prob": "にゅんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "26x6=156",
+    "label": "JI",
+    "yomi": "にろんろひころ",
+    "prob": "にろんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "39x4=156",
+    "label": "JI",
+    "yomi": "せんしひころ",
+    "prob": "せんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "78x2=156",
+    "label": "JI",
+    "yomi": "うぁんにひころ",
+    "prob": "うぁんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "79x2=158",
+    "label": "JI",
+    "yomi": "ねんにぴらあ",
+    "prob": "ねんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "23x7=161",
+    "label": "JI",
+    "yomi": "つんないるい",
+    "prob": "つんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "27x6=162",
+    "label": "JI",
+    "yomi": "ちゅんろいろち",
+    "prob": "ちゅんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "54x3=162",
+    "label": "JI",
+    "yomi": "ふぉんさいろち",
+    "prob": "ふぉんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "33x5=165",
+    "label": "JI",
+    "yomi": "すんこいも",
+    "prob": "すんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "55x3=165",
+    "label": "JI",
+    "yomi": "たんさいも",
+    "prob": "たんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "24x7=168",
+    "label": "JI",
+    "yomi": "ちょんないろは",
+    "prob": "ちょんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "28x6=168",
+    "label": "JI",
+    "yomi": "ちゃんろいろは",
+    "prob": "ちゃんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "56x3=168",
+    "label": "JI",
+    "yomi": "ころんさいろは",
+    "prob": "ころんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "57x3=171",
+    "label": "JI",
+    "yomi": "てゅんさいない",
+    "prob": "てゅんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "43x4=172",
+    "label": "JI",
+    "yomi": "ゆんしひなつ",
+    "prob": "ゆんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "86x2=172",
+    "label": "JI",
+    "yomi": "はろんにひなつ",
+    "prob": "はろんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "29x6=174",
+    "label": "JI",
+    "yomi": "つぇんろいゔぉ",
+    "prob": "つぇんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "58x3=174",
+    "label": "JI",
+    "yomi": "ふぁんさいゔぉ",
+    "prob": "ふぁんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "87x2=174",
+    "label": "JI",
+    "yomi": "はなんにいゔぉ",
+    "prob": "はなんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "25x7=175",
+    "label": "JI",
+    "yomi": "にこんないなご",
+    "prob": "にこんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "35x5=175",
+    "label": "JI",
+    "yomi": "そんこいなご",
+    "prob": "そんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "22x8=176",
+    "label": "JI",
+    "yomi": "ちんはいなり",
+    "prob": "ちんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "44x4=176",
+    "label": "JI",
+    "yomi": "しょんしいなり",
+    "prob": "しょんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "88x2=176",
+    "label": "JI",
+    "yomi": "わんにいなり",
+    "prob": "わんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "59x3=177",
+    "label": "JI",
+    "yomi": "てんさひなな",
+    "prob": "てんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "89x2=178",
+    "label": "JI",
+    "yomi": "へんにいなば",
+    "prob": "へんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "26x7=182",
+    "label": "JI",
+    "yomi": "にろんないぱつ",
+    "prob": "にろんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "23x8=184",
+    "label": "JI",
+    "yomi": "つんはいやし",
+    "prob": "つんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "46x4=184",
+    "label": "JI",
+    "yomi": "しろんしいやし",
+    "prob": "しろんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "37x5=185",
+    "label": "JI",
+    "yomi": "みゅんこひばこ",
+    "prob": "みゅんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "47x4=188",
+    "label": "JI",
+    "yomi": "しゅんしいわ",
+    "prob": "しゅんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "27x7=189",
+    "label": "JI",
+    "yomi": "ちゅんなひやく",
+    "prob": "ちゅんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "24x8=192",
+    "label": "JI",
+    "yomi": "ちょんはぴくに",
+    "prob": "ちょんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "32x6=192",
+    "label": "JI",
+    "yomi": "さにんろぴくに",
+    "prob": "さにんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "48x4=192",
+    "label": "JI",
+    "yomi": "しゃんしぴくに",
+    "prob": "しゃんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "64x3=192",
+    "label": "JI",
+    "yomi": "りょんさぴくに",
+    "prob": "りょんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "96x2=192",
+    "label": "JI",
+    "yomi": "きろんにぴくに",
+    "prob": "きろんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x2=194",
+    "label": "JI",
+    "yomi": "きゅんにぴくし",
+    "prob": "きゅんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "39x5=195",
+    "label": "JI",
+    "yomi": "せんこひきこ",
+    "prob": "せんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "65x3=195",
+    "label": "JI",
+    "yomi": "もんさひきこ",
+    "prob": "もんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "28x7=196",
+    "label": "JI",
+    "yomi": "ちゃんなぴくる",
+    "prob": "ちゃんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "49x4=196",
+    "label": "JI",
+    "yomi": "しぇんしぴくる",
+    "prob": "しぇんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "98x2=196",
+    "label": "JI",
+    "yomi": "きゃんにぴくる",
+    "prob": "きゃんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "22x9=198",
+    "label": "JI",
+    "yomi": "ちんきいきゃ",
+    "prob": "ちんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "33x6=198",
+    "label": "JI",
+    "yomi": "すんろいきゃ",
+    "prob": "すんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "66x3=198",
+    "label": "JI",
+    "yomi": "ろろんさいきゃ",
+    "prob": "ろろんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x2=198",
+    "label": "JI",
+    "yomi": "けんにいきゃ",
+    "prob": "けんに"
+  },
+  {
+    "tier": "mid",
+    "expr": "74x3=222",
+    "label": "JI",
+    "yomi": "にょんさにち",
+    "prob": "にょんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "32x7=224",
+    "label": "JI",
+    "yomi": "さにんなちよ",
+    "prob": "さにんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "75x3=225",
+    "label": "JI",
+    "yomi": "のんさちこ",
+    "prob": "のんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "76x3=228",
+    "label": "JI",
+    "yomi": "なろんさちば",
+    "prob": "なろんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "33x7=231",
+    "label": "JI",
+    "yomi": "すんなついい",
+    "prob": "すんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "77x3=231",
+    "label": "JI",
+    "yomi": "にゅんさついい",
+    "prob": "にゅんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "78x3=234",
+    "label": "JI",
+    "yomi": "うぁんさつゆ",
+    "prob": "うぁんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "79x3=237",
+    "label": "JI",
+    "yomi": "ねんさつな",
+    "prob": "ねんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "34x7=238",
+    "label": "JI",
+    "yomi": "みょんなつば",
+    "prob": "みょんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "35x7=245",
+    "label": "JI",
+    "yomi": "そんなちょこ",
+    "prob": "そんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "36x7=252",
+    "label": "JI",
+    "yomi": "さろんなにこに",
+    "prob": "さろんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "42x6=252",
+    "label": "JI",
+    "yomi": "しにんろにこに",
+    "prob": "しにんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "63x4=252",
+    "label": "JI",
+    "yomi": "むんしにこに",
+    "prob": "むんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "84x3=252",
+    "label": "JI",
+    "yomi": "はしんさにこに",
+    "prob": "はしんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "85x3=255",
+    "label": "JI",
+    "yomi": "ほんさぶた",
+    "prob": "ほんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "32x8=256",
+    "label": "JI",
+    "yomi": "さにんはにごろ",
+    "prob": "さにんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "64x4=256",
+    "label": "JI",
+    "yomi": "りょんしにごろ",
+    "prob": "りょんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "43x6=258",
+    "label": "JI",
+    "yomi": "ゆんろにこば",
+    "prob": "ゆんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "86x3=258",
+    "label": "JI",
+    "yomi": "はろんさにこば",
+    "prob": "はろんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "37x7=259",
+    "label": "JI",
+    "yomi": "みゅんなふで",
+    "prob": "みゅんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "87x3=261",
+    "label": "JI",
+    "yomi": "はなんさふり",
+    "prob": "はなんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "33x8=264",
+    "label": "JI",
+    "yomi": "すんはふろし",
+    "prob": "すんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "44x6=264",
+    "label": "JI",
+    "yomi": "しょんろふろし",
+    "prob": "しょんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "66x4=264",
+    "label": "JI",
+    "yomi": "ろろんしふろし",
+    "prob": "ろろんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "88x3=264",
+    "label": "JI",
+    "yomi": "わんさふろし",
+    "prob": "わんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "53x5=265",
+    "label": "JI",
+    "yomi": "こさんこぶろこ",
+    "prob": "こさんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "38x7=266",
+    "label": "JI",
+    "yomi": "みゃんなふむ",
+    "prob": "みゃんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "89x3=267",
+    "label": "JI",
+    "yomi": "へんさぷろな",
+    "prob": "へんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "67x4=268",
+    "label": "JI",
+    "yomi": "りゅんしふろば",
+    "prob": "りゅんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "34x8=272",
+    "label": "JI",
+    "yomi": "みょんはふうじ",
+    "prob": "みょんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "68x4=272",
+    "label": "JI",
+    "yomi": "りゃんしふうじ",
+    "prob": "りゃんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "39x7=273",
+    "label": "JI",
+    "yomi": "せんなふなさ",
+    "prob": "せんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "55x5=275",
+    "label": "JI",
+    "yomi": "たんこにの",
+    "prob": "たんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "46x6=276",
+    "label": "JI",
+    "yomi": "しろんろぷうる",
+    "prob": "しろんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "69x4=276",
+    "label": "JI",
+    "yomi": "めんしぷうる",
+    "prob": "めんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "47x6=282",
+    "label": "JI",
+    "yomi": "しゅんろちゃぷ",
+    "prob": "しゅんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "94x3=282",
+    "label": "JI",
+    "yomi": "きょんさちゃぷ",
+    "prob": "きょんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "57x5=285",
+    "label": "JI",
+    "yomi": "てゅんこにぱこ",
+    "prob": "てゅんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "95x3=285",
+    "label": "JI",
+    "yomi": "きこんさにぱこ",
+    "prob": "きこんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "32x9=288",
+    "label": "JI",
+    "yomi": "さにんきにっぱ",
+    "prob": "さにんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "36x8=288",
+    "label": "JI",
+    "yomi": "さろんはにっぱ",
+    "prob": "さろんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "48x6=288",
+    "label": "JI",
+    "yomi": "しゃんろにっぱ",
+    "prob": "しゃんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "96x3=288",
+    "label": "JI",
+    "yomi": "きろんさにっぱ",
+    "prob": "きろんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x3=291",
+    "label": "JI",
+    "yomi": "きゅんさつきひ",
+    "prob": "きゅんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "73x4=292",
+    "label": "JI",
+    "yomi": "ぬんしふきふ",
+    "prob": "ぬんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "42x7=294",
+    "label": "JI",
+    "yomi": "しにんなにきし",
+    "prob": "しにんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "49x6=294",
+    "label": "JI",
+    "yomi": "しぇんろにきし",
+    "prob": "しぇんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "98x3=294",
+    "label": "JI",
+    "yomi": "きゃんさにきし",
+    "prob": "きゃんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "59x5=295",
+    "label": "JI",
+    "yomi": "てんこふきこ",
+    "prob": "てんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "37x8=296",
+    "label": "JI",
+    "yomi": "みゅんはぶくろ",
+    "prob": "みゅんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "74x4=296",
+    "label": "JI",
+    "yomi": "にょんしぶくろ",
+    "prob": "にょんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "33x9=297",
+    "label": "JI",
+    "yomi": "すんきにくな",
+    "prob": "すんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x3=297",
+    "label": "JI",
+    "yomi": "けんさにくな",
+    "prob": "けんさ"
+  },
+  {
+    "tier": "mid",
+    "expr": "83x4=332",
+    "label": "JI",
+    "yomi": "はさんしすに",
+    "prob": "はさんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "42x8=336",
+    "label": "JI",
+    "yomi": "しにんはすろ",
+    "prob": "しにんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "84x4=336",
+    "label": "JI",
+    "yomi": "はしんしすろ",
+    "prob": "はしんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "43x8=344",
+    "label": "JI",
+    "yomi": "ゆんはみしし",
+    "prob": "ゆんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "86x4=344",
+    "label": "JI",
+    "yomi": "はろんしみしし",
+    "prob": "はろんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "87x4=348",
+    "label": "JI",
+    "yomi": "はなんしさしゃ",
+    "prob": "はなんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "44x8=352",
+    "label": "JI",
+    "yomi": "しょんはそに",
+    "prob": "しょんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "88x4=352",
+    "label": "JI",
+    "yomi": "わんしそに",
+    "prob": "わんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "89x4=356",
+    "label": "JI",
+    "yomi": "へんしぞろ",
+    "prob": "へんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "52x7=364",
+    "label": "JI",
+    "yomi": "こにんなすりゅ",
+    "prob": "こにんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "73x5=365",
+    "label": "JI",
+    "yomi": "ぬんこみるこ",
+    "prob": "ぬんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "46x8=368",
+    "label": "JI",
+    "yomi": "しろんはさるや",
+    "prob": "しろんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "53x7=371",
+    "label": "JI",
+    "yomi": "こさんなみない",
+    "prob": "こさんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "62x6=372",
+    "label": "JI",
+    "yomi": "ろにんろすうぷ",
+    "prob": "ろにんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "93x4=372",
+    "label": "JI",
+    "yomi": "きさんしすうぷ",
+    "prob": "きさんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "75x5=375",
+    "label": "JI",
+    "yomi": "のんこみなこ",
+    "prob": "のんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "47x8=376",
+    "label": "JI",
+    "yomi": "しゅんはすうる",
+    "prob": "しゅんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "94x4=376",
+    "label": "JI",
+    "yomi": "きょんしすうる",
+    "prob": "きょんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "42x9=378",
+    "label": "JI",
+    "yomi": "しにんきすうぱ",
+    "prob": "しにんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "54x7=378",
+    "label": "JI",
+    "yomi": "ふぉんなすうぱ",
+    "prob": "ふぉんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "63x6=378",
+    "label": "JI",
+    "yomi": "むんろすうぱ",
+    "prob": "むんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "48x8=384",
+    "label": "JI",
+    "yomi": "しゃんはみやし",
+    "prob": "しゃんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "64x6=384",
+    "label": "JI",
+    "yomi": "りょんろみやし",
+    "prob": "りょんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "96x4=384",
+    "label": "JI",
+    "yomi": "きろんしみやし",
+    "prob": "きろんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "55x7=385",
+    "label": "JI",
+    "yomi": "たんなみやこ",
+    "prob": "たんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "77x5=385",
+    "label": "JI",
+    "yomi": "にゅんこみやこ",
+    "prob": "にゅんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "43x9=387",
+    "label": "JI",
+    "yomi": "ゆんきさばん",
+    "prob": "ゆんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x4=388",
+    "label": "JI",
+    "yomi": "きゅんしさわ",
+    "prob": "きゅんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "49x8=392",
+    "label": "JI",
+    "yomi": "しぇんはぜに",
+    "prob": "しぇんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "56x7=392",
+    "label": "JI",
+    "yomi": "ころんなぜに",
+    "prob": "ころんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "98x4=392",
+    "label": "JI",
+    "yomi": "きゃんしぜに",
+    "prob": "きゃんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "79x5=395",
+    "label": "JI",
+    "yomi": "ねんこさきこ",
+    "prob": "ねんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "44x9=396",
+    "label": "JI",
+    "yomi": "しょんきせる",
+    "prob": "しょんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "66x6=396",
+    "label": "JI",
+    "yomi": "ろろんろせる",
+    "prob": "ろろんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x4=396",
+    "label": "JI",
+    "yomi": "けんしせる",
+    "prob": "けんし"
+  },
+  {
+    "tier": "mid",
+    "expr": "57x7=399",
+    "label": "JI",
+    "yomi": "てゅんなさけ",
+    "prob": "てゅんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "72x6=432",
+    "label": "JI",
+    "yomi": "なにんろゆに",
+    "prob": "なにんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "62x7=434",
+    "label": "JI",
+    "yomi": "ろにんなしみゅ",
+    "prob": "ろにんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "73x6=438",
+    "label": "JI",
+    "yomi": "ぬんろゆば",
+    "prob": "ぬんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "63x7=441",
+    "label": "JI",
+    "yomi": "むんなじじい",
+    "prob": "むんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "74x6=444",
+    "label": "JI",
+    "yomi": "にょんろしょじ",
+    "prob": "にょんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "64x7=448",
+    "label": "JI",
+    "yomi": "りょんなししゃ",
+    "prob": "りょんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "65x7=455",
+    "label": "JI",
+    "yomi": "もんなしだ",
+    "prob": "もんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "76x6=456",
+    "label": "JI",
+    "yomi": "なろんろさいこ",
+    "prob": "なろんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "66x7=462",
+    "label": "JI",
+    "yomi": "ろろんなしるふ",
+    "prob": "ろろんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "77x6=462",
+    "label": "JI",
+    "yomi": "にゅんろしるふ",
+    "prob": "にゅんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "93x5=465",
+    "label": "JI",
+    "yomi": "きさんこしろこ",
+    "prob": "きさんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "52x9=468",
+    "label": "JI",
+    "yomi": "こにんきしるば",
+    "prob": "こにんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "78x6=468",
+    "label": "JI",
+    "yomi": "うぁんろしるば",
+    "prob": "うぁんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "67x7=469",
+    "label": "JI",
+    "yomi": "りゅんなしろき",
+    "prob": "りゅんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "79x6=474",
+    "label": "JI",
+    "yomi": "ねんろしにょ",
+    "prob": "ねんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "95x5=475",
+    "label": "JI",
+    "yomi": "きこんこしゅご",
+    "prob": "きこんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "68x7=476",
+    "label": "JI",
+    "yomi": "りゃんなしゅろ",
+    "prob": "りゃんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "53x9=477",
+    "label": "JI",
+    "yomi": "こさんきしゅな",
+    "prob": "こさんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "69x7=483",
+    "label": "JI",
+    "yomi": "めんなしゃみ",
+    "prob": "めんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x5=485",
+    "label": "JI",
+    "yomi": "きゅんこしゃこ",
+    "prob": "きゅんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "54x9=486",
+    "label": "JI",
+    "yomi": "ふぉんきしゃろ",
+    "prob": "ふぉんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "82x6=492",
+    "label": "JI",
+    "yomi": "はにんろしぇふ",
+    "prob": "はにんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "55x9=495",
+    "label": "JI",
+    "yomi": "たんきしくら",
+    "prob": "たんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x5=495",
+    "label": "JI",
+    "yomi": "けんこしくら",
+    "prob": "けんこ"
+  },
+  {
+    "tier": "mid",
+    "expr": "62x8=496",
+    "label": "JI",
+    "yomi": "ろにんはしぇる",
+    "prob": "ろにんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "83x6=498",
+    "label": "JI",
+    "yomi": "はさんろしぇぱ",
+    "prob": "はさんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "92x6=552",
+    "label": "JI",
+    "yomi": "きにんろたに",
+    "prob": "きにんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "62x9=558",
+    "label": "JI",
+    "yomi": "ろにんきたば",
+    "prob": "ろにんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "93x6=558",
+    "label": "JI",
+    "yomi": "きさんろたば",
+    "prob": "きさんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "94x6=564",
+    "label": "JI",
+    "yomi": "きょんろころし",
+    "prob": "きょんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "63x9=567",
+    "label": "JI",
+    "yomi": "むんきこじゅ",
+    "prob": "むんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "82x7=574",
+    "label": "JI",
+    "yomi": "はにんなこうし",
+    "prob": "はにんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "64x9=576",
+    "label": "JI",
+    "yomi": "りょんきこうろ",
+    "prob": "りょんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "72x8=576",
+    "label": "JI",
+    "yomi": "なにんはこうろ",
+    "prob": "なにんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "96x6=576",
+    "label": "JI",
+    "yomi": "きろんろこうろ",
+    "prob": "きろんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "83x7=581",
+    "label": "JI",
+    "yomi": "はさんなふぁい",
+    "prob": "はさんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x6=582",
+    "label": "JI",
+    "yomi": "きゅんろふぁに",
+    "prob": "きゅんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "73x8=584",
+    "label": "JI",
+    "yomi": "ぬんはこはし",
+    "prob": "ぬんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "65x9=585",
+    "label": "JI",
+    "yomi": "もんきこぼ",
+    "prob": "もんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "84x7=588",
+    "label": "JI",
+    "yomi": "はしんならっぱ",
+    "prob": "はしんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "98x6=588",
+    "label": "JI",
+    "yomi": "きゃんろらっぱ",
+    "prob": "きゃんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "74x8=592",
+    "label": "JI",
+    "yomi": "にょんはてつ",
+    "prob": "にょんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "66x9=594",
+    "label": "JI",
+    "yomi": "ろろんきでし",
+    "prob": "ろろんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x6=594",
+    "label": "JI",
+    "yomi": "けんろでし",
+    "prob": "けんろ"
+  },
+  {
+    "tier": "mid",
+    "expr": "85x7=595",
+    "label": "JI",
+    "yomi": "ほんならくご",
+    "prob": "ほんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "92x7=644",
+    "label": "JI",
+    "yomi": "きにんなろっし",
+    "prob": "きにんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "72x9=648",
+    "label": "JI",
+    "yomi": "なにんきじょば",
+    "prob": "なにんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "93x7=651",
+    "label": "JI",
+    "yomi": "きさんなもび",
+    "prob": "きさんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "82x8=656",
+    "label": "JI",
+    "yomi": "はにんはもろ",
+    "prob": "はにんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "73x9=657",
+    "label": "JI",
+    "yomi": "ぬんきもなあ",
+    "prob": "ぬんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "94x7=658",
+    "label": "JI",
+    "yomi": "きょんなもや",
+    "prob": "きょんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "83x8=664",
+    "label": "JI",
+    "yomi": "はさんはるるし",
+    "prob": "はさんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "95x7=665",
+    "label": "JI",
+    "yomi": "きこんなるるこ",
+    "prob": "きこんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "74x9=666",
+    "label": "JI",
+    "yomi": "にょんきるるる",
+    "prob": "にょんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "84x8=672",
+    "label": "JI",
+    "yomi": "はしんはるうつ",
+    "prob": "はしんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "96x7=672",
+    "label": "JI",
+    "yomi": "きろんなるうつ",
+    "prob": "きろんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "75x9=675",
+    "label": "JI",
+    "yomi": "のんきるの",
+    "prob": "のんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x7=679",
+    "label": "JI",
+    "yomi": "きゅんなるね",
+    "prob": "きゅんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "76x9=684",
+    "label": "JI",
+    "yomi": "なろんきじゃし",
+    "prob": "なろんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "98x7=686",
+    "label": "JI",
+    "yomi": "きゃんなじゃる",
+    "prob": "きゃんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "86x8=688",
+    "label": "JI",
+    "yomi": "はろんはるああ",
+    "prob": "はろんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "77x9=693",
+    "label": "JI",
+    "yomi": "にゅんきめす",
+    "prob": "にゅんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x7=693",
+    "label": "JI",
+    "yomi": "けんなめす",
+    "prob": "けんな"
+  },
+  {
+    "tier": "mid",
+    "expr": "87x8=696",
+    "label": "JI",
+    "yomi": "はなんはめろ",
+    "prob": "はなんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "92x8=736",
+    "label": "JI",
+    "yomi": "きにんはぬる",
+    "prob": "きにんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "82x9=738",
+    "label": "JI",
+    "yomi": "はにんきうすば",
+    "prob": "はにんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "93x8=744",
+    "label": "JI",
+    "yomi": "きさんはなっし",
+    "prob": "きさんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "83x9=747",
+    "label": "JI",
+    "yomi": "はさんきなしゅ",
+    "prob": "はさんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "94x8=752",
+    "label": "JI",
+    "yomi": "きょんはのぶ",
+    "prob": "きょんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "84x9=756",
+    "label": "JI",
+    "yomi": "はしんきのろ",
+    "prob": "はしんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "85x9=765",
+    "label": "JI",
+    "yomi": "ほんきなむこ",
+    "prob": "ほんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "96x8=768",
+    "label": "JI",
+    "yomi": "きろんはうるば",
+    "prob": "きろんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "86x9=774",
+    "label": "JI",
+    "yomi": "はろんきななし",
+    "prob": "はろんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x8=776",
+    "label": "JI",
+    "yomi": "きゅんはうる",
+    "prob": "きゅんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "87x9=783",
+    "label": "JI",
+    "yomi": "はなんきにゃす",
+    "prob": "はなんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "98x8=784",
+    "label": "JI",
+    "yomi": "きゃんはにゃし",
+    "prob": "きゃんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "88x9=792",
+    "label": "JI",
+    "yomi": "わんきねつ",
+    "prob": "わんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x8=792",
+    "label": "JI",
+    "yomi": "けんはねつ",
+    "prob": "けんは"
+  },
+  {
+    "tier": "mid",
+    "expr": "92x9=828",
+    "label": "JI",
+    "yomi": "きにんきばにあ",
+    "prob": "きにんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "93x9=837",
+    "label": "JI",
+    "yomi": "きさんきやみな",
+    "prob": "きさんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "94x9=846",
+    "label": "JI",
+    "yomi": "きょんきばじる",
+    "prob": "きょんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "95x9=855",
+    "label": "JI",
+    "yomi": "きこんきはた",
+    "prob": "きこんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "96x9=864",
+    "label": "JI",
+    "yomi": "きろんきはじょ",
+    "prob": "きろんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "97x9=873",
+    "label": "JI",
+    "yomi": "きゅんきはなみ",
+    "prob": "きゅんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "98x9=882",
+    "label": "JI",
+    "yomi": "きゃんきわに",
+    "prob": "きゃんき"
+  },
+  {
+    "tier": "mid",
+    "expr": "99x9=891",
+    "label": "JI",
+    "yomi": "けんきはくい",
+    "prob": "けんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "25x4=100",
+    "label": "jI+·E0",
+    "yomi": "にこんしいま",
+    "prob": "にこんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "15x8=120",
+    "label": "jI+·E0",
+    "yomi": "いこんはひにん",
+    "prob": "いこんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "17x6=102",
+    "label": "jI+",
+    "yomi": "ひゅんろとに",
+    "prob": "ひゅんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "34x3=102",
+    "label": "jI+",
+    "yomi": "みょんさとに",
+    "prob": "みょんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "13x8=104",
+    "label": "jI+",
+    "yomi": "いさんはとし",
+    "prob": "いさんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "26x4=104",
+    "label": "jI+",
+    "yomi": "にろんしとし",
+    "prob": "にろんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "15x7=105",
+    "label": "jI+",
+    "yomi": "いこんなとら",
+    "prob": "いこんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "35x3=105",
+    "label": "jI+",
+    "yomi": "そんさとら",
+    "prob": "そんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "12x9=108",
+    "label": "jI+",
+    "yomi": "てぃんきとぱ",
+    "prob": "てぃんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "18x6=108",
+    "label": "jI+",
+    "yomi": "ひゃんろとぱ",
+    "prob": "ひゃんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "27x4=108",
+    "label": "jI+",
+    "yomi": "ちゅんしとぱ",
+    "prob": "ちゅんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "36x3=108",
+    "label": "jI+",
+    "yomi": "さろんさとぱ",
+    "prob": "さろんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "37x3=111",
+    "label": "jI+",
+    "yomi": "みゅんさぴっぴ",
+    "prob": "みゅんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "14x8=112",
+    "label": "jI+",
+    "yomi": "ひょんはびてぃ",
+    "prob": "ひょんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "16x7=112",
+    "label": "jI+",
+    "yomi": "いろんなびてぃ",
+    "prob": "いろんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "28x4=112",
+    "label": "jI+",
+    "yomi": "ちゃんしびてぃ",
+    "prob": "ちゃんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "19x6=114",
+    "label": "jI+",
+    "yomi": "いきんろいいし",
+    "prob": "いきんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "38x3=114",
+    "label": "jI+",
+    "yomi": "みゃんさいいし",
+    "prob": "みゃんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "29x4=116",
+    "label": "jI+",
+    "yomi": "つぇんしいいろ",
+    "prob": "つぇんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "13x9=117",
+    "label": "jI+",
+    "yomi": "いさんきぴいな",
+    "prob": "いさんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "39x3=117",
+    "label": "jI+",
+    "yomi": "せんさぴいな",
+    "prob": "せんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "17x7=119",
+    "label": "jI+",
+    "yomi": "ひゅんなぴいく",
+    "prob": "ひゅんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "14x9=126",
+    "label": "jI+",
+    "yomi": "ひょんきいふる",
+    "prob": "ひょんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "18x7=126",
+    "label": "jI+",
+    "yomi": "ひゃんないふる",
+    "prob": "ひゃんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "16x8=128",
+    "label": "jI+",
+    "yomi": "いろんはいにば",
+    "prob": "いろんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "19x7=133",
+    "label": "jI+",
+    "yomi": "いきんないす",
+    "prob": "いきんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "15x9=135",
+    "label": "jI+",
+    "yomi": "いこんきいそ",
+    "prob": "いこんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "17x8=136",
+    "label": "jI+",
+    "yomi": "ひゅんはぴさろ",
+    "prob": "ひゅんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "16x9=144",
+    "label": "jI+",
+    "yomi": "いろんきいしし",
+    "prob": "いろんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "18x8=144",
+    "label": "jI+",
+    "yomi": "ひゃんはいしし",
+    "prob": "ひゃんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "19x8=152",
+    "label": "jI+",
+    "yomi": "いきんはぴらふ",
+    "prob": "いきんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "17x9=153",
+    "label": "jI+",
+    "yomi": "ひゅんきぴらみ",
+    "prob": "ひゅんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "18x9=162",
+    "label": "jI+",
+    "yomi": "ひゃんきいろち",
+    "prob": "ひゃんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "19x9=171",
+    "label": "jI+",
+    "yomi": "いきんきいない",
+    "prob": "いきんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "25x8=200",
+    "label": "JI+·E0",
+    "yomi": "にこんはふれん",
+    "prob": "にこんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "35x6=210",
+    "label": "JI+·E0",
+    "yomi": "そんろぶど",
+    "prob": "そんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "75x4=300",
+    "label": "JI+·E0",
+    "yomi": "のんしさまあ",
+    "prob": "のんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "85x6=510",
+    "label": "JI+·E0",
+    "yomi": "ほんろごと",
+    "prob": "ほんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "65x8=520",
+    "label": "JI+·E0",
+    "yomi": "もんはこぶん",
+    "prob": "もんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "75x8=600",
+    "label": "JI+·E0",
+    "yomi": "のんはろま",
+    "prob": "のんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "67x3=201",
+    "label": "JI+",
+    "yomi": "りゅんさにんい",
+    "prob": "りゅんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "29x7=203",
+    "label": "JI+",
+    "yomi": "つぇんなふんさ",
+    "prob": "つぇんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "34x6=204",
+    "label": "JI+",
+    "yomi": "みょんろぶんし",
+    "prob": "みょんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "68x3=204",
+    "label": "JI+",
+    "yomi": "りゃんさぶんし",
+    "prob": "りゃんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "23x9=207",
+    "label": "JI+",
+    "yomi": "つんきぶおう",
+    "prob": "つんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "69x3=207",
+    "label": "JI+",
+    "yomi": "めんさぶおう",
+    "prob": "めんさ"
+  },
+  {
+    "tier": "hard",
+    "expr": "26x8=208",
+    "label": "JI+",
+    "yomi": "にろんはにんば",
+    "prob": "にろんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "24x9=216",
+    "label": "JI+",
+    "yomi": "ちょんきふぃる",
+    "prob": "ちょんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "27x8=216",
+    "label": "JI+",
+    "yomi": "ちゅんはふぃる",
+    "prob": "ちゅんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "36x6=216",
+    "label": "JI+",
+    "yomi": "さろんろふぃる",
+    "prob": "さろんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "37x6=222",
+    "label": "JI+",
+    "yomi": "みゅんろにち",
+    "prob": "みゅんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "28x8=224",
+    "label": "JI+",
+    "yomi": "ちゃんはちよ",
+    "prob": "ちゃんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "25x9=225",
+    "label": "JI+",
+    "yomi": "にこんきちこ",
+    "prob": "にこんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "38x6=228",
+    "label": "JI+",
+    "yomi": "みゃんろちば",
+    "prob": "みゃんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "29x8=232",
+    "label": "JI+",
+    "yomi": "つぇんはつぶ",
+    "prob": "つぇんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "26x9=234",
+    "label": "JI+",
+    "yomi": "にろんきつゆ",
+    "prob": "にろんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "39x6=234",
+    "label": "JI+",
+    "yomi": "せんろつゆ",
+    "prob": "せんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "27x9=243",
+    "label": "JI+",
+    "yomi": "ちゅんきふゆ",
+    "prob": "ちゅんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "28x9=252",
+    "label": "JI+",
+    "yomi": "ちゃんきにこに",
+    "prob": "ちゃんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "29x9=261",
+    "label": "JI+",
+    "yomi": "つぇんきふり",
+    "prob": "つぇんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "43x7=301",
+    "label": "JI+",
+    "yomi": "ゆんなでれ",
+    "prob": "ゆんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "38x8=304",
+    "label": "JI+",
+    "yomi": "みゃんはみんじ",
+    "prob": "みゃんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "76x4=304",
+    "label": "JI+",
+    "yomi": "なろんしみんじ",
+    "prob": "なろんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "34x9=306",
+    "label": "JI+",
+    "yomi": "みょんきさんる",
+    "prob": "みょんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "44x7=308",
+    "label": "JI+",
+    "yomi": "しょんなさんば",
+    "prob": "しょんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "77x4=308",
+    "label": "JI+",
+    "yomi": "にゅんしさんば",
+    "prob": "にゅんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "39x8=312",
+    "label": "JI+",
+    "yomi": "せんはさいふ",
+    "prob": "せんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "78x4=312",
+    "label": "JI+",
+    "yomi": "うぁんしさいふ",
+    "prob": "うぁんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "35x9=315",
+    "label": "JI+",
+    "yomi": "そんきみしろ",
+    "prob": "そんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "45x7=315",
+    "label": "JI+",
+    "yomi": "しこんなみしろ",
+    "prob": "しこんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "79x4=316",
+    "label": "JI+",
+    "yomi": "ねんしさいろ",
+    "prob": "ねんし"
+  },
+  {
+    "tier": "hard",
+    "expr": "46x7=322",
+    "label": "JI+",
+    "yomi": "しろんなさち",
+    "prob": "しろんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "36x9=324",
+    "label": "JI+",
+    "yomi": "さろんきみによ",
+    "prob": "さろんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "47x7=329",
+    "label": "JI+",
+    "yomi": "しゅんなさつき",
+    "prob": "しゅんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "37x9=333",
+    "label": "JI+",
+    "yomi": "みゅんきみず",
+    "prob": "みゅんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "48x7=336",
+    "label": "JI+",
+    "yomi": "しゃんなすろ",
+    "prob": "しゃんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "38x9=342",
+    "label": "JI+",
+    "yomi": "みゃんきみしつ",
+    "prob": "みゃんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "49x7=343",
+    "label": "JI+",
+    "yomi": "しぇんなみゆ",
+    "prob": "しぇんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "39x9=351",
+    "label": "JI+",
+    "yomi": "せんきみらい",
+    "prob": "せんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "67x6=402",
+    "label": "JI+",
+    "yomi": "りゅんろしんぷ",
+    "prob": "りゅんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "45x9=405",
+    "label": "JI+",
+    "yomi": "しこんきしんご",
+    "prob": "しこんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "58x7=406",
+    "label": "JI+",
+    "yomi": "ふぁんなじんろ",
+    "prob": "ふぁんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "68x6=408",
+    "label": "JI+",
+    "yomi": "りゃんろしんや",
+    "prob": "りゃんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "59x7=413",
+    "label": "JI+",
+    "yomi": "てんなしいざ",
+    "prob": "てんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "46x9=414",
+    "label": "JI+",
+    "yomi": "しろんきしいし",
+    "prob": "しろんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "69x6=414",
+    "label": "JI+",
+    "yomi": "めんろしいし",
+    "prob": "めんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "47x9=423",
+    "label": "JI+",
+    "yomi": "しゅんきよつ",
+    "prob": "しゅんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "48x9=432",
+    "label": "JI+",
+    "yomi": "しゃんきゆに",
+    "prob": "しゃんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "49x9=441",
+    "label": "JI+",
+    "yomi": "しぇんきじじい",
+    "prob": "しぇんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "56x9=504",
+    "label": "JI+",
+    "yomi": "ころんきこんし",
+    "prob": "ころんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "63x8=504",
+    "label": "JI+",
+    "yomi": "むんはこんし",
+    "prob": "むんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "72x7=504",
+    "label": "JI+",
+    "yomi": "なにんなこんし",
+    "prob": "なにんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "84x6=504",
+    "label": "JI+",
+    "yomi": "はしんろこんし",
+    "prob": "はしんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "73x7=511",
+    "label": "JI+",
+    "yomi": "ぬんなこぴい",
+    "prob": "ぬんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "64x8=512",
+    "label": "JI+",
+    "yomi": "りょんはらぴぶ",
+    "prob": "りょんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "57x9=513",
+    "label": "JI+",
+    "yomi": "てゅんきらいざ",
+    "prob": "てゅんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "86x6=516",
+    "label": "JI+",
+    "yomi": "はろんろこいる",
+    "prob": "はろんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "74x7=518",
+    "label": "JI+",
+    "yomi": "にょんなこいや",
+    "prob": "にょんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "58x9=522",
+    "label": "JI+",
+    "yomi": "ふぁんきこっぷ",
+    "prob": "ふぁんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "87x6=522",
+    "label": "JI+",
+    "yomi": "はなんろこっぷ",
+    "prob": "はなんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "75x7=525",
+    "label": "JI+",
+    "yomi": "のんなこぶら",
+    "prob": "のんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "66x8=528",
+    "label": "JI+",
+    "yomi": "ろろんはらふぁ",
+    "prob": "ろろんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "88x6=528",
+    "label": "JI+",
+    "yomi": "わんろらふぁ",
+    "prob": "わんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "59x9=531",
+    "label": "JI+",
+    "yomi": "てんきこみい",
+    "prob": "てんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "76x7=532",
+    "label": "JI+",
+    "yomi": "なろんなこみに",
+    "prob": "なろんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "89x6=534",
+    "label": "JI+",
+    "yomi": "へんろこさじ",
+    "prob": "へんろ"
+  },
+  {
+    "tier": "hard",
+    "expr": "67x8=536",
+    "label": "JI+",
+    "yomi": "りゅんはこざる",
+    "prob": "りゅんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "77x7=539",
+    "label": "JI+",
+    "yomi": "にゅんなごみき",
+    "prob": "にゅんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "68x8=544",
+    "label": "JI+",
+    "yomi": "りゃんはらっし",
+    "prob": "りゃんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "78x7=546",
+    "label": "JI+",
+    "yomi": "うぁんなこじろ",
+    "prob": "うぁんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "69x8=552",
+    "label": "JI+",
+    "yomi": "めんはたに",
+    "prob": "めんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "79x7=553",
+    "label": "JI+",
+    "yomi": "ねんなだず",
+    "prob": "ねんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "86x7=602",
+    "label": "JI+",
+    "yomi": "はろんなろおぷ",
+    "prob": "はろんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "67x9=603",
+    "label": "JI+",
+    "yomi": "りゅんきろおざ",
+    "prob": "りゅんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "76x8=608",
+    "label": "JI+",
+    "yomi": "なろんはろおば",
+    "prob": "なろんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "87x7=609",
+    "label": "JI+",
+    "yomi": "はなんなろんぐ",
+    "prob": "はなんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "68x9=612",
+    "label": "JI+",
+    "yomi": "りゃんきりに",
+    "prob": "りゃんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "77x8=616",
+    "label": "JI+",
+    "yomi": "にゅんはりろ",
+    "prob": "にゅんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "88x7=616",
+    "label": "JI+",
+    "yomi": "わんなりろ",
+    "prob": "わんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "69x9=621",
+    "label": "JI+",
+    "yomi": "めんきるふぃ",
+    "prob": "めんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "89x7=623",
+    "label": "JI+",
+    "yomi": "へんなるつ",
+    "prob": "へんな"
+  },
+  {
+    "tier": "hard",
+    "expr": "78x8=624",
+    "label": "JI+",
+    "yomi": "うぁんはるふゆ",
+    "prob": "うぁんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "79x8=632",
+    "label": "JI+",
+    "yomi": "ねんはむに",
+    "prob": "ねんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "78x9=702",
+    "label": "JI+",
+    "yomi": "うぁんきなんぶ",
+    "prob": "うぁんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "88x8=704",
+    "label": "JI+",
+    "yomi": "わんはうれし",
+    "prob": "わんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "79x9=711",
+    "label": "JI+",
+    "yomi": "ねんきなひい",
+    "prob": "ねんき"
+  },
+  {
+    "tier": "hard",
+    "expr": "89x8=712",
+    "label": "JI+",
+    "yomi": "へんはないつ",
+    "prob": "へんは"
+  },
+  {
+    "tier": "hard",
+    "expr": "89x9=801",
+    "label": "JI+",
+    "yomi": "へんきばんび",
+    "prob": "へんき"
+  }
+]

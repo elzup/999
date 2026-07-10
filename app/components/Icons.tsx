@@ -22,6 +22,16 @@ export function IconD2() {
   )
 }
 
+export function IconKuku() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  )
+}
+
 export function IconCard() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

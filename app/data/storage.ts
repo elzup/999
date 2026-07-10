@@ -67,6 +67,15 @@ export function saveSubTab(key: string, value: string) {
 // Records
 const RecordsSchema = z.array(RecordSchema)
 
+/** 任意キーのテスト記録を読み書きする汎用ヘルパ(useQuizRecords が使用) */
+export function loadRecords(key: string): Record[] {
+  return loadJson(key, RecordsSchema, [])
+}
+
+export function saveRecords(key: string, records: Record[]) {
+  saveJson(key, records)
+}
+
 export function loadPiRecords(key = 'pi999'): Record[] {
   return loadJson(key, RecordsSchema, [])
 }
