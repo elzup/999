@@ -4,7 +4,10 @@ import {
   membersByGroup,
   buildYearMap,
   getMapBounds,
+  buildUnits,
   YEAR_MAP_LAYOUT,
+  type LayoutCell,
+  type RenderedCell,
 } from '../lib/yearMap'
 import { XY_TO_Z } from '../data/constants'
 import type { NumberEntry } from '../data/schema'
@@ -104,5 +107,67 @@ describe('getMapBounds', () => {
       expect(c.x - b.minX + 1 + c.w - 1).toBeLessThanOrEqual(b.cols + 1)
       expect(c.y - b.minY + 1 + c.h - 1).toBeLessThanOrEqual(b.rows + 1)
     }
+  })
+})
+
+function cell(c: LayoutCell, group?: string): RenderedCell {
+  const dash = c.label.indexOf('-')
+  const g = group ?? (dash < 0 ? c.label : c.label.slice(0, dash))
+  return { ...c, group: g, order: null, tiles: [] }
+}
+
+describe('buildUnits', () => {
+  it('同じ group の隣接マスでは共有辺のボーダーが消える', () => {
+    const cells: RenderedCell[] = [
+      cell({ label: 'a-1', x: 1, y: 1, w: 2, h: 1, color: '#000' }),
+      cell({ label: 'a-2', x: 3, y: 1, w: 1, h: 1, color: '#000' }),
+    ]
+    const units = buildUnits(cells)
+    const rightEdge = units.find((u) => u.gx === 2 && u.gy === 1)!
+    const leftEdge = units.find((u) => u.gx === 3 && u.gy === 1)!
+    expect(rightEdge.borders.right).toBe(false)
+    expect(leftEdge.borders.left).toBe(false)
+  })
+
+  it('異なる group との境界にはボーダーを描く', () => {
+    const cells: RenderedCell[] = [
+      cell({ label: 'a', x: 1, y: 1, w: 2, h: 1, color: '#000' }),
+      cell({ label: 'b', x: 1, y: 2, w: 2, h: 1, color: '#fff' }),
+    ]
+    const units = buildUnits(cells)
+    const aBottom = units.find((u) => u.gx === 1 && u.gy === 1)!
+    const bTop = units.find((u) => u.gx === 1 && u.gy === 2)!
+    expect(aBottom.borders.bottom).toBe(true)
+    expect(bTop.borders.top).toBe(true)
+  })
+
+  it('凸凹した和集合でも輪郭が正しく制御される', () => {
+    // L 字型 union: a の 2x2 から右下が欠けた形状
+    const cells: RenderedCell[] = [
+      cell({ label: 'a-1', x: 1, y: 1, w: 2, h: 1, color: '#000' }),
+      cell({ label: 'a-2', x: 1, y: 2, w: 1, h: 1, color: '#000' }),
+    ]
+    const units = buildUnits(cells)
+    const aTopLeft = units.find((u) => u.gx === 1 && u.gy === 1)!
+    const aTopRight = units.find((u) => u.gx === 2 && u.gy === 1)!
+    const aBottomLeft = units.find((u) => u.gx === 1 && u.gy === 2)!
+    // 同じ group の隣接マス間はボーダーなし
+    expect(aTopLeft.borders.right).toBe(false)
+    expect(aTopLeft.borders.bottom).toBe(false)
+    // 空の内側に面する辺は外縁なのでボーダーあり
+    expect(aTopRight.borders.bottom).toBe(true)
+    expect(aTopRight.borders.right).toBe(true)
+    expect(aBottomLeft.borders.right).toBe(true)
+    expect(aBottomLeft.borders.bottom).toBe(true)
+  })
+
+  it('マップ境界にはボーダーを描く', () => {
+    const cells: RenderedCell[] = [
+      cell({ label: 'a', x: 1, y: 1, w: 2, h: 2, color: '#000' }),
+    ]
+    const units = buildUnits(cells)
+    const topLeft = units.find((u) => u.gx === 1 && u.gy === 1)!
+    expect(topLeft.borders.top).toBe(true)
+    expect(topLeft.borders.left).toBe(true)
   })
 })

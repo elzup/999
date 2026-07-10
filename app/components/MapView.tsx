@@ -2,7 +2,12 @@ import { h } from 'preact'
 import { useState, useMemo, useCallback } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import type { NumberEntry } from '../data/schema'
-import type { MapTile, RenderedCell } from '../lib/yearMap'
+import {
+  buildUnits,
+  type MapUnit,
+  type MapTile,
+  type RenderedCell,
+} from '../lib/yearMap'
 import {
   candidatesOf,
   loadYmapChoices,
@@ -101,6 +106,8 @@ function MapView({
 
   const { cells, bounds } = useMemo(() => build(choices), [build, choices])
 
+  const units = useMemo(() => buildUnits(cells), [cells])
+
   const selEntry = useMemo(
     () => (sel ? numbers.find((n) => n.num === sel) ?? null : null),
     [sel, numbers]
@@ -192,30 +199,41 @@ function MapView({
             aspectRatio: `${bounds.cols} / ${bounds.rows}`,
           }}
         >
+          {units.map((unit: MapUnit) => (
+            <div
+              key={unit.key}
+              class={'ymap-unit' + (unit.tile ? '' : ' empty')}
+              style={{
+                gridColumn: `${unit.gx - bounds.minX + 1} / span 1`,
+                gridRow: `${unit.gy - bounds.minY + 1} / span 1`,
+                '--ymap-c': unit.color,
+                borderTopWidth: unit.borders.top ? '2.5px' : '0',
+                borderRightWidth: unit.borders.right ? '2.5px' : '0',
+                borderBottomWidth: unit.borders.bottom ? '2.5px' : '0',
+                borderLeftWidth: unit.borders.left ? '2.5px' : '0',
+              }}
+            >
+              {unit.tile ? (
+                <MapTileView
+                  tile={unit.tile}
+                  selected={sel === unit.tile.num}
+                  onSelect={() => setSel(unit.tile.num)}
+                />
+              ) : null}
+            </div>
+          ))}
           {cells.map((cell, i) => (
             <div
-              key={i}
-              class={'ymap-cell' + (cell.tiles.length === 0 ? ' empty' : '')}
+              key={`label-${i}`}
+              class="ymap-cell-label-wrap"
               style={{
                 gridColumn: `${cell.x - bounds.minX + 1} / span ${cell.w}`,
                 gridRow: `${cell.y - bounds.minY + 1} / span ${cell.h}`,
-                '--ymap-c': cell.color,
-                '--ymap-w': String(cell.w),
               }}
             >
               <span class="ymap-cell-label">
                 {GROUP_LABEL[cell.group] ?? cell.group}
               </span>
-              <div class="ymap-tiles">
-                {cell.tiles.map((tile) => (
-                  <MapTileView
-                    key={tile.xy}
-                    tile={tile}
-                    selected={sel === tile.num}
-                    onSelect={() => setSel(tile.num)}
-                  />
-                ))}
-              </div>
             </div>
           ))}
         </div>

@@ -110,6 +110,23 @@ export type RenderedCell = LayoutCell & {
   tiles: MapTile[]
 }
 
+export type UnitBorder = {
+  top: boolean
+  right: boolean
+  bottom: boolean
+  left: boolean
+}
+
+export type MapUnit = {
+  key: string
+  gx: number
+  gy: number
+  color: string
+  group: GroupKey
+  tile: MapTile | null
+  borders: UnitBorder
+}
+
 /** order 指定があればそれ優先、無ければ reading order (上→下, 左→右) */
 function cellOrder(a: RenderedCell, b: RenderedCell): number {
   if (a.order != null && b.order != null) return a.order - b.order
@@ -134,6 +151,52 @@ export function tileFromNum(
   const slot = resolveSlot(entry, overrides)
   const cand = candidateAt(entry, slot)
   return { xy, z, num, slot, img: cand?.img, word: cand?.word }
+}
+
+/**
+ * レイアウト矩形を1マス単位の Unit に展開する。
+ * 各 Unit の四辺は、隣接マスが同じ group ならボーダーなし、
+ * 異なる group またはマップ境界ならボーダーあり。
+ * 同じ group が複数の矩形で凸凹した和集合を形成しても正しく輪郭を描ける。
+ */
+export function buildUnits(cells: RenderedCell[]): MapUnit[] {
+  const groupAt = new Map<string, GroupKey>()
+  for (const cell of cells) {
+    for (let dx = 0; dx < cell.w; dx++) {
+      for (let dy = 0; dy < cell.h; dy++) {
+        groupAt.set(`${cell.x + dx},${cell.y + dy}`, cell.group)
+      }
+    }
+  }
+
+  const sameGroup = (x: number, y: number, group: GroupKey) =>
+    groupAt.get(`${x},${y}`) === group
+
+  const list: MapUnit[] = []
+  for (const cell of cells) {
+    for (let dy = 0; dy < cell.h; dy++) {
+      for (let dx = 0; dx < cell.w; dx++) {
+        const gx = cell.x + dx
+        const gy = cell.y + dy
+        const tile = cell.tiles[dy * cell.w + dx] ?? null
+        list.push({
+          key: `${cell.label}-${dx}-${dy}`,
+          gx,
+          gy,
+          color: cell.color,
+          group: cell.group,
+          tile,
+          borders: {
+            top: !sameGroup(gx, gy - 1, cell.group),
+            right: !sameGroup(gx + 1, gy, cell.group),
+            bottom: !sameGroup(gx, gy + 1, cell.group),
+            left: !sameGroup(gx - 1, gy, cell.group),
+          },
+        })
+      }
+    }
+  }
+  return list
 }
 
 /** total 件を k セルへ「均等割」した連続ブロックのサイズ列 */
