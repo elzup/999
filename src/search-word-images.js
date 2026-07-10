@@ -23,6 +23,9 @@ import {
   writeJson,
   slotKey,
 } from './images/store.js'
+// wh/wm 多候補スキーマを w1/w2/w1_2/w2_2 に正規化する共有ローダを使う
+// (旧ローカル loadWords は tsv 生カラムのままで _2 スロットを拾えなかった)
+import { loadWords } from './words.js'
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
 
@@ -58,18 +61,6 @@ function readCx() {
   const cx = process.env.CSE_CX
   if (!cx) throw new Error('CSE_CX (search engine id) is required')
   return cx
-}
-
-function loadWords() {
-  const text = readFileSync(join(dataDir, 'words.tsv'), 'utf-8')
-  const lines = text.split('\n').filter((l) => l.trim() !== '')
-  const header = lines[0].split('\t')
-  return lines.slice(1).map((line) => {
-    const cols = line.split('\t')
-    const e = {}
-    header.forEach((k, i) => (e[k] = cols[i]?.trim() || ''))
-    return e
-  })
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
