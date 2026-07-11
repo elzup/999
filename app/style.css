@@ -152,14 +152,21 @@ body {
   padding: 8px 12px;
 }
 .detail-row1 {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   height: 32px;
   overflow: hidden;
-  /* ★/× のアクション分の幅を右に確保し、語やScoreBarが溢れても見切れないようにする */
-  padding-right: 60px;
+}
+/* 語・ScoreBar 等の中身。flex:1+min-width:0 で縮み、溢れは内部で clip。
+   これにより ★/× のアクションを押し出さず、かつ被せて隠すこともしない。 */
+.detail-row1-mid {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
 }
 .detail-row2 {
   display: flex;
@@ -229,16 +236,6 @@ body {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-}
-/* 番号パネルの row1 は横に溢れやすいので、★/× を右端に固定して見切れを防ぐ */
-.detail-row1 .detail-actions {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 0;
-  padding-left: 8px;
-  background: var(--surface);
 }
 .detail-body {
   display: flex;

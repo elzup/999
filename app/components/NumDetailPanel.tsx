@@ -22,81 +22,83 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
     <div class="detail-panel">
       <div class="detail-row1">
         <span class="detail-id">{d.num}</span>
-        {d.wh1Img || d.w1Img ? (
-          <img
-            class="detail-word-img"
-            loading="lazy"
-            src={d.wh1Img || d.w1Img}
-            alt={d.wh1 || d.w1}
-          />
-        ) : null}
-        {d.wh1 || d.w1 ? (
-          <span class="detail-main-word">
-            {d.wh1 || d.w1}
-            {d.wh1k || d.w1k ? (
-              <span class="detail-sub-word"> {d.wh1k || d.w1k}</span>
-            ) : null}
-          </span>
-        ) : null}
-        {d.w1Score != null ? (
-          <ScoreBar
-            label={'WH1' + (d.w1Pattern ? ' [' + d.w1Pattern + ']' : '')}
-            score={d.w1Score}
-            error={d.w1Error}
-          />
-        ) : null}
-        {d.wm1Img || d.w2Img ? (
-          <img
-            class="detail-word-img"
-            loading="lazy"
-            src={d.wm1Img || d.w2Img}
-            alt={d.wm1 || d.w2}
-          />
-        ) : null}
-        {d.wm1 || d.w2 ? (
-          <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
-            {d.wm1 || d.w2}
-            {d.wm1k || d.w2k ? (
-              <span class="detail-sub-word"> {d.wm1k || d.w2k}</span>
-            ) : null}
-          </span>
-        ) : null}
-        {d.w2Score != null ? (
-          <ScoreBar label="WM1" score={d.w2Score} error={d.w2Error} />
-        ) : null}
-        {/* 2枠目の穴埋め: mono が空なら人の2人目、hito が空なら mono の2つ目 */}
-        {!(d.wm1 || d.w2) && (d.wh2Img || d.w1_2Img) ? (
-          <img
-            class="detail-word-img"
-            loading="lazy"
-            src={d.wh2Img || d.w1_2Img}
-            alt={d.wh2 || d.w1_2}
-          />
-        ) : null}
-        {!(d.wm1 || d.w2) && (d.wh2 || d.w1_2) ? (
-          <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
-            {d.wh2 || d.w1_2}
-          </span>
-        ) : null}
-        {!(d.wh1 || d.w1) && (d.wm2Img || d.w2_2Img) ? (
-          <img
-            class="detail-word-img"
-            loading="lazy"
-            src={d.wm2Img || d.w2_2Img}
-            alt={d.wm2 || d.w2_2}
-          />
-        ) : null}
-        {!(d.wh1 || d.w1) && (d.wm2 || d.w2_2) ? (
-          <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
-            {d.wm2 || d.w2_2}
-          </span>
-        ) : null}
-        {d.catScore ? (
-          <div class="detail-chip cat">
-            <span class="dc-label">Cat</span>
-            <span class="dc-val">{d.catScore}</span>
-          </div>
-        ) : null}
+        <div class="detail-row1-mid">
+          {d.wh1Img || d.w1Img ? (
+            <img
+              class="detail-word-img"
+              loading="lazy"
+              src={d.wh1Img || d.w1Img}
+              alt={d.wh1 || d.w1}
+            />
+          ) : null}
+          {d.wh1 || d.w1 ? (
+            <span class="detail-main-word">
+              {d.wh1 || d.w1}
+              {d.wh1k || d.w1k ? (
+                <span class="detail-sub-word"> {d.wh1k || d.w1k}</span>
+              ) : null}
+            </span>
+          ) : null}
+          {d.w1Score != null ? (
+            <ScoreBar
+              label={'WH1' + (d.w1Pattern ? ' [' + d.w1Pattern + ']' : '')}
+              score={d.w1Score}
+              error={d.w1Error}
+            />
+          ) : null}
+          {d.wm1Img || d.w2Img ? (
+            <img
+              class="detail-word-img"
+              loading="lazy"
+              src={d.wm1Img || d.w2Img}
+              alt={d.wm1 || d.w2}
+            />
+          ) : null}
+          {d.wm1 || d.w2 ? (
+            <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
+              {d.wm1 || d.w2}
+              {d.wm1k || d.w2k ? (
+                <span class="detail-sub-word"> {d.wm1k || d.w2k}</span>
+              ) : null}
+            </span>
+          ) : null}
+          {d.w2Score != null ? (
+            <ScoreBar label="WM1" score={d.w2Score} error={d.w2Error} />
+          ) : null}
+          {/* 2枠目の穴埋め: mono が空なら人の2人目、hito が空なら mono の2つ目 */}
+          {!(d.wm1 || d.w2) && (d.wh2Img || d.w1_2Img) ? (
+            <img
+              class="detail-word-img"
+              loading="lazy"
+              src={d.wh2Img || d.w1_2Img}
+              alt={d.wh2 || d.w1_2}
+            />
+          ) : null}
+          {!(d.wm1 || d.w2) && (d.wh2 || d.w1_2) ? (
+            <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
+              {d.wh2 || d.w1_2}
+            </span>
+          ) : null}
+          {!(d.wh1 || d.w1) && (d.wm2Img || d.w2_2Img) ? (
+            <img
+              class="detail-word-img"
+              loading="lazy"
+              src={d.wm2Img || d.w2_2Img}
+              alt={d.wm2 || d.w2_2}
+            />
+          ) : null}
+          {!(d.wh1 || d.w1) && (d.wm2 || d.w2_2) ? (
+            <span class="detail-main-word" style={{ color: 'var(--text2)' }}>
+              {d.wm2 || d.w2_2}
+            </span>
+          ) : null}
+          {d.catScore ? (
+            <div class="detail-chip cat">
+              <span class="dc-label">Cat</span>
+              <span class="dc-val">{d.catScore}</span>
+            </div>
+          ) : null}
+        </div>
         <div class="detail-actions">
           {onToggleBm && (
             <span
