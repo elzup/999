@@ -10,11 +10,10 @@ import YearTab from './components/YearTab'
 import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
 import KukuTab from './components/KukuTab'
-import EditorTab from './components/EditorTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
-import { fetchEditorWords } from './lib/editorApi'
 import { fetchAppData } from './lib/appDataApi'
+import { SHEET_EDIT_URL } from './data/constants'
 import {
   IconNum,
   IconCard,
@@ -46,22 +45,9 @@ export function App() {
 
     let cancelled = false
     fetchAppData(token)
-      .then(async (raw) => {
+      .then((raw) => {
         if (cancelled) return
-        const initialData = validateAppData(raw)
-        setData(initialData)
-
-        // 保存済みシート編集を反映するライブ同期 (任意・非ブロッキング)。
-        try {
-          const liveWords = await fetchEditorWords(token)
-          if (cancelled) return
-          setData({
-            ...initialData,
-            numbers: mergeNumberEntries(initialData.numbers, liveWords),
-          })
-        } catch {
-          // 静的スナップショットのまま利用可能。
-        }
+        setData(validateAppData(raw))
       })
       .catch(() => {
         // 401 (無効トークン) やネットワーク失敗はロック画面へ。
@@ -144,26 +130,6 @@ export function App() {
           onToggleBm={toggleBm}
         />
       )}
-      {tab === 'edit' && (
-        <EditorTab
-          numbers={data.numbers}
-          token={token}
-          onSaved={(entry) =>
-            setData((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    numbers: prev.numbers.map((current) =>
-                      current.num === entry.num
-                        ? { ...current, ...entry }
-                        : current
-                    ),
-                  }
-                : prev
-            )
-          }
-        />
-      )}
       <div class="bottom-bar">
         <TabButton
           id="num"
@@ -214,29 +180,18 @@ export function App() {
           icon={<IconStats />}
           label="その他"
         />
-        {token && (
-          <TabButton
-            id="edit"
-            current={tab}
-            onSelect={setTab}
-            icon={<IconEdit />}
-            label="編集"
-          />
-        )}
+        <button
+          class="bar-tab"
+          onClick={() =>
+            window.open(SHEET_EDIT_URL, '_blank', 'noopener,noreferrer')
+          }
+        >
+          <IconEdit />
+          <span>編集</span>
+        </button>
       </div>
     </>
   )
-}
-
-function mergeNumberEntries(
-  current: AppData['numbers'],
-  live: AppData['numbers']
-): AppData['numbers'] {
-  const liveByNum = new Map(live.map((entry) => [entry.num, entry]))
-  return current.map((entry) => ({
-    ...entry,
-    ...(liveByNum.get(entry.num) || {}),
-  }))
 }
 
 function TabButton({

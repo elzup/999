@@ -5,6 +5,10 @@ import type { YearItem } from './schema'
 export const ACTIVATE_URL =
   'https://app.notion.com/p/anozon/memosupo-secret-39b08b0e9da8800ea08df83802c8dacd'
 
+// 編集は当面 Google スプレッドシートで直接行う (アプリ内エディタは撤去)。
+export const SHEET_EDIT_URL =
+  'https://docs.google.com/spreadsheets/d/1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM/edit?gid=0#gid=0'
+
 export const PI_STR =
   '3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513'
 export const PI_DIGITS = PI_STR.replace('.', '').split('')
@@ -437,6 +441,5 @@ export const VALID_TABS = [
   'weekday',
   'kuku',
   'misc',
-  'edit',
 ] as const
 export type TabId = typeof VALID_TABS[number]
