@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
@@ -8,7 +8,9 @@ import { classify } from './goro-extract.js'
 import { extractName, isKanaOnly, loadWords, toHiragana } from './words.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
-const publicDir = join(baseDir, '..', 'public')
+// data.json は辞書本体 (私的連想) を含むため、公開 hosting (public/→dist) には出さず
+// gitignore 済みの private/ に書き出す。配信は認証付き Cloud Function 経由のみ。
+const privateDir = join(baseDir, '..', 'private')
 
 function buildCandidateSlotShape(prefix) {
   const shape = {}
@@ -229,9 +231,10 @@ for (const n of numbers) {
 }
 
 const out = { numbers, cards, rules }
-writeFileSync(join(publicDir, 'data.json'), JSON.stringify(out))
+mkdirSync(privateDir, { recursive: true })
+writeFileSync(join(privateDir, 'data.json'), JSON.stringify(out))
 console.log(
-  `Generated public/data.json (${numbers.length} numbers, ${
+  `Generated private/data.json (${numbers.length} numbers, ${
     cards.length
   } cards, rules: ${Object.keys(rules.singleByDigit).length} digits)`
 )

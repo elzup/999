@@ -35,10 +35,11 @@
     "preview:legacy": "npx serve public",
     "preview": "portless run vite preview",
     "preview:raw": "vite preview",
-    "build:preview": "node src/generate-preview-data.js && cp src/visualize-words.html public/stats.html && cp src/visualize-words.css public/ && cp src/viz-client.js public/ && cp src/visualize-words.data.json public/",
+    "build:preview": "node src/generate-preview-data.js && cp src/visualize-words.html public/stats.html && cp src/visualize-words.css public/ && cp src/viz-client.js public/",
+    "sync:private": "mkdir -p functions/private && cp private/data.json functions/private/data.json && cp src/visualize-words.data.json functions/private/visualize-words.data.json",
     "deploy:legacy": "npm run build:preview && firebase deploy --only hosting",
-    "deploy": "npm run build:preview && npm run build && firebase deploy --only hosting",
-    "deploy:api": "npm run build:preview && npm run build && firebase deploy --only functions:api,hosting",
+    "deploy": "npm run build:preview && npm run build && npm run sync:private && firebase deploy --only functions:api,hosting",
+    "deploy:api": "npm run build:preview && npm run build && npm run sync:private && firebase deploy --only functions:api,hosting",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {

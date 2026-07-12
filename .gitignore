@@ -13,11 +13,16 @@ src/visualize-words.data.json
 .firebase/
 functions/.env
 functions/.secret.local
-public/visualize-words.data.json
+# ローカル秘匿 (EDIT_TOKEN / SHEET_URL 等)。public repo なので絶対にコミットしない
+.envrc
+.env
+.env.local
+# 私的辞書データ (認証付き Function 経由でのみ配信。公開 hosting には出さない)
+private/
+functions/private/
 public/visualize-words.css
 public/viz-client.js
 public/stats.html
-public/data.json
 
 # sheet-audit 生成物 (write plan)
 src/sheet-audit.out.json

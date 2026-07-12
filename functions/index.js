@@ -1,4 +1,6 @@
 const { createSign, timingSafeEqual } = require('node:crypto')
+const { readFileSync } = require('node:fs')
+const { join } = require('node:path')
 const { onRequest } = require('firebase-functions/v2/https')
 const { defineSecret } = require('firebase-functions/params')
 
@@ -73,6 +75,18 @@ exports.api = onRequest(
         return
       }
 
+      // 辞書本体 (私的連想 + 画像URL)。認証済みブラウザだけが取得できる。
+      if (req.method === 'GET' && path === '/app/data') {
+        res.json(readPrivateJson('data.json'))
+        return
+      }
+
+      // 統計ページ (visualize-words) 用データ。同じく私的語を含むため認証必須。
+      if (req.method === 'GET' && path === '/app/stats') {
+        res.json(readPrivateJson('visualize-words.data.json'))
+        return
+      }
+
       if (req.method === 'GET' && path === '/editor/words') {
         const sheet = await loadWordsSheet()
         res.json({ ok: true, words: sheet.entries })
@@ -101,6 +115,24 @@ exports.api = onRequest(
 function setNoStore(res) {
   res.set('cache-control', 'no-store')
   res.set('vary', 'authorization')
+}
+
+const privateJsonCache = new Map()
+
+// functions/private/<name> をデプロイ時に同梱し、fs で読む (キャッシュ)。
+// 公開 hosting には置かず、この認証付き関数経由でのみ配信する。
+function readPrivateJson(name) {
+  if (!privateJsonCache.has(name)) {
+    try {
+      const raw = readFileSync(join(__dirname, 'private', name), 'utf8')
+      privateJsonCache.set(name, JSON.parse(raw))
+    } catch (cause) {
+      const error = new Error('private_data_unavailable')
+      error.statusCode = 500
+      throw error
+    }
+  }
+  return privateJsonCache.get(name)
 }
 
 function normalizeApiPath(path) {

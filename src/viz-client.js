@@ -1106,10 +1106,18 @@ function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    const dataFile = params.get('data') || './visualize-words.data.json'
-    fetch(dataFile)
+    // 統計データも私的語を含むため、認証付き Function 経由で取得する。
+    // localStorage のトークンは親アプリ (同一オリジン) と共有。?data= は明示上書き用。
+    const override = params.get('data')
+    const token = localStorage.getItem('editToken999') || ''
+    const req = override
+      ? fetch(override)
+      : fetch('/api/app/stats', {
+          headers: token ? { authorization: 'Bearer ' + token } : {},
+        })
+    req
       .then((r) => {
-        if (!r.ok) throw new Error('Failed to load ' + dataFile)
+        if (!r.ok) throw new Error('Failed to load stats (' + r.status + ')')
         return r.json()
       })
       .then((json) => {
