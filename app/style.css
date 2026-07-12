@@ -469,7 +469,7 @@ body {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   min-height: 80px;
-  max-height: 40vh;
+  max-height: 56vh;
   overflow-y: auto;
 }
 .sticky-empty {
@@ -734,18 +734,18 @@ body {
 .np-numpad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-  max-width: 280px;
+  gap: 6px;
+  max-width: min(440px, 94vw);
   margin: 0 auto;
 }
 .np-numkey {
-  aspect-ratio: 5/3;
+  aspect-ratio: 3 / 2;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--surface2);
   border-radius: 8px;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: bold;
   cursor: pointer;
   color: var(--text);
