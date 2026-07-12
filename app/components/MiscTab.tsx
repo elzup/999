@@ -6,6 +6,7 @@ import StorageEstimatePanel from './StorageEstimatePanel'
 import TagPanel from './TagPanel'
 import RulesPanel from './RulesPanel'
 import RecallTab from './RecallTab'
+import ActivatePanel from './ActivatePanel'
 
 type Props = {
   numbers: NumberEntry[]
@@ -15,7 +16,14 @@ type Props = {
   onToggleBm: (key: string) => void
 }
 
-type SubTab = 'bm' | 'tags' | 'rules' | 'recall' | 'stats' | 'storage'
+type SubTab =
+  | 'bm'
+  | 'tags'
+  | 'rules'
+  | 'recall'
+  | 'stats'
+  | 'storage'
+  | 'activate'
 
 function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('bm')
@@ -73,6 +81,12 @@ function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
         >
           容量
         </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'activate' ? ' active' : '')}
+          onClick={() => handleSub('activate')}
+        >
+          認証
+        </button>
       </div>
       {sub === 'bm' && (
         <BookmarkTab
@@ -101,6 +115,7 @@ function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
         ))}
       {sub === 'stats' && <iframe class="stats-frame" src="./stats.html" />}
       {sub === 'storage' && <StorageEstimatePanel />}
+      {sub === 'activate' && <ActivatePanel />}
     </div>
   )
 }

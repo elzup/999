@@ -1,6 +1,7 @@
 const EDIT_TOKEN_KEY = 'editToken999'
 
-const TOKEN_QUERY_KEYS = ['edit_token', 'editor_token']
+// `token` は閲覧=編集を統一したアクセストークン。`edit_token`/`editor_token` は後方互換。
+const TOKEN_QUERY_KEYS = ['token', 'edit_token', 'editor_token']
 
 export function consumeEditorTokenFromUrl(): string {
   const url = new URL(window.location.href)
@@ -24,6 +25,10 @@ export function consumeEditorTokenFromUrl(): string {
 
 export function loadEditorToken(): string {
   return localStorage.getItem(EDIT_TOKEN_KEY) || ''
+}
+
+export function saveEditorToken(token: string) {
+  localStorage.setItem(EDIT_TOKEN_KEY, token.trim())
 }
 
 export function clearEditorToken() {

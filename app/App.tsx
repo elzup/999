@@ -11,8 +11,10 @@ import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
 import KukuTab from './components/KukuTab'
 import EditorTab from './components/EditorTab'
+import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { fetchEditorWords } from './lib/editorApi'
+import { fetchAppData } from './lib/appDataApi'
 import {
   IconNum,
   IconCard,
@@ -26,33 +28,50 @@ import {
 
 export function App() {
   const [tab, _setTab] = useState<TabId>(loadTab)
-  const [editorToken] = useState(consumeEditorTokenFromUrl)
+  const [token] = useState(consumeEditorTokenFromUrl)
   const setTab = useCallback((t: TabId) => {
     saveTab(t)
     _setTab(t)
   }, [])
   const [data, setData] = useState<AppData | null>(null)
+  const [locked, setLocked] = useState(false)
   const [bookmarks, setBookmarks] = useState(loadBookmarks)
 
   useEffect(() => {
-    fetch('./data.json')
-      .then((r) => r.json())
+    // 辞書本体は認証付き Function 経由でのみ取得。トークンが無ければロック画面へ。
+    if (!token) {
+      setLocked(true)
+      return
+    }
+
+    let cancelled = false
+    fetchAppData(token)
       .then(async (raw) => {
+        if (cancelled) return
         const initialData = validateAppData(raw)
         setData(initialData)
 
-        if (!editorToken) return
+        // 保存済みシート編集を反映するライブ同期 (任意・非ブロッキング)。
         try {
-          const liveWords = await fetchEditorWords(editorToken)
+          const liveWords = await fetchEditorWords(token)
+          if (cancelled) return
           setData({
             ...initialData,
             numbers: mergeNumberEntries(initialData.numbers, liveWords),
           })
         } catch {
-          // Static data remains usable when the editor API is not deployed yet.
+          // 静的スナップショットのまま利用可能。
         }
       })
-  }, [editorToken])
+      .catch(() => {
+        // 401 (無効トークン) やネットワーク失敗はロック画面へ。
+        if (!cancelled) setLocked(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
   const toggleBm = useCallback((key: string) => {
     setBookmarks((prev) => {
@@ -63,6 +82,10 @@ export function App() {
       return next
     })
   }, [])
+
+  if (locked) {
+    return <LockedScreen invalid={Boolean(token)} />
+  }
 
   if (!data) {
     return (
@@ -124,7 +147,7 @@ export function App() {
       {tab === 'edit' && (
         <EditorTab
           numbers={data.numbers}
-          token={editorToken}
+          token={token}
           onSaved={(entry) =>
             setData((prev) =>
               prev
@@ -191,7 +214,7 @@ export function App() {
           icon={<IconStats />}
           label="その他"
         />
-        {editorToken && (
+        {token && (
           <TabButton
             id="edit"
             current={tab}

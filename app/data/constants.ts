@@ -1,5 +1,10 @@
 import type { YearItem } from './schema'
 
+// 「アクティベート」リンク先。本番トークン付き URL を記した個人 Notion ページ
+// (Notion ログイン必須)。新しい端末はここからトークン URL を踏んで認証する。
+export const ACTIVATE_URL =
+  'https://app.notion.com/p/anozon/memosupo-secret-39b08b0e9da8800ea08df83802c8dacd'
+
 export const PI_STR =
   '3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513'
 export const PI_DIGITS = PI_STR.replace('.', '').split('')
