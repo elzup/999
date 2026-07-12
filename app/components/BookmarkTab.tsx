@@ -10,6 +10,8 @@ type Props = {
   cards: CardEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
+  // 詳細を開いたら呼ぶ (復習リマインドの閲覧時刻更新)
+  onView?: (key: string) => void
 }
 
 type CardCellProps = {
@@ -60,7 +62,15 @@ function NumCell({ d, selected, onSelect }: NumCellProps) {
   )
 }
 
-function BookmarkTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
+function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
+  const openDetail = (key: string) => {
+    setSelected((cur) => {
+      const next = cur === key ? null : key
+      if (next) onView?.(next)
+      return next
+    })
+  }
+
   const bmNums = useMemo(() => {
     const keys = [...bookmarks]
       .filter((k) => k.startsWith('n:'))
@@ -134,9 +144,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
                   key={d.num}
                   d={d}
                   selected={selected === 'n:' + d.num}
-                  onSelect={() =>
-                    setSelected(selected === 'n:' + d.num ? null : 'n:' + d.num)
-                  }
+                  onSelect={() => openDetail('n:' + d.num)}
                 />
               ))}
             </div>
@@ -161,9 +169,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm }: Props) {
                     key={key}
                     c={c}
                     selected={selected === 'c:' + key}
-                    onSelect={() =>
-                      setSelected(selected === 'c:' + key ? null : 'c:' + key)
-                    }
+                    onSelect={() => openDetail('c:' + key)}
                   />
                 )
               })}

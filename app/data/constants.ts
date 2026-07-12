@@ -440,6 +440,7 @@ export const VALID_TABS = [
   'year',
   'weekday',
   'kuku',
+  'bm',
   'misc',
 ] as const
 export type TabId = typeof VALID_TABS[number]

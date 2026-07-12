@@ -1198,6 +1198,23 @@ body {
 .bar-tab.active {
   color: var(--accent);
 }
+/* 復習リマインド: 最も長く開かれていないブックマークが1週間超で点滅させる */
+.bar-tab.glow:not(.active) {
+  color: var(--warn);
+  animation: barGlow 1.5s ease-in-out infinite;
+}
+.bar-tab.glow svg {
+  filter: drop-shadow(0 0 4px var(--warn));
+}
+@keyframes barGlow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
 .bar-tab svg {
   width: 22px;
   height: 22px;

@@ -1,23 +1,20 @@
 import { h } from 'preact'
 import { useState, useCallback } from 'preact/hooks'
-import type { NumberEntry, CardEntry, RulesData } from '../data/schema'
-import BookmarkTab from './BookmarkTab'
+import type { NumberEntry, RulesData } from '../data/schema'
 import StorageEstimatePanel from './StorageEstimatePanel'
 import TagPanel from './TagPanel'
 import RulesPanel from './RulesPanel'
 import RecallTab from './RecallTab'
 import ActivatePanel from './ActivatePanel'
+import { SHEET_EDIT_URL } from '../data/constants'
 
 type Props = {
   numbers: NumberEntry[]
-  cards: CardEntry[]
   rules?: RulesData
-  bookmarks: Set<string>
-  onToggleBm: (key: string) => void
 }
 
 type SubTab =
-  | 'bm'
+  | 'sheet'
   | 'tags'
   | 'rules'
   | 'recall'
@@ -25,14 +22,12 @@ type SubTab =
   | 'storage'
   | 'activate'
 
-function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
-  const [sub, setSub] = useState<SubTab>('bm')
+function MiscTab({ numbers, rules }: Props) {
+  const [sub, setSub] = useState<SubTab>('sheet')
 
   const handleSub = useCallback((s: SubTab) => {
     setSub(s)
   }, [])
-
-  const bmCount = bookmarks.size
 
   return (
     <div
@@ -46,10 +41,10 @@ function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
     >
       <div class="sub-tab-switch">
         <button
-          class={'sub-tab-btn' + (sub === 'bm' ? ' active' : '')}
-          onClick={() => handleSub('bm')}
+          class={'sub-tab-btn' + (sub === 'sheet' ? ' active' : '')}
+          onClick={() => handleSub('sheet')}
         >
-          ★ {bmCount > 0 && <span class="bar-badge">{bmCount}</span>}
+          編集
         </button>
         <button
           class={'sub-tab-btn' + (sub === 'tags' ? ' active' : '')}
@@ -88,13 +83,20 @@ function MiscTab({ numbers, cards, rules, bookmarks, onToggleBm }: Props) {
           認証
         </button>
       </div>
-      {sub === 'bm' && (
-        <BookmarkTab
-          numbers={numbers}
-          cards={cards}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
+      {sub === 'sheet' && (
+        <div class="content activate-panel">
+          <p class="activate-desc">
+            辞書の追加・編集・タグ付けは当面 Google スプレッドシートで行います。
+          </p>
+          <a
+            class="activate-link"
+            href={SHEET_EDIT_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            スプレッドシートを開く
+          </a>
+        </div>
       )}
       {sub === 'tags' && <TagPanel numbers={numbers} />}
       {sub === 'rules' &&

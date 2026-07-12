@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect } from 'preact/hooks'
 import { validateAppData } from './data/parse'
-import { loadBookmarks, saveBookmarks, loadTab, saveTab } from './data/storage'
+import {
+  loadBookmarks,
+  saveBookmarks,
+  loadBookmarkViews,
+  saveBookmarkViews,
+  loadTab,
+  saveTab,
+} from './data/storage'
 import type { AppData } from './data/schema'
 import type { TabId } from './data/constants'
 import NumGroupTab from './components/NumGroupTab'
@@ -10,10 +17,11 @@ import YearTab from './components/YearTab'
 import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
 import KukuTab from './components/KukuTab'
+import BookmarkTab from './components/BookmarkTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { fetchAppData } from './lib/appDataApi'
-import { SHEET_EDIT_URL } from './data/constants'
+import { isBookmarkReviewDue } from './lib/bookmarkReview'
 import {
   IconNum,
   IconCard,
@@ -22,7 +30,7 @@ import {
   IconWeekday,
   IconKuku,
   IconStats,
-  IconEdit,
+  IconStar,
 } from './components/Icons'
 
 export function App() {
@@ -35,6 +43,7 @@ export function App() {
   const [data, setData] = useState<AppData | null>(null)
   const [locked, setLocked] = useState(false)
   const [bookmarks, setBookmarks] = useState(loadBookmarks)
+  const [bmViews, setBmViews] = useState(loadBookmarkViews)
 
   useEffect(() => {
     // 辞書本体は認証付き Function 経由でのみ取得。トークンが無ければロック画面へ。
@@ -59,15 +68,38 @@ export function App() {
     }
   }, [token])
 
-  const toggleBm = useCallback((key: string) => {
-    setBookmarks((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      saveBookmarks(next)
+  const toggleBm = useCallback(
+    (key: string) => {
+      const adding = !bookmarks.has(key)
+      setBookmarks((prev) => {
+        const next = new Set(prev)
+        if (adding) next.add(key)
+        else next.delete(key)
+        saveBookmarks(next)
+        return next
+      })
+      // 追加時は「今見た」扱いで閲覧時刻を記録 (新規が即光らないように)。削除時は掃除。
+      setBmViews((prev) => {
+        const next = { ...prev }
+        if (adding) next[key] = Date.now()
+        else delete next[key]
+        saveBookmarkViews(next)
+        return next
+      })
+    },
+    [bookmarks]
+  )
+
+  // ブックマークの詳細を開いたら閲覧時刻を更新 (復習グローのリセット)。
+  const recordBookmarkView = useCallback((key: string) => {
+    setBmViews((prev) => {
+      const next = { ...prev, [key]: Date.now() }
+      saveBookmarkViews(next)
       return next
     })
   }, [])
+
+  const bmReviewDue = isBookmarkReviewDue(bookmarks, bmViews, Date.now())
 
   if (locked) {
     return <LockedScreen invalid={Boolean(token)} />
@@ -121,15 +153,16 @@ export function App() {
         />
       )}
       {tab === 'kuku' && <KukuTab />}
-      {tab === 'misc' && (
-        <MiscTab
+      {tab === 'bm' && (
+        <BookmarkTab
           numbers={data.numbers}
           cards={data.cards}
-          rules={data.rules}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
+          onView={recordBookmarkView}
         />
       )}
+      {tab === 'misc' && <MiscTab numbers={data.numbers} rules={data.rules} />}
       <div class="bottom-bar">
         <TabButton
           id="num"
@@ -174,21 +207,20 @@ export function App() {
           label="九九"
         />
         <TabButton
+          id="bm"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconStar />}
+          label="ブックマーク"
+          highlight={bmReviewDue}
+        />
+        <TabButton
           id="misc"
           current={tab}
           onSelect={setTab}
           icon={<IconStats />}
-          label="その他"
+          label="設定"
         />
-        <button
-          class="bar-tab"
-          onClick={() =>
-            window.open(SHEET_EDIT_URL, '_blank', 'noopener,noreferrer')
-          }
-        >
-          <IconEdit />
-          <span>編集</span>
-        </button>
       </div>
     </>
   )
@@ -200,16 +232,22 @@ function TabButton({
   onSelect,
   icon,
   label,
+  highlight,
 }: {
   id: TabId
   current: TabId
   onSelect: (t: TabId) => void
   icon: preact.JSX.Element
   label: preact.ComponentChildren
+  highlight?: boolean
 }) {
   return (
     <button
-      class={'bar-tab' + (current === id ? ' active' : '')}
+      class={
+        'bar-tab' +
+        (current === id ? ' active' : '') +
+        (highlight ? ' glow' : '')
+      }
       onClick={() => onSelect(id)}
     >
       {icon}

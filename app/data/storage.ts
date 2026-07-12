@@ -36,6 +36,23 @@ export function saveBookmarks(bm: Set<string>) {
   localStorage.setItem('bm999', JSON.stringify([...bm]))
 }
 
+// ブックマーク復習リマインド: 各ブックマークを最後に詳細表示した時刻(ms)を記録する。
+// 全ブックマーク中で最も長く開かれていないものがこの閾値を超えたら Tab Bar を光らせる。
+export const BM_STALE_MS = 7 * 24 * 60 * 60 * 1000 // 1週間
+
+export function loadBookmarkViews(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem('bmViews999')
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveBookmarkViews(views: Record<string, number>) {
+  localStorage.setItem('bmViews999', JSON.stringify(views))
+}
+
 // Tab
 export function loadTab(): TabId {
   const saved = localStorage.getItem('tab999')
