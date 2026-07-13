@@ -11,6 +11,7 @@ import {
 import type { Record as TestRecord } from '../data/schema'
 import { loadWeekdayRecords, saveWeekdayRecords } from '../data/storage'
 import RecordPanel from './RecordPanel'
+import ReviewPanel, { type ReviewItem } from './ReviewPanel'
 
 type Answer = {
   questionId: string
@@ -23,7 +24,10 @@ type ViewMode = 'explain' | 'test'
 
 function todayString() {
   const now = new Date()
-  return `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`
+  return `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}/${String(now.getDate()).padStart(2, '0')}`
 }
 
 function formatMs(ms: number) {
@@ -43,8 +47,12 @@ function WeekdayExplanation({ result }: { result: WeekdayResult }) {
         </div>
         <div class="weekday-badges">
           <span class="weekday-badge">{result.month}月</span>
-          <span class="weekday-badge">{result.isLeapYear ? '閏年' : '平年'}</span>
-          {result.leapAdjust !== 0 && <span class="weekday-badge warn">補正 -1</span>}
+          <span class="weekday-badge">
+            {result.isLeapYear ? '閏年' : '平年'}
+          </span>
+          {result.leapAdjust !== 0 && (
+            <span class="weekday-badge warn">補正 -1</span>
+          )}
         </div>
       </div>
 
@@ -65,7 +73,9 @@ function WeekdayExplanation({ result }: { result: WeekdayResult }) {
           <div class="weekday-ref-title">曜日 index</div>
           <div class="weekday-ref-row">
             {WEEKDAY_NAMES_JA.map((name, index) => (
-              <span key={name} class="weekday-ref-chip">{index}:{name}</span>
+              <span key={name} class="weekday-ref-chip">
+                {index}:{name}
+              </span>
             ))}
           </div>
         </div>
@@ -73,7 +83,9 @@ function WeekdayExplanation({ result }: { result: WeekdayResult }) {
           <div class="weekday-ref-title">月コード</div>
           <div class="weekday-ref-row">
             {Object.entries(MONTH_CODES).map(([month, code]) => (
-              <span key={month} class="weekday-ref-chip">{month}月:{code}</span>
+              <span key={month} class="weekday-ref-chip">
+                {month}月:{code}
+              </span>
             ))}
           </div>
         </div>
@@ -85,20 +97,31 @@ function WeekdayExplanation({ result }: { result: WeekdayResult }) {
 function WeekdayCalcTab() {
   const [viewMode, setViewMode] = useState<ViewMode>('explain')
   const [dateInput, setDateInput] = useState(todayString())
-  const [result, setResult] = useState<WeekdayResult | null>(() => calculateWeekday(todayString()))
+  const [result, setResult] = useState<WeekdayResult | null>(() =>
+    calculateWeekday(todayString())
+  )
   const [error, setError] = useState('')
   const [quiz, setQuiz] = useState<WeekdayQuestion[]>([])
   const [answers, setAnswers] = useState<Answer[]>([])
   const [quizStartedAt, setQuizStartedAt] = useState<number | null>(null)
-  const [questionStartedAt, setQuestionStartedAt] = useState<number | null>(null)
+  const [questionStartedAt, setQuestionStartedAt] = useState<number | null>(
+    null
+  )
   const [elapsedMs, setElapsedMs] = useState(0)
   const timerRef = useRef<number | null>(null)
-  const [openExplanations, setOpenExplanations] = useState<Record<string, boolean>>({})
+  const [openExplanations, setOpenExplanations] = useState<
+    Record<string, boolean>
+  >({})
   const [records, setRecords] = useState<TestRecord[]>(loadWeekdayRecords)
   const [showRecords, setShowRecords] = useState(false)
 
   useEffect(() => {
-    if (viewMode === 'test' && quiz.length > 0 && answers.length < quiz.length && quizStartedAt !== null) {
+    if (
+      viewMode === 'test' &&
+      quiz.length > 0 &&
+      answers.length < quiz.length &&
+      quizStartedAt !== null
+    ) {
       timerRef.current = window.setInterval(() => {
         setElapsedMs(Date.now() - quizStartedAt)
       }, 50)
@@ -122,10 +145,27 @@ function WeekdayCalcTab() {
   const lastScore = answers.filter((answer) => answer.correct).length
   const finished = quiz.length > 0 && answers.length >= quiz.length
 
+  // 結果は他テストと同様に ReviewPanel ページで表示する。
+  const reviewItems = useMemo<ReviewItem[]>(
+    () =>
+      quiz.map((q) => {
+        const a = answerMap.get(q.id)
+        return {
+          label: q.date,
+          correct: a?.correct ?? false,
+          userAnswer: a ? WEEKDAY_NAMES_JA[a.selected] : '—',
+          rightAnswer: `${q.result.weekdayJa}曜`,
+        }
+      }),
+    [quiz, answerMap]
+  )
+
   const handleExplain = useCallback(() => {
     const next = calculateWeekday(dateInput)
     if (!next) {
-      setError('無効な日付です。1500/01/01 から 2500/12/31 の範囲で入力してください。')
+      setError(
+        '無効な日付です。1500/01/01 から 2500/12/31 の範囲で入力してください。'
+      )
       setResult(null)
       return
     }
@@ -152,43 +192,60 @@ function WeekdayCalcTab() {
     setOpenExplanations({})
   }, [])
 
-  const handleAnswer = useCallback((selected: number) => {
-    if (!currentQuestion || questionStartedAt === null || finished) return
-    const elapsed = Date.now() - questionStartedAt
-    const nextAnswer: Answer = {
-      questionId: currentQuestion.id,
-      selected,
-      correct: selected === currentQuestion.result.weekdayIndex,
-      elapsedMs: elapsed,
-    }
-    const nextAnswers = [...answers, nextAnswer]
-    setAnswers(nextAnswers)
-    setQuestionStartedAt(Date.now())
-
-    if (nextAnswers.length >= quiz.length && quizStartedAt !== null) {
-      const score = nextAnswers.filter((a) => a.correct).length
-      const totalMs = Date.now() - quizStartedAt
-      const record: TestRecord = {
-        date: new Date().toISOString(),
-        score,
-        total: quiz.length,
-        time: Math.round(totalMs / 1000),
+  const handleAnswer = useCallback(
+    (selected: number) => {
+      if (!currentQuestion || questionStartedAt === null || finished) return
+      const elapsed = Date.now() - questionStartedAt
+      const nextAnswer: Answer = {
+        questionId: currentQuestion.id,
+        selected,
+        correct: selected === currentQuestion.result.weekdayIndex,
+        elapsedMs: elapsed,
       }
-      const newRecords = [record, ...records].slice(0, 50)
-      setRecords(newRecords)
-      saveWeekdayRecords(newRecords)
-    }
-  }, [currentQuestion, questionStartedAt, finished, answers, quiz, quizStartedAt, records])
+      const nextAnswers = [...answers, nextAnswer]
+      setAnswers(nextAnswers)
+      setQuestionStartedAt(Date.now())
+
+      if (nextAnswers.length >= quiz.length && quizStartedAt !== null) {
+        const score = nextAnswers.filter((a) => a.correct).length
+        const totalMs = Date.now() - quizStartedAt
+        const record: TestRecord = {
+          date: new Date().toISOString(),
+          score,
+          total: quiz.length,
+          time: Math.round(totalMs / 1000),
+        }
+        const newRecords = [record, ...records].slice(0, 50)
+        setRecords(newRecords)
+        saveWeekdayRecords(newRecords)
+      }
+    },
+    [
+      currentQuestion,
+      questionStartedAt,
+      finished,
+      answers,
+      quiz,
+      quizStartedAt,
+      records,
+    ]
+  )
 
   const toggleExplanation = useCallback((questionId: string) => {
-    setOpenExplanations((prev) => ({ ...prev, [questionId]: !prev[questionId] }))
+    setOpenExplanations((prev) => ({
+      ...prev,
+      [questionId]: !prev[questionId],
+    }))
   }, [])
 
-  const deleteRecord = useCallback((idx: number) => {
-    const newRecords = records.filter((_, i) => i !== idx)
-    setRecords(newRecords)
-    saveWeekdayRecords(newRecords)
-  }, [records])
+  const deleteRecord = useCallback(
+    (idx: number) => {
+      const newRecords = records.filter((_, i) => i !== idx)
+      setRecords(newRecords)
+      saveWeekdayRecords(newRecords)
+    },
+    [records]
+  )
 
   const clearRecords = useCallback(() => {
     setRecords([])
@@ -230,14 +287,20 @@ function WeekdayCalcTab() {
               <input
                 class="search-input weekday-date-input"
                 value={dateInput}
-                onInput={(e) => setDateInput((e.target as HTMLInputElement).value)}
+                onInput={(e) =>
+                  setDateInput((e.target as HTMLInputElement).value)
+                }
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleExplain()
                 }}
                 placeholder="YYYY/MM/DD"
               />
-              <button class="filter-btn" onClick={handleExplain}>計算</button>
-              <button class="filter-btn" onClick={handleRandomExplain}>ランダム</button>
+              <button class="filter-btn" onClick={handleExplain}>
+                計算
+              </button>
+              <button class="filter-btn" onClick={handleRandomExplain}>
+                ランダム
+              </button>
             </div>
             {error ? <div class="weekday-error">{error}</div> : null}
             {result ? <WeekdayExplanation result={result} /> : null}
@@ -247,15 +310,26 @@ function WeekdayCalcTab() {
             <div class="weekday-test-summary">
               <div>
                 <div class="weekday-test-title">曜日テスト</div>
-                <div class="weekday-test-sub">1500年から2500年のランダム10問</div>
+                <div class="weekday-test-sub">
+                  1500年から2500年のランダム10問
+                </div>
               </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div
+                style={{
+                  marginLeft: 'auto',
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'center',
+                }}
+              >
                 {quiz.length > 0 ? (
                   <span class="weekday-timer">
                     {lastScore}/{answers.length} ・ {formatMs(elapsedMs)}
                   </span>
                 ) : null}
-                <button class="filter-btn" onClick={startQuiz}>開始</button>
+                <button class="filter-btn" onClick={startQuiz}>
+                  開始
+                </button>
               </div>
             </div>
 
@@ -266,7 +340,9 @@ function WeekdayCalcTab() {
                 {currentQuestion && !finished ? (
                   <div class="weekday-current-card">
                     <div class="weekday-current-no">Q{currentIndex + 1}</div>
-                    <div class="weekday-current-date">{currentQuestion.date}</div>
+                    <div class="weekday-current-date">
+                      {currentQuestion.date}
+                    </div>
                     <div class="weekday-current-help">日曜から縦1列で選択</div>
                   </div>
                 ) : (
@@ -305,14 +381,25 @@ function WeekdayCalcTab() {
                           <span class="weekday-quiz-date">{question.date}</span>
                           {answer ? (
                             <>
-                              <span class={'weekday-quiz-status ' + (answer.correct ? 'ok' : 'ng')}>
+                              <span
+                                class={
+                                  'weekday-quiz-status ' +
+                                  (answer.correct ? 'ok' : 'ng')
+                                }
+                              >
                                 {answer.correct ? '正解' : '不正解'}
                               </span>
                               <span class="weekday-quiz-picked">
-                                {WEEKDAY_NAMES_JA[answer.selected]} → {question.result.weekdayJa}
+                                {WEEKDAY_NAMES_JA[answer.selected]} →{' '}
+                                {question.result.weekdayJa}
                               </span>
-                              <span class="weekday-quiz-time">{formatMs(answer.elapsedMs)}</span>
-                              <button class="rec-btn" onClick={() => toggleExplanation(question.id)}>
+                              <span class="weekday-quiz-time">
+                                {formatMs(answer.elapsedMs)}
+                              </span>
+                              <button
+                                class="rec-btn"
+                                onClick={() => toggleExplanation(question.id)}
+                              >
                                 {isOpen ? '解説を閉じる' : '解説'}
                               </button>
                             </>
@@ -332,6 +419,20 @@ function WeekdayCalcTab() {
           </div>
         )}
       </div>
+
+      {finished ? (
+        <ReviewPanel
+          title="曜日計算"
+          score={lastScore}
+          total={quiz.length}
+          time={Math.round(elapsedMs / 1000)}
+          items={reviewItems}
+          onClose={() => {
+            setQuiz([])
+            setAnswers([])
+          }}
+        />
+      ) : null}
 
       {showRecords ? (
         <RecordPanel
