@@ -7,6 +7,8 @@ export type ChoiceQuestion = {
   prompt: string
   answer: string
   choices: string[]
+  /** 振り返りでブックマークする際のキー(例: 'n:573')。無ければ★を出さない。 */
+  bmKey?: string
 }
 
 export type QuizSummary = {
@@ -20,13 +22,11 @@ type Props = {
   title: string
   questions: ChoiceQuestion[]
   onQuit: () => void
-  onRetry: () => void
-  /** 全問終了時に1回だけ呼ばれる(記録保存/振り返り生成に使う) */
+  /**
+   * 全問終了時に1回だけ呼ばれる(記録保存/振り返り生成に使う)。
+   * 結果表示は他テストと統一し、呼び出し側が summary から ReviewPanel を自動表示する。
+   */
   onComplete?: (summary: QuizSummary) => void
-  /** 結果画面に「記録」ボタンを出す */
-  onShowRecords?: () => void
-  /** 結果画面に「振り返り」ボタンを出す */
-  onShowReview?: () => void
   /** 問題表示の追加クラス(例: 等幅にしたい等) */
   promptClass?: string
 }
@@ -71,10 +71,7 @@ function ChoiceQuiz({
   title,
   questions,
   onQuit,
-  onRetry,
   onComplete,
-  onShowRecords,
-  onShowReview,
   promptClass,
 }: Props) {
   const [state, dispatch] = useReducer(reducer, {
@@ -104,6 +101,7 @@ function ChoiceQuiz({
           correct,
           userAnswer: choice,
           rightAnswer: q.answer,
+          bmKey: q.bmKey,
         },
       })
     },
@@ -132,40 +130,9 @@ function ChoiceQuiz({
     })
   }, [finished, score, reviews, questions.length, onComplete])
 
-  if (finished) {
-    return (
-      <div class="test-screen quiz-screen">
-        <div class="pi-header">
-          <div class="pi-header-title">{title} 結果</div>
-        </div>
-        <div class="content" style={{ flex: 1 }}>
-          <div class="cm-quiz-wrap quiz-result">
-            <div class="quiz-result-score">
-              {score} / {questions.length}
-            </div>
-            <div class="quiz-result-actions">
-              <button class="filter-btn active" onClick={onRetry}>
-                もう一度
-              </button>
-              {onShowReview ? (
-                <button class="filter-btn" onClick={onShowReview}>
-                  振り返り
-                </button>
-              ) : null}
-              {onShowRecords ? (
-                <button class="filter-btn" onClick={onShowRecords}>
-                  記録
-                </button>
-              ) : null}
-              <button class="filter-btn" onClick={onQuit}>
-                終了
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // 全問終了後は独自の結果画面を出さず、呼び出し側が ReviewPanel を自動表示する
+  // (年号/年コード/カード/π と同じ「終了→結果オーバーレイ自動表示」の流れに統一)。
+  if (finished) return null
 
   const revealed = picked !== null
 

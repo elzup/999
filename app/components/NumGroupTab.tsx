@@ -4,6 +4,7 @@ import type { NumberEntry } from '../data/schema'
 import NumberTab from './NumberTab'
 import DigitTab from './DigitTab'
 import NumMapTab from './NumMapTab'
+import AssocTestTab from './AssocTestTab'
 
 type Props = {
   numbers: NumberEntry[]
@@ -11,7 +12,7 @@ type Props = {
   onToggleBm: (key: string) => void
 }
 
-type SubTab = 'all' | 'd2' | 'map'
+type SubTab = 'all' | 'd2' | 'map' | 'test'
 
 function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [sub, setSub] = useState<SubTab>('all')
@@ -49,6 +50,12 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
         >
           マップ
         </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'test' ? ' active' : '')}
+          onClick={() => handleSub('test')}
+        >
+          テスト
+        </button>
       </div>
       {sub === 'all' && (
         <NumberTab
@@ -66,6 +73,13 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
       )}
       {sub === 'map' && (
         <NumMapTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
+      {sub === 'test' && (
+        <AssocTestTab
           numbers={numbers}
           bookmarks={bookmarks}
           onToggleBm={onToggleBm}

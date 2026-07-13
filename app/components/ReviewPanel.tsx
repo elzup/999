@@ -5,6 +5,8 @@ export type ReviewItem = {
   correct: boolean
   userAnswer?: string
   rightAnswer: string
+  /** ブックマークキー(例: 'n:573')。bookmarks/onToggleBm と揃ったとき★を出す。 */
+  bmKey?: string
 }
 
 type Props = {
@@ -14,10 +16,38 @@ type Props = {
   time: number
   items: ReviewItem[]
   onClose: () => void
+  /** ★トグルを出したいクイズは両方を渡す(番号系クイズの振り返り復習用)。 */
+  bookmarks?: Set<string>
+  onToggleBm?: (key: string) => void
 }
 
-function ReviewPanel({ title, score, total, time, items, onClose }: Props) {
+function ReviewPanel({
+  title,
+  score,
+  total,
+  time,
+  items,
+  onClose,
+  bookmarks,
+  onToggleBm,
+}: Props) {
   const wrongItems = items.filter((i) => !i.correct)
+  const correctItems = items.filter((i) => i.correct)
+
+  const renderStar = (item: ReviewItem) => {
+    if (!onToggleBm || !item.bmKey) return null
+    const on = bookmarks ? bookmarks.has(item.bmKey) : false
+    const key = item.bmKey
+    return (
+      <span
+        class={'bm-star review-bm ' + (on ? 'on' : '')}
+        onClick={() => onToggleBm(key)}
+      >
+        {on ? '★' : '☆'}
+      </span>
+    )
+  }
+
   return (
     <div
       class="rec-overlay"
@@ -38,9 +68,7 @@ function ReviewPanel({ title, score, total, time, items, onClose }: Props) {
           </span>
           <span class="review-time">{time}秒</span>
           {wrongItems.length > 0 ? (
-            <span class="review-wrong-count">
-              {wrongItems.length}問ミス
-            </span>
+            <span class="review-wrong-count">{wrongItems.length}問ミス</span>
           ) : (
             <span class="review-perfect">全問正解</span>
           )}
@@ -55,21 +83,19 @@ function ReviewPanel({ title, score, total, time, items, onClose }: Props) {
                   <span class="review-user">{item.userAnswer}</span>
                   <span class="review-arrow">&rarr;</span>
                   <span class="review-right">{item.rightAnswer}</span>
+                  {renderStar(item)}
                 </div>
               ))}
             </>
           ) : null}
-          <div class="review-section-label">
-            正解 ({items.filter((i) => i.correct).length})
-          </div>
-          {items
-            .filter((i) => i.correct)
-            .map((item, i) => (
-              <div key={'c' + i} class="review-item correct">
-                <span class="review-label">{item.label}</span>
-                <span class="review-right">{item.rightAnswer}</span>
-              </div>
-            ))}
+          <div class="review-section-label">正解 ({correctItems.length})</div>
+          {correctItems.map((item, i) => (
+            <div key={'c' + i} class="review-item correct">
+              <span class="review-label">{item.label}</span>
+              <span class="review-right">{item.rightAnswer}</span>
+              {renderStar(item)}
+            </div>
+          ))}
         </div>
       </div>
     </div>
