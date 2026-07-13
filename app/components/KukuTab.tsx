@@ -5,12 +5,44 @@ import ChoiceQuiz, { type ChoiceQuestion, type QuizSummary } from './ChoiceQuiz'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
 import { useQuizRecords } from '../lib/useQuizRecords'
-import { buildQuiz, makeRng, type KukuItem } from '../lib/kukuQuiz'
+import {
+  buildQuiz,
+  buildQuestion,
+  shuffle,
+  makeRng,
+  type KukuItem,
+} from '../lib/kukuQuiz'
+import { loadKukuAbScores, saveKukuAbScores } from '../data/storage'
 
 const RECORDS_KEY = 'kuku999'
 
 const ITEMS = kukuData as KukuItem[]
 const QUIZ_LEN = 10
+
+// ABxC の AB (先頭の2桁) を取り出す。AB ごとの練習/スコアに使う。
+const abOf = (it: KukuItem) => it.expr.split('x')[0]
+
+const AB_LIST: string[] = (() => {
+  const seen = new Set<string>()
+  for (const it of ITEMS) seen.add(abOf(it))
+  return [...seen].sort((a, b) => Number(a) - Number(b))
+})()
+
+const AB_COUNTS: Record<string, number> = (() => {
+  const m: Record<string, number> = {}
+  for (const it of ITEMS) m[abOf(it)] = (m[abOf(it)] || 0) + 1
+  return m
+})()
+
+/** 指定 AB の全 C を出題。誤答は全体から採って選択肢に変化をつける。 */
+function buildAbQuestions(ab: string): ChoiceQuestion[] {
+  const pool = ITEMS.filter((it) => abOf(it) === ab)
+  const rng = makeRng(Date.now())
+  return shuffle(pool, rng).map((item) => {
+    const q = buildQuestion(item, ITEMS, rng)
+    return { prompt: q.left, answer: q.answer, choices: q.choices }
+  })
+}
 
 const TIERS = [
   { key: 'easy', label: '易', desc: '足し算なし系 + JI·E0' },
@@ -46,14 +78,15 @@ function buildKukuQuestions(tier: TierKey): ChoiceQuestion[] {
   }))
 }
 
-type QuizRun = { questions: ChoiceQuestion[]; id: number }
+type QuizRun = { questions: ChoiceQuestion[]; id: number; ab?: string }
 
 function KukuTab() {
   const [tier, setTier] = useState<TierKey>('easy')
-  const [view, setView] = useState<'list' | 'lyrics'>('list')
+  const [view, setView] = useState<'list' | 'lyrics' | 'ab'>('list')
   const [run, setRun] = useState<QuizRun | null>(null)
   const [summary, setSummary] = useState<QuizSummary | null>(null)
   const [showRecords, setShowRecords] = useState(false)
+  const [abScores, setAbScores] = useState(loadKukuAbScores)
   const rec = useQuizRecords(RECORDS_KEY)
   const items = ITEMS.filter((it) => it.tier === tier)
   const active = TIERS.find((t) => t.key === tier)!
@@ -66,12 +99,39 @@ function KukuTab() {
     }))
   }, [tier])
 
+  const startAbQuiz = useCallback((ab: string) => {
+    setSummary(null)
+    setRun((prev) => ({
+      questions: buildAbQuestions(ab),
+      id: (prev?.id ?? 0) + 1,
+      ab,
+    }))
+  }, [])
+
   const onComplete = useCallback(
     (s: QuizSummary) => {
       setSummary(s)
-      rec.addRecord(s)
+      if (run?.ab) {
+        // AB 別練習は AB キーで best/last を保存する。
+        setAbScores((prev) => {
+          const before = prev[run.ab!]
+          const next = {
+            ...prev,
+            [run.ab!]: {
+              last: s.score,
+              best: Math.max(before?.best ?? 0, s.score),
+              total: s.total,
+              date: new Date().toISOString(),
+            },
+          }
+          saveKukuAbScores(next)
+          return next
+        })
+      } else {
+        rec.addRecord(s)
+      }
     },
-    [rec]
+    [rec, run]
   )
 
   // 全問終了 → summary が入ったら結果オーバーレイを自動表示。閉じるとタブ表示に戻る
@@ -79,7 +139,7 @@ function KukuTab() {
   if (run && summary) {
     return (
       <ReviewPanel
-        title="九九 読みテスト"
+        title={run.ab ? `九九 ${run.ab}の段` : '九九 読みテスト'}
         score={summary.score}
         total={summary.total}
         time={summary.time}
@@ -96,7 +156,7 @@ function KukuTab() {
     return (
       <ChoiceQuiz
         key={run.id}
-        title={`九九 読みテスト（${active.label}）`}
+        title={run.ab ? `九九 ${run.ab}の段` : `九九 読みテスト（${active.label}）`}
         questions={run.questions}
         promptClass="kuku-quiz-face"
         onQuit={() => setRun(null)}
@@ -136,6 +196,12 @@ function KukuTab() {
               onClick={() => setView('lyrics')}
             >
               歌詞
+            </button>
+            <button
+              class={'kuku-view-btn' + (view === 'ab' ? ' active' : '')}
+              onClick={() => setView('ab')}
+            >
+              AB別
             </button>
           </div>
         </div>
@@ -184,7 +250,7 @@ function KukuTab() {
               ))}
             </div>
           ))
-        ) : (
+        ) : view === 'lyrics' ? (
           <div class="kuku-lyrics">
             {chunk(
               items.map((it) => it.yomi),
@@ -194,6 +260,34 @@ function KukuTab() {
                 {line.join('　')}
               </div>
             ))}
+          </div>
+        ) : (
+          <div class="kuku-ab-grid">
+            {AB_LIST.map((ab) => {
+              const sc = abScores[ab]
+              const ratio = sc ? sc.best / sc.total : -1
+              const cls =
+                'kuku-ab-cell' +
+                (ratio < 0
+                  ? ''
+                  : ratio >= 0.9
+                    ? ' ok'
+                    : ratio >= 0.6
+                      ? ' mid'
+                      : ' low')
+              return (
+                <button
+                  key={ab}
+                  class={cls}
+                  onClick={() => startAbQuiz(ab)}
+                >
+                  <span class="kuku-ab-num">{ab}</span>
+                  <span class="kuku-ab-score">
+                    {sc ? `${sc.best}/${sc.total}` : `${AB_COUNTS[ab]}問`}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

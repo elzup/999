@@ -5,7 +5,7 @@ import {
   CardTrainSettingsSchema,
 } from './schema'
 import { VALID_TABS } from './constants'
-import type { Record, CardStats, CardTrainSettings } from './schema'
+import type { Record as QuizRecord, CardStats, CardTrainSettings } from './schema'
 import type { TabId } from './constants'
 
 function loadJson<T>(key: string, schema: z.ZodType<T>, fallback: T): T {
@@ -85,43 +85,43 @@ export function saveSubTab(key: string, value: string) {
 const RecordsSchema = z.array(RecordSchema)
 
 /** 任意キーのテスト記録を読み書きする汎用ヘルパ(useQuizRecords が使用) */
-export function loadRecords(key: string): Record[] {
+export function loadRecords(key: string): QuizRecord[] {
   return loadJson(key, RecordsSchema, [])
 }
 
-export function saveRecords(key: string, records: Record[]) {
+export function saveRecords(key: string, records: QuizRecord[]) {
   saveJson(key, records)
 }
 
-export function loadPiRecords(key = 'pi999'): Record[] {
+export function loadPiRecords(key = 'pi999'): QuizRecord[] {
   return loadJson(key, RecordsSchema, [])
 }
 
-export function savePiRecords(records: Record[], key = 'pi999') {
+export function savePiRecords(records: QuizRecord[], key = 'pi999') {
   saveJson(key, records)
 }
 
-export function loadYearRecords(): Record[] {
+export function loadYearRecords(): QuizRecord[] {
   return loadJson('year999', RecordsSchema, [])
 }
 
-export function saveYearRecords(records: Record[]) {
+export function saveYearRecords(records: QuizRecord[]) {
   saveJson('year999', records)
 }
 
-export function loadD3Records(): Record[] {
+export function loadD3Records(): QuizRecord[] {
   return loadJson('d3-999', RecordsSchema, [])
 }
 
-export function saveD3Records(records: Record[]) {
+export function saveD3Records(records: QuizRecord[]) {
   saveJson('d3-999', records)
 }
 
-export function loadCardRecords(): Record[] {
+export function loadCardRecords(): QuizRecord[] {
   return loadJson('card999', RecordsSchema, [])
 }
 
-export function saveCardRecords(records: Record[]) {
+export function saveCardRecords(records: QuizRecord[]) {
   saveJson('card999', records)
 }
 
@@ -144,10 +144,31 @@ export function saveCardTrainSettings(settings: CardTrainSettings) {
   saveJson('cardTrainSettings999', settings)
 }
 
-export function loadWeekdayRecords(): Record[] {
+export function loadWeekdayRecords(): QuizRecord[] {
   return loadJson('weekday999', RecordsSchema, [])
 }
 
-export function saveWeekdayRecords(records: Record[]) {
+export function saveWeekdayRecords(records: QuizRecord[]) {
   saveJson('weekday999', records)
+}
+
+// 九九 AB(=ABxC の AB) ごとの練習スコア。AB キーで best/last を保存する。
+export type KukuAbScore = {
+  best: number
+  last: number
+  total: number
+  date: string
+}
+
+export function loadKukuAbScores(): Record<string, KukuAbScore> {
+  try {
+    const raw = localStorage.getItem('kukuAbScores999')
+    return raw ? (JSON.parse(raw) as Record<string, KukuAbScore>) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveKukuAbScores(scores: Record<string, KukuAbScore>) {
+  localStorage.setItem('kukuAbScores999', JSON.stringify(scores))
 }
