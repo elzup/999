@@ -12,6 +12,7 @@ import type { Record as TestRecord } from '../data/schema'
 import { loadWeekdayRecords, saveWeekdayRecords } from '../data/storage'
 import RecordPanel from './RecordPanel'
 import ReviewPanel, { type ReviewItem } from './ReviewPanel'
+import TestFeatureList from './TestFeatureList'
 
 type Answer = {
   questionId: string
@@ -327,14 +328,23 @@ function WeekdayCalcTab() {
                     {lastScore}/{answers.length} ・ {formatMs(elapsedMs)}
                   </span>
                 ) : null}
-                <button class="filter-btn" onClick={startQuiz}>
-                  開始
-                </button>
               </div>
             </div>
 
             {quiz.length === 0 ? (
-              <div class="sticky-empty">開始で10問生成します</div>
+              <TestFeatureList
+                compact
+                features={[
+                  {
+                    id: 'weekday-check',
+                    title: '曜日テスト (10問)',
+                    inputMethod: 'choice',
+                    onStart: startQuiz,
+                    hasRecords: records.length > 0,
+                    onShowRecords: () => setShowRecords(true),
+                  },
+                ]}
+              />
             ) : (
               <>
                 {currentQuestion && !finished ? (

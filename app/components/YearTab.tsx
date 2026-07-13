@@ -43,6 +43,7 @@ import { loadYearRecords, saveYearRecords } from '../data/storage'
 import NumDetailPanel from './NumDetailPanel'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
+import TestFeatureList from './TestFeatureList'
 import TestNavBar from './TestNavBar'
 import type { ReviewItem } from './ReviewPanel'
 
@@ -418,32 +419,7 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
             }}
           >
             {mode === 'view' ? (
-              <>
-                {records.length > 0 ? (
-                  <button
-                    class="filter-btn"
-                    style={{
-                      fontSize: '11px',
-                      minWidth: '40px',
-                      padding: '4px 8px',
-                    }}
-                    onClick={() => setShowRecords(true)}
-                  >
-                    記録
-                  </button>
-                ) : null}
-                <button
-                  class="filter-btn"
-                  style={{
-                    fontSize: '12px',
-                    minWidth: '60px',
-                    padding: '4px 10px',
-                  }}
-                  onClick={() => startCheck(eraFilter)}
-                >
-                  テスト
-                </button>
-              </>
+              <></>
             ) : (
               <>
                 <span
@@ -472,6 +448,30 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
           </div>
         </div>
       </div>
+      {mode === 'view' ? (
+        <div
+          style={{
+            padding: '6px 8px',
+            background: 'var(--surface)',
+            borderBottom: '1px solid var(--border)',
+            flexShrink: 0,
+          }}
+        >
+          <TestFeatureList
+            compact
+            features={[
+              {
+                id: 'year-check',
+                title: 'XYZ 3桁テスト',
+                inputMethod: 'number',
+                onStart: () => startCheck(eraFilter),
+                hasRecords: records.length > 0,
+                onShowRecords: () => setShowRecords(true),
+              },
+            ]}
+          />
+        </div>
+      ) : null}
       {mode === 'view' ? (
         <div class="sticky-wrap">
           {selectedNums ? (
