@@ -54,7 +54,6 @@ function KukuTab() {
   const [run, setRun] = useState<QuizRun | null>(null)
   const [summary, setSummary] = useState<QuizSummary | null>(null)
   const [showRecords, setShowRecords] = useState(false)
-  const [showReview, setShowReview] = useState(false)
   const rec = useQuizRecords(RECORDS_KEY)
   const items = ITEMS.filter((it) => it.tier === tier)
   const active = TIERS.find((t) => t.key === tier)!
@@ -75,40 +74,34 @@ function KukuTab() {
     [rec]
   )
 
+  // 全問終了 → summary が入ったら結果オーバーレイを自動表示。閉じるとタブ表示に戻る
+  // (年号/年コード/カード/π と同じ流れ)。
+  if (run && summary) {
+    return (
+      <ReviewPanel
+        title="九九 読みテスト"
+        score={summary.score}
+        total={summary.total}
+        time={summary.time}
+        items={summary.reviews}
+        onClose={() => {
+          setRun(null)
+          setSummary(null)
+        }}
+      />
+    )
+  }
+
   if (run) {
     return (
-      <>
-        <ChoiceQuiz
-          key={run.id}
-          title={`九九 読みテスト（${active.label}）`}
-          questions={run.questions}
-          promptClass="kuku-quiz-face"
-          onRetry={startQuiz}
-          onQuit={() => setRun(null)}
-          onComplete={onComplete}
-          onShowRecords={() => setShowRecords(true)}
-          onShowReview={summary ? () => setShowReview(true) : undefined}
-        />
-        {showRecords ? (
-          <RecordPanel
-            title="九九 読みテスト"
-            records={rec.records}
-            onDelete={rec.deleteRecord}
-            onClear={rec.clearRecords}
-            onClose={() => setShowRecords(false)}
-          />
-        ) : null}
-        {showReview && summary ? (
-          <ReviewPanel
-            title="九九 読みテスト"
-            score={summary.score}
-            total={summary.total}
-            time={summary.time}
-            items={summary.reviews}
-            onClose={() => setShowReview(false)}
-          />
-        ) : null}
-      </>
+      <ChoiceQuiz
+        key={run.id}
+        title={`九九 読みテスト（${active.label}）`}
+        questions={run.questions}
+        promptClass="kuku-quiz-face"
+        onQuit={() => setRun(null)}
+        onComplete={onComplete}
+      />
     )
   }
 
