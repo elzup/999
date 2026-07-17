@@ -147,26 +147,32 @@ body {
   border-radius: 50%;
 }
 
-/* Detail panel - 2 fixed rows */
+/* Detail panel */
 .detail-panel {
-  padding: 8px 12px;
+  padding: 12px 14px;
 }
 .detail-row1 {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  overflow: hidden;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 52px;
 }
-/* 語・ScoreBar 等の中身。flex:1+min-width:0 で縮み、溢れは内部で clip。
-   これにより ★/× のアクションを押し出さず、かつ被せて隠すこともしない。 */
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 40px;
+}
+/* 語・ScoreBar 等の中身。右のアクション領域を侵食せず、
+   幅が足りない場合はパネル内で折り返す。 */
 .detail-row1-mid {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow: hidden;
+  min-height: 52px;
 }
 .detail-row2 {
   display: flex;
@@ -204,7 +210,7 @@ body {
   font-family: monospace;
 }
 .detail-id {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: bold;
   color: var(--accent);
   font-family: monospace;
@@ -223,8 +229,8 @@ body {
   color: var(--text2);
 }
 .detail-word-img {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   object-fit: cover;
   border-radius: 6px;
   flex-shrink: 0;
@@ -234,8 +240,23 @@ body {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-height: 40px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
   flex-shrink: 0;
+}
+.detail-actions .bm-star {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: 22px !important;
+  line-height: 1;
+}
+.detail-actions .d2-mode-btn {
+  min-width: 36px;
+  height: 36px;
 }
 .detail-body {
   display: flex;
