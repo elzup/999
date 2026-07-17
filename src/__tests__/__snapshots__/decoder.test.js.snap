@@ -49,27 +49,27 @@ exports[`decodeRanked > 629 の候補一覧 1`] = `
 [
   {
     "score": 4,
-    "word": "ろつぇ",
-  },
-  {
-    "score": 4,
     "word": "ろちぇ",
   },
   {
-    "score": 3.8,
-    "word": "るつぇ",
+    "score": 4,
+    "word": "ろつぇ",
   },
   {
     "score": 3.8,
     "word": "るちぇ",
   },
   {
-    "score": 3.6,
-    "word": "えつぇ",
+    "score": 3.8,
+    "word": "るつぇ",
   },
   {
     "score": 3.6,
     "word": "えちぇ",
+  },
+  {
+    "score": 3.6,
+    "word": "えつぇ",
   },
   {
     "score": 3,
@@ -150,11 +150,11 @@ exports[`decodeRanked > 784 の候補一覧 1`] = `
 [
   {
     "score": 4,
-    "word": "うぁし",
+    "word": "にゃし",
   },
   {
     "score": 4,
-    "word": "にゃし",
+    "word": "うぁし",
   },
   {
     "score": 4,
@@ -162,11 +162,11 @@ exports[`decodeRanked > 784 の候補一覧 1`] = `
   },
   {
     "score": 3.8,
-    "word": "うぁよ",
+    "word": "にゃよ",
   },
   {
     "score": 3.8,
-    "word": "にゃよ",
+    "word": "うぁよ",
   },
   {
     "score": 3.8,
