@@ -440,7 +440,8 @@ export const VALID_TABS = [
   'year',
   'weekday',
   'kuku',
+  'slide',
   'bm',
   'misc',
 ] as const
-export type TabId = typeof VALID_TABS[number]
+export type TabId = (typeof VALID_TABS)[number]

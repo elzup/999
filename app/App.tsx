@@ -17,6 +17,7 @@ import YearTab from './components/YearTab'
 import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
 import KukuTab from './components/KukuTab'
+import SlideshowTab from './components/SlideshowTab'
 import BookmarkTab from './components/BookmarkTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
@@ -31,6 +32,7 @@ import {
   IconKuku,
   IconStats,
   IconStar,
+  IconSlide,
 } from './components/Icons'
 
 export function App() {
@@ -153,6 +155,13 @@ export function App() {
         />
       )}
       {tab === 'kuku' && <KukuTab />}
+      {tab === 'slide' && (
+        <SlideshowTab
+          numbers={data.numbers}
+          bookmarks={bookmarks}
+          onToggleBm={toggleBm}
+        />
+      )}
       {tab === 'bm' && (
         <BookmarkTab
           numbers={data.numbers}
@@ -205,6 +214,13 @@ export function App() {
           onSelect={setTab}
           icon={<IconKuku />}
           label="九九"
+        />
+        <TabButton
+          id="slide"
+          current={tab}
+          onSelect={setTab}
+          icon={<IconSlide />}
+          label="スライド"
         />
         <TabButton
           id="bm"
