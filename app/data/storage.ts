@@ -5,7 +5,11 @@ import {
   CardTrainSettingsSchema,
 } from './schema'
 import { VALID_TABS } from './constants'
-import type { Record as QuizRecord, CardStats, CardTrainSettings } from './schema'
+import type {
+  Record as QuizRecord,
+  CardStats,
+  CardTrainSettings,
+} from './schema'
 import type { TabId } from './constants'
 
 function loadJson<T>(key: string, schema: z.ZodType<T>, fallback: T): T {
@@ -171,4 +175,41 @@ export function loadKukuAbScores(): Record<string, KukuAbScore> {
 
 export function saveKukuAbScores(scores: Record<string, KukuAbScore>) {
   localStorage.setItem('kukuAbScores999', JSON.stringify(scores))
+}
+
+// スライドショー設定 (モード / 速度 / 絞り込み) を永続化する。
+const SlideSettingsSchema = z.object({
+  mode: z.enum(['order', 'random']).default('order'),
+  speed: z.number().int().min(0).max(2).default(1),
+  bmOnly: z.boolean().default(false),
+  skipOk: z.boolean().default(false),
+})
+
+export type SlideSettings = z.infer<typeof SlideSettingsSchema>
+
+export function loadSlideSettings(): SlideSettings {
+  return loadJson('slideSettings999', SlideSettingsSchema, {
+    mode: 'order',
+    speed: 1,
+    bmOnly: false,
+    skipOk: false,
+  })
+}
+
+export function saveSlideSettings(settings: SlideSettings) {
+  saveJson('slideSettings999', settings)
+}
+
+// スライドショーで「一応OK」印を付けた数字の集合 (bm とは別管理)。
+export function loadSlideOk(): Set<string> {
+  try {
+    const raw = localStorage.getItem('slideOk999')
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+export function saveSlideOk(ok: Set<string>) {
+  localStorage.setItem('slideOk999', JSON.stringify([...ok]))
 }

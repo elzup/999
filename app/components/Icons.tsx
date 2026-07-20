@@ -108,6 +108,16 @@ export function IconWeekday() {
   )
 }
 
+export function IconSlide() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="2" y="4" width="20" height="14" rx="2" />
+      <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none" />
+      <path d="M8 21h8" />
+    </svg>
+  )
+}
+
 export function IconEdit() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
