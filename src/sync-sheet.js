@@ -2,12 +2,21 @@ import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { splitConceptFields } from './words.js'
+import {
+  getSheetTitleByGid,
+  getSheetValuesByTitle,
+  parseSpreadsheetUrl,
+} from './google-sheets.js'
 
-const SHEET_ID = '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
-const GID = '0'
-const EXPORT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=tsv&gid=${GID}`
+const DEFAULT_SHEET_URL =
+  'https://docs.google.com/spreadsheets/d/1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM/edit?gid=0#gid=0'
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
+
+function buildExportUrl(sheetUrl) {
+  const { spreadsheetId, gid } = parseSpreadsheetUrl(sheetUrl)
+  return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=tsv&gid=${gid}`
+}
 
 /** TSV 行をパースしてヘッダーインデックスを取得 */
 function parseHeader(headerLine) {
@@ -25,22 +34,27 @@ function parseHeader(headerLine) {
 
 /** Google Sheet から TSV を取得してパース */
 async function fetchSheet() {
-  const url = process.env.SHEET_URL_EXPORT || EXPORT_URL
-  const res = await fetch(url)
+  // SHEET_URL は他タブ向けなので、sync 専用 URL を使う
+  const sheetUrl = process.env.SHEET_URL_SYNC || DEFAULT_SHEET_URL
+  const exportUrl = process.env.SHEET_URL_EXPORT || buildExportUrl(sheetUrl)
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch sheet: ${res.status} ${res.statusText}`)
+  try {
+    const res = await fetch(exportUrl)
+    if (res.ok) {
+      const text = await res.text()
+      if (!text.startsWith('<!DOCTYPE')) {
+        return text
+      }
+    }
+  } catch (err) {
+    // 公開 export が使えない場合は認証 API にフォールバック
   }
 
-  const text = await res.text()
-
-  if (text.startsWith('<!DOCTYPE')) {
-    throw new Error(
-      'シートが非公開です。共有設定を「リンクを知っている全員」に変更してください'
-    )
-  }
-
-  return text
+  console.log('Public export unavailable, falling back to authenticated API...')
+  const { spreadsheetId, gid } = parseSpreadsheetUrl(sheetUrl)
+  const title = await getSheetTitleByGid(spreadsheetId, gid)
+  const values = await getSheetValuesByTitle({ spreadsheetId, title })
+  return values.map((row) => row.join('\t')).join('\n')
 }
 
 function parseTsv(tsv) {
