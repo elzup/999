@@ -1,7 +1,7 @@
 // FF(00-FF hex) の読み生成 共有ロジック(純関数)。
 // gen-ff-lyrics.mjs / gen-ff-json.mjs / app(FFTab) が同じ規則を使うための単一の正本。
 //   NC/CN: hex名前読み + 参照の括弧内かな   (B3 -> びーさん + いいさ)
-//   NN/CC: 語読み(F括弧内 or G/H)
+//   NN/CC: 語読み(G/H or F括弧内)
 // row の並び: [num, hex, type, bin, exp, F(参照), G(人), H(物)]
 
 // hex 各文字の名前読み(ひらがな)。数字=数字名、英字=アルファベット名。
@@ -95,9 +95,9 @@ export function rowReading(row) {
   const G = clean(row[6])
   const H = clean(row[7])
   if (type === 'NC' || type === 'CN') return phoneticFor(row[1], F)
-  if (usable(F)) return parenInner(F) // NN
-  if (usable(G)) return stripTags(G) // CC(人)
-  if (usable(H)) return stripTags(H) // CC(物)
+  if (usable(G)) return stripTags(G) // 人
+  if (usable(H)) return stripTags(H) // 物
+  if (usable(F)) return parenInner(F) // 参照
   return '＿'
 }
 
@@ -109,15 +109,15 @@ export function buildRow(row) {
   const H = clean(row[7])
   let word = ''
   let kana = ''
-  if (usable(F)) {
-    word = wordPart(F)
-    kana = parenInner(F)
-  } else if (usable(G)) {
+  if (usable(G)) {
     word = stripTags(G)
     kana = word
   } else if (usable(H)) {
     word = stripTags(H)
     kana = word
+  } else if (usable(F)) {
+    word = wordPart(F)
+    kana = parenInner(F)
   }
   return {
     hex: clean(row[1]),
