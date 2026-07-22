@@ -11,6 +11,7 @@ import type {
   CardTrainSettings,
 } from './schema'
 import type { TabId } from './constants'
+import type { HexStats } from '../lib/hexStats'
 
 function loadJson<T>(key: string, schema: z.ZodType<T>, fallback: T): T {
   try {
@@ -175,6 +176,17 @@ export function loadKukuAbScores(): Record<string, KukuAbScore> {
 
 export function saveKukuAbScores(scores: Record<string, KukuAbScore>) {
   localStorage.setItem('kukuAbScores999', JSON.stringify(scores))
+}
+
+// hex テスト「間違えがちな文字」統計 (confusionKey → 回数)。
+const HexStatsSchema = z.record(z.string(), z.number())
+
+export function loadHexStats(): HexStats {
+  return loadJson('hexStats999', HexStatsSchema, {})
+}
+
+export function saveHexStats(stats: HexStats) {
+  saveJson('hexStats999', stats)
 }
 
 // スライドショー設定 (モード / 速度 / 絞り込み) を永続化する。
