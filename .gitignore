@@ -26,3 +26,6 @@ public/stats.html
 
 # sheet-audit 生成物 (write plan)
 src/sheet-audit.out.json
+
+# 生成物: 語呂/FF の歌詞テキスト (src/gen-words-lyrics.js が正本)
+lyrics/
