@@ -13,6 +13,38 @@ export type KeypadQuestion = {
   promptClass?: string
 }
 
+type GradeGuard = { current: boolean }
+
+export function claimKeypadGrade(
+  guard: GradeGuard,
+  question: KeypadQuestion,
+  answer: string
+): ReviewItem | null {
+  if (guard.current) return null
+  guard.current = true
+  return {
+    label: question.prompt,
+    correct: answer === question.answer,
+    userAnswer: answer,
+    rightAnswer: question.answer,
+  }
+}
+
+export function buildKeypadSummary(
+  score: number,
+  total: number,
+  startedAt: number,
+  completedAt: number,
+  reviews: ReviewItem[]
+): QuizSummary {
+  return {
+    score,
+    total,
+    time: Math.round((completedAt - startedAt) / 1000),
+    reviews,
+  }
+}
+
 type Props = {
   title: string
   pad: 'hex' | 'bin'
@@ -27,6 +59,7 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
   const [idx, setIdx] = useState(0)
   const [typed, setTyped] = useState('')
   const [revealed, setRevealed] = useState(false)
+  const gradingRef = useRef(false)
   const scoreRef = useRef(0)
   const reviewsRef = useRef<ReviewItem[]>([])
   const startRef = useRef(Date.now())
@@ -37,36 +70,37 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
   const correct = typed === q.answer
 
   const press = (k: string) => {
-    if (revealed) return
+    if (gradingRef.current) return
     const next = typed + k
     if (next.length < q.answer.length) {
       setTyped(next)
       return
     }
     // 最終桁 → 採点
-    const ok = next === q.answer
+    const review = claimKeypadGrade(gradingRef, q, next)
+    if (!review) return
+    const ok = review.correct
     if (ok) scoreRef.current += 1
-    reviewsRef.current.push({
-      label: q.prompt,
-      correct: ok,
-      userAnswer: next,
-      rightAnswer: q.answer,
-    })
+    reviewsRef.current.push(review)
     vibrate()
     setTyped(next)
     setRevealed(true)
     timerRef.current = setTimeout(
       () => {
         if (idx + 1 >= questions.length) {
-          onComplete({
-            score: scoreRef.current,
-            total: questions.length,
-            time: Math.round((Date.now() - startRef.current) / 1000),
-            reviews: reviewsRef.current,
-          })
+          onComplete(
+            buildKeypadSummary(
+              scoreRef.current,
+              questions.length,
+              startRef.current,
+              Date.now(),
+              reviewsRef.current
+            )
+          )
         } else {
           setIdx(idx + 1)
           setTyped('')
+          gradingRef.current = false
           setRevealed(false)
         }
       },

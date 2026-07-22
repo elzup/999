@@ -18,16 +18,6 @@ function TabVisibilityPanel({ visibility, onChange, onSelectTab }: Props) {
     [visibility, onChange]
   )
 
-  const handleKeyDown = useCallback(
-    (e: preact.JSX.TargetedKeyboardEvent<HTMLDivElement>, id: TabId) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        onSelectTab(id)
-      }
-    },
-    [onSelectTab]
-  )
-
   return (
     <>
       <p class="tab-visibility-desc">
@@ -40,18 +30,20 @@ function TabVisibilityPanel({ visibility, onChange, onSelectTab }: Props) {
           return (
             <div
               key={id}
-              role="button"
-              tabIndex={0}
               class={'tab-visibility-row' + (disabled ? ' disabled' : '')}
-              onClick={() => onSelectTab(id)}
-              onKeyDown={(e) => handleKeyDown(e, id)}
             >
-              <div class="tab-visibility-info">
-                <div class="tab-visibility-label">{BAR_TAB_LABELS[id]}</div>
-                {disabled && (
-                  <div class="tab-visibility-note">常に表示されます</div>
-                )}
-              </div>
+              <button
+                type="button"
+                class="tab-visibility-open"
+                onClick={() => onSelectTab(id)}
+              >
+                <span class="tab-visibility-info">
+                  <span class="tab-visibility-label">{BAR_TAB_LABELS[id]}</span>
+                  {disabled && (
+                    <span class="tab-visibility-note">常に表示されます</span>
+                  )}
+                </span>
+              </button>
               <button
                 type="button"
                 class={
@@ -59,10 +51,7 @@ function TabVisibilityPanel({ visibility, onChange, onSelectTab }: Props) {
                   (on ? ' on' : '') +
                   (disabled ? ' disabled' : '')
                 }
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggle(id)
-                }}
+                onClick={() => toggle(id)}
                 disabled={disabled}
                 aria-pressed={on}
                 aria-label={`${BAR_TAB_LABELS[id]}を${

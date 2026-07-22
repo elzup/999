@@ -9,6 +9,9 @@ type Props = {
   onClose?: () => void
 }
 
+const scoreErrorLabel = (error: string | boolean | undefined) =>
+  typeof error === 'string' ? error : error ? 'error' : undefined
+
 function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
   const bmKey = 'n:' + d.num
   const isBm = bookmarks ? bookmarks.has(bmKey) : false
@@ -43,7 +46,7 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
             <ScoreBar
               label={'WH1' + (d.w1Pattern ? ' [' + d.w1Pattern + ']' : '')}
               score={d.w1Score}
-              error={d.w1Error}
+              error={scoreErrorLabel(d.w1Error)}
             />
           ) : null}
           {d.wm1Img || d.w2Img ? (
@@ -63,7 +66,11 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onClose }: Props) {
             </span>
           ) : null}
           {d.w2Score != null ? (
-            <ScoreBar label="WM1" score={d.w2Score} error={d.w2Error} />
+            <ScoreBar
+              label="WM1"
+              score={d.w2Score}
+              error={scoreErrorLabel(d.w2Error)}
+            />
           ) : null}
           {/* 2枠目の穴埋め: mono が空なら人の2人目、hito が空なら mono の2つ目 */}
           {!(d.wm1 || d.w2) && (d.wh2Img || d.w1_2Img) ? (

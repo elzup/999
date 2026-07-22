@@ -3,12 +3,23 @@ import { z } from 'zod'
 const GoroSlotSchema = z.object({ k: z.string(), d: z.string() }).nullable()
 
 const CandidateSlotSchema = {
-  word: z.string().default(''),
-  kana: z.string().default(''),
+  word: z.string().optional(),
+  kana: z.string().optional(),
   image: z.string().optional(),
 }
 
-function buildCandidateSlotShape(prefix: 'wh' | 'wm') {
+type CandidateRank = 1 | 2 | 3
+type CandidateSlotShape<Prefix extends 'wh' | 'wm'> = {
+  [Key in `${Prefix}${CandidateRank}`]: typeof CandidateSlotSchema.word
+} & {
+  [Key in `${Prefix}${CandidateRank}k`]: typeof CandidateSlotSchema.kana
+} & {
+  [Key in `${Prefix}${CandidateRank}Img`]: typeof CandidateSlotSchema.image
+}
+
+function buildCandidateSlotShape<Prefix extends 'wh' | 'wm'>(
+  prefix: Prefix
+): CandidateSlotShape<Prefix> {
   return {
     [`${prefix}1`]: CandidateSlotSchema.word,
     [`${prefix}1k`]: CandidateSlotSchema.kana,
@@ -19,7 +30,7 @@ function buildCandidateSlotShape(prefix: 'wh' | 'wm') {
     [`${prefix}3`]: CandidateSlotSchema.word,
     [`${prefix}3k`]: CandidateSlotSchema.kana,
     [`${prefix}3Img`]: CandidateSlotSchema.image,
-  }
+  } as CandidateSlotShape<Prefix>
 }
 
 export const GoroAllocSchema = z.object({

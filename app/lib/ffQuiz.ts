@@ -13,13 +13,25 @@ export type FfRow = {
 
 export const FF_ROWS = ffJson as FfRow[]
 
-// テストの「読み」面: phonetic(いーごひよこ)ではなく語/かな。漢字語があればそれを優先。
+// テストの「語」面: phonetic(いーごひよこ)ではなく語/かな。漢字語があればそれを優先。
 const readLabel = (r: FfRow) => r.word || r.kana
 
 // テスト出題に使える行(語/かな・hex・bin が揃っていて欠損記号を含まない)
-const BAD = /[—＿]/
-const VALID = FF_ROWS.filter(
-  (r) => readLabel(r) && r.hex && r.bin && !BAD.test(readLabel(r))
+const MISSING_MARKER = /—|＿|#REF!|#N\/A|#ERROR!|#VALUE!|^(?:FALSE|TRUE)$/
+
+export const isValidFfRow = (row: FfRow) =>
+  Boolean(readLabel(row) && row.hex && row.bin) &&
+  ![readLabel(row), row.hex, row.bin].some((value) =>
+    MISSING_MARKER.test(value)
+  )
+
+const VALID = FF_ROWS.filter(isValidFfRow)
+const READ_LABEL_COUNTS = VALID.reduce<Map<string, number>>((counts, row) => {
+  const label = readLabel(row)
+  return new Map(counts).set(label, (counts.get(label) ?? 0) + 1)
+}, new Map())
+const UNIQUE_READ_ROWS = VALID.filter(
+  (row) => READ_LABEL_COUNTS.get(readLabel(row)) === 1
 )
 
 export type FfDir = 'hex2read' | 'read2hex' | 'bin2hex' | 'hex2bin'
@@ -37,7 +49,7 @@ const DIR: Record<
   }
 > = {
   hex2read: {
-    title: 'hex → 読み',
+    title: 'hex → 語',
     prompt: (r) => r.hex,
     answer: (r) => readLabel(r),
     pool: (r) => readLabel(r),
@@ -45,7 +57,7 @@ const DIR: Record<
     promptClass: 'ff-quiz-hex',
   },
   read2hex: {
-    title: '読み → hex',
+    title: '語 → hex',
     prompt: (r) => readLabel(r),
     answer: (r) => r.hex,
     pool: (r) => r.hex,
@@ -89,6 +101,9 @@ function withDistractors(pool: string[], answer: string, n: number): string[] {
 
 export const FF_QUIZ_LEN = 10
 
+const normalizeQuestionCount = (count: number) =>
+  Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0
+
 /** 指定方向のクイズ設問(既定10問)を組む */
 export function buildFfQuestions(
   dir: FfDir,
@@ -97,8 +112,10 @@ export function buildFfQuestions(
   const cfg = DIR[dir]
   const pool = [...new Set(VALID.map(cfg.pool))]
   const n = Math.min(cfg.choices, pool.length)
-  return shuffle(VALID)
-    .slice(0, count)
+  const questionCount = normalizeQuestionCount(count)
+  const rows = dir === 'read2hex' ? UNIQUE_READ_ROWS : VALID
+  return shuffle(rows)
+    .slice(0, questionCount)
     .map((r) => {
       const answer = cfg.answer(r)
       return {
@@ -128,7 +145,8 @@ export function buildNibble(
   kind: NibbleKind,
   count = FF_QUIZ_LEN
 ): KeypadQuestion[] {
-  return Array.from({ length: count }, () =>
+  const questionCount = normalizeQuestionCount(count)
+  return Array.from({ length: questionCount }, () =>
     Math.floor(Math.random() * 16)
   ).map((v) => {
     const hex = v.toString(16).toUpperCase()

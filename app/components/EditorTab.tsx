@@ -677,14 +677,17 @@ function readSlotItems(
   entry: NumberEntry | undefined,
   prefix: SlotPrefix
 ): SlotItem[] {
-  return Array.from({ length: MAX_SLOT_COUNT }, (_, index) => {
-    const slot = index + 1
-    return {
-      word: readEntryField(entry, `${prefix}${slot}`),
-      kana: readEntryField(entry, `${prefix}${slot}k`),
-      image: readEntryField(entry, `${prefix}${slot}Img`),
-    }
-  }).filter((item) => item.word || item.kana || item.image)
+  const ranks = [1, 2, 3] as const
+  return ranks
+    .slice(0, MAX_SLOT_COUNT)
+    .map((slot) => {
+      return {
+        word: readEntryField(entry, `${prefix}${slot}`),
+        kana: readEntryField(entry, `${prefix}${slot}k`),
+        image: readEntryField(entry, `${prefix}${slot}Img`),
+      }
+    })
+    .filter((item) => item.word || item.kana || item.image)
 }
 
 function readEntryField(

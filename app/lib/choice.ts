@@ -76,7 +76,7 @@ export function candidatesOf(entry: NumberEntry): Candidate[] {
  */
 export function resolveSlot(
   entry: NumberEntry,
-  overrides: Record<string, Slot>
+  overrides: Readonly<Record<string, string>>
 ): Slot | null {
   const cands = candidatesOf(entry)
   if (cands.length === 0) return null
@@ -109,10 +109,10 @@ export function loadYmapChoices(): Record<string, Slot> {
     const obj = JSON.parse(raw)
     if (!obj || typeof obj !== 'object') return {}
     return Object.fromEntries(
-      Object.entries(obj).map(([num, slot]) => [
-        num,
-        normalizeSlot(slot) ?? slot,
-      ])
+      Object.entries(obj).flatMap(([num, slot]) => {
+        const normalized = typeof slot === 'string' ? normalizeSlot(slot) : null
+        return normalized ? [[num, normalized]] : []
+      })
     ) as Record<string, Slot>
   } catch {
     return {}

@@ -19,7 +19,7 @@ import {
 } from '../lib/ffQuiz'
 
 type Sub = 'ref' | 'bin' | 'test'
-type Run =
+export type FfRun =
   | { kind: 'ff'; dir: FfDir; questions: ChoiceQuestion[]; id: number }
   | {
       kind: 'kp'
@@ -58,11 +58,23 @@ const mono = {
 } as const
 
 // テストID = FfDir | NibbleKind。各IDごとに記録(履歴/統計)を保存する。
-type TestId = FfDir | NibbleKind
+export type TestId = FfDir | NibbleKind
+
+type RecordSink = { addRecord: (summary: QuizSummary) => void }
+
+export function completeFfRun(
+  run: FfRun | null,
+  summary: QuizSummary,
+  records: Record<TestId, RecordSink>
+) {
+  if (!run) return
+  const id: TestId = run.kind === 'kp' ? run.nibble : run.dir
+  records[id].addRecord(summary)
+}
 
 function FFTab() {
   const [sub, setSub] = useState<Sub>('ref')
-  const [run, setRun] = useState<Run | null>(null)
+  const [run, setRun] = useState<FfRun | null>(null)
   const [summary, setSummary] = useState<QuizSummary | null>(null)
   const [showRecords, setShowRecords] = useState<TestId | null>(null)
 
@@ -108,10 +120,7 @@ function FFTab() {
   const onComplete = useCallback(
     (s: QuizSummary) => {
       setSummary(s)
-      if (run) {
-        const id: TestId = run.kind === 'kp' ? run.nibble : run.dir
-        recOf[id].addRecord(s)
-      }
+      completeFfRun(run, s, recOf)
     },
     [run, recOf]
   )

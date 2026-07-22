@@ -217,7 +217,7 @@ function MapView({
                 <MapTileView
                   tile={unit.tile}
                   selected={sel === unit.tile.num}
-                  onSelect={() => setSel(unit.tile.num)}
+                  onSelect={() => setSel(unit.tile?.num ?? null)}
                 />
               ) : null}
             </div>

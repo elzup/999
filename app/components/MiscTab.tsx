@@ -9,6 +9,7 @@ import RecallTab from './RecallTab'
 import ActivatePanel from './ActivatePanel'
 import TabVisibilityPanel from './TabVisibilityPanel'
 import { SHEET_EDIT_URL } from '../data/constants'
+import type { TabId } from '../data/constants'
 
 type Props = {
   numbers: NumberEntry[]

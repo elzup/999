@@ -201,7 +201,7 @@ export function saveSlideSettings(settings: SlideSettings) {
 }
 
 // App Bar に表示するタブの ON/OFF 設定。
-const TabVisibilitySchema = z.record(z.boolean())
+const TabVisibilitySchema = z.record(z.string(), z.unknown())
 export type TabVisibility = Record<TabId, boolean>
 
 export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
@@ -225,7 +225,7 @@ export function loadTabVisibility(): TabVisibility {
   )
   const next = { ...DEFAULT_TAB_VISIBILITY }
   for (const id of VALID_TABS) {
-    if (typeof loaded[id] === 'boolean') next[id] = loaded[id]
+    if (id !== 'misc' && typeof loaded[id] === 'boolean') next[id] = loaded[id]
   }
   return next
 }
