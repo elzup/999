@@ -136,6 +136,8 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
   )
   const [trainGroupIdx, setTrainGroupIdx] = useState(0)
   const [trainStopped, setTrainStopped] = useState(false)
+  // 連想テスト中に答えを表示したカード (suit+rank)。答えを見ると自動で要復習にする。
+  const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set())
   const timerRef = useRef<number | null>(null)
   const questionStartRef = useRef<number>(0)
 
@@ -231,9 +233,25 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
     setStartTime(Date.now())
     setElapsed(0)
     setTrainStopped(false)
+    setRevealedKeys(new Set())
     setMode('train')
     setSelected(null)
   }, [buildTrainGroups, trainSettings.direction])
+
+  // 答えの表示/非表示を切り替える。初めて表示するとき、まだ★でなければ自動で要復習に。
+  const toggleReveal = useCallback(
+    (key: string, bmKey: string, currentlyRevealed: boolean, isBm: boolean) => {
+      vibrate()
+      setRevealedKeys((prev) => {
+        const next = new Set(prev)
+        if (next.has(key)) next.delete(key)
+        else next.add(key)
+        return next
+      })
+      if (!currentlyRevealed && !isBm) onToggleBm(bmKey)
+    },
+    [onToggleBm]
+  )
 
   const endCheck = useCallback(
     (finalResults?: MatchResult[]) => {
@@ -436,7 +454,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
                 グループ {trainGroupIdx + 1} / {trainGroups.length}
               </div>
               <div class="cm-train-note">
-                連想できたら矢印で進む。最後まで行ったら停止。
+                連想できたら矢印で進む。あいまいなら答えを見て確認（見ると自動で要復習に）。最後まで行ったら停止。
               </div>
             </div>
 
@@ -448,15 +466,50 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
                 }, minmax(0, 1fr))`,
               }}
             >
-              {currentTrainGroup?.map((card) => (
-                <div
-                  key={card.suit + card.rank}
-                  class={'cm-train-card ' + card.suit}
-                  style={{ color: suitColor(card.suit) }}
-                >
-                  {formatCardId(card)}
-                </div>
-              ))}
+              {currentTrainGroup?.map((card) => {
+                const key = card.suit + card.rank
+                const bmKey = 'c:' + key
+                const isBm = bookmarks.has(bmKey)
+                const revealed = revealedKeys.has(key)
+                const prompt = pickCardValue(card)
+                return (
+                  <div key={key} class="cm-train-cardwrap">
+                    <div
+                      class={'cm-train-card ' + card.suit}
+                      style={{ color: suitColor(card.suit) }}
+                    >
+                      {formatCardId(card)}
+                    </div>
+                    <div
+                      class={'cm-train-answer' + (revealed ? ' shown' : '')}
+                      onClick={() =>
+                        !revealed && toggleReveal(key, bmKey, revealed, isBm)
+                      }
+                    >
+                      {revealed ? (prompt?.value ?? '—') : '答えを見る'}
+                    </div>
+                    <div class="cm-train-cardtools">
+                      <button
+                        class={'cm-train-mark' + (isBm ? ' on' : '')}
+                        onClick={() => onToggleBm(bmKey)}
+                        aria-pressed={isBm}
+                      >
+                        {isBm ? '★' : '☆'} 要復習
+                      </button>
+                      {revealed ? (
+                        <button
+                          class="cm-train-hide"
+                          onClick={() =>
+                            toggleReveal(key, bmKey, revealed, isBm)
+                          }
+                        >
+                          答えを隠す
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             <div class="cm-train-nav">

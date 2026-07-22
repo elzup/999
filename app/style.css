@@ -2348,6 +2348,67 @@ body {
   line-height: 1;
   letter-spacing: 0.03em;
 }
+.cm-train-cardwrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.cm-train-cardwrap .cm-train-card {
+  width: 100%;
+}
+.cm-train-answer {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  background: var(--bg);
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+  cursor: pointer;
+}
+.cm-train-answer.shown {
+  border-style: solid;
+  color: var(--text);
+  font-weight: 700;
+  cursor: default;
+}
+.cm-train-cardtools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+.cm-train-mark {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cm-train-mark.on {
+  border-color: var(--warn, #f97316);
+  color: var(--warn, #f97316);
+  background: color-mix(in srgb, var(--warn, #f97316) 12%, transparent);
+}
+.cm-train-hide {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 11px;
+  cursor: pointer;
+}
 .cm-train-nav {
   display: flex;
   justify-content: center;
