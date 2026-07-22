@@ -34,9 +34,29 @@ const JUNK = new Set([
   'FALSE',
   'TRUE',
 ])
+const FF_TYPES = new Set(['NN', 'NC', 'CN', 'CC'])
 
 export const clean = (s) => String(s ?? '').trim()
 export const usable = (s) => Boolean(s) && !JUNK.has(s)
+
+/** 生成元が 00-FF の完全な順序集合であることを確認する。 */
+export function validateFfRows(rows) {
+  if (rows.length !== 256) {
+    throw new Error(`FF source must contain 256 rows; got ${rows.length}`)
+  }
+  rows.forEach((row, value) => {
+    const expectedHex = value.toString(16).toUpperCase().padStart(2, '0')
+    const expectedBin = value.toString(2).padStart(8, '0')
+    if (
+      clean(row[1]) !== expectedHex ||
+      clean(row[3]) !== expectedBin ||
+      !FF_TYPES.has(clean(row[2]))
+    ) {
+      throw new Error(`FF source row ${value} is invalid`)
+    }
+  })
+  return rows
+}
 
 /** hex2桁を名前読みに (B3 -> びーさん, 0B -> ぜろびー) */
 export function hexNameRead(hex) {
@@ -53,8 +73,8 @@ export function parenInner(s) {
 export function stripTags(s) {
   return String(s)
     .replace(/#\S+/g, '')
-    .replace(/\s*-\w+\s*$/g, '')
     .replace(/\s*\|\s*$/g, '')
+    .replace(/\s*-\w+\s*$/g, '')
     .trim()
 }
 

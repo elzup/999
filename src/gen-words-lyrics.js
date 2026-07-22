@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { writeFileSync } from 'node:fs'
 import {
-  availableSlots,
+  isAutoConfirmed,
   loadRep,
   loadWordsTsv,
   resolveOrder,
@@ -25,15 +25,15 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(repoRoot, 'lyrics')
 
 /** 番号ごとの代表①の読みを返す(未確定でもデフォルト順で拾う) */
-function repReading(word, entry) {
+export function repReading(word, entry) {
   const { order } = resolveOrder(word, entry)
   const slot = order[0]
   return slot ? word[`${slot}k`] || null : null
 }
 
 /** 自動確定(単一候補) or 明示確定 なら true */
-function isConfirmed(word, entry) {
-  return availableSlots(word).length <= 1 || Boolean(entry?.confirmed)
+export function isConfirmed(word, entry) {
+  return isAutoConfirmed(word) || Boolean(entry?.confirmed)
 }
 
 function toLines(readings) {
@@ -44,9 +44,24 @@ function toLines(readings) {
   return lines
 }
 
-function main() {
+/** 生成元が 000-999 の完全な順序集合であることを確認する。 */
+export function validateNumberWords(words) {
+  if (words.length !== 1000) {
+    throw new Error(`word source must contain 1000 rows; got ${words.length}`)
+  }
+  words.forEach((word, value) => {
+    if (word.num !== String(value).padStart(3, '0')) {
+      throw new Error(`word source row ${value} is invalid`)
+    }
+  })
+  return words
+}
+
+export function main() {
   const rep = loadRep().rep || {}
-  const words = loadWordsTsv().sort((a, b) => a.num.localeCompare(b.num))
+  const words = validateNumberWords(
+    loadWordsTsv().sort((a, b) => a.num.localeCompare(b.num))
+  )
 
   const readings = words.map((w) => repReading(w, rep[w.num]) || '＿')
   const confirmed = words.filter((w) => isConfirmed(w, rep[w.num])).length
@@ -75,4 +90,4 @@ function main() {
   )
 }
 
-main()
+if (process.argv[1] === fileURLToPath(import.meta.url)) main()

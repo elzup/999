@@ -8,7 +8,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readFfRows } from './ff-sheet.mjs'
-import { clean, rowReading } from '../src/ff-reading.js'
+import { clean, rowReading, validateFfRows } from '../src/ff-reading.js'
 
 const ZW = '　' // 全角スペース
 const PER_LINE = 4
@@ -27,7 +27,10 @@ const toLines = (arr) => {
 
 async function main() {
   const rows = await readFfRows()
-  const items = rows.map((r) => ({ type: clean(r[2]), reading: rowReading(r) }))
+  const items = validateFfRows(rows).map((r) => ({
+    type: clean(r[2]),
+    reading: rowReading(r),
+  }))
 
   mkdirSync(outDir, { recursive: true })
   for (const g of GROUPS) {

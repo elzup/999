@@ -2,6 +2,8 @@
 // 番号ごとに代表順(①②)を決める。チップクリック=即確定(確定ボタンは無し)。
 // 保存は /api/rep へ POST。
 
+import { applySavedRep } from './rep-state.js'
+
 let state = null
 let filter = 'all'
 let hideConfirmed = false
@@ -32,12 +34,7 @@ async function saveRep(num, order) {
     body: JSON.stringify({ num, order, confirmed: true }),
   })
   const saved = await res.json()
-  const w = byNum(num)
-  if (w && !saved.error) {
-    w.order = saved.order
-    w.confirmed = saved.confirmed
-    w.stale = [] // 保存で pick を取り直したのでズレは解消
-  }
+  if (res.ok) state = applySavedRep(state, num, saved)
   return saved
 }
 

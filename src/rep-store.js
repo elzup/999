@@ -58,6 +58,11 @@ export function defaultOrder(word) {
   return DEFAULT_PRIORITY.filter((s) => word[`${s}k`]).slice(0, MAX_REP)
 }
 
+/** 候補がちょうど1つの場合だけ、選択余地がないので自動確定する。 */
+export function isAutoConfirmed(word) {
+  return availableSlots(word).length === 1
+}
+
 /** 候補の表示情報(語・読み・スコア・画像URL) */
 function slotView(word, slot, imagesForNum) {
   const w = word[slot] || ''
@@ -98,7 +103,8 @@ function resolvePicks(word, picks) {
 
 /** entry(picks) or 既定 から代表順と stale を得る (gen とも共有) */
 export function resolveOrder(word, entry) {
-  if (entry?.picks?.length) return resolvePicks(word, entry.picks)
+  if (entry && Array.isArray(entry.picks))
+    return resolvePicks(word, entry.picks)
   return { order: defaultOrder(word), stale: [] }
 }
 
@@ -146,7 +152,7 @@ export function buildRepState() {
     const entry = rep[w.num]
     const { order, stale } = resolveOrder(w, entry)
     // 候補が 1 つなら選ぶ余地が無いので自動確定 (永続化はしない=原本更新に追従)
-    const auto = cands.length <= 1
+    const auto = isAutoConfirmed(w)
     const confirmed = auto || Boolean(entry?.confirmed)
     return {
       num: w.num,
@@ -161,13 +167,38 @@ export function buildRepState() {
 }
 
 /** 代表順・確定状態を保存する */
-export function setRep({ num, order, confirmed }) {
-  const store = loadRep()
-  const word = loadWordsTsv().find((w) => w.num === num)
+export function setRep(
+  { num, order, confirmed },
+  {
+    loadStore = loadRep,
+    loadWords = loadWordsTsv,
+    writeStore = (nextStore) => writeJson(REP_PATH, nextStore),
+  } = {}
+) {
+  const store = loadStore()
+  const word = loadWords().find((w) => w.num === num)
   if (!word) return { error: 'unknown num' }
-  const picks = orderToPicks(word, order)
-  store.rep[num] = { picks, confirmed: Boolean(confirmed) }
-  writeJson(REP_PATH, store)
-  const { order: resolved } = resolveOrder(word, store.rep[num])
-  return { num, order: resolved, confirmed: Boolean(confirmed) }
+  if (!Array.isArray(order)) return { error: 'order must be an array' }
+  if (typeof confirmed !== 'boolean')
+    return { error: 'confirmed must be boolean' }
+
+  const available = new Set(availableSlots(word))
+  if (order.some((slot) => !available.has(slot))) {
+    return { error: 'order contains unavailable slot' }
+  }
+
+  const normalizedOrder = [...new Set(order)]
+  if (normalizedOrder.length > MAX_REP)
+    return { error: `order must have at most ${MAX_REP} slots` }
+  const entry = { picks: orderToPicks(word, normalizedOrder), confirmed }
+  const nextStore = {
+    ...store,
+    rep: {
+      ...(store.rep || {}),
+      [num]: entry,
+    },
+  }
+  writeStore(nextStore)
+  const { order: resolved } = resolveOrder(word, entry)
+  return { num, order: resolved, confirmed }
 }

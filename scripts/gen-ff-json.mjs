@@ -7,14 +7,14 @@ import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readFfRows } from './ff-sheet.mjs'
-import { buildRow } from '../src/ff-reading.js'
+import { buildRow, validateFfRows } from '../src/ff-reading.js'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(repoRoot, 'app', 'data', 'ff.json')
 
 async function main() {
   const rows = await readFfRows()
-  const items = rows.map(buildRow)
+  const items = validateFfRows(rows).map(buildRow)
   writeFileSync(OUT, JSON.stringify(items) + '\n')
   const byType = {}
   for (const it of items) byType[it.type] = (byType[it.type] || 0) + 1
