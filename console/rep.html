@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>語呂 999 — 代表語コンソール</title>
+    <style>
+      :root {
+        --bg: #0b0c10;
+        --surface: #16181f;
+        --surface2: #1e212a;
+        --hover: #272b36;
+        --line: rgba(255, 255, 255, 0.08);
+        --line2: rgba(255, 255, 255, 0.14);
+        --text: #eceef2;
+        --text2: #9aa1ad;
+        --muted: #6b7280;
+        --green: #34d399;
+        --green-dim: rgba(52, 211, 153, 0.16);
+        --amber: #fbbf24;
+        --amber-dim: rgba(251, 191, 36, 0.16);
+        --blue: #60a5fa;
+        --blue-dim: rgba(96, 165, 250, 0.16);
+        --pink: #f472b6;
+        --pink-dim: rgba(244, 114, 182, 0.16);
+        --red: #f87171;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          'Hiragino Sans', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(11, 12, 16, 0.9);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--line);
+        padding: 12px 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 18px;
+        align-items: center;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .stat {
+        font: 500 12px ui-monospace, Menlo, monospace;
+        color: var(--text2);
+      }
+      .stat b {
+        color: var(--text);
+      }
+      .stat .g {
+        color: var(--green);
+      }
+      .filters {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-left: auto;
+      }
+      .filters button,
+      .bulk {
+        background: var(--surface2);
+        color: var(--text2);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .filters button.active {
+        background: var(--green-dim);
+        color: var(--green);
+        border-color: var(--green);
+      }
+      .bulk {
+        border-radius: 8px;
+        color: var(--amber);
+        border-color: var(--amber-dim);
+      }
+      .hint {
+        width: 100%;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .hint kbd {
+        background: var(--surface2);
+        border: 1px solid var(--line2);
+        border-radius: 4px;
+        padding: 0 5px;
+        font: 600 10px ui-monospace, Menlo, monospace;
+        color: var(--text2);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        padding: 18px;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px;
+        box-shadow: var(--shadow);
+        transition: border-color 0.12s, box-shadow 0.12s;
+        content-visibility: auto;
+        contain-intrinsic-size: auto 150px;
+        scroll-margin: 90px;
+      }
+      .card.confirmed {
+        border-color: var(--green);
+      }
+      .card.stale {
+        border-color: var(--amber);
+      }
+      .card.focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 2px var(--blue-dim), var(--shadow);
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 2px 8px;
+      }
+      .card-num {
+        font: 700 13px ui-monospace, 'SF Mono', Menlo, monospace;
+        letter-spacing: 1px;
+        color: var(--text2);
+      }
+      .card.confirmed .card-num {
+        color: var(--green);
+      }
+      .tag {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 7px;
+        border-radius: 999px;
+      }
+      .tag.ok {
+        background: var(--green-dim);
+        color: var(--green);
+      }
+      .tag.warn {
+        background: var(--amber-dim);
+        color: var(--amber);
+      }
+      .chips {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .chip {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        background: var(--surface2);
+        border: 1.5px solid var(--line);
+        border-radius: 10px;
+        padding: 7px 9px;
+        cursor: pointer;
+        transition: border-color 0.1s, background 0.1s;
+      }
+      .chip:hover {
+        background: var(--hover);
+      }
+      .chip.rank1 {
+        border-color: var(--green);
+        background: var(--green-dim);
+      }
+      .chip.rank2 {
+        border-color: var(--line2);
+      }
+      .rankbadge {
+        flex: 0 0 auto;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        font: 700 12px ui-monospace, Menlo, monospace;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .chip.rank1 .rankbadge {
+        background: var(--green);
+        color: #06281c;
+      }
+      .chip.rank2 .rankbadge {
+        background: var(--line2);
+        color: var(--text);
+      }
+      .chip-img {
+        flex: 0 0 auto;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: #0d0f14;
+      }
+      .chip-img.none {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+      }
+      .kindmark {
+        flex: 0 0 auto;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 6px;
+      }
+      .kindmark.hito {
+        background: var(--blue-dim);
+        color: var(--blue);
+      }
+      .kindmark.mono {
+        background: var(--pink-dim);
+        color: var(--pink);
+      }
+      .chip-body {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .chip-top {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+      .chip-k {
+        font-size: 17px;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+      .chip-w {
+        font-size: 11px;
+        color: var(--text2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .meter {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 2px;
+      }
+      .meter-bar {
+        flex: 1 1 auto;
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+      .meter-fill {
+        display: block;
+        height: 100%;
+        border-radius: 3px;
+      }
+      .meter-dev {
+        flex: 0 0 auto;
+        font: 700 11px ui-monospace, Menlo, monospace;
+      }
+      .tag.auto {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text2);
+      }
+      .head-sp {
+        flex: 1;
+      }
+      .swap {
+        background: var(--surface2);
+        color: var(--text2);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 2px 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .swap:hover {
+        color: var(--text);
+        border-color: var(--line2);
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text2);
+        cursor: pointer;
+        user-select: none;
+      }
+      #empty {
+        padding: 60px 18px;
+        text-align: center;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>代表語コンソール</h1>
+      <span class="stat" id="stat"></span>
+      <div class="filters" id="filters"></div>
+      <label class="toggle"
+        ><input type="checkbox" id="hideConfirmed" />確定済みを隠す</label
+      >
+      <button class="bulk" id="bulkBtn">表示中を現順で一括確定</button>
+      <div class="hint">
+        チップ<kbd>クリック</kbd>=その候補を代表①にして即確定(①クリックはそのまま確定)。
+        <kbd>⇅</kbd>で①②入替。 フォーカス中: <kbd>1</kbd>-<kbd>6</kbd>候補選択
+        <kbd>s</kbd>入替 <kbd>Enter</kbd>確定して次へ <kbd>↑↓←→</kbd>移動。
+        スコアは全候補の<b>偏差値</b>(緑=良/赤=弱)。
+      </div>
+    </header>
+    <div class="grid" id="grid"></div>
+    <div id="empty" hidden>該当なし</div>
+    <script src="./rep.js"></script>
+  </body>
+</html>
