@@ -7,9 +7,13 @@ import {
   saveBookmarkViews,
   loadTab,
   saveTab,
+  loadTabVisibility,
+  saveTabVisibility,
 } from './data/storage'
 import type { AppData } from './data/schema'
 import type { TabId } from './data/constants'
+import { BAR_TAB_LABELS, VALID_TABS } from './data/constants'
+import type { TabVisibility } from './data/storage'
 import NumGroupTab from './components/NumGroupTab'
 import CardTab from './components/CardTab'
 import PiTab from './components/PiTab'
@@ -19,6 +23,7 @@ import MiscTab from './components/MiscTab'
 import KukuTab from './components/KukuTab'
 import SlideshowTab from './components/SlideshowTab'
 import BookmarkTab from './components/BookmarkTab'
+import FFTab from './components/FFTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { fetchAppData } from './lib/appDataApi'
@@ -33,7 +38,21 @@ import {
   IconStats,
   IconStar,
   IconSlide,
+  IconHex,
 } from './components/Icons'
+
+const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
+  num: <IconNum />,
+  card: <IconCard />,
+  pi: <IconPi />,
+  year: <IconYear />,
+  weekday: <IconWeekday />,
+  kuku: <IconKuku />,
+  slide: <IconSlide />,
+  bm: <IconStar />,
+  hex: <IconHex />,
+  misc: <IconStats />,
+}
 
 export function App() {
   const [tab, _setTab] = useState<TabId>(loadTab)
@@ -46,6 +65,12 @@ export function App() {
   const [locked, setLocked] = useState(false)
   const [bookmarks, setBookmarks] = useState(loadBookmarks)
   const [bmViews, setBmViews] = useState(loadBookmarkViews)
+  const [visibility, setVisibility] = useState(loadTabVisibility)
+
+  const updateVisibility = useCallback((next: TabVisibility) => {
+    saveTabVisibility(next)
+    setVisibility(next)
+  }, [])
 
   useEffect(() => {
     // 辞書本体は認証付き Function 経由でのみ取得。トークンが無ければロック画面へ。
@@ -171,72 +196,28 @@ export function App() {
           onView={recordBookmarkView}
         />
       )}
-      {tab === 'misc' && <MiscTab numbers={data.numbers} rules={data.rules} />}
+      {tab === 'hex' && <FFTab />}
+      {tab === 'misc' && (
+        <MiscTab
+          numbers={data.numbers}
+          rules={data.rules}
+          visibility={visibility}
+          onVisibilityChange={updateVisibility}
+          onSelectTab={setTab}
+        />
+      )}
       <div class="bottom-bar">
-        <TabButton
-          id="num"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconNum />}
-          label="数字"
-        />
-        <TabButton
-          id="card"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconCard />}
-          label="カード"
-        />
-        <TabButton
-          id="pi"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconPi />}
-          label="π"
-        />
-        <TabButton
-          id="year"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconYear />}
-          label="年号"
-        />
-        <TabButton
-          id="weekday"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconWeekday />}
-          label="曜日"
-        />
-        <TabButton
-          id="kuku"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconKuku />}
-          label="九九"
-        />
-        <TabButton
-          id="slide"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconSlide />}
-          label="スライド"
-        />
-        <TabButton
-          id="bm"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconStar />}
-          label="ブックマーク"
-          highlight={bmReviewDue}
-        />
-        <TabButton
-          id="misc"
-          current={tab}
-          onSelect={setTab}
-          icon={<IconStats />}
-          label="設定"
-        />
+        {VALID_TABS.filter((id) => visibility[id] || tab === id).map((id) => (
+          <TabButton
+            key={id}
+            id={id}
+            current={tab}
+            onSelect={setTab}
+            icon={TAB_ICONS[id]}
+            label={BAR_TAB_LABELS[id]}
+            highlight={id === 'bm' ? bmReviewDue : undefined}
+          />
+        ))}
       </div>
     </>
   )

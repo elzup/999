@@ -200,6 +200,40 @@ export function saveSlideSettings(settings: SlideSettings) {
   saveJson('slideSettings999', settings)
 }
 
+// App Bar に表示するタブの ON/OFF 設定。
+const TabVisibilitySchema = z.record(z.boolean())
+export type TabVisibility = Record<TabId, boolean>
+
+export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
+  num: true,
+  card: true,
+  pi: true,
+  year: true,
+  weekday: false,
+  kuku: false,
+  slide: false,
+  bm: true,
+  hex: false,
+  misc: true,
+}
+
+export function loadTabVisibility(): TabVisibility {
+  const loaded = loadJson(
+    'tabVisibility999',
+    TabVisibilitySchema,
+    DEFAULT_TAB_VISIBILITY
+  )
+  const next = { ...DEFAULT_TAB_VISIBILITY }
+  for (const id of VALID_TABS) {
+    if (typeof loaded[id] === 'boolean') next[id] = loaded[id]
+  }
+  return next
+}
+
+export function saveTabVisibility(visibility: TabVisibility) {
+  saveJson('tabVisibility999', visibility)
+}
+
 // スライドショーで「一応OK」印を付けた数字の集合 (bm とは別管理)。
 export function loadSlideOk(): Set<string> {
   try {

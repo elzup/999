@@ -50,6 +50,35 @@ export function IconStar() {
   )
 }
 
+export function IconHex() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 2.5 20 7v10l-8 4.5L4 17V7l8-4.5Z"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linejoin="round"
+      />
+      <text
+        x="12"
+        y="15.5"
+        text-anchor="middle"
+        font-size="7.5"
+        font-weight="700"
+        fill="currentColor"
+      >
+        F
+      </text>
+    </svg>
+  )
+}
+
 export function IconStats() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

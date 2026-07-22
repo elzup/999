@@ -442,6 +442,20 @@ export const VALID_TABS = [
   'kuku',
   'slide',
   'bm',
+  'hex',
   'misc',
 ] as const
-export type TabId = (typeof VALID_TABS)[number]
+export type TabId = typeof VALID_TABS[number]
+
+export const BAR_TAB_LABELS: Record<TabId, string> = {
+  num: '数字',
+  card: 'カード',
+  pi: 'π',
+  year: '年号',
+  weekday: '曜日',
+  kuku: '九九',
+  slide: 'スライド',
+  bm: 'ブックマーク',
+  hex: 'hex',
+  misc: '設定',
+}

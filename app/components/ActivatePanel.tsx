@@ -16,7 +16,7 @@ function ActivatePanel() {
   }
 
   return (
-    <div class="content activate-panel">
+    <div class="activate-panel">
       <div class="activate-status">
         状態:{' '}
         {isActivated ? (
