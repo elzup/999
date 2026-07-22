@@ -729,6 +729,41 @@ body {
 .test-feature-list.compact .test-feature-method {
   font-size: 9px;
 }
+/* 非compact(FF テスト選択の主リスト): タップしやすい大きめの縦並び */
+.test-feature-list:not(.compact) {
+  flex-direction: column;
+}
+.test-feature-list:not(.compact) .test-feature-item {
+  width: 100%;
+}
+.test-feature-list:not(.compact) .test-feature-start {
+  flex: 1;
+  padding: 12px 16px;
+}
+.test-feature-list:not(.compact) .test-feature-title {
+  font-size: 15px;
+}
+.test-feature-list:not(.compact) .test-feature-method {
+  margin-left: auto;
+}
+.test-feature-list:not(.compact) .test-feature-records {
+  padding: 0 16px;
+  font-size: 12px;
+}
+/* 前回実施したテストの強調マーカー */
+.test-feature-item.is-last {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.test-feature-last {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--accent);
+  background: var(--accent2);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
 @media (max-width: 640px) {
   .test-feature-list {
     width: 100%;
@@ -749,6 +784,21 @@ body {
   }
   .test-feature-method {
     display: none;
+  }
+  /* 非compact は縦フル幅・method 表示を維持 */
+  .test-feature-list:not(.compact) {
+    gap: 8px;
+  }
+  .test-feature-list:not(.compact) .test-feature-item {
+    flex: none;
+    width: 100%;
+  }
+  .test-feature-list:not(.compact) .test-feature-start {
+    justify-content: flex-start;
+    padding: 12px 16px;
+  }
+  .test-feature-list:not(.compact) .test-feature-method {
+    display: inline-flex;
   }
 }
 /* Shared numpad (pi/year test) */

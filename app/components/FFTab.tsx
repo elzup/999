@@ -96,6 +96,15 @@ function FFTab() {
   const titleOf = (id: TestId): string =>
     id in NIBBLE ? NIBBLE[id as NibbleKind].title : ffDirTitle(id as FfDir)
 
+  // 全テストのうち最後に実施したもの(記録の最新日時が最大)を「前回」として印す。
+  const allIds: TestId[] = [...NIBBLE_KINDS, ...FF_DIRS]
+  const lastDoneId = allIds.reduce<TestId | null>((best, id) => {
+    const rec = recOf[id].last
+    if (!rec) return best
+    const bestRec = best ? recOf[best].last : null
+    return !bestRec || rec.date > bestRec.date ? id : best
+  }, null)
+
   const startTest = useCallback((dir: FfDir) => {
     setSummary(null)
     setRun((prev) => ({
@@ -180,6 +189,7 @@ function FFTab() {
     title: NIBBLE[kind].title,
     inputMethod: 'number',
     hasRecords: recOf[kind].records.length > 0,
+    lastDone: kind === lastDoneId,
     onStart: () => startNibble(kind),
     onShowRecords: () => setShowRecords(kind),
   }))
@@ -188,6 +198,7 @@ function FFTab() {
     title: ffDirTitle(dir),
     inputMethod: 'choice',
     hasRecords: recOf[dir].records.length > 0,
+    lastDone: dir === lastDoneId,
     onStart: () => startTest(dir),
     onShowRecords: () => setShowRecords(dir),
   }))

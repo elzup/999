@@ -13,6 +13,8 @@ export type TestFeature = {
   title: string
   inputMethod: TestInputMethod
   hasRecords?: boolean
+  // このリスト内で最後に実施したテストに true。「前回」マーカーを表示する。
+  lastDone?: boolean
 }
 
 export function groupTestFeaturesByInputMethod(features: TestFeature[]) {

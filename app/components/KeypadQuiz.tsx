@@ -121,7 +121,10 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
     : 'var(--text)'
 
   return (
-    <div class="test-screen quiz-screen">
+    <div
+      class="test-screen quiz-screen"
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
       <div class="pi-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div class="pi-header-title">{title}</div>
@@ -155,7 +158,15 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
         </div>
       </div>
 
-      <div class="content" style={{ flex: 1 }}>
+      <div
+        class="content"
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
         <div class="cm-quiz-wrap">
           <div class="cm-card-prompt">
             <div class="cm-card-order">
@@ -216,57 +227,66 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
               正解: {q.answer}
             </div>
           )}
+        </div>
+      </div>
 
-          {/* キーパッド */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                pad === 'hex' ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
-              gap: 8,
-              width: '100%',
-              maxWidth: pad === 'hex' ? 320 : 260,
-              margin: '0 auto',
-            }}
-          >
-            {keys.map((k) => (
-              <button
-                key={k}
-                disabled={revealed}
-                onClick={() => press(k)}
-                style={{
-                  padding: pad === 'hex' ? '16px 0' : '20px 0',
-                  fontSize: 22,
-                  fontWeight: 700,
-                  fontFamily: 'ui-monospace, monospace',
-                  borderRadius: 10,
-                  border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-                  background: 'var(--surface2, #1e212a)',
-                  color: 'var(--text)',
-                  cursor: revealed ? 'default' : 'pointer',
-                }}
-              >
-                {k}
-              </button>
-            ))}
+      {/* キーパッド(画面下部に固定・親指で届く位置) */}
+      <div
+        style={{
+          flexShrink: 0,
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
+          padding: '10px 12px 14px',
+        }}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              pad === 'hex' ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
+            gap: 8,
+            width: '100%',
+            maxWidth: pad === 'hex' ? 420 : 320,
+            margin: '0 auto',
+          }}
+        >
+          {keys.map((k) => (
             <button
-              disabled={revealed || typed.length === 0}
-              onClick={backspace}
+              key={k}
+              disabled={revealed}
+              onClick={() => press(k)}
               style={{
-                gridColumn: pad === 'hex' ? 'span 4' : 'span 2',
-                padding: '10px 0',
-                fontSize: 15,
-                fontWeight: 600,
-                borderRadius: 10,
+                padding: pad === 'hex' ? '18px 0' : '24px 0',
+                fontSize: 24,
+                fontWeight: 700,
+                fontFamily: 'ui-monospace, monospace',
+                borderRadius: 12,
                 border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-                background: 'transparent',
-                color: 'var(--text2)',
-                cursor: 'pointer',
+                background: 'var(--surface2, #1e212a)',
+                color: 'var(--text)',
+                cursor: revealed ? 'default' : 'pointer',
               }}
             >
-              ⌫ 消す
+              {k}
             </button>
-          </div>
+          ))}
+          <button
+            disabled={revealed || typed.length === 0}
+            onClick={backspace}
+            style={{
+              gridColumn: pad === 'hex' ? 'span 4' : 'span 2',
+              padding: '12px 0',
+              fontSize: 16,
+              fontWeight: 600,
+              borderRadius: 12,
+              border: '1.5px solid var(--line, rgba(255,255,255,.12))',
+              background: 'transparent',
+              color: 'var(--text2)',
+              cursor: 'pointer',
+            }}
+          >
+            ⌫ 消す
+          </button>
         </div>
       </div>
     </div>
