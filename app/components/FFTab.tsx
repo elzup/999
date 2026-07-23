@@ -4,7 +4,14 @@ import ChoiceQuiz, { type ChoiceQuestion, type QuizSummary } from './ChoiceQuiz'
 import ReviewPanel from './ReviewPanel'
 import RecordPanel from './RecordPanel'
 import KeypadQuiz, { type KeypadQuestion } from './KeypadQuiz'
+import BinaryTest from './BinaryTest'
+import {
+  BINARY_MEMO_OPTIONS,
+  BINARY_ROW_OPTIONS,
+  genBinaryRows,
+} from '../lib/binaryTest'
 import { useQuizRecords } from '../lib/useQuizRecords'
+import { loadSubTab, saveSubTab } from '../data/storage'
 import {
   FF_ROWS,
   FF_DIRS,
@@ -18,7 +25,9 @@ import {
   type NibbleKind,
 } from '../lib/ffQuiz'
 
-type Sub = 'ref' | 'bin' | 'test'
+const FF_SUB_TABS = ['ref', 'bin', 'test'] as const
+type Sub = typeof FF_SUB_TABS[number]
+const FF_SUB_KEY = 'subtab.ff'
 export type FfRun =
   | { kind: 'ff'; dir: FfDir; questions: ChoiceQuestion[]; id: number }
   | {
@@ -73,10 +82,50 @@ export function completeFfRun(
 }
 
 function FFTab() {
-  const [sub, setSub] = useState<Sub>('ref')
+  const [sub, setSub] = useState<Sub>(() =>
+    loadSubTab(FF_SUB_KEY, FF_SUB_TABS, 'ref')
+  )
+  const handleSub = useCallback((next: Sub) => {
+    saveSubTab(FF_SUB_KEY, next)
+    setSub(next)
+  }, [])
   const [run, setRun] = useState<FfRun | null>(null)
   const [summary, setSummary] = useState<QuizSummary | null>(null)
   const [showRecords, setShowRecords] = useState<TestId | null>(null)
+
+  // バイナリー記憶(記憶競技)。FfRun とは独立した状態で扱う。
+  const [binRun, setBinRun] = useState<{
+    rows: string[]
+    memoSec: number
+    recallSec: number
+    id: number
+  } | null>(null)
+  const [binSummary, setBinSummary] = useState<QuizSummary | null>(null)
+  // 既定は公式ナショナルスタンダード(記憶5分 / 25行)。
+  const [binMemoSec, setBinMemoSec] = useState<number>(
+    BINARY_MEMO_OPTIONS[3].sec
+  )
+  const [binRows, setBinRows] = useState<number>(BINARY_ROW_OPTIONS[2])
+  const [showBinRecords, setShowBinRecords] = useState(false)
+  const recBinary = useQuizRecords('ff_binary')
+
+  const startBinary = useCallback(() => {
+    setBinSummary(null)
+    setBinRun((prev) => ({
+      rows: genBinaryRows(binRows),
+      memoSec: binMemoSec,
+      recallSec: binMemoSec * 3, // 公式比: 記憶5分→回答15分
+      id: (prev?.id ?? 0) + 1,
+    }))
+  }, [binRows, binMemoSec])
+
+  const onBinComplete = useCallback(
+    (s: QuizSummary) => {
+      setBinSummary(s)
+      recBinary.addRecord(s)
+    },
+    [recBinary]
+  )
 
   // 各テストの記録エンジン(他テストと同じ useQuizRecords / RecordPanel)。
   const recHex2read = useQuizRecords('ff_hex2read')
@@ -183,6 +232,36 @@ function FFTab() {
     )
   }
 
+  if (binRun && binSummary) {
+    return (
+      <ReviewPanel
+        title="バイナリー記憶"
+        score={binSummary.score}
+        total={binSummary.total}
+        time={binSummary.time}
+        items={binSummary.reviews}
+        onClose={() => {
+          setBinRun(null)
+          setBinSummary(null)
+        }}
+      />
+    )
+  }
+
+  if (binRun) {
+    return (
+      <BinaryTest
+        key={binRun.id}
+        title="バイナリー記憶"
+        memoSec={binRun.memoSec}
+        recallSec={binRun.recallSec}
+        rows={binRun.rows}
+        onQuit={() => setBinRun(null)}
+        onComplete={onBinComplete}
+      />
+    )
+  }
+
   // nibble(キーパッド) と語4択を同じ TestFeature 抽象に統一。記録も共通。
   const nibbleFeatures: TestFeatureAction[] = NIBBLE_KINDS.map((kind) => ({
     id: kind,
@@ -216,19 +295,19 @@ function FFTab() {
       <div class="sub-tab-switch">
         <button
           class={'sub-tab-btn' + (sub === 'ref' ? ' active' : '')}
-          onClick={() => setSub('ref')}
+          onClick={() => handleSub('ref')}
         >
           確認
         </button>
         <button
           class={'sub-tab-btn' + (sub === 'bin' ? ' active' : '')}
-          onClick={() => setSub('bin')}
+          onClick={() => handleSub('bin')}
         >
           binary
         </button>
         <button
           class={'sub-tab-btn' + (sub === 'test' ? ' active' : '')}
-          onClick={() => setSub('test')}
+          onClick={() => handleSub('test')}
         >
           テスト
         </button>
@@ -314,7 +393,69 @@ function FFTab() {
             語データを使った 10問・4択テスト
           </div>
           <TestFeatureList features={choiceFeatures} />
+
+          <div
+            style={{
+              fontSize: 12,
+              color: 'var(--text2)',
+              margin: '16px 0 6px',
+            }}
+          >
+            バイナリー記憶（0/1を記憶→1行30桁で再現・行単位採点）
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {BINARY_MEMO_OPTIONS.map((o) => (
+              <button
+                key={o.sec}
+                class={'filter-btn' + (binMemoSec === o.sec ? ' active' : '')}
+                onClick={() => setBinMemoSec(o.sec)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <div
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}
+          >
+            {BINARY_ROW_OPTIONS.map((n) => (
+              <button
+                key={n}
+                class={'filter-btn' + (binRows === n ? ' active' : '')}
+                onClick={() => setBinRows(n)}
+              >
+                {n}行
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+            <button
+              class="filter-btn"
+              style={{ fontWeight: 700, padding: '10px 20px' }}
+              onClick={startBinary}
+            >
+              ▶ 開始（{binRows * 30}桁）
+            </button>
+            {recBinary.records.length > 0 && (
+              <button
+                class="filter-btn"
+                style={{ padding: '10px 16px' }}
+                onClick={() => setShowBinRecords(true)}
+              >
+                記録（{recBinary.records.length}）
+              </button>
+            )}
+          </div>
         </div>
+      )}
+
+      {showBinRecords && (
+        <RecordPanel
+          title="バイナリー記憶"
+          records={recBinary.records}
+          onDelete={recBinary.deleteRecord}
+          onClear={recBinary.clearRecords}
+          onClose={() => setShowBinRecords(false)}
+        />
       )}
 
       {showRecords && (
