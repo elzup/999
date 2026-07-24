@@ -85,6 +85,30 @@ function MemoView({
   const move = (d: number) =>
     setCursor((c) => Math.max(0, Math.min(byteCount - 1, c + d)))
 
+  // 矢印キーでもカーソルを動かせる(←→で1バイト, ↑↓で約1行=4バイト)。
+  const rowStep = Math.ceil(COLS / CURSOR_BITS)
+  useEffect(() => {
+    if (!highlight) return
+    const onKey = (e: KeyboardEvent) => {
+      const step =
+        e.key === 'ArrowRight'
+          ? 1
+          : e.key === 'ArrowLeft'
+          ? -1
+          : e.key === 'ArrowDown'
+          ? rowStep
+          : e.key === 'ArrowUp'
+          ? -rowStep
+          : 0
+      if (step === 0) return
+      e.preventDefault()
+      move(step)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlight, byteCount, rowStep])
+
   return (
     <div
       class="test-screen quiz-screen"
