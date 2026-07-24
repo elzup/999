@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   BINARY_DIGITS_PER_ROW,
+  byteDiff,
+  byteToHex,
   chunkRows,
   genBinaryRow,
   genBinaryRows,
@@ -114,6 +116,39 @@ describe('chunkRows', () => {
 
   it('空入力は空配列', () => {
     expect(chunkRows('')).toEqual([])
+  })
+})
+
+describe('byteDiff', () => {
+  it('8bitごとに一致/不一致/未到達を判定する', () => {
+    // 正解24bit=3バイト
+    const correct = '11110000' + '10101010' + '00001111'
+    // 回答: 1バイト目一致, 2バイト目ミス, 3バイト目未入力
+    const user = '11110000' + '10100000'
+    const cells = byteDiff(user, correct)
+    expect(cells.map((c) => c.state)).toEqual(['match', 'miss', 'blank'])
+    expect(cells[1].correct).toBe('10101010')
+    expect(cells[1].user).toBe('10100000')
+    expect(cells[2].user).toBe('')
+  })
+
+  it('末尾の8bit未満バイトも比較できる', () => {
+    const correct = '11111111' + '110' // 11bit → 2バイト目は3bit
+    const user = '11111111' + '110'
+    const cells = byteDiff(user, correct)
+    expect(cells).toHaveLength(2)
+    expect(cells[1].correct).toBe('110')
+    expect(cells[1].state).toBe('match')
+  })
+})
+
+describe('byteToHex', () => {
+  it('8bitをhex2桁に', () => {
+    expect(byteToHex('11001010')).toBe('CA')
+    expect(byteToHex('00000000')).toBe('00')
+  })
+  it('8bit未満はnull', () => {
+    expect(byteToHex('110')).toBeNull()
   })
 })
 

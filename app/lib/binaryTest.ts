@@ -75,6 +75,41 @@ export type BinaryScore = {
   rows: BinaryRowResult[]
 }
 
+// --- byte単位の diff (回答確認用) ---
+// 位置合わせで 8bit ごとに正解/回答を突き合わせる。4bit/8bit抜けの検知や
+// 「それ以外は合っていたか」の確認に使う。行(30桁)とは独立した連続バイト列。
+export const BINARY_BYTE_BITS = 8
+
+export type ByteDiffState = 'match' | 'miss' | 'blank'
+export type ByteDiffCell = {
+  index: number
+  correct: string // 正解ビット(末尾は8bit未満のことがある)
+  user: string // 回答ビット(未到達なら '')
+  state: ByteDiffState
+}
+
+export function byteDiff(
+  userStream: string,
+  correctStream: string
+): ByteDiffCell[] {
+  const count = Math.ceil(correctStream.length / BINARY_BYTE_BITS)
+  return Array.from({ length: count }, (_, index) => {
+    const start = index * BINARY_BYTE_BITS
+    const end = Math.min(start + BINARY_BYTE_BITS, correctStream.length)
+    const correct = correctStream.slice(start, end)
+    const user = userStream.slice(start, end)
+    const state: ByteDiffState =
+      user.length === 0 ? 'blank' : user === correct ? 'match' : 'miss'
+    return { index, correct, user, state }
+  })
+}
+
+// 8bit を hex 2桁に。8bit未満(末尾端数)は null。
+export function byteToHex(bits: string): string | null {
+  if (bits.length !== BINARY_BYTE_BITS) return null
+  return parseInt(bits, 2).toString(16).toUpperCase().padStart(2, '0')
+}
+
 // グリッド全体の採点。userRows が短い(未着手の末尾行)場合は空行=0点として扱う。
 export function scoreBinary(
   userRows: string[],

@@ -4,8 +4,11 @@ import type { QuizSummary } from './ChoiceQuiz'
 import type { ReviewItem } from './ReviewPanel'
 import {
   BINARY_DIGITS_PER_ROW as COLS,
+  byteDiff,
+  byteToHex,
   chunkRows,
   scoreBinary,
+  type ByteDiffCell,
 } from '../lib/binaryTest'
 
 type Props = {
@@ -13,6 +16,7 @@ type Props = {
   memoSec: number
   recallSec: number
   rows: string[] // 正解グリッド(呼び出し側で生成)
+  highlight: boolean // 記憶時に8bitカーソルのハイライトを出すか
   onQuit: () => void
   onComplete: (summary: QuizSummary) => void
 }
@@ -23,12 +27,6 @@ const NIBBLE = 4 // 色分けの単位(4bit)
 const CELL_W = 11 // 1桁セルの固定幅(記憶・回答で列を縦に揃える)
 // 4bitごとの色(偶数ニブル/奇数ニブル)。8bitを hex 2桁として読めるように。
 const NIBBLE_COLOR = ['var(--text)', 'var(--blue, #60a5fa)']
-
-// 8bit を hex 2桁に。端数(<8)は空文字。
-function bitsToHex(bits: string): string {
-  if (bits.length !== CURSOR_BITS) return ''
-  return parseInt(bits, 2).toString(16).toUpperCase().padStart(2, '0')
-}
 
 // 30桁を3桁ずつ区切って表示(採点結果・確定行の視認性)。
 function groupBits(bits: string): string {
@@ -59,11 +57,13 @@ function buildReviews(userRows: string[], correctRows: string[]): ReviewItem[] {
 function MemoView({
   rows,
   remain,
+  highlight,
   onQuit,
   onEnd,
 }: {
   rows: string[]
   remain: number
+  highlight: boolean
   onQuit: () => void
   onEnd: () => void
 }) {
@@ -73,14 +73,14 @@ function MemoView({
   const [cursor, setCursor] = useState(0) // バイト番号(連続)
   const byteStart = cursor * CURSOR_BITS
   const byteEnd = Math.min(byteStart + CURSOR_BITS, totalBits)
-  const curRow = Math.floor(byteStart / COLS)
-  const curHex = bitsToHex(allBits.slice(byteStart, byteEnd))
+  const curRow = highlight ? Math.floor(byteStart / COLS) : -1
+  const curHex = byteToHex(allBits.slice(byteStart, byteEnd)) ?? ''
   const rowRef = useRef<HTMLDivElement | null>(null)
 
   // カーソル(バイト先頭)の行を表示領域内に保つ。
   useEffect(() => {
-    rowRef.current?.scrollIntoView({ block: 'center' })
-  }, [curRow])
+    if (highlight) rowRef.current?.scrollIntoView({ block: 'center' })
+  }, [curRow, highlight])
 
   const move = (d: number) =>
     setCursor((c) => Math.max(0, Math.min(byteCount - 1, c + d)))
@@ -141,11 +141,13 @@ function MemoView({
             <span style={{ display: 'flex' }}>
               {Array.from({ length: COLS }, (_, col) => {
                 const a = i * COLS + col // 連続ビット位置
-                const hl = a >= byteStart && a < byteEnd
+                const hl = highlight && a >= byteStart && a < byteEnd
                 return (
                   <span
                     key={col}
-                    onClick={() => setCursor(Math.floor(a / CURSOR_BITS))}
+                    onClick={() =>
+                      highlight && setCursor(Math.floor(a / CURSOR_BITS))
+                    }
                     style={{
                       ...mono,
                       fontSize: 16,
@@ -186,39 +188,41 @@ function MemoView({
           gap: 8,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            class="filter-btn"
-            style={{ flex: 1, padding: '16px 0', fontSize: 20 }}
-            disabled={cursor <= 0}
-            onClick={() => move(-1)}
-          >
-            ◀
-          </button>
-          <span
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              minWidth: 86,
-            }}
-          >
-            <span style={{ ...mono, fontSize: 20, fontWeight: 700 }}>
-              {curHex || '端数'}
+        {highlight && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              class="filter-btn"
+              style={{ flex: 1, padding: '16px 0', fontSize: 20 }}
+              disabled={cursor <= 0}
+              onClick={() => move(-1)}
+            >
+              ◀
+            </button>
+            <span
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                minWidth: 86,
+              }}
+            >
+              <span style={{ ...mono, fontSize: 20, fontWeight: 700 }}>
+                {curHex || '端数'}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text2)' }}>
+                {cursor + 1}/{byteCount} バイト
+              </span>
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text2)' }}>
-              {cursor + 1}/{byteCount} バイト
-            </span>
-          </span>
-          <button
-            class="filter-btn"
-            style={{ flex: 1, padding: '16px 0', fontSize: 20 }}
-            disabled={cursor >= byteCount - 1}
-            onClick={() => move(1)}
-          >
-            ▶
-          </button>
-        </div>
+            <button
+              class="filter-btn"
+              style={{ flex: 1, padding: '16px 0', fontSize: 20 }}
+              disabled={cursor >= byteCount - 1}
+              onClick={() => move(1)}
+            >
+              ▶
+            </button>
+          </div>
+        )}
         <button
           class="filter-btn"
           style={{ padding: '10px 0', fontWeight: 700 }}
@@ -231,15 +235,180 @@ function MemoView({
   )
 }
 
+// バイト1個の表示(2進 or hex)。空(未到達)は placeholder。
+function dispByte(bits: string, mode: 'bin' | 'hex'): string {
+  if (!bits) return mode === 'hex' ? '··' : '········'
+  if (mode === 'hex') return byteToHex(bits) ?? bits // 末尾端数はビットのまま
+  return bits
+}
+
+const DIFF_BG: Record<ByteDiffCell['state'], string> = {
+  match: 'color-mix(in srgb, var(--green, #34d399) 22%, transparent)',
+  miss: 'color-mix(in srgb, var(--red, #f87171) 22%, transparent)',
+  blank: 'transparent',
+}
+
+// 結果: byte単位の diff。4bit/8bit抜けで「それ以外は合っていたか」を確認する。
+// 2進 ⇔ HEX 切替。行ごとの公式点数はおまけとして下部に出す。
+function BinaryResult({
+  rows,
+  entered,
+  time,
+  onClose,
+}: {
+  rows: string[]
+  entered: string
+  time: number
+  onClose: () => void
+}) {
+  const [mode, setMode] = useState<'bin' | 'hex'>('bin')
+  const correctStream = rows.join('')
+  const cells = byteDiff(entered, correctStream)
+  const matched = cells.filter((c) => c.state === 'match').length
+  const {
+    points,
+    maxPoints,
+    rows: rowScores,
+  } = scoreBinary(chunkRows(entered), rows)
+  const cellW = mode === 'hex' ? 30 : 74
+
+  return (
+    <div
+      class="test-screen quiz-screen"
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
+      <div class="pi-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div class="pi-header-title">結果</div>
+          <span style={{ ...mono, fontSize: 15, fontWeight: 700 }}>
+            {points}/{maxPoints}pt
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text2)' }}>
+            {matched}/{cells.length}バイト一致 · 記憶{time}s
+          </span>
+          <button
+            class="filter-btn"
+            style={{ fontSize: 12, padding: '4px 10px', marginLeft: 'auto' }}
+            onClick={onClose}
+          >
+            閉じる
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="content"
+        style={{ flex: 1, overflow: 'auto', padding: '10px 12px' }}
+      >
+        {/* 2進 / HEX 切替 */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          {(['bin', 'hex'] as const).map((m) => (
+            <button
+              key={m}
+              class={'filter-btn' + (mode === m ? ' active' : '')}
+              onClick={() => setMode(m)}
+            >
+              {m === 'bin' ? '2進' : 'HEX'}
+            </button>
+          ))}
+          <span
+            style={{
+              fontSize: 11,
+              color: 'var(--text2)',
+              alignSelf: 'center',
+              marginLeft: 'auto',
+            }}
+          >
+            正解 / <span style={{ color: 'var(--red, #f87171)' }}>回答</span>
+          </span>
+        </div>
+
+        {/* byte diff */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {cells.map((c) => (
+            <span
+              key={c.index}
+              title={`${c.index + 1}バイト目`}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                width: cellW,
+                padding: '2px 0',
+                borderRadius: 5,
+                background: DIFF_BG[c.state],
+                border:
+                  c.state === 'miss'
+                    ? '1px solid var(--red, #f87171)'
+                    : '1px solid transparent',
+              }}
+            >
+              <span style={{ ...mono, fontSize: 13, fontWeight: 600 }}>
+                {dispByte(c.correct, mode)}
+              </span>
+              {c.state === 'miss' && (
+                <span
+                  style={{
+                    ...mono,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--red, #f87171)',
+                  }}
+                >
+                  {dispByte(c.user, mode)}
+                </span>
+              )}
+            </span>
+          ))}
+        </div>
+
+        {/* おまけ: 行ごとの公式点数 */}
+        <div
+          style={{ fontSize: 11, color: 'var(--text2)', margin: '16px 0 6px' }}
+        >
+          行ごとの点数（おまけ）
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 6,
+            ...mono,
+            fontSize: 12,
+          }}
+        >
+          {rowScores.map((r) => (
+            <span
+              key={r.index}
+              style={{
+                color:
+                  r.points === COLS
+                    ? 'var(--green, #34d399)'
+                    : r.points > 0
+                    ? 'var(--amber, #fbbf24)'
+                    : 'var(--text2)',
+              }}
+            >
+              {r.index + 1}:{r.points}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function BinaryTest({
   title,
   memoSec,
   recallSec,
   rows,
+  highlight,
   onQuit,
   onComplete,
 }: Props) {
-  const [phase, setPhase] = useState<'memo' | 'recall'>('memo')
+  const [phase, setPhase] = useState<'memo' | 'recall' | 'done'>('memo')
+  const [finalEntered, setFinalEntered] = useState('')
   const [remain, setRemain] = useState(memoSec)
   const [remainR, setRemainR] = useState(recallSec)
   const [entered, setEntered] = useState('')
@@ -253,12 +422,14 @@ function BinaryTest({
     doneRef.current = true
     const userRows = chunkRows(nextEntered)
     const { points } = scoreBinary(userRows, rows)
+    setFinalEntered(nextEntered)
     onComplete({
       score: points,
       total,
       time: memoUsedRef.current,
       reviews: buildReviews(userRows, rows),
     })
+    setPhase('done')
   }
 
   // 記憶フェーズのカウントダウン。0で自動的に回答へ。
@@ -313,9 +484,26 @@ function BinaryTest({
 
   const backspace = () => setEnteredBoth(entered.slice(0, -1))
 
+  if (phase === 'done') {
+    return (
+      <BinaryResult
+        rows={rows}
+        entered={finalEntered}
+        time={memoUsedRef.current}
+        onClose={onQuit}
+      />
+    )
+  }
+
   if (phase === 'memo') {
     return (
-      <MemoView rows={rows} remain={remain} onQuit={onQuit} onEnd={endMemo} />
+      <MemoView
+        rows={rows}
+        remain={remain}
+        highlight={highlight}
+        onQuit={onQuit}
+        onEnd={endMemo}
+      />
     )
   }
 

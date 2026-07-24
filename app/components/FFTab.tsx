@@ -98,30 +98,30 @@ function FFTab() {
     rows: string[]
     memoSec: number
     recallSec: number
+    highlight: boolean
     id: number
   } | null>(null)
-  const [binSummary, setBinSummary] = useState<QuizSummary | null>(null)
   // 既定は公式ナショナルスタンダード(記憶5分 / 25行)。
   const [binMemoSec, setBinMemoSec] = useState<number>(
     BINARY_MEMO_OPTIONS[3].sec
   )
   const [binRows, setBinRows] = useState<number>(BINARY_ROW_OPTIONS[2])
+  const [binHighlight, setBinHighlight] = useState(true)
   const [showBinRecords, setShowBinRecords] = useState(false)
   const recBinary = useQuizRecords('ff_binary')
 
   const startBinary = useCallback(() => {
-    setBinSummary(null)
     setBinRun((prev) => ({
       rows: genBinaryRows(binRows),
       memoSec: binMemoSec,
       recallSec: binMemoSec * 3, // 公式比: 記憶5分→回答15分
+      highlight: binHighlight,
       id: (prev?.id ?? 0) + 1,
     }))
-  }, [binRows, binMemoSec])
+  }, [binRows, binMemoSec, binHighlight])
 
   const onBinComplete = useCallback(
     (s: QuizSummary) => {
-      setBinSummary(s)
       recBinary.addRecord(s)
     },
     [recBinary]
@@ -232,22 +232,6 @@ function FFTab() {
     )
   }
 
-  if (binRun && binSummary) {
-    return (
-      <ReviewPanel
-        title="バイナリー記憶"
-        score={binSummary.score}
-        total={binSummary.total}
-        time={binSummary.time}
-        items={binSummary.reviews}
-        onClose={() => {
-          setBinRun(null)
-          setBinSummary(null)
-        }}
-      />
-    )
-  }
-
   if (binRun) {
     return (
       <BinaryTest
@@ -256,6 +240,7 @@ function FFTab() {
         memoSec={binRun.memoSec}
         recallSec={binRun.recallSec}
         rows={binRun.rows}
+        highlight={binRun.highlight}
         onQuit={() => setBinRun(null)}
         onComplete={onBinComplete}
       />
@@ -426,6 +411,30 @@ function FFTab() {
                 {n}行
               </button>
             ))}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginTop: 8,
+            }}
+          >
+            <span style={{ fontSize: 12, color: 'var(--text2)' }}>
+              記憶ハイライト(8bit)
+            </span>
+            <button
+              class={'filter-btn' + (binHighlight ? ' active' : '')}
+              onClick={() => setBinHighlight(true)}
+            >
+              あり
+            </button>
+            <button
+              class={'filter-btn' + (!binHighlight ? ' active' : '')}
+              onClick={() => setBinHighlight(false)}
+            >
+              なし
+            </button>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
             <button
