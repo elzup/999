@@ -444,15 +444,16 @@ function FFTab() {
             >
               ▶ 開始（{binRows * 30}桁）
             </button>
-            {recBinary.records.length > 0 && (
-              <button
-                class="filter-btn"
-                style={{ padding: '10px 16px' }}
-                onClick={() => setShowBinRecords(true)}
-              >
-                記録（{recBinary.records.length}）
-              </button>
-            )}
+            <button
+              class="filter-btn"
+              style={{
+                padding: '10px 16px',
+                opacity: recBinary.records.length > 0 ? undefined : 0.5,
+              }}
+              onClick={() => setShowBinRecords(true)}
+            >
+              記録（{recBinary.records.length}）
+            </button>
           </div>
         </div>
       )}

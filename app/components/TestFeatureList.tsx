@@ -29,9 +29,10 @@ function TestFeatureList({ features, compact }: Props) {
               {TEST_INPUT_METHOD_LABEL[feature.inputMethod]}
             </span>
           </button>
-          {feature.hasRecords && feature.onShowRecords ? (
+          {feature.onShowRecords ? (
             <button
               class="test-feature-records"
+              style={feature.hasRecords ? undefined : { opacity: 0.5 }}
               title={`${feature.title}の記録`}
               onClick={feature.onShowRecords}
             >
