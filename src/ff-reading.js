@@ -88,6 +88,40 @@ export function phoneticFor(hex, F) {
   return hexNameRead(hex) + parenInner(F)
 }
 
+/** 半角括弧の読み注記も拾って かな部分だけにする ("キース(きいす)" -> "きいす") */
+export function kanaOnly(s) {
+  const ms = [...String(s).matchAll(/[（(]([^（）()]+)[）)]/g)]
+  return (ms.length ? ms[ms.length - 1][1] : String(s)).trim()
+}
+
+/** 読み注記の括弧ごと落とす ("エア(air)" -> "エア") */
+export function dropParen(s) {
+  return String(s)
+    .replace(/\s*[（(][^（）()]*[）)]\s*/g, '')
+    .trim()
+}
+
+/**
+ * 歌詞用の読み(hex名前読みの前半を付けない語だけの読み)。
+ * NC/CN は参照 F のかな、F が空なら G(人)/H(物) の語で埋める。
+ * CC/NN は代表読みから読み注記の括弧を落とす。
+ */
+export function lyricReading(row) {
+  const type = clean(row[2])
+  const F = clean(row[5])
+  const G = clean(row[6])
+  const H = clean(row[7])
+  if (type === 'NC' || type === 'CN') {
+    // かな括弧を先に取り出す。stripTags を先に掛けると "壱#asariri（いち）" の
+    // ように #タグ とかな括弧が地続きの行でかなごと落ちる。
+    if (usable(F)) return stripTags(kanaOnly(F))
+    if (usable(G)) return stripTags(dropParen(G))
+    if (usable(H)) return stripTags(dropParen(H))
+    return '＿'
+  }
+  return dropParen(rowReading(row))
+}
+
 /** 行の代表読み(歌詞・テストで使う1つ) */
 export function rowReading(row) {
   const type = clean(row[2])
