@@ -137,7 +137,10 @@ function ChoiceQuiz({
   const revealed = picked !== null
 
   return (
-    <div class="test-screen quiz-screen">
+    <div
+      class="test-screen quiz-screen"
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
       <div class="pi-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div class="pi-header-title">{title}</div>
@@ -171,7 +174,12 @@ function ChoiceQuiz({
       {/* 回答後はどこをタップしても即次へ(待ち time をスキップ) */}
       <div
         class="content"
-        style={{ flex: 1 }}
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
         onClick={revealed ? advance : undefined}
       >
         <div class="cm-quiz-wrap">
