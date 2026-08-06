@@ -125,16 +125,30 @@ function setRedo({ num, slot, on, reason }) {
   return redo.redo
 }
 
+/** 子プロセスの失敗を握り潰さず、原因を1行に畳んで返す */
+function runScript(script, args) {
+  const r = spawnSync('node', [join('src', script), ...args], {
+    cwd: repoRoot,
+    encoding: 'utf-8',
+  })
+  if (r.error) return `${script}: ${r.error.message}`
+  if (r.status !== 0) {
+    // stderr の最終行が原因であることが多い (throw のメッセージ)
+    const lines = String(r.stderr || '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+    const why = lines.find((l) => /Error|error|失敗/.test(l)) || lines.at(-1)
+    return `${script} が exit ${r.status}: ${(why || '出力なし').slice(0, 160)}`
+  }
+  return null
+}
+
 /** その語だけ redo フラグ→再検索(前回URL除外)→再取得し、新しい画像を返す */
 function redoNow({ num, slot }) {
   setRedo({ num, slot, on: true })
-  const run = (script, args) =>
-    spawnSync('node', [join('src', script), ...args], {
-      cwd: repoRoot,
-      encoding: 'utf-8',
-    })
   // 1. 再検索 (--redo は flag 付きのみ、--nums/--slot で対象を絞る)
-  run('search-word-images.js', [
+  const searchError = runScript('search-word-images.js', [
     '--redo',
     '--nums',
     num,
@@ -143,12 +157,17 @@ function redoNow({ num, slot }) {
     '--limit',
     '5',
   ])
+  if (searchError) return { ok: false, error: searchError }
   // 2. 再取得 (--redo-only。成功で redo フラグは自動クリア)
-  run('fetch-word-images.js', ['--redo-only'])
+  const fetchError = runScript('fetch-word-images.js', ['--redo-only'])
+  if (fetchError) return { ok: false, error: fetchError }
 
   const img = loadManifest().images?.[num]?.[slot] || null
   const stillFlagged = Boolean(loadRedo().redo?.[slotKey(num, slot)])
-  return { image: img, ok: Boolean(img) && !stillFlagged }
+  if (!img) return { ok: false, error: '検索したが画像が見つからなかった' }
+  if (stillFlagged)
+    return { ok: false, error: '取得に失敗し redo フラグが残っている' }
+  return { image: img, ok: true }
 }
 
 /** 元画像(sourceImageUrl)から上寄せでクロップし直して差し替える */

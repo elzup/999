@@ -5,8 +5,11 @@ import { Storage } from '@google-cloud/storage'
 
 export const BUCKET = process.env.WORDS_BUCKET || 'anoz-memosupo-words'
 
+// 画像アップロード専用の鍵。汎用の GOOGLE_SERVICE_ACCOUNT_PATH は
+// シート書き込み用 SA (sheet-writer) を指していることがあり、その SA は
+// このバケットへの storage.objects.create を持たないため使わない。
 const KEY_PATH =
-  process.env.GOOGLE_SERVICE_ACCOUNT_PATH ||
+  process.env.WORDS_UPLOADER_KEY ||
   join(process.cwd(), '.config', 'words-uploader.json')
 
 let bucketRef = null
