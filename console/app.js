@@ -160,14 +160,52 @@ async function recropTop(num, slot, btn) {
   }
 }
 
+// #i タグ (プライベートな友人)。src/avatar-i-images.js と同じ判定にする。
+// \b があるので #ipra のような別タグには誤爆しない。
+const hasITag = (w) => typeof w === 'string' && /#i\b/.test(w)
+
+// 手入力した検索ワードはタブを閉じるまで保持する。試行錯誤で何度も打ち直す枠が
+// あるため、失敗しても直前の入力から再開できるようにする (サーバには保存しない)。
+const CUSTOM_QUERY_KEY = 'consoleCustomQuery'
+
+function readCustomQueries() {
+  try {
+    return JSON.parse(sessionStorage.getItem(CUSTOM_QUERY_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function loadCustomQuery(num, slot) {
+  return readCustomQueries()[`${num}:${slot}`] || ''
+}
+
+function saveCustomQuery(num, slot, query) {
+  const all = readCustomQueries()
+  const key = `${num}:${slot}`
+  const next = query.trim()
+    ? { ...all, [key]: query.trim() }
+    : Object.fromEntries(Object.entries(all).filter(([k]) => k !== key))
+  try {
+    sessionStorage.setItem(CUSTOM_QUERY_KEY, JSON.stringify(next))
+  } catch {
+    /* プライベートモード等で書けなくても機能は落とさない */
+  }
+}
+
 // 検索ワードを指定して取得 (未取得スロットの救済 / 任意の語で取り直し)
 async function customSearch(num, slot, btn) {
   if (readOnly) return
   const w = state.words.find((x) => x.num === num)
+  // 前回この枠に入れた検索ワード > 保存済みクエリ > 語そのもの の順で初期値にする
   const def =
-    state.candidates?.[`${num}:${slot}`]?.query || (w && w[slot]) || ''
+    loadCustomQuery(num, slot) ||
+    state.candidates?.[`${num}:${slot}`]?.query ||
+    (w && w[slot]) ||
+    ''
   const q = window.prompt('検索ワードを指定', def)
   if (q == null) return // キャンセル
+  saveCustomQuery(num, slot, q)
   const oldImg = state.images?.[num]?.[slot] || null
   btn.textContent = '⌛'
   btn.disabled = true
@@ -246,7 +284,10 @@ function slotEl(w, slot) {
   wrap.className = 'slot'
   wrap.dataset.key = `${num}:${slot}`
 
-  const kept = Boolean(state.keep?.[`${num}:${slot}`])
+  // #i (プライベートな友人) は DiceBear アバターで固定。実写に差し替わると困るので
+  // コンソールからは触れないようにする。images:avatar-i が keep も立てている。
+  const isAvatarI = hasITag(word)
+  const kept = isAvatarI || Boolean(state.keep?.[`${num}:${slot}`])
   const unconfirmed = Boolean(img) && !kept
 
   const thumb = document.createElement('div')
@@ -262,8 +303,12 @@ function slotEl(w, slot) {
   } else {
     thumb.textContent = st === 'error' ? '取得失敗' : '未取得'
   }
-  thumb.title = readOnly ? '' : 'クリックで redo トグル'
-  thumb.onclick = () => toggleRedo(num, slot)
+  if (isAvatarI) {
+    thumb.title = '#i は DiceBear アバター固定 (操作不可)'
+  } else {
+    thumb.title = readOnly ? '' : 'クリックで redo トグル'
+    thumb.onclick = () => toggleRedo(num, slot)
+  }
   wrap.appendChild(thumb)
 
   // 画像の下: 語 + 状態ラベル (画像には被せない)
@@ -275,13 +320,13 @@ function slotEl(w, slot) {
   if (img) {
     const stat = document.createElement('span')
     stat.className = 'slot-stat ' + (kept ? 'is-kept' : 'is-unconf')
-    stat.textContent = kept ? '🔒確定' : '未確定'
+    stat.textContent = isAvatarI ? '🔒アバター' : kept ? '🔒確定' : '未確定'
     label.appendChild(stat)
   }
   wrap.appendChild(label)
 
-  // 操作ボタン
-  if (!readOnly) {
+  // 操作ボタン (#i は固定枠なので出さない)
+  if (!readOnly && !isAvatarI) {
     const actions = document.createElement('div')
     actions.className = 'slot-actions'
     const mk = (cls, text, title, fn) => {
