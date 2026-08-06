@@ -55,16 +55,26 @@ describe('encode', () => {
   })
 
   it('long_digit: ん付き・長音', () => {
-    expect(encode('さん').digits).toBe('36')
     expect(encode('きん').digits).toBe('90')
     expect(encode('きー').digits).toBe('91')
     expect(encode('かい').digits).toBe('91')
   })
 
-  it('long_digit: ん付きは2文字マッチ優先', () => {
-    // さん → 36 (long_digit), not さ(3)+ん(0)=30
-    const result = encode('さん')
-    expect(result.tokens).toEqual([{ kana: 'さん', value: '36' }])
+  it('long_digit: ん付き(X0)は2文字マッチ優先', () => {
+    // きん → 90 (long_digit) を1トークンとして取る
+    expect(encode('きん').tokens).toEqual([{ kana: 'きん', value: '90' }])
+  })
+
+  it('long_digit: ん を6と読む X6 は廃止済み', () => {
+    // さん は さ(3)+ん(0)=30。旧 long_digit の さん=36 は誤りとして削除した
+    expect(encode('さん').digits).toBe('30')
+    expect(encode('さん').tokens).toEqual([
+      { kana: 'さ', value: '3' },
+      { kana: 'ん', value: '0' },
+    ])
+    for (const kana of ['ふん', 'よん', 'うん', 'やん', 'かん']) {
+      expect(encode(kana).digits.endsWith('0')).toBe(true)
+    }
   })
 
   it('促音: 後続文字の数字を繰り返す', () => {
