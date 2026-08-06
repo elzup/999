@@ -284,6 +284,57 @@
         flex: 0 0 auto;
         font: 700 11px ui-monospace, Menlo, monospace;
       }
+      /* 主観評価 (-1/0/+1/+2)。機械スコア(meter)の下に並べる */
+      .rates {
+        display: flex;
+        gap: 3px;
+        margin-top: 3px;
+      }
+      .rates.unrated {
+        opacity: 0.45;
+      }
+      .chip:hover .rates,
+      .chipfocus .rates {
+        opacity: 1;
+      }
+      .rate {
+        flex: 1 1 0;
+        padding: 2px 0;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface2);
+        color: var(--text2);
+        font: 700 10px ui-monospace, Menlo, monospace;
+        cursor: pointer;
+      }
+      .rate:hover {
+        background: var(--hover);
+        color: var(--text);
+      }
+      .rate.on.rneg {
+        background: var(--red);
+        border-color: var(--red);
+        color: #1a0d0d;
+      }
+      .rate.on.r0 {
+        background: var(--text2);
+        border-color: var(--text2);
+        color: #12141a;
+      }
+      .rate.on.r1 {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #0b1220;
+      }
+      .rate.on.r2 {
+        background: var(--green);
+        border-color: var(--green);
+        color: #06231a;
+      }
+      .chipfocus {
+        outline: 2px solid var(--blue);
+        outline-offset: -2px;
+      }
       .tag.auto {
         background: rgba(255, 255, 255, 0.06);
         color: var(--text2);
@@ -334,7 +385,11 @@
         チップ<kbd>クリック</kbd>=その候補を代表①にして即確定(①クリックはそのまま確定)。
         <kbd>⇅</kbd>で①②入替。 フォーカス中: <kbd>1</kbd>-<kbd>6</kbd>候補選択
         <kbd>s</kbd>入替 <kbd>Enter</kbd>確定して次へ <kbd>↑↓←→</kbd>移動。
-        スコアは全候補の<b>偏差値</b>(緑=良/赤=弱)。
+        スコアは全候補の<b>偏差値</b>(緑=良/赤=弱)。<br />
+        <b>主観評価</b>は候補ごとに <kbd>z</kbd>-1 <kbd>x</kbd>0 <kbd>c</kbd>+1
+        <kbd>v</kbd>+2
+        (<kbd>Tab</kbd>で候補送り・同じ値をもう一度で未評価に戻す)。
+        代表①②とは独立した軸で、確定状態は動かさない。
       </div>
     </header>
     <div class="grid" id="grid"></div>

@@ -2,19 +2,29 @@
 // 番号ごとに代表順(①②)を決める。チップクリック=即確定(確定ボタンは無し)。
 // 保存は /api/rep へ POST。
 
-import { applySavedRep } from './rep-state.js'
+import { applySavedRep, applySavedScore } from './rep-state.js'
 
 let state = null
 let filter = 'all'
 let hideConfirmed = false
 let focusNum = null
+let focusSlot = null
 
 const KIND_LABEL = { hito: '人', mono: '物' }
+// 主観評価。key は候補にフォーカス中に押す(z=却下 … v=最高)
+const RATINGS = [
+  [-1, '-1', 'z', '却下'],
+  [0, '0', 'x', '普通'],
+  [1, '+1', 'c', '良い'],
+  [2, '+2', 'v', '最高'],
+]
+const RATE_KEYS = Object.fromEntries(RATINGS.map(([v, , key]) => [key, v]))
 const FILTERS = [
   ['all', 'すべて'],
   ['multi', '2択+'],
   ['sameKind', '同種ペア'],
   ['mono1', '物優先'],
+  ['unrated', '未評価'],
   ['stale', '⚠要再確認'],
 ]
 
@@ -36,6 +46,22 @@ async function saveRep(num, order) {
   const saved = await res.json()
   if (res.ok) state = applySavedRep(state, num, saved)
   return saved
+}
+
+// 評価は代表とは独立。同じ値を再度押したら未評価に戻す (トグル)。
+async function saveScore(num, slot, v) {
+  const w = byNum(num)
+  const cand = w && candBySlot(w, slot)
+  if (!cand) return
+  const next = cand.rate === v ? null : v
+  const res = await fetch('/api/score', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ num, slot, v: next }),
+  })
+  const saved = await res.json()
+  if (res.ok) state = applySavedScore(state, num, slot, saved)
+  render()
 }
 
 // チップクリック = その候補を代表①へ繰り上げて即確定。
@@ -80,7 +106,9 @@ function matchesFilter(w) {
   if (filter === 'multi') return w.cands.length >= 2
   if (filter === 'sameKind') return sameKindPair(w)
   if (filter === 'mono1') return candBySlot(w, w.order[0])?.kind === 'mono'
-  if (filter === 'stale') return w.stale && w.stale.length > 0
+  if (filter === 'unrated') return w.rated < w.cands.length
+  if (filter === 'stale')
+    return (w.stale?.length || 0) + (w.rateStale?.length || 0) > 0
   return true
 }
 
@@ -96,6 +124,7 @@ function move(dir) {
   const next = idx + delta
   if (next >= 0 && next < list.length) {
     focusNum = list[next].num
+    focusSlot = list[next].cands[0]?.slot ?? null // カードを跨いだら先頭候補に戻す
     render()
     document
       .querySelector(`.card[data-num="${focusNum}"]`)
@@ -113,11 +142,16 @@ function renderStat() {
   const confirmed = ws.filter((w) => w.confirmed).length
   const multi = ws.filter((w) => w.cands.length >= 2).length
   const remain = ws.filter((w) => !w.confirmed).length
-  const stale = ws.filter((w) => w.stale && w.stale.length).length
+  const stale = ws.filter(
+    (w) => (w.stale?.length || 0) + (w.rateStale?.length || 0)
+  ).length
+  const cands = ws.reduce((a, w) => a + w.cands.length, 0)
+  const rated = ws.reduce((a, w) => a + w.rated, 0)
   statEl.innerHTML =
     `確定 <b class="g">${confirmed}</b>/<b>${total}</b>` +
     ` ・ 残 <b>${remain}</b>` +
     ` ・ 2択+ <b>${multi}</b>` +
+    ` ・ 評価 <b class="g">${rated}</b>/<b>${cands}</b>` +
     (stale ? ` ・ <b style="color:var(--amber)">⚠${stale}</b>` : '')
 }
 
@@ -136,18 +170,34 @@ function meterHtml(cand) {
     </span>`
 }
 
+function rateHtml(w, cand) {
+  const buttons = RATINGS.map(
+    ([v, label, key, title]) =>
+      `<button class="rate r${v < 0 ? 'neg' : v} ${
+        cand.rate === v ? 'on' : ''
+      }" data-num="${w.num}" data-slot="${
+        cand.slot
+      }" data-v="${v}" title="${title} (${key})">${label}</button>`
+  ).join('')
+  return `<span class="rates ${
+    cand.rate === null ? 'unrated' : ''
+  }">${buttons}</span>`
+}
+
 function chipHtml(w, cand) {
   const rank = w.order.indexOf(cand.slot) // 0=①, 1=②, -1=未
   const rankCls = rank === 0 ? 'rank1' : rank === 1 ? 'rank2' : ''
   const rankTxt = rank === 0 ? '①' : rank === 1 ? '②' : '·'
+  const focusCls =
+    w.num === focusNum && cand.slot === focusSlot ? ' chipfocus' : ''
   const thumb = cand.img
     ? `<img class="chip-img" src="${escapeHtml(
         cand.img
       )}" loading="lazy" alt="" />`
     : `<span class="chip-img none">no img</span>`
-  return `<div class="chip ${rankCls}" data-num="${w.num}" data-slot="${
-    cand.slot
-  }">
+  return `<div class="chip ${rankCls}${focusCls}" data-num="${
+    w.num
+  }" data-slot="${cand.slot}">
       <span class="rankbadge">${rankTxt}</span>
       ${thumb}
       <span class="chip-body">
@@ -159,6 +209,7 @@ function chipHtml(w, cand) {
         </span>
         <span class="chip-w">${escapeHtml(cand.word || '—')}</span>
         ${meterHtml(cand)}
+        ${rateHtml(w, cand)}
       </span>
     </div>`
 }
@@ -216,9 +267,17 @@ function escapeHtml(s) {
 
 // --- events ---
 gridEl.addEventListener('click', (e) => {
+  // 評価ボタンは代表繰り上げより先に拾う (chip の内側にあるため)
+  const rate = e.target.closest('.rate')
+  if (rate) {
+    focusNum = rate.dataset.num
+    focusSlot = rate.dataset.slot
+    return void saveScore(rate.dataset.num, rate.dataset.slot, +rate.dataset.v)
+  }
   const chip = e.target.closest('.chip')
   if (chip) {
     focusNum = chip.dataset.num
+    focusSlot = chip.dataset.slot
     return tapChip(chip.dataset.num, chip.dataset.slot)
   }
   const swapBtn = e.target.closest('.swap')
@@ -267,7 +326,29 @@ window.addEventListener('keydown', (e) => {
   const key = e.key
   if (key >= '1' && key <= '6') {
     const cand = w?.cands[Number(key) - 1]
-    if (cand) return void (e.preventDefault(), tapChip(focusNum, cand.slot))
+    if (cand) {
+      focusSlot = cand.slot
+      return void (e.preventDefault(), tapChip(focusNum, cand.slot))
+    }
+  }
+  // 評価キー: フォーカス中の候補 (未指定なら先頭) に適用
+  if (key in RATE_KEYS) {
+    const cand = (w && candBySlot(w, focusSlot)) || w?.cands[0]
+    if (cand) {
+      focusSlot = cand.slot
+      return void (e.preventDefault(),
+      saveScore(focusNum, cand.slot, RATE_KEYS[key]))
+    }
+  }
+  // Tab: カード内の候補フォーカスを送る (評価キーの対象を切り替える)
+  if (key === 'Tab' && w?.cands.length) {
+    e.preventDefault()
+    const i = w.cands.findIndex((c) => c.slot === focusSlot)
+    const step = e.shiftKey ? -1 : 1
+    focusSlot =
+      w.cands[(i + step + w.cands.length) % w.cands.length]?.slot ??
+      w.cands[0].slot
+    return void render()
   }
   if (key === 's') return void (e.preventDefault(), swap(focusNum))
   if (key === 'Enter' || key === ' ')

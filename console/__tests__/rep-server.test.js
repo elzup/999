@@ -119,6 +119,62 @@ describe('representative console server', () => {
   })
 
   it.each([
+    { num: '051', slot: 'wh1', v: -1 },
+    { num: '051', slot: 'wm3', v: 0 },
+    { num: '051', slot: 'wh1', v: 2 },
+    { num: '051', slot: 'wh1', v: null },
+  ])('REQ-REP-007: accepts a valid rating %#', async (body) => {
+    const updateScore = vi.fn((input) => ({ ...input }))
+    const server = createRepServer({
+      updateScore,
+      staticRoot: createStaticRoot(),
+    })
+    const address = await listen(server)
+
+    const response = await rawRequest({
+      ...address,
+      path: '/api/score',
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json' },
+    })
+
+    expect(response.status).toBe(200)
+    expect(updateScore).toHaveBeenCalledWith(body)
+  })
+
+  it.each([
+    { num: '51', slot: 'wh1', v: 1 },
+    { num: '051', slot: 'w1', v: 1 },
+    { num: '051', slot: 'wh1', v: 3 },
+    { num: '051', slot: 'wh1', v: -2 },
+    { num: '051', slot: 'wh1', v: 1.5 },
+    { num: '051', slot: 'wh1', v: '1' },
+    { num: '051', slot: 'wh1' },
+    { num: '051', slot: 'wh1', v: 1, extra: true },
+  ])(
+    'REQ-REP-007: rejects an invalid rating %# without writing',
+    async (body) => {
+      const updateScore = vi.fn()
+      const server = createRepServer({
+        updateScore,
+        staticRoot: createStaticRoot(),
+      })
+      const address = await listen(server)
+
+      const response = await rawRequest({
+        ...address,
+        path: '/api/score',
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+
+      expect(response.status).toBe(400)
+      expect(updateScore).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([
     { num: '51', order: ['wh1'], confirmed: true },
     { num: '051', order: 'wh1', confirmed: true },
     { num: '051', order: ['unknown'], confirmed: true },

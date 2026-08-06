@@ -1,6 +1,7 @@
 // 代表語コンソールのローカル API サーバ。
 //   GET  /api/state                         候補と代表語 state
-//   POST /api/rep {num,order,confirmed}    word-rep.json を更新
+//   POST /api/rep {num,order,confirmed}    word-rep.json の代表を更新
+//   POST /api/score {num,slot,v}           候補語 1 件の主観評価を更新 (v=null で解除)
 //   静的: console/rep.html, console/rep.js
 // ※ ファイル書込が必要なため、loopback 限定で待ち受ける。
 
@@ -9,7 +10,13 @@ import { createServer } from 'node:http'
 import { dirname, extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import { buildRepState, setRep, SLOT_ORDER } from '../src/rep-store.js'
+import {
+  buildRepState,
+  RATINGS,
+  setRep,
+  setScore,
+  SLOT_ORDER,
+} from '../src/rep-store.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const DEFAULT_PORT = Number(process.env.PORT || 6001)
@@ -28,6 +35,21 @@ const RepRequestSchema = z
     num: z.string().regex(/^\d{3}$/),
     order: z.array(z.enum(SLOT_ORDER)).max(2),
     confirmed: z.boolean(),
+  })
+  .strict()
+
+const ScoreRequestSchema = z
+  .object({
+    num: z.string().regex(/^\d{3}$/),
+    slot: z.enum(SLOT_ORDER),
+    // null は「未評価に戻す」
+    v: z.union([
+      z.null(),
+      z
+        .number()
+        .int()
+        .refine((n) => RATINGS.includes(n)),
+    ]),
   })
   .strict()
 
@@ -111,6 +133,7 @@ function resolveStaticFile(staticRoot, rawPath) {
 export function createRepServer({
   getState = buildRepState,
   updateRep = setRep,
+  updateScore = setScore,
   staticRoot = here,
 } = {}) {
   return createServer(async (req, res) => {
@@ -128,6 +151,20 @@ export function createRepServer({
           return
         }
         const result = updateRep(parsed.data)
+        if (result?.error) {
+          sendJson(res, 400, result)
+          return
+        }
+        sendJson(res, 200, result)
+        return
+      }
+      if (req.method === 'POST' && url.pathname === '/api/score') {
+        const parsed = ScoreRequestSchema.safeParse(await readJsonBody(req))
+        if (!parsed.success) {
+          sendJson(res, 400, { error: 'invalid score request' })
+          return
+        }
+        const result = updateScore(parsed.data)
         if (result?.error) {
           sendJson(res, 400, result)
           return

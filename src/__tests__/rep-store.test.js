@@ -4,7 +4,9 @@ import {
   defaultOrder,
   isAutoConfirmed,
   resolveOrder,
+  resolveRatings,
   setRep,
+  setScore,
 } from '../rep-store.js'
 
 const word = {
@@ -93,6 +95,8 @@ describe('representative word store', () => {
       version: 1,
       rep: { '001': { confirmed: true } },
     })
+    // 書き込みでは現行スキーマ版に揃える (scores 導入で v2)
+    expect(written.version).toBe(2)
   })
 
   it('REQ-REP-002: persists an explicit empty order without defaults', () => {
@@ -110,6 +114,101 @@ describe('representative word store', () => {
 
     expect(result.order).toEqual([])
     expect(written.rep['051'].picks).toEqual([])
+  })
+
+  it('REQ-REP-007: rates a candidate by value and keeps other ratings', () => {
+    let written
+    const result = setScore(
+      { num: '051', slot: 'wm1', v: 2 },
+      {
+        loadStore: () => ({
+          version: 2,
+          rep: {},
+          scores: { '051': [{ k: 'こい', w: '鯉', v: -1 }] },
+        }),
+        loadWords: () => [word],
+        writeStore: (next) => {
+          written = next
+        },
+      }
+    )
+
+    expect(result).toMatchObject({ num: '051', slot: 'wm1', v: 2 })
+    expect(written.scores['051']).toEqual([
+      { k: 'こい', w: '鯉', v: -1 },
+      { k: 'こいん', w: 'コイン', v: 2 },
+    ])
+  })
+
+  it('REQ-REP-007: replaces the rating of the same word instead of appending', () => {
+    let written
+    setScore(
+      { num: '051', slot: 'wh1', v: 1 },
+      {
+        loadStore: () => ({
+          version: 2,
+          rep: {},
+          scores: { '051': [{ k: 'こい', w: '鯉', v: -1 }] },
+        }),
+        loadWords: () => [word],
+        writeStore: (next) => {
+          written = next
+        },
+      }
+    )
+
+    expect(written.scores['051']).toEqual([{ k: 'こい', w: '鯉', v: 1 }])
+  })
+
+  it('REQ-REP-007: clears a rating with null and drops the empty entry', () => {
+    let written
+    const result = setScore(
+      { num: '051', slot: 'wh1', v: null },
+      {
+        loadStore: () => ({
+          version: 2,
+          rep: {},
+          scores: { '051': [{ k: 'こい', w: '鯉', v: -1 }] },
+        }),
+        loadWords: () => [word],
+        writeStore: (next) => {
+          written = next
+        },
+      }
+    )
+
+    expect(result.v).toBe(null)
+    expect(written.scores['051']).toBeUndefined()
+  })
+
+  it('REQ-REP-007: distinguishes an unrated candidate from a zero rating', () => {
+    const { rates } = resolveRatings(word, [{ k: 'こい', w: '鯉', v: 0 }])
+
+    expect(rates.wh1).toBe(0)
+    expect('wm1' in rates).toBe(false)
+  })
+
+  it('REQ-REP-007: keeps ratings of deleted words stale instead of shifting them', () => {
+    const gone = { k: 'さかな', w: '魚', v: 2 }
+
+    expect(resolveRatings(word, [gone])).toEqual({ rates: {}, stale: [gone] })
+  })
+
+  it('REQ-REP-007: rejects an out-of-range rating without writing', () => {
+    const writeStore = () => {
+      throw new Error('must not write')
+    }
+
+    expect(
+      setScore(
+        { num: '051', slot: 'wh1', v: 3 },
+        {
+          loadStore: () => ({ scores: {} }),
+          loadWords: () => [word],
+          writeStore,
+        }
+      )
+    ).toEqual({ error: 'invalid rating' })
   })
 
   it('REQ-REP-003: rejects unavailable slots without writing', () => {

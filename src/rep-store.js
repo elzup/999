@@ -5,9 +5,15 @@
 // 保存はスロット位置(wh1等)ではなく「読み+語」の値で持つ(picks)。原本(words.tsv)
 // の候補が並び替わっても代表はズレず、語そのものが消えた/変わった時だけ stale として
 // 再確認を促す(黙って別語にすり替わらない)。
+//
+// さらに候補語 1 件ずつに主観評価 (-1/0/+1/+2) を持つ(scores)。scorer.js の機械スコア
+// (pt) とは別軸で、「人間から見てこの語呂はアリか」を記録する。未評価(null)と 0(普通)
+// は別状態として扱う。picks と同じく値(読み+語)で保存するので並び替えに強い。
 //   word-rep.json:
-//   { version:1, rep: { "051": { picks:[{k:"こい",w:"鯉"},{k:"らび",w:"ラビ#lom"}],
-//                                confirmed:true } } }
+//   { version:2,
+//     rep:    { "051": { picks:[{k:"こい",w:"鯉"},{k:"らび",w:"ラビ#lom"}],
+//                        confirmed:true } },
+//     scores: { "051": [{k:"こい",w:"鯉",v:2},{k:"こいぬ",w:"子犬",v:-1}] } }
 
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -27,11 +33,16 @@ export const DEFAULT_PRIORITY = ['wh1', 'wm1', 'wh2', 'wm2', 'wh3', 'wm3']
 const SLOT_IMG = { wh1: 'w1', wh2: 'w1_2', wm1: 'w2', wm2: 'w2_2' }
 const MAX_REP = 2
 
+// 主観評価の許容値。未評価は null(キー自体を持たない)で、0(普通)とは区別する。
+export const RATINGS = [-1, 0, 1, 2]
+export const STORE_VERSION = 2
+
 const slotKind = (slot) => (slot.startsWith('wh') ? 'hito' : 'mono')
 const slotRank = (slot) => Number(slot.slice(2))
 
 export function loadRep() {
-  return readJson(REP_PATH, { version: 1, rep: {} })
+  const store = readJson(REP_PATH, {})
+  return { version: STORE_VERSION, rep: {}, scores: {}, ...store }
 }
 
 export function loadWordsTsv() {
@@ -101,6 +112,24 @@ function resolvePicks(word, picks) {
   return { order: order.slice(0, MAX_REP), stale }
 }
 
+/** scores(値) を現在の候補スロットに解決する。マッチしないものは stale。*/
+export function resolveRatings(word, list) {
+  const avail = availableSlots(word)
+  const rates = {}
+  const stale = []
+  for (const s of list || []) {
+    const slot = avail.find(
+      (x) =>
+        rates[x] === undefined &&
+        word[`${x}k`] === s.k &&
+        (word[x] || '') === (s.w || '')
+    )
+    if (slot && RATINGS.includes(s.v)) rates[slot] = s.v
+    else stale.push(s)
+  }
+  return { rates, stale }
+}
+
 /** entry(picks) or 既定 から代表順と stale を得る (gen とも共有) */
 export function resolveOrder(word, entry) {
   if (entry && Array.isArray(entry.picks))
@@ -139,16 +168,24 @@ function toDeviation(score, { mean, std }) {
 
 /** UI 用の state を組み立てる */
 export function buildRepState() {
-  const rep = loadRep().rep || {}
+  const store = loadRep()
+  const rep = store.rep || {}
+  const scores = store.scores || {}
   const images = loadManifest().images || {}
   const wordsRaw = loadWordsTsv()
   const pop = scorePopulation(wordsRaw)
 
   const words = wordsRaw.map((w) => {
+    const { rates, stale: rateStale } = resolveRatings(w, scores[w.num])
     const cands = availableSlots(w)
       .map((s) => slotView(w, s, images[w.num]))
       .filter(Boolean)
-      .map((c) => ({ ...c, dev: toDeviation(c.score, pop) }))
+      .map((c) => ({
+        ...c,
+        dev: toDeviation(c.score, pop),
+        // 主観評価。未評価は null (0 と区別する)
+        rate: c.slot in rates ? rates[c.slot] : null,
+      }))
     const entry = rep[w.num]
     const { order, stale } = resolveOrder(w, entry)
     // 候補が 1 つなら選ぶ余地が無いので自動確定 (永続化はしない=原本更新に追従)
@@ -156,14 +193,16 @@ export function buildRepState() {
     const confirmed = auto || Boolean(entry?.confirmed)
     return {
       num: w.num,
-      cands, // [{slot,kind,rank,word,k,score,dev,img}] 人→物
+      cands, // [{slot,kind,rank,word,k,score,dev,img,rate}] 人→物
       order, // 代表順 (スロット配列, 最大2)
       confirmed,
       auto, // 自動確定 (単一候補)
       stale, // 原本更新で消えた/変わった pick (あれば要再確認)
+      rateStale, // 原本更新で行き場を失った評価
+      rated: cands.filter((c) => c.rate !== null).length,
     }
   })
-  return { slots: SLOT_ORDER, pop, words }
+  return { slots: SLOT_ORDER, pop, ratings: RATINGS, words }
 }
 
 /** 代表順・確定状態を保存する */
@@ -193,6 +232,7 @@ export function setRep(
   const entry = { picks: orderToPicks(word, normalizedOrder), confirmed }
   const nextStore = {
     ...store,
+    version: STORE_VERSION,
     rep: {
       ...(store.rep || {}),
       [num]: entry,
@@ -201,4 +241,37 @@ export function setRep(
   writeStore(nextStore)
   const { order: resolved } = resolveOrder(word, entry)
   return { num, order: resolved, confirmed }
+}
+
+/**
+ * 候補語 1 件の主観評価を保存する。v=null で未評価に戻す。
+ * 代表(picks)とは独立した軸なので、評価しても確定状態は動かさない。
+ */
+export function setScore(
+  { num, slot, v },
+  {
+    loadStore = loadRep,
+    loadWords = loadWordsTsv,
+    writeStore = (nextStore) => writeJson(REP_PATH, nextStore),
+  } = {}
+) {
+  const store = loadStore()
+  const word = loadWords().find((w) => w.num === num)
+  if (!word) return { error: 'unknown num' }
+  if (!availableSlots(word).includes(slot)) return { error: 'unavailable slot' }
+  if (v !== null && !RATINGS.includes(v)) return { error: 'invalid rating' }
+
+  const key = { k: word[`${slot}k`], w: word[slot] || '' }
+  // 同じ語を指す既存評価だけ落として置き換える (他スロットの評価は保つ)
+  const kept = (store.scores?.[num] || []).filter(
+    (s) => !(s.k === key.k && (s.w || '') === key.w)
+  )
+  const next = v === null ? kept : [...kept, { ...key, v }]
+  const nextScores = { ...(store.scores || {}) }
+  if (next.length) nextScores[num] = next
+  else delete nextScores[num]
+
+  writeStore({ ...store, version: STORE_VERSION, scores: nextScores })
+  const { rates } = resolveRatings(word, next)
+  return { num, slot, v: slot in rates ? rates[slot] : null, rates }
 }
