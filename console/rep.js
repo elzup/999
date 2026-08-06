@@ -19,6 +19,8 @@ const RATINGS = [
   [2, '+2', 'v', '最高'],
 ]
 const RATE_KEYS = Object.fromEntries(RATINGS.map(([v, , key]) => [key, v]))
+// 未評価の既定値。表示上は 0(普通) が選ばれている状態にする
+const DEFAULT_RATE = 0
 const FILTERS = [
   ['all', 'すべて'],
   ['multi', '2択+'],
@@ -119,22 +121,26 @@ function visibleWords() {
 function move(dir) {
   const list = visibleWords()
   const idx = list.findIndex((w) => w.num === focusNum)
-  const cols = Math.max(1, Math.floor(gridEl.clientWidth / 232))
+  // 列幅は CSS 側 (minmax) が決めるので、実際のカード幅から数える
+  const cols = Math.max(1, countColumns())
   const delta = { left: -1, right: 1, up: -cols, down: cols }[dir]
   const next = idx + delta
   if (next >= 0 && next < list.length) {
     focusNum = list[next].num
     focusSlot = list[next].cands[0]?.slot ?? null // カードを跨いだら先頭候補に戻す
     render()
-    document
-      .querySelector(`.card[data-num="${focusNum}"]`)
-      ?.scrollIntoView({ block: 'nearest' })
   }
 }
 
 const gridEl = document.getElementById('grid')
 const statEl = document.getElementById('stat')
 const emptyEl = document.getElementById('empty')
+
+/** グリッドの実際の列数。カード幅を CSS 側だけで変えられるようにする */
+function countColumns() {
+  const template = getComputedStyle(gridEl).gridTemplateColumns
+  return template ? template.split(' ').filter(Boolean).length : 1
+}
 
 function renderStat() {
   const ws = state.words
@@ -171,17 +177,17 @@ function meterHtml(cand) {
 }
 
 function rateHtml(w, cand) {
+  // 未評価は 0(普通) 扱いで表示する。保存されるのは明示的に押した値だけ
+  const shown = cand.rate ?? DEFAULT_RATE
   const buttons = RATINGS.map(
     ([v, label, key, title]) =>
       `<button class="rate r${v < 0 ? 'neg' : v} ${
-        cand.rate === v ? 'on' : ''
+        shown === v ? 'on' : ''
       }" data-num="${w.num}" data-slot="${
         cand.slot
       }" data-v="${v}" title="${title} (${key})">${label}</button>`
   ).join('')
-  return `<span class="rates ${
-    cand.rate === null ? 'unrated' : ''
-  }">${buttons}</span>`
+  return `<span class="rates">${buttons}</span>`
 }
 
 function chipHtml(w, cand) {
@@ -246,7 +252,11 @@ function render() {
   renderStat()
   const list = visibleWords()
   emptyEl.hidden = list.length > 0
+  // innerHTML の入れ替えでスクロール位置が飛ぶ。評価は連続して押すので、
+  // 押すたびに画面が動くと作業にならない。位置は据え置く。
+  const y = window.scrollY
   gridEl.innerHTML = list.map(cardHtml).join('')
+  if (window.scrollY !== y) window.scrollTo(0, y)
 }
 
 function renderFilters() {

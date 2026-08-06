@@ -108,7 +108,7 @@
       }
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         gap: 12px;
         padding: 18px;
       }
@@ -287,49 +287,51 @@
       /* 主観評価 (-1/0/+1/+2)。機械スコア(meter)の下に並べる */
       .rates {
         display: flex;
-        gap: 3px;
-        margin-top: 3px;
+        gap: 5px;
+        margin-top: 6px;
       }
-      .rates.unrated {
-        opacity: 0.45;
-      }
-      .chip:hover .rates,
-      .chipfocus .rates {
-        opacity: 1;
-      }
+      /* 未評価は「どれも塗られていない」ことで既に分かるので、色は落とさない */
       .rate {
         flex: 1 1 0;
-        padding: 2px 0;
-        border: 1px solid var(--line);
-        border-radius: 5px;
+        min-height: 34px;
+        padding: 0;
+        border: 1.5px solid var(--line2);
+        border-radius: 7px;
         background: var(--surface2);
         color: var(--text2);
-        font: 700 10px ui-monospace, Menlo, monospace;
+        font: 700 15px ui-monospace, Menlo, monospace;
         cursor: pointer;
+        touch-action: manipulation;
+      }
+      .rate.rneg {
+        --rc: var(--red);
+      }
+      .rate.r0 {
+        --rc: var(--text2);
+      }
+      .rate.r1 {
+        --rc: var(--blue);
+      }
+      .rate.r2 {
+        --rc: var(--green);
       }
       .rate:hover {
         background: var(--hover);
         color: var(--text);
       }
-      .rate.on.rneg {
-        background: var(--red);
-        border-color: var(--red);
-        color: #1a0d0d;
+      .rate:active {
+        transform: translateY(1px);
       }
-      .rate.on.r0 {
-        background: var(--text2);
-        border-color: var(--text2);
-        color: #12141a;
+      .rate:focus-visible {
+        outline: 2px solid var(--blue);
+        outline-offset: 1px;
       }
-      .rate.on.r1 {
-        background: var(--blue);
-        border-color: var(--blue);
-        color: #0b1220;
-      }
-      .rate.on.r2 {
-        background: var(--green);
-        border-color: var(--green);
-        color: #06231a;
+      /* 選択中だけ塗りつぶす */
+      .rate.on,
+      .rate.on:hover {
+        background: var(--rc);
+        border-color: var(--rc);
+        color: #0b0f14;
       }
       .chipfocus {
         outline: 2px solid var(--blue);
