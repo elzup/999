@@ -13,8 +13,10 @@
 //
 //   接尾 (パイプの後ろ)
 //   v      境界を跨いだ2桁の外側
-//   n / -  語の余りが「ん」「ー」だけ         にいさん = AAA|n / ミッキー = BtA|-
-//   . / .. 語の余りが1文字 / 2文字以上        トマス   = wwv|v. / フリックル = Bww|..
+//   n / -  余りが「ん」「ー」だけ             にいさん = AAA|n / ミッキー = BtA|-
+//   . / .. 余りが1文字 / 2文字以上            トマス   = wwv|v. / フリックル = Bww|..
+//   ※ 余りは「読みが3桁を超えた分」(のるん の ん) と「語が読みより長い分」
+//      (ミッキー の ー) の両方を指す。どちらも3桁に乗らなかったかな。
 //   m      mix (同じ数字を別のかなで表す)
 //
 // 「ん」は single に 0(core) があるため単独で賄える。「ー」は single に無いので
@@ -25,7 +27,7 @@ import { kataToHira, normalizeDakuten, normalizeSmallVowel } from './table.js'
 
 const TIER_MARK = { core: 'A', sub: 'B', bad: 'C' }
 const TARGET = 3
-// 小書きの拗音。これが2文字目なら「2文字1音」= x、そうでなければ「2文字2音」
+// 小書きの拗音。2文字目がこれなら小書き側は独立した音を持たないので x を当てる
 const SMALL_YOUON = ['ゃ', 'ゅ', 'ょ', 'ャ', 'ュ', 'ョ']
 
 const toHira = (s) => [...normalizeDakuten(s)].map(kataToHira).join('')
@@ -83,9 +85,9 @@ function tokenMarks(token) {
     const chars = [...token.kana]
     // 1文字2桁 (た=55): どちらの桁も1文字に紐づかないので w w
     if (chars.length !== 2) return Array(width).fill('w')
-    // 2文字1音の拗音 (しゅ=47): base は tier を出せる。小書き側が x
+    // 拗音 (しゅ=47): 小書き側は独立した音ではないので x
     if (SMALL_YOUON.includes(chars[1])) return [charMark(chars[0]), 'x']
-    // 2文字2音 (ろん=60, きー=91): 各文字がそれぞれ1桁を賄う
+    // それ以外 (しん=40, ろん=60, きー=91): 各文字がそれぞれ1桁を賄う
     return chars.map(charMark)
   }
   return Array(width).fill('?') // overflow は呼び出し側で扱う
@@ -135,12 +137,14 @@ export function rankey(kana, num, word = '') {
   }
 
   const marks = []
-  let straddle = false
   let consumed = 0 // 記法に載せたかな数 (省略記号の挿入位置合わせ用)
+  let overflowKana = '' // 3桁を完全に超えたかな。接尾で表す
 
   for (const token of detail.tokens) {
-    if (token.type === 'overflow') continue // 3桁を完全に超えた分は接尾で表す
-    if (token.type === 'halfOverflow') straddle = true
+    if (token.type === 'overflow') {
+      overflowKana += token.kana
+      continue
+    }
     marks.push(...tokenMarks(token))
     consumed += [...token.kana].length
     if (omitAt >= 0 && consumed === omitAt) marks.push('!')
@@ -153,7 +157,9 @@ export function rankey(kana, num, word = '') {
   const body = head + marks.slice(0, TARGET + (omitAt >= 0 ? 1 : 0)).join('')
   const tail = marks.slice(TARGET + (omitAt >= 0 ? 1 : 0)).join('')
 
-  const rest = leftoverOf(word, kana)
+  // 余りは2系統ある。読みが3桁を超えた分 (のるん の ん) と、語が読みより長い分
+  // (ミッキー の ー)。どちらも「3桁に乗らなかったかな」なので繋げて1つの記号にする。
+  const rest = overflowKana + (leftoverOf(word, kana) || '')
   const suffix = tail + leftoverMark(rest) + (detail.mix ? 'm' : '')
 
   return `${body}|${suffix}`

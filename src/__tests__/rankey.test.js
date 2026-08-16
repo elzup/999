@@ -42,6 +42,17 @@ describe('rankey notation', () => {
     expect(rankey('とま', '100', '')).toBe('wwv|vm')
   })
 
+  it('marks a reading that overflows past three digits', () => {
+    // のるん: の(75) る(6) ん(0) で4桁。あふれた ん は接尾の n
+    expect(rankey('のるん', '756', 'ノルン')).toBe('wwB|n')
+    expect(rankey('れすな', '037', 'レスナ')).toBe('Cww|.')
+  })
+
+  it('merges a reading overflow with a word leftover into one mark', () => {
+    // 読みのあふれ(ん) + 語の余り(こ) で2文字 -> ..
+    expect(rankey('のるん', '756', 'ノルンコ')).toBe('wwB|..')
+  })
+
   it('reports a leftover only when the word is fully kana', () => {
     expect(leftoverOf('ミッキー', 'みっき')).toBe('ー')
     expect(leftoverOf('フリックル#tri', 'ふり')).toBe('っくる')
