@@ -19,6 +19,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadManifest, readJson, writeJson } from './images/store.js'
+import { rankey } from './rankey.js'
 import { scoreWithLabel } from './scorer.js'
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
@@ -74,7 +75,7 @@ export function isAutoConfirmed(word) {
   return availableSlots(word).length === 1
 }
 
-/** 候補の表示情報(語・読み・スコア・画像URL) */
+/** 候補の表示情報(語・読み・スコア・rankey・画像URL) */
 function slotView(word, slot, imagesForNum) {
   const w = word[slot] || ''
   const k = word[`${slot}k`] || ''
@@ -87,6 +88,7 @@ function slotView(word, slot, imagesForNum) {
     word: w,
     k,
     score: scoreWithLabel(k, w).score,
+    rk: rankey(k, word.num, w), // 3桁の内訳。色付きで表示する
     img: (imgSlot && imagesForNum?.[imgSlot]?.url) || null,
   }
 }
@@ -146,26 +148,6 @@ function orderToPicks(word, order) {
     .map((s) => ({ k: word[`${s}k`], w: word[s] || '' }))
 }
 
-/** 全候補スコアの平均・標準偏差(偏差値の母集団) */
-function scorePopulation(words) {
-  const all = []
-  for (const w of words)
-    for (const s of availableSlots(w))
-      all.push(scoreWithLabel(w[`${s}k`], w[s] || '').score)
-  const n = all.length || 1
-  const mean = all.reduce((a, b) => a + b, 0) / n
-  const variance = all.reduce((a, b) => a + (b - mean) ** 2, 0) / n
-  return { mean, std: Math.sqrt(variance) || 1 }
-}
-
-/** スコア → 偏差値(T得点) 0-100 に丸めクランプ */
-function toDeviation(score, { mean, std }) {
-  return Math.max(
-    0,
-    Math.min(100, Math.round(50 + (10 * (score - mean)) / std))
-  )
-}
-
 /** UI 用の state を組み立てる */
 export function buildRepState() {
   const store = loadRep()
@@ -173,7 +155,6 @@ export function buildRepState() {
   const scores = store.scores || {}
   const images = loadManifest().images || {}
   const wordsRaw = loadWordsTsv()
-  const pop = scorePopulation(wordsRaw)
 
   const words = wordsRaw.map((w) => {
     const { rates, stale: rateStale } = resolveRatings(w, scores[w.num])
@@ -182,7 +163,6 @@ export function buildRepState() {
       .filter(Boolean)
       .map((c) => ({
         ...c,
-        dev: toDeviation(c.score, pop),
         // 主観評価。未評価は null (0 と区別する)
         rate: c.slot in rates ? rates[c.slot] : null,
       }))
@@ -193,7 +173,7 @@ export function buildRepState() {
     const confirmed = auto || Boolean(entry?.confirmed)
     return {
       num: w.num,
-      cands, // [{slot,kind,rank,word,k,score,dev,img,rate}] 人→物
+      cands, // [{slot,kind,rank,word,k,score,rk,img,rate}] 人→物
       order, // 代表順 (スロット配列, 最大2)
       confirmed,
       auto, // 自動確定 (単一候補)
@@ -202,7 +182,7 @@ export function buildRepState() {
       rated: cands.filter((c) => c.rate !== null).length,
     }
   })
-  return { slots: SLOT_ORDER, pop, ratings: RATINGS, words }
+  return { slots: SLOT_ORDER, ratings: RATINGS, words }
 }
 
 /** 代表順・確定状態を保存する */

@@ -262,27 +262,58 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      .meter {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 2px;
+      /* rankey: 3桁の内訳。記号ごとの色で質を読ませる (数値スコアの代わり) */
+      .rk {
+        display: inline-block;
+        margin-top: 3px;
+        padding: 2px 7px;
+        border: 1px solid var(--line2);
+        border-radius: 6px;
+        background: var(--bg);
+        font: 700 13px ui-monospace, Menlo, monospace;
+        letter-spacing: 0.08em;
+        white-space: nowrap;
       }
-      .meter-bar {
-        flex: 1 1 auto;
-        height: 5px;
-        border-radius: 3px;
-        background: rgba(255, 255, 255, 0.08);
-        overflow: hidden;
+      .rk .k-a {
+        color: var(--green);
       }
-      .meter-fill {
-        display: block;
-        height: 100%;
-        border-radius: 3px;
+      .rk .k-b {
+        color: var(--blue);
       }
-      .meter-dev {
-        flex: 0 0 auto;
-        font: 700 11px ui-monospace, Menlo, monospace;
+      .rk .k-c {
+        color: var(--red);
+      }
+      .rk .k-w {
+        color: var(--amber);
+      }
+      /* 拗音は減点ではないので良い側 (緑寄りのシアン) */
+      .rk .k-x {
+        color: #5eead4;
+      }
+      .rk .k-t {
+        color: #a78bfa;
+      }
+      .rk .k-v {
+        color: var(--red);
+      }
+      .rk .k-u {
+        color: var(--green);
+        opacity: 0.65;
+      }
+      .rk .k-o {
+        color: var(--red);
+      }
+      /* 3桁境界は薄く置く */
+      .rk .k-s {
+        color: var(--muted);
+        opacity: 0.5;
+      }
+      .rk .k-f {
+        color: var(--text2);
+      }
+      .rk .k-m {
+        color: var(--amber);
+        opacity: 0.8;
       }
       /* 主観評価 (-1/0/+1/+2)。機械スコア(meter)の下に並べる */
       .rates {
@@ -387,7 +418,17 @@
         チップ<kbd>クリック</kbd>=その候補を代表①にして即確定(①クリックはそのまま確定)。
         <kbd>⇅</kbd>で①②入替。 フォーカス中: <kbd>1</kbd>-<kbd>6</kbd>候補選択
         <kbd>s</kbd>入替 <kbd>Enter</kbd>確定して次へ <kbd>↑↓←→</kbd>移動。
-        スコアは全候補の<b>偏差値</b>(緑=良/赤=弱)。<br />
+        <br />
+        <b>rankey</b> は3桁の内訳。<span class="rk"
+          ><span class="k-a">A</span><span class="k-b">B</span
+          ><span class="k-c">C</span><span class="k-w">w</span
+          ><span class="k-x">x</span><span class="k-t">t</span
+          ><span class="k-v">v</span><span class="k-u">_</span
+          ><span class="k-o">!</span><span class="k-s">|</span
+          ><span class="k-f">n</span><span class="k-m">m</span></span
+        >
+        = core / sub / bad / 1文字2桁 / 拗音 / 促音 / 桁跨ぎ / 先頭0省略 /
+        中間省略 / 3桁境界 / 余り / mix。<br />
         <b>主観評価</b>は候補ごとに <kbd>z</kbd>-1 <kbd>x</kbd>0 <kbd>c</kbd>+1
         <kbd>v</kbd>+2
         (<kbd>Tab</kbd>で候補送り・同じ値をもう一度で未評価に戻す)。

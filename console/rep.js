@@ -161,19 +161,31 @@ function renderStat() {
     (stale ? ` ・ <b style="color:var(--amber)">⚠${stale}</b>` : '')
 }
 
-function devColor(dev) {
-  if (dev >= 60) return 'var(--green)'
-  if (dev >= 50) return 'var(--blue)'
-  if (dev >= 42) return 'var(--amber)'
-  return 'var(--red)'
+// rankey の記号 → 色クラス。数値スコアの代わりに、記号そのものの色で質を読む。
+// x(拗音) は減点ではないので A/B と同じ良い側の色に置く。
+const RK_CLASS = {
+  A: 'k-a',
+  B: 'k-b',
+  C: 'k-c',
+  w: 'k-w',
+  x: 'k-x',
+  t: 'k-t',
+  v: 'k-v',
+  _: 'k-u',
+  '!': 'k-o',
+  '|': 'k-s',
+  n: 'k-f',
+  '-': 'k-f',
+  '.': 'k-f',
+  m: 'k-m',
 }
 
-function meterHtml(cand) {
-  const c = devColor(cand.dev)
-  return `<span class="meter" title="score ${cand.score} / 偏差値 ${cand.dev}">
-      <span class="meter-bar"><span class="meter-fill" style="width:${cand.dev}%;background:${c}"></span></span>
-      <span class="meter-dev" style="color:${c}">${cand.dev}</span>
-    </span>`
+function rankeyHtml(cand) {
+  if (!cand.rk) return ''
+  const body = [...cand.rk]
+    .map((c) => `<span class="${RK_CLASS[c] || ''}">${escapeHtml(c)}</span>`)
+    .join('')
+  return `<span class="rk" title="rankey ${cand.rk} / pt ${cand.score}">${body}</span>`
 }
 
 function rateHtml(w, cand) {
@@ -214,7 +226,7 @@ function chipHtml(w, cand) {
           <span class="chip-k">${escapeHtml(cand.k)}</span>
         </span>
         <span class="chip-w">${escapeHtml(cand.word || '—')}</span>
-        ${meterHtml(cand)}
+        ${rankeyHtml(cand)}
         ${rateHtml(w, cand)}
       </span>
     </div>`
