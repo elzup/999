@@ -46,6 +46,11 @@ const Z_KANA: Record<string, string> = {
   '6': 'ろ',
 }
 
+// 桁 d が末尾コード z と一致するときのマーク
+function markCls(d: number, z: number): string {
+  return d === z ? ' mark-eq' : ''
+}
+
 function shuffle<T>(arr: readonly T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -327,6 +332,9 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     const isRevealed = !!revealed[xyz]
     const isSelected = selected === xyz
     const lastAns = lastAnswers.get(xy)
+    const zn = Number(z)
+    const xCls = markCls(Number(xyz[0]), zn)
+    const yCls = markCls(Number(xyz[1]), zn)
     return (
       <div
         key={xyz}
@@ -338,7 +346,10 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
         }
         onClick={() => toggleReveal(xyz)}
       >
-        <span class="d3-prefix">{xy}</span>
+        <span class="d3-prefix">
+          <span class={'d3-digit' + xCls}>{xyz[0]}</span>
+          <span class={'d3-digit' + yCls}>{xyz[1]}</span>
+        </span>
         <span class={'d3-suffix' + (isRevealed ? '' : ' hidden')}>
           {isRevealed ? z : '?'}
         </span>
@@ -552,6 +563,11 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
                   全隠す
                 </button>
               </div>
+            </div>
+            <div class="d3-mark-legend">
+              <span>
+                <span class="d3-digit mark-eq">桁</span>=Z
+              </span>
             </div>
             {viewMode === 'seq' ? (
               <div class="d3-grid">{D3_LIST.map((xyz) => renderCell(xyz))}</div>

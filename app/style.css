@@ -1160,6 +1160,21 @@ body {
   min-width: 38px;
   min-height: 30px;
 }
+/* D3 digit-match marks (X/Y と Z の一致) */
+.d3-digit {
+  display: inline-block;
+}
+.d3-digit.mark-eq {
+  box-shadow: inset 0 -2px 0 #4ade80;
+}
+.d3-mark-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
 .d3-cell.last-correct {
   box-shadow: inset 0 -2px 0 #4ade80;
 }
