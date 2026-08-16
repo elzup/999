@@ -125,12 +125,12 @@ describe('score', () => {
     expect(result.score).toBe(3.5)
   })
 
-  it('きかい: き(core) + かい(double) + mix(9) 減点', () => {
+  it('きかい: き + か + い の3文字。かい の2文字ボーナスは廃止', () => {
     const result = score('きかい')
     expect(result.digits).toBe('991')
     expect(result.mix).toBe(true)
-    // き(core 1) + かい(double 3) + mix(-0.7) = 3.3
-    expect(result.score).toBe(3.3)
+    // き(core 1) + か(bad 0.6) + い(core 1) + mix(-0.7) = 1.9
+    expect(result.score).toBe(1.9)
   })
 
   it('なの: 同じ数字7が な と の で mix減点', () => {

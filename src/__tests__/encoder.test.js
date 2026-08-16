@@ -60,9 +60,18 @@ describe('encode', () => {
     expect(encode('かい').digits).toBe('91')
   })
 
-  it('long_digit: ん付き(X0)は2文字マッチ優先', () => {
-    // きん → 90 (long_digit) を1トークンとして取る
-    expect(encode('きん').tokens).toEqual([{ kana: 'きん', value: '90' }])
+  it('long_digit: ○ん は1文字ずつに割れる (2文字ボーナス無し)', () => {
+    // ん は single に core=0 として在るので ○ん を表に持つ必要が無い。
+    // きん=90 等の冗長エントリは削除し、き(9)+ん(0) の2トークンで取る。
+    expect(encode('きん').digits).toBe('90')
+    expect(encode('きん').tokens).toEqual([
+      { kana: 'き', value: '9' },
+      { kana: 'ん', value: '0' },
+    ])
+    expect(encode('かい').tokens).toEqual([
+      { kana: 'か', value: '9' },
+      { kana: 'い', value: '1' },
+    ])
   })
 
   it('long_digit: ん を6と読む X6 は廃止済み', () => {
