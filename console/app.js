@@ -16,6 +16,7 @@ const FILTERS = [
   ['unconfirmed', '未確定'],
   ['kept', '🔒確定'],
   ['missing', '未取得'],
+  ['changed', '⚠️語変更'],
   ['flagged', 'redo'],
 ]
 
@@ -56,6 +57,8 @@ function cardMatchesFilter(w) {
     if (filter === 'kept') return Boolean(state.keep?.[`${w.num}:${slot}`])
     if (filter === 'unconfirmed')
       return st === 'has' && !state.keep?.[`${w.num}:${slot}`]
+    if (filter === 'changed')
+      return st === 'has' && wordChanged(w.num, slot, w[slot])
     return true
   })
 }
@@ -163,6 +166,27 @@ async function recropTop(num, slot, btn) {
 // #i タグ (プライベートな友人)。src/avatar-i-images.js と同じ判定にする。
 // \b があるので #ipra のような別タグには誤爆しない。
 const hasITag = (w) => typeof w === 'string' && /#i\b/.test(w)
+
+// 語からタグ(#x)・ラベル(-a)・別名(,以降)・括弧注記を落とした本体。
+// src/words.js の extractName と同じ規則 (クライアントからは import できない)。
+function nameOf(w) {
+  if (!w) return ''
+  return w
+    .split('#')[0]
+    .replace(/\s*-\w+\s*$/, '')
+    .split(',')[0]
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\s+/g, '')
+    .trim()
+}
+
+// sync でシートの語が差し替わった枠。タグが付いただけ (嫌 -> 嫌#g) は無視し、
+// 本体が別語になったもの (鶴 -> 振る) だけを「画像が合っていない」として拾う。
+function wordChanged(num, slot, word) {
+  const searched = state.candidates?.[`${num}:${slot}`]?.word
+  if (!searched || !word) return false
+  return nameOf(searched) !== nameOf(word)
+}
 
 // 手入力した検索ワードはタブを閉じるまで保持する。試行錯誤で何度も打ち直す枠が
 // あるため、失敗しても直前の入力から再開できるようにする (サーバには保存しない)。
@@ -322,6 +346,16 @@ function slotEl(w, slot) {
     stat.className = 'slot-stat ' + (kept ? 'is-kept' : 'is-unconf')
     stat.textContent = isAvatarI ? '🔒アバター' : kept ? '🔒確定' : '未確定'
     label.appendChild(stat)
+    // 画像は前の語で取ったもの。確定済みでも当ては外れているので目立たせる
+    if (!isAvatarI && wordChanged(num, slot, word)) {
+      const warn = document.createElement('span')
+      warn.className = 'slot-stat is-changed'
+      warn.textContent = '⚠️語変更'
+      warn.title = `検索時: ${
+        state.candidates[`${num}:${slot}`].word
+      } → 現在: ${word}`
+      label.appendChild(warn)
+    }
   }
   wrap.appendChild(label)
 
