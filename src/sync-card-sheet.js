@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { getSheetTitleByGid, getSheetValuesByTitle } from './google-sheets.js'
 
 const SHEET_ID = '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
 const GID = '1530780723'
@@ -12,7 +13,9 @@ function parseTsvRows(tsv) {
   const lines = tsv.split('\n').filter((line) => line.trim() !== '')
   if (lines.length === 0) throw new Error('Empty TSV')
   const headers = lines[0].split('\t').map((header) => header.trim())
-  const rows = lines.slice(1).map((line) => line.split('\t').map((cell) => cell.trim()))
+  const rows = lines
+    .slice(1)
+    .map((line) => line.split('\t').map((cell) => cell.trim()))
   return { headers, rows }
 }
 
@@ -36,31 +39,40 @@ function normalizeScore(raw) {
   return String(Math.max(0, Math.min(3, value)))
 }
 
-/** Google Sheet から TSV を取得 */
+/**
+ * Google Sheet から TSV を取得。無認証 export を先に試し、非公開シートで
+ * 弾かれたら認証 API に落ちる (sync-sheet.js / sync-tags.js と同じ二段構え)。
+ */
 async function fetchSheet() {
   const url = process.env.CARD_SHEET_URL_EXPORT || EXPORT_URL
   const res = await fetch(url)
+  const text = res.ok ? await res.text() : ''
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch sheet: ${res.status} ${res.statusText}`)
-  }
+  if (res.ok && !text.startsWith('<!DOCTYPE')) return text
 
-  const text = await res.text()
-
-  if (text.startsWith('<!DOCTYPE')) {
-    throw new Error(
-      'シートが非公開です。共有設定を「リンクを知っている全員」に変更してください'
-    )
-  }
-
-  return text
+  console.log(
+    `Public export unavailable (${res.status}), falling back to authenticated API...`
+  )
+  const title = await getSheetTitleByGid(SHEET_ID, GID)
+  const values = await getSheetValuesByTitle({ spreadsheetId: SHEET_ID, title })
+  return values.map((row) => row.join('\t')).join('\n')
 }
 
 function parseSheet(tsv) {
   const { headers, rows } = parseTsvRows(tsv)
   const indexMap = headerIndex(headers)
 
-  const requiredHeaders = ['mark', 'person', 'action_p', 'score_p', 'object', 'action_o', 'score_o', 'action', 'score_a']
+  const requiredHeaders = [
+    'mark',
+    'person',
+    'action_p',
+    'score_p',
+    'object',
+    'action_o',
+    'score_o',
+    'action',
+    'score_a',
+  ]
   const missing = requiredHeaders.filter((h) => !indexMap.has(h))
   if (missing.length > 0) {
     throw new Error(`想定しているヘッダが見つかりません: ${missing.join(', ')}`)
@@ -85,7 +97,8 @@ function parseSheet(tsv) {
 }
 
 function toTsv(entries) {
-  const header = 'mark\tperson\taction_p\tscore_p\tobject\taction_o\tscore_o\taction\tscore_a'
+  const header =
+    'mark\tperson\taction_p\tscore_p\tobject\taction_o\tscore_o\taction\tscore_a'
   const rows = entries.map(
     (entry) =>
       `${entry.mark}\t${entry.person}\t${entry.action_p}\t${entry.score_p}\t${entry.object}\t${entry.action_o}\t${entry.score_o}\t${entry.action}\t${entry.score_a}`

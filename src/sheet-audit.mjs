@@ -201,8 +201,12 @@ if (DO_WRITE) {
     range: `${title}!${c.a1}`,
     values: [[c.value]],
   }))
-  const res = await batchUpdateValues({ spreadsheetId: ID, data })
-  console.log('rankey 書込 updatedCells:', res.totalUpdatedCells)
+  if (data.length === 0) {
+    console.log('rankey 書込: 差分なし (シートは最新)')
+  } else {
+    const res = await batchUpdateValues({ spreadsheetId: ID, data })
+    console.log('rankey 書込 updatedCells:', res.totalUpdatedCells)
+  }
 } else {
   console.log('(dry-run) --write-rankey で rankey のみ書き込み')
 }

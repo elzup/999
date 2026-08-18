@@ -4,6 +4,7 @@
 import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { getSheetValuesByTitle } from './google-sheets.js'
 
 const SHEET_ID =
   process.env.SHEET_ID || '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
@@ -36,10 +37,26 @@ function parseCsv(text) {
   return rows
 }
 
-async function main() {
+/**
+ * 無認証 export を先に試し、非公開シートで弾かれたら認証 API に落ちる。
+ * sync-sheet.js と同じ二段構え (シートを非公開にすると 401 になるため)。
+ */
+async function fetchRows() {
   const res = await fetch(URL)
-  if (!res.ok) throw new Error(`fetch tags sheet: ${res.status}`)
-  const rows = parseCsv(await res.text()).slice(1) // header 除去
+  if (res.ok) return parseCsv(await res.text()).slice(1)
+
+  console.log(
+    `Public export unavailable (${res.status}), falling back to authenticated API...`
+  )
+  const values = await getSheetValuesByTitle({
+    spreadsheetId: SHEET_ID,
+    title: 'tags',
+  })
+  return values.slice(1)
+}
+
+async function main() {
+  const rows = await fetchRows()
 
   const map = {}
   for (const r of rows) {
