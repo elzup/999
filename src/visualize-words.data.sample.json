@@ -40,8 +40,10 @@
       "w1Score": 2.6,
       "w1Error": false,
       "w1Pattern": "D+DD+X",
+      "w1Rk": "Cww|.",
       "w2Score": null,
-      "w2Error": false
+      "w2Error": false,
+      "w2Rk": ""
     },
     {
       "num": "001",
@@ -83,8 +85,10 @@
       "w1Score": 3.8,
       "w1Error": false,
       "w1Pattern": "DD+D",
+      "w1Rk": "wwB|",
       "w2Score": 4,
-      "w2Error": false
+      "w2Error": false,
+      "w2Rk": "Aww|"
     },
     {
       "num": "002",
@@ -126,8 +130,10 @@
       "w1Score": 4,
       "w1Error": false,
       "w1Pattern": "DD+D",
+      "w1Rk": "wwA|",
       "w2Score": 2.7,
-      "w2Error": false
+      "w2Error": false,
+      "w2Rk": "wwv|vm"
     }
   ],
   "ruleStats": {

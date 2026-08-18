@@ -35,8 +35,11 @@ const NumberSchema = z.object({
   w1Score: z.number().nullable().default(null),
   w1Pattern: z.string().optional(),
   w1Error: z.union([z.boolean(), z.string()]).optional(),
+  // rankey: 3桁の内訳記法 (編集画面で表示する)
+  w1Rk: z.string().default(''),
   w2Score: z.number().nullable().default(null),
   w2Error: z.union([z.boolean(), z.string()]).optional(),
+  w2Rk: z.string().default(''),
   w1Img: z.string().optional(),
   w2Img: z.string().optional(),
   ...buildCandidateSlotShape('wh'),

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { saveWordPatch, type EditableWordPatch } from '../lib/editorApi'
 import { clearEditorToken } from '../lib/editorAuth'
+import Rankey from './Rankey'
 
 type SlotPrefix = 'wh' | 'wm'
 
@@ -414,6 +415,11 @@ function SlotListEditor({
                 </span>
               </div>
               <div class="editor-rule-summary">
+                {index === 0 && (
+                  <Rankey
+                    value={(prefix === 'wh' ? entry.w1Rk : entry.w2Rk) ?? ''}
+                  />
+                )}
                 <span class={scoreClass(metrics.score)}>
                   {metrics.score === null ? '-' : metrics.score}
                 </span>

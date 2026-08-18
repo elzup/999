@@ -59,8 +59,11 @@ export const NumberEntrySchema = z.object({
   w1Score: z.number().nullable().default(null),
   w1Pattern: z.string().optional(),
   w1Error: z.union([z.boolean(), z.string()]).optional(),
+  // rankey: 3桁の内訳記法。編集画面でだけ出す (学習中は邪魔なので)
+  w1Rk: z.string().optional(),
   w2Score: z.number().nullable().default(null),
   w2Error: z.union([z.boolean(), z.string()]).optional(),
+  w2Rk: z.string().optional(),
   w1Img: z.string().optional(),
   w2Img: z.string().optional(),
   w1_2: z.string().optional(),

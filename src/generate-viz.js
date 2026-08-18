@@ -8,6 +8,7 @@ import {
   isKanaOnly,
   normalizeForCompare,
 } from './words.js'
+import { rankey } from './rankey.js'
 import { scoreWithLabel } from './scorer.js'
 import { kataToHira } from './table.js'
 
@@ -82,8 +83,11 @@ function buildData(filename = 'words.tsv') {
       w1Score: null,
       w1Error: false,
       w1Pattern: '',
+      // rankey: 3桁の内訳記法。pt が潰す「どの桁がどう賄われているか」を残す
+      w1Rk: entry.w1k ? rankey(entry.w1k, entry.num, entry.w1) : '',
       w2Score: null,
       w2Error: false,
+      w2Rk: entry.w2k ? rankey(entry.w2k, entry.num, entry.w2) : '',
     }
 
     if (entry.w1k) {
