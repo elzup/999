@@ -27,6 +27,7 @@ Token Classification Flow と Position × Token Type マトリクス。
 ## Scripts
 
 ```bash
+nr sync:all    # ★これ1本でOK: シート取得 → rankey書戻し → 歌詞/配信データ再生成
 nr sync        # Google Sheet からデータ同期
 nr push        # src/data/words.tsv を Google Sheet に書き戻す
 nr push:tags   # BCD列の #tag 一覧を tags シートへ書き出す
@@ -36,8 +37,31 @@ nr check:kana  # かなカバレッジチェック
 nr check:digits # 桁数チェック
 nr check:errors # エラーチェック
 nr viz         # 単語ダッシュボード可視化HTML生成
+nr lyrics      # 代表語/FF の歌詞テキスト (lyrics/) を再生成
+nr sheet:audit # シート監査 (dry-run。書込プランを sheet-audit.out.json に出す)
+nr sheet:rankey # 各スロットの rankey 列をシートへ書き戻す
 nr test        # テスト実行
 ```
+
+### 同期は `nr sync:all` 1 本
+
+シートを直接編集したあと、ローカルと配信データを追従させるにはこれだけ実行します。
+
+```
+nr sync:all
+  ├ sync         シート(999)  → src/data/words.tsv
+  ├ sync:tags    シート(tags) → src/data/tags.json
+  ├ sync:card    シート(card) → src/data/cards.tsv
+  ├ sheet:rankey rankey を再計算してシートへ書き戻す
+  ├ lyrics       lyrics/ を再生成
+  └ build:data   visualize-words.data.json と private/data.json を再生成
+```
+
+本番へ出すのは別で `nr deploy`。
+
+> ⚠️ **`nr push` は `sync:all` に含めません。** `push` は 999 タブを clear → 全上書き
+> するため、`words.tsv` に無い列（`check` / `rankey` / スロット 4 以降 / 手動列）が
+> 消えます。ローカルからシートへ戻す必要があるときだけ、消える列を承知の上で使ってください。
 
 ## Google Sheet Read/Write
 
@@ -59,4 +83,4 @@ nr test        # テスト実行
 ## Docs
 
 - [かな数字対応表](docs/kana-number-table.md) - 対応表・桁数判定ルール・想起ツリー・スコア計算
-- [ゴロ割り当て分布統計](docs/goro-stats.md) - `_YZ` / `XY_` / `X_Z` の2桁ゴロ分布（`nr stats:goro` で再生成）
+- [ゴロ割り当て分布統計](docs/goro-stats.md) - `_YZ` / `XY_` / `X_Z` の 2 桁ゴロ分布（`nr stats:goro` で再生成）

@@ -35,7 +35,7 @@ flowchart TD
   App -- "editorToken あり時<br/>GET /api/editor/words で上書き" --> API
   App -- "PATCH /api/editor/words/{num}<br/>= 唯一のアプリ発の書き込み" --> API
   API -- "Sheets v4 values:batchUpdate" --> Sheet
-  Sheet -- "sheet-audit.mjs --write-pt<br/>(score を pt 列へ)" --> Sheet
+  Sheet -- "sheet-audit.mjs --write-rankey<br/>(rankey を rankey 列へ)" --> Sheet
 ```
 
 **要点:** ソースは Google Sheet ただ 1 つ。ローカルの `words.tsv` 以下、`data.json`、GCS 画像、シートの `pt`/`check` 列はすべて **そこから一方向に生成される派生キャッシュ**。アプリからシートへ戻る唯一の経路は EditorTab → Functions API のみ。
@@ -46,26 +46,26 @@ flowchart TD
 
 ### タブ一覧
 
-| タブ / gid                  | 主な列                                                                                                         | 用途                                                 |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **999** (gid `0`)           | `num`, `hito`, `mono`, 各スロット `wh1/wh1k/wh1Img … wh3`・`wm1 … wm3`、各 `k` 列の**左隣 `check`・右隣 `pt`** | 語呂本体。人(wh)/物(wm) × 語(word)/かな(k)/画像(Img) |
-| **card** (gid `1530780723`) | `mark`, `person`, `action_p`, `score_p`, `object`, `action_o`, `score_o`, `action`, `score_a`                  | トランプ PAO。`score_*` は 0〜3                      |
-| **tags** (gid 参照は title) | `tag`, `title`, `count`, `hito`, `mono`, `gainen`, `nums`, `labels`                                            | `#tag` 集計。`title` 列だけ手動メンテ                |
+| タブ / gid                  | 主な列                                                                                                             | 用途                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| **999** (gid `0`)           | `num`, `hito`, `mono`, 各スロット `wh1/wh1k/wh1Img … wh3`・`wm1 … wm3`、各 `k` 列の**左隣 `check`・右隣 `rankey`** | 語呂本体。人(wh)/物(wm) × 語(word)/かな(k)/画像(Img) |
+| **card** (gid `1530780723`) | `mark`, `person`, `action_p`, `score_p`, `object`, `action_o`, `score_o`, `action`, `score_a`                      | トランプ PAO。`score_*` は 0〜3                      |
+| **tags** (gid 参照は title) | `tag`, `title`, `count`, `hito`, `mono`, `gainen`, `nums`, `labels`                                                | `#tag` 集計。`title` 列だけ手動メンテ                |
 
 ### 999 タブの列の意味
 
-| 列                  | 意味                                                                                                                  | 誰が書くか                             |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `num`               | 3 桁数字（`/^\d{3}$/`）。データ行判定キー                                                                             | 人手                                   |
-| `hito`              | 人物の語（`#tag` 記法可）                                                                                             | 人手 / EditorTab                       |
-| `mono`              | 物・概念の語。**`gainen`(概念) は独立列を持たず `mono` に `#g` タグ付きで集約**される                                 | 人手 / EditorTab                       |
-| `whN` / `wmN`       | スロットの暗記語（word 本体）。N=1..3（シート）、Editor は 1..5                                                       | 人手 / EditorTab                       |
-| `whNk` / `wmNk`     | その語のかな読み。**エンコード・スコアの入力**                                                                        | 人手 / EditorTab                       |
-| `whNImg` / `wmNImg` | 画像 URL                                                                                                              | 画像パイプライン経由（後述）           |
-| `check`             | 監査フラグ（`[x]` 等）。各 `k` 列の**左隣**                                                                           | `sheet-audit.mjs` / `sheet-remark.mjs` |
-| `pt`                | スコア（`scoreWithLabel`。**1/10 スケール** → [scoring-rules-blog.md](./scoring-rules-blog.md)）。各 `k` 列の**右隣** | `sheet-audit.mjs --write-pt`           |
+| 列                  | 意味                                                                                  | 誰が書くか                             |
+| ------------------- | ------------------------------------------------------------------------------------- | -------------------------------------- |
+| `num`               | 3 桁数字（`/^\d{3}$/`）。データ行判定キー                                             | 人手                                   |
+| `hito`              | 人物の語（`#tag` 記法可）                                                             | 人手 / EditorTab                       |
+| `mono`              | 物・概念の語。**`gainen`(概念) は独立列を持たず `mono` に `#g` タグ付きで集約**される | 人手 / EditorTab                       |
+| `whN` / `wmN`       | スロットの暗記語（word 本体）。N=1..3（シート）、Editor は 1..5                       | 人手 / EditorTab                       |
+| `whNk` / `wmNk`     | その語のかな読み。**エンコード・スコアの入力**                                        | 人手 / EditorTab                       |
+| `whNImg` / `wmNImg` | 画像 URL                                                                              | 画像パイプライン経由（後述）           |
+| `check`             | 監査フラグ（`[x]` 等）。各 `k` 列の**左隣**                                           | `sheet-audit.mjs` / `sheet-remark.mjs` |
+| `rankey`            | 3 桁の内訳記法（`src/rankey.js`。旧 `pt` 列を置き換え）。各 `k` 列の**右隣**          | `sheet-audit.mjs --write-rankey`       |
 
-> スロット列は `sheet-audit.mjs` が正規表現 `^(w[hm]\d)k$` で動的検出し、その左=`check`・右=`pt` を前提にする。**ヘッダ名やスロットの並びを変えると audit が例外で止まる**。
+> スロット列は `sheet-audit.mjs` が正規表現 `^(w[hm]\d)k$` で動的検出し、その左=`check`・右=`rankey`(旧 `pt`) を前提にする。**ヘッダ名やスロットの並びを変えると audit が例外で止まる**。
 
 ---
 
@@ -89,23 +89,23 @@ flowchart TD
 
 読み取りは 2 系統: **無認証 export**（公開シート前提の `export?format=tsv` / `gviz csv`）と **認証 values API**（`src/google-sheets.js` 経由、ADC / service account / `GOOGLE_OAUTH_ACCESS_TOKEN`）。書き込み系は全て後者。
 
-| スクリプト           | 読む                          | 書く                                                           | 変換                                           | npm           |
-| -------------------- | ----------------------------- | -------------------------------------------------------------- | ---------------------------------------------- | ------------- |
-| `sync-sheet.js`      | 999/gid0（無認証 TSV）        | `src/data/words.tsv`                                           | 別名ヘッダ吸収、`splitConceptFields`、num 検証 | `sync`        |
-| `push-sheet.js`      | `words.tsv`                   | 999/gid0（**clear→ 全上書き**）                                | 行列化して `overwriteSheetValues`              | `push`        |
-| `sync-tags.js`       | tags（無認証 CSV）            | `src/data/tags.json`                                           | `tag→title` マップ                             | `sync:tags`   |
-| `push-tags-sheet.js` | `words.tsv` + tags 既存 title | tags（全上書き）                                               | `#tag` 集計、title 引き継ぎ                    | `push:tags`   |
-| `sync-card-sheet.js` | card/gid（無認証 TSV）        | `src/data/cards.tsv`                                           | `score_*` を 0〜3 正規化                       | `sync:card`   |
-| `sheet-audit.mjs`    | 999/gid0（認証）              | 既定 dry-run→`sheet-audit.out.json`／`--write-pt` で **pt 列** | かな採点＋`missing/digit/read/sokuon3` 判定    | （直接 node） |
-| `sheet-remark.mjs`   | `sheet-audit.out.json`        | 既定 dry-run／`--write` で **かな(k)セル末尾にマーカー**       | audit 結果を再鑑定・長音救済                   | （直接 node） |
-| `score-words.js`     | `words.tsv` のみ              | 標準出力のみ                                                   | 完成度・スコア集計表示                         | `score`       |
+| スクリプト           | 読む                          | 書く                                                                   | 変換                                           | npm           |
+| -------------------- | ----------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- | ------------- |
+| `sync-sheet.js`      | 999/gid0（無認証 TSV）        | `src/data/words.tsv`                                                   | 別名ヘッダ吸収、`splitConceptFields`、num 検証 | `sync`        |
+| `push-sheet.js`      | `words.tsv`                   | 999/gid0（**clear→ 全上書き**）                                        | 行列化して `overwriteSheetValues`              | `push`        |
+| `sync-tags.js`       | tags（無認証 CSV）            | `src/data/tags.json`                                                   | `tag→title` マップ                             | `sync:tags`   |
+| `push-tags-sheet.js` | `words.tsv` + tags 既存 title | tags（全上書き）                                                       | `#tag` 集計、title 引き継ぎ                    | `push:tags`   |
+| `sync-card-sheet.js` | card/gid（無認証 TSV）        | `src/data/cards.tsv`                                                   | `score_*` を 0〜3 正規化                       | `sync:card`   |
+| `sheet-audit.mjs`    | 999/gid0（認証）              | 既定 dry-run→`sheet-audit.out.json`／`--write-rankey` で **rankey 列** | かな採点＋`missing/digit/read/sokuon3` 判定    | （直接 node） |
+| `sheet-remark.mjs`   | `sheet-audit.out.json`        | 既定 dry-run／`--write` で **かな(k)セル末尾にマーカー**               | audit 結果を再鑑定・長音救済                   | （直接 node） |
+| `score-words.js`     | `words.tsv` のみ              | 標準出力のみ                                                           | 完成度・スコア集計表示                         | `score`       |
 
 ### ⚠️ 運用上の gotcha
 
-- **`push` は 999 タブを clear→ 全上書き**し、書くのは `words.tsv` の 21 列のみ。→ **`sync`→`push` の往復でシート上の `check` / `pt` / スロット 4 以降 / その他手動列が消える**（sync 時点で読み込んでいないため復元不可）。**pt を書いた後に `push` を流すと pt が飛ぶ**ので注意。
+- **`push` は 999 タブを clear→ 全上書き**し、書くのは `words.tsv` の 21 列のみ。→ **`sync`→`push` の往復でシート上の `check` / `pt` / スロット 4 以降 / その他手動列が消える**（sync 時点で読み込んでいないため復元不可）。**rankey を書いた後に `push` を流すと rankey が飛ぶ**ので注意。
 - `gainen` はシート上「mono 列 + `#g` タグ」に正規化されており、独立列としては保存されない。読み出し時に `splitConceptFields` で復元。
 - `sheet-remark.mjs` は単独では動かない（`sheet-audit.mjs` が出す `sheet-audit.out.json` が入力）。実行順依存。両者とも npm script 未登録。
-- 書き込みはデフォルト dry-run（`--write-pt` / `--write` 必須）。安全側だが忘れると無反映。
+- 書き込みはデフォルト dry-run（`--write-rankey` / `--write` 必須）。安全側だが忘れると無反映。
 - `score` はシート非接触の純ローカル集計（同期フローの外）。
 
 ---
@@ -257,23 +257,26 @@ score は **`w1k`/`wm1k` などのかな + ラベルから決まる純粋な派�
 
 実体化される先は 2 か所（どちらも入力には戻らない＝循環しない）:
 
-1. **シートの `pt` 列** … `sheet-audit.mjs --write-pt`。シート上でソート/フィルタ用
+1. **シートの `pt` 列** … `sheet-audit.mjs --write-rankey`。シート上でソート/フィルタ用
 2. **`data.json` の `w1Score`/`w2Score`** … `generate-viz.js` が build 時に計算。アプリ表示用
 
 **ルールを変えたら両方を作り直す**（かな →score の一方向なので、古い値は自動更新されない）:
 
-- シート pt: `node src/sheet-audit.mjs --write-pt`
+- シート rankey: `nr sheet:rankey` (= `node src/sheet-audit.mjs --write-rankey`)
 - data.json: `nr viz`（→ `nr build:preview` / `deploy` で配信）
 
 ---
 
 ## 付録: npm scripts 早見表
 
-| 分類       | script                                                                                                    | 役割                                     |
-| ---------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| 同期       | `sync` / `sync:card` / `sync:tags` / `push` / `push:tags`                                                 | シート ⇔ ローカル TSV/JSON               |
-| 画像       | `images:search` / `images:retag` / `images:fetch` / `images:redo` / `images:keep-all` / `images:avatar-i` | 画像 探索 → 取得 → ロック                |
-| ギャラリー | `console` / `gallery:build`                                                                               | ローカルレビュー UI / 静的ギャラリー生成 |
-| 生成       | `viz` / `build:data` / `build:preview`                                                                    | 中間 → `public/data.json`                |
-| 検証       | `score` / `check:kana` / `check:digits` / `check:errors` / `test`                                         | ローカル集計・検証                       |
-| 開発/配信  | `dev` / `dev:api` / `build` / `deploy` / `deploy:api`                                                     | Vite / Functions エミュ / デプロイ       |
+| 分類         | script                                                                                                    | 役割                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **一括**     | **`sync:all`**                                                                                            | **sync → sync:tags → sync:card → sheet:rankey → lyrics → build:data を順に実行。通常はこれ 1 本** |
+| 同期         | `sync` / `sync:card` / `sync:tags` / `push` / `push:tags`                                                 | シート ⇔ ローカル TSV/JSON                                                                        |
+| シート書戻し | `sheet:audit` (dry-run) / `sheet:rankey`                                                                  | 監査プラン出力 / rankey 列を書き戻す                                                              |
+| 歌詞         | `lyrics`                                                                                                  | `lyrics/` を再生成（確定が増えたら都度）                                                          |
+| 画像         | `images:search` / `images:retag` / `images:fetch` / `images:redo` / `images:keep-all` / `images:avatar-i` | 画像 探索 → 取得 → ロック                                                                         |
+| ギャラリー   | `console` / `gallery:build`                                                                               | ローカルレビュー UI / 静的ギャラリー生成                                                          |
+| 生成         | `viz` / `build:data` / `build:preview`                                                                    | 中間 → `public/data.json`                                                                         |
+| 検証         | `score` / `check:kana` / `check:digits` / `check:errors` / `test`                                         | ローカル集計・検証                                                                                |
+| 開発/配信    | `dev` / `dev:api` / `build` / `deploy` / `deploy:api`                                                     | Vite / Functions エミュ / デプロイ                                                                |
