@@ -16,29 +16,44 @@ flowchart TD
   Sheet["Google Sheet<br/>(999 / card / tags タブ)<br/>= 唯一の手編集ソース"]
 
   subgraph local["ローカル中間データ (src/data/, 大半は gitignore)"]
-    tsv["words.tsv / cards.tsv / tags.json<br/>*_digit.tsv (ルール表)"]
+    tsv["words.tsv / cards.tsv / tags.json"]
+    rules["*_digit.tsv (かな→数字の規則表)<br/>★ git 追跡・手編集"]
+    rep["word-rep.json<br/>代表語 + 主観評価<br/>★ git 追跡"]
     imgstate["word-images.json (manifest)<br/>.candidates / -keep / -redo"]
-    vizjson["visualize-words.data.json<br/>(generate-viz 出力)"]
+    vizjson["visualize-words.data.json"]
   end
 
   GCS["GCS: anoz-memosupo-words<br/>words/&lt;hash&gt;.webp"]
-  dataJson["public/data.json<br/>{ numbers, cards, rules }"]
-  App["React アプリ (Firebase Hosting)"]
-  API["Firebase Functions /api<br/>(editor 用, 認証)"]
+  priv["private/data.json<br/>{ numbers, cards, rules }<br/>私的データ・公開 hosting に出さない"]
+  App["Preact アプリ (Firebase Hosting)"]
+  API["Firebase Functions /api<br/>(認証。辞書配信 + editor)"]
+  Lyr["lyrics/ (歌詞テキスト)"]
 
-  Sheet -- "nr sync / sync:card / sync:tags<br/>(無認証 TSV export)" --> tsv
-  tsv -- "images:search → fetch<br/>(DDG検索→webp→upload)" --> GCS
+  Sheet -- "nr sync / sync:tags / sync:card" --> tsv
+  tsv -- "images:search → fetch" --> GCS
   GCS --> imgstate
-  tsv -- "nr viz (generate-viz.js)<br/>+ scoreWithLabel" --> vizjson
-  vizjson -- "generate-preview-data.js<br/>+ cards.tsv + table.js + manifest" --> dataJson
-  dataJson -- "fetch('./data.json')" --> App
-  App -- "editorToken あり時<br/>GET /api/editor/words で上書き" --> API
-  App -- "PATCH /api/editor/words/{num}<br/>= 唯一のアプリ発の書き込み" --> API
+  rules -. "encode / score / rankey" .-> vizjson
+  tsv -- "generate-viz.js" --> vizjson
+  vizjson -- "generate-preview-data.js<br/>+ cards.tsv + manifest" --> priv
+  priv -- "sync:private → functions/private/" --> API
+  API -- "GET /api/app/data (認証)" --> App
+  App -- "PATCH /api/editor/words/{num}<br/>= アプリ発の唯一の書き込み" --> API
   API -- "Sheets v4 values:batchUpdate" --> Sheet
-  Sheet -- "sheet-audit.mjs --write-rankey<br/>(rankey を rankey 列へ)" --> Sheet
+  Sheet -- "nr sheet:rankey<br/>(rankey 列を再計算)" --> Sheet
+  tsv --> rep
+  rep -- "nr lyrics" --> Lyr
+  rep -. "console/rep-server.js<br/>代表語コンソール :6001" .-> rep
+  imgstate -. "console/server.js<br/>画像コンソール :5999" .-> imgstate
 ```
 
-**要点:** ソースは Google Sheet ただ 1 つ。ローカルの `words.tsv` 以下、`data.json`、GCS 画像、シートの `pt`/`check` 列はすべて **そこから一方向に生成される派生キャッシュ**。アプリからシートへ戻る唯一の経路は EditorTab → Functions API のみ。
+**要点:** 語そのもののソースは Google Sheet ただ 1 つ。`words.tsv` 以下、`private/data.json`、GCS 画像、シートの `rankey`/`check` 列はすべて **そこから一方向に生成される派生キャッシュ**。アプリからシートへ戻る唯一の経路は EditorTab → Functions API のみ。
+
+ただし **シート由来でない source of truth が 2 つ**ある。どちらも git 追跡で、消えると復元できない。
+
+| ファイル                 | 中身                                                      | 編集手段                            |
+| ------------------------ | --------------------------------------------------------- | ----------------------------------- |
+| `src/data/*_digit.tsv`   | かな → 数字の規則表。encode / score / rankey の全ての土台 | 手編集                              |
+| `src/data/word-rep.json` | 各番号の代表語(①②)と、候補語ごとの主観評価(-1/0/+1/+2)    | 代表語コンソール (`nr console:rep`) |
 
 ---
 
@@ -122,11 +137,32 @@ flowchart TD
 | `word-images.candidates.json`                              | 画像候補 URL/query/status                                       | `search-word-images.js` | fetch の入力                                       | 中間                |
 | `word-images-keep.json`                                    | ロック集合 `"num:slot": true`                                   | `keep-all.js` / console | search/fetch の上書き保護                          | 制御 state          |
 | `word-images-redo.json`                                    | やり直しフラグ                                                  | console / CLI           | fetch `--redo-only`                                | 制御 state          |
+| `word-rep.json`                                            | `rep`(代表語 picks + confirmed) / `scores`(主観評価 -1/0/+1/+2) | 代表語コンソール        | `gen-words-lyrics.js`                              | ★ **選択の SoT**    |
 | `visualize-words.data.json`                                | `{ data:[row…], ruleStats }`                                    | **`generate-viz.js`**   | generate-preview-data, stats HTML                  | 生成物（gitignore） |
 | `visualize-words.data.sample.json`                         | 同構造（sample 由来）                                           | generate-viz            | 公開デモ                                           | 生成物（commit 済） |
 | `words.json`                                               | num, w1, w1k, w2, w2k                                           | 旧エクスポート          | **未使用（レガシー・未追跡）**                     | 旧派生物            |
 
 > `words.json` は git 未追跡・現行チェーン未使用・旧スキーマの残骸。source of truth は `words.tsv`。
+
+### `word-rep.json` だけは git 追跡
+
+`src/data/` の大半は gitignore（シートから再生成できるため）だが、`word-rep.json` は
+**シートに存在しない情報**なので追跡している。消えると復元できない。
+
+```json
+{
+  "version": 2,
+  "rep": {
+    "051": { "picks": [{ "k": "こい", "w": "鯉" }], "confirmed": true }
+  },
+  "scores": { "051": [{ "k": "こい", "w": "鯉", "v": 2 }] }
+}
+```
+
+スロット位置(`wh1` 等)ではなく **「読み+語」の値で保存**する。`words.tsv` の候補が
+並び替わっても選択がズレず、語が消えた／変わったときだけ `stale` として浮く
+（黙って別の語にすり替わらない）。`picks` は最大 2 枠(①②)、`scores` は候補語ごとに
+1 つ。未評価(キー無し)と `0`(普通)は別状態。
 
 ---
 
@@ -136,21 +172,25 @@ flowchart TD
 build
 ├─ build:data
 │   ├─ node src/generate-viz.js           # words.tsv(+sample) → visualize-words.data(.sample).json
-│   └─ node src/generate-preview-data.js  # viz.data.json + cards.tsv + table.js + word-images.json → public/data.json
-└─ vite build                             # app/ を public/data.json 前提でバンドル
+│   └─ node src/generate-preview-data.js  # viz.data.json + cards.tsv + table.js + word-images.json → private/data.json
+└─ vite build                             # app/ をバンドル → dist/
 
 build:preview = generate-preview-data.js + (stats.html 等を public/ へ cp)
+sync:private  = private/data.json → functions/private/ へコピー
 viz           = generate-viz.js 単体
-deploy        = build:preview → build → firebase deploy --only hosting
-deploy:api    = build:preview → build → firebase deploy --only functions:api,hosting
+deploy        = build:preview → build → sync:private → firebase deploy --only functions:api,hosting
 ```
+
+> 配信データは **`private/data.json`**。私的な辞書なので公開 hosting には置かず、
+> `functions/private/` に同梱して**認証付き Function (`GET /api/app/data`) からのみ**
+> 配信する。`private/` と `functions/private/` は gitignore。
 
 ### generate-viz.js（score の計算地点）
 
 - 入力: `words.tsv`（+ sample）を `loadWords`
 - 計算: `categoryScore`→`catScore`、`scoreWithLabel(w1k,w1)/(w2k,w2)`→`w1Score`/`w2Score`/`w1Pattern`（トークン記号列）・エラー時 `w1Error`/`w2Error`、集計 `ruleStats`（patterns / tokenTypes / kanaUsage / digitKanaAlloc / violations 等）
 - 出力: `visualize-words.data.json`（本番, gitignore）と `.sample.json`（commit）
-- **score はここで計算される派生値**。1/10 スケール化はこの経路と `sheet-audit.mjs`（pt 列）の両方に効く。
+- **pt と rankey はここで計算される派生値**（`w1Score`/`w2Score` と `w1Rk`/`w2Rk`）。ルール表を変えたら、この経路と `sheet-audit.mjs`（シートの rankey 列）の両方を作り直す（→ `nr sync:all`）。
 
 ### generate-preview-data.js（配信データの組み立て）
 
@@ -159,7 +199,7 @@ deploy:api    = build:preview → build → firebase deploy --only functions:api
 - `table.js` + `scorer.WEIGHTS` → `rules`（singleByDigit / doubleMatrix / longMatrix / weights）
 - manifest 画像を merge: `slots.w1.url → n.w1Img`（w2/w1_2/w2_2 も）。**書くのは legacy 4 Img のみ**
 - `goro-extract.classify` で各 num のゴロ割当 `ga`（t1..t4=下 2 桁 / h1..h4=上 2 桁）を事前計算
-- 出力: `public/data.json = { numbers, cards, rules }`（minify）
+- 出力: `private/data.json = { numbers, cards, rules }`（minify）
 
 ---
 
@@ -186,11 +226,43 @@ deploy:api    = build:preview → build → firebase deploy --only functions:api
 - `POST /api/redo` / `redo-now`（該当スロットだけ再検索 → 再取得）/ `keep` / `recrop`（上寄せ再クロップ）/ `search-custom`（任意語で再取得）/ `set-image`（2 択の差替）
 - `console/build-static.js`（`npm run gallery:build`）: 閲覧専用ギャラリーを `dist-gallery/` に生成（`state.json` に焼込、API 無しなら read-only フォールバック）。→ bayalhost 配信（[project memory: Words Gallery Deploy]）
 
+#### 画像が「語と合っていない」状態の検出
+
+`word-images-keep.json` は `"001:w1": true` という真偽値だけで、**どの語に対する確定かを
+持たない**。そのため sync でシートの語が差し替わっても確定が外れず、前の語で取った画像が
+残る。`word-images.candidates.json` には検索時の語が `word` として残っているので、
+現在の語と突き合わせて検出する（`console/app.js#wordChanged`）。
+
+タグが付いただけ（`嫌` → `嫌#g`）は無視し、`extractName` 相当で本体が別語になったもの
+（`鶴` → `振る`）だけを `⚠️語変更` として出す。フィルタで絞れる。
+
+#### `#i`（プライベートな友人）は固定枠
+
+`/#i\b/` の語は DiceBear アバター（`images:avatar-i`）で固定。実写に差し替わると困るので
+コンソールからは操作できない（常に確定表示、ボタンを出さない）。`#ipra` には誤爆しない。
+
+---
+
+## 6.5 代表語コンソール（`nr console:rep`）
+
+`console/rep-server.js`（既定 `PORT=6001`）。ファイル書込のため loopback 限定。
+`word-rep.json` を読み書きする唯一の UI。
+
+- `GET /api/state`: `src/rep-store.js#buildRepState`。候補(人 wh1-3 / 物 wm1-3)に
+  `rankey` / `pt` / 画像 / 主観評価をマージして返す
+- `POST /api/rep {num, order, confirmed}`: 代表 ①② を保存
+- `POST /api/score {num, slot, v}`: 候補語 1 件の主観評価（`v=null` で未評価に戻す）
+
+**2 つの軸は独立**している。代表(picks)を決めても評価は動かず、評価しても確定状態は
+動かない。書込は `writeJson`（tmp→rename）でアトミック。
+
+確定が増えたら `nr lyrics` で `lyrics/` を再生成する必要がある（`sync:all` に含む）。
+
 ---
 
 ## 7. アプリ実行時（Firebase Hosting）
 
-- 起動: `app/App.tsx` が `fetch('./data.json')`（= `public/data.json`）→ `validateAppData`（`AppDataSchema`）。
+- 起動: `app/App.tsx` → `app/lib/appDataApi.ts#fetchAppData` が `GET /api/app/data` を **Bearer トークン付き**で叩く（`editToken999`）→ `validateAppData`（`AppDataSchema`）。401 なら `LockedScreen` に倒す。辞書本体は公開 hosting に無い。
 - 編集トークン所持時のみ `GET /api/editor/words` でライブ値を上書きマージ（`mergeNumberEntries`）。失敗時は静的 data.json にフォールバック。
 - `data.json` = `{ numbers, cards, rules }`。schema 主要フィールド:
   - `NumberEntrySchema`: num, w1/w1k/w2/w2k, hito/mono/gainen, catScore, w1Score/w1Pattern/w1Error, w2Score/w2Error, w1Img/w2Img, w1_2/w2_2(+Img), wh1..wh3(+k/Img), wm1..wm3(+k/Img), `ga`(ゴロ割当)
@@ -251,19 +323,62 @@ EditorTab.tsx
 
 ---
 
-## 9. score のライフサイクル（1/10 スケール）
+## 9. 評価値の 3 系統（score / rankey / 主観評価）
 
-score は **`w1k`/`wm1k` などのかな + ラベルから決まる純粋な派生値**（`src/scorer.js` の `scoreWithLabel`）。詳細ルールは [scoring-rules-blog.md](./scoring-rules-blog.md) / [kana-number-table.md](./kana-number-table.md)。
+かなに対する「評価」は 3 つある。**別物なので混同しない**。
 
-実体化される先は 2 か所（どちらも入力には戻らない＝循環しない）:
+|                | 実体       | 誰が決める                     | どこに出る                                                       | 用途                   |
+| -------------- | ---------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------- |
+| **pt (score)** | 数値       | `src/scorer.js` の重み付き総和 | `data.json` の `w1Score`/`w2Score`                               | 候補の**並び替え**基準 |
+| **rankey**     | 文字列     | `src/rankey.js`                | シートの `rankey` 列、`data.json` の `w1Rk`/`w2Rk`、両コンソール | 3 桁の**内訳**を読む   |
+| **主観評価**   | -1/0/+1/+2 | **人間**                       | `word-rep.json` の `scores`                                      | 「この語呂はアリか」   |
 
-1. **シートの `pt` 列** … `sheet-audit.mjs --write-rankey`。シート上でソート/フィルタ用
-2. **`data.json` の `w1Score`/`w2Score`** … `generate-viz.js` が build 時に計算。アプリ表示用
+pt と rankey はどちらも **かな + 語からの純粋な派生値**で、入力には戻らない（循環しない）。
+主観評価だけは人間が入れるので、どこからも再生成できない。
 
-**ルールを変えたら両方を作り直す**（かな →score の一方向なので、古い値は自動更新されない）:
+### rankey の記法
 
-- シート rankey: `nr sheet:rankey` (= `node src/sheet-audit.mjs --write-rankey`)
-- data.json: `nr viz`（→ `nr build:preview` / `deploy` で配信）
+```
+<3桁ぶんの記号(+中間省略 !)>|<接尾>
+
+A/B/C  1文字1桁の core/sub/bad     みかみ = BCB|
+w w    1文字2桁 (と=10) の2桁ぶん   きた   = Aww|
+x      拗音の小書き側              しゅろ = AxA|
+t      促音                        ろっし = AtA|
+_      先頭0の省略                 れい   = _CA|
+!      中間の省略                  りんご = ww!A|
+v      2桁が3桁境界を跨ぐ          たま   = wwv|v
+n/-/.  余り(ん / ー / その他)       にいさん = AAA|n
+m      mix (同じ数字を別のかなで)
+```
+
+余りは「読みが 3 桁を超えた分」と「語が読みより長い分」の両方を指す。
+
+### ルールを変えたら作り直す
+
+`*_digit.tsv` や `scorer.js` を触ると pt と rankey の両方が変わる。かな → 値の
+**一方向**なので、古い値は自動更新されない。
+
+- `nr sync:all` … シートの `rankey` 列と `data.json` の両方を作り直す（**通常はこれ 1 本**）
+- 個別なら `nr sheet:rankey`（シート）/ `nr build:data`（配信データ）
+
+---
+
+## 10. 認証情報（用途ごとに別の鍵）
+
+| 用途                 | 環境変数                      | 既定                                  | 主体                                                  |
+| -------------------- | ----------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| シート読み書き       | `GOOGLE_SERVICE_ACCOUNT_PATH` | `.config/google-service-account.json` | `.envrc` で `sheet-writer@drive-editor-501303` を指す |
+| **画像アップロード** | `WORDS_UPLOADER_KEY`          | `.config/words-uploader.json`         | `words-uploader@anoz-memosupo`                        |
+
+> ⚠️ かつて `src/images/upload.js` も `GOOGLE_SERVICE_ACCOUNT_PATH` を見ていたため、
+> `.envrc` のシート用 SA が画像アップロードにも使われ、バケットへの
+> `storage.objects.create` が無く **全ての画像取得が 403 で失敗**していた。
+> 変数名を分離して解決済み。汎用的な名前の環境変数を複数用途で共有しない。
+
+シートは非公開なので、無認証 export（`export?format=tsv` / `gviz csv`）は 401 を返す。
+`sync-sheet.js` / `sync-tags.js` / `sync-card-sheet.js` はいずれも**無認証を試して
+弾かれたら認証 API に落ちる**二段構え。
 
 ---
 
@@ -277,6 +392,6 @@ score は **`w1k`/`wm1k` などのかな + ラベルから決まる純粋な派�
 | 歌詞         | `lyrics`                                                                                                  | `lyrics/` を再生成（確定が増えたら都度）                                                          |
 | 画像         | `images:search` / `images:retag` / `images:fetch` / `images:redo` / `images:keep-all` / `images:avatar-i` | 画像 探索 → 取得 → ロック                                                                         |
 | ギャラリー   | `console` / `gallery:build`                                                                               | ローカルレビュー UI / 静的ギャラリー生成                                                          |
-| 生成         | `viz` / `build:data` / `build:preview`                                                                    | 中間 → `public/data.json`                                                                         |
+| 生成         | `viz` / `build:data` / `build:preview` / `sync:private`                                                   | 中間 → `private/data.json` → `functions/private/`                                                 |
 | 検証         | `score` / `check:kana` / `check:digits` / `check:errors` / `test`                                         | ローカル集計・検証                                                                                |
 | 開発/配信    | `dev` / `dev:api` / `build` / `deploy` / `deploy:api`                                                     | Vite / Functions エミュ / デプロイ                                                                |
