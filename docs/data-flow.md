@@ -12,39 +12,68 @@
 ## 0. 全体マップ
 
 ```mermaid
-flowchart TD
-  Sheet["Google Sheet<br/>(999 / card / tags タブ)<br/>= 唯一の手編集ソース"]
-
-  subgraph local["ローカル中間データ (src/data/, 大半は gitignore)"]
-    tsv["words.tsv / cards.tsv / tags.json"]
-    rules["*_digit.tsv (かな→数字の規則表)<br/>★ git 追跡・手編集"]
-    rep["word-rep.json<br/>代表語 + 主観評価<br/>★ git 追跡"]
-    imgstate["word-images.json (manifest)<br/>.candidates / -keep / -redo"]
-    vizjson["visualize-words.data.json"]
+flowchart LR
+  subgraph SRC["① ソース — 手で編集する / 再生成できない"]
+    direction TB
+    Sheet["Google Sheet<br/>999 · card · tags"]
+    Rules["*_digit.tsv<br/>かな→数字の規則表"]
+    Rep["word-rep.json<br/>代表語①② · 主観評価"]
   end
 
-  GCS["GCS: anoz-memosupo-words<br/>words/&lt;hash&gt;.webp"]
-  priv["private/data.json<br/>{ numbers, cards, rules }<br/>私的データ・公開 hosting に出さない"]
-  App["Preact アプリ (Firebase Hosting)"]
-  API["Firebase Functions /api<br/>(認証。辞書配信 + editor)"]
-  Lyr["lyrics/ (歌詞テキスト)"]
+  subgraph MID["② ローカル中間 — 派生。消しても作り直せる"]
+    direction TB
+    Tsv["words.tsv<br/>cards.tsv · tags.json"]
+    Viz["visualize-words.data.json"]
+    Img["word-images.json<br/>candidates · keep · redo"]
+  end
 
-  Sheet -- "nr sync / sync:tags / sync:card" --> tsv
-  tsv -- "images:search → fetch" --> GCS
-  GCS --> imgstate
-  rules -. "encode / score / rankey" .-> vizjson
-  tsv -- "generate-viz.js" --> vizjson
-  vizjson -- "generate-preview-data.js<br/>+ cards.tsv + manifest" --> priv
-  priv -- "sync:private → functions/private/" --> API
-  API -- "GET /api/app/data (認証)" --> App
-  App -- "PATCH /api/editor/words/{num}<br/>= アプリ発の唯一の書き込み" --> API
-  API -- "Sheets v4 values:batchUpdate" --> Sheet
-  Sheet -- "nr sheet:rankey<br/>(rankey 列を再計算)" --> Sheet
-  tsv --> rep
-  rep -- "nr lyrics" --> Lyr
-  rep -. "console/rep-server.js<br/>代表語コンソール :6001" .-> rep
-  imgstate -. "console/server.js<br/>画像コンソール :5999" .-> imgstate
+  subgraph OUT["③ 配信"]
+    direction TB
+    Priv["private/data.json"]
+    Fn["Functions /api<br/>認証付き"]
+    App["アプリ"]
+  end
+
+  GCS["GCS<br/>anoz-memosupo-words"]
+  Lyr["lyrics/"]
+
+  Sheet -->|"nr sync"| Tsv
+  Tsv -->|"generate-viz"| Viz
+  Rules -.->|"encode · pt · rankey"| Viz
+  Rules -.-> Sheet
+  Viz -->|"generate-preview-data"| Priv
+  Img --> Priv
+  Priv -->|"sync:private"| Fn
+  Fn -->|"GET /api/app/data"| App
+  App -->|"PATCH /api/editor/words<br/>唯一の逆流"| Fn
+  Fn --> Sheet
+  Sheet -->|"nr sheet:rankey<br/>rankey 列を再計算"| Sheet
+  Tsv -->|"images:search → fetch"| GCS
+  GCS --> Img
+  Tsv -.->|"候補を供給"| Rep
+  Rep -->|"nr lyrics"| Lyr
+
+  RepUI["代表語コンソール :6001"] --> Rep
+  ImgUI["画像コンソール :5999"] --> Img
+
+  classDef src fill:#fef3c7,stroke:#b45309,stroke-width:2px,color:#1f2937
+  classDef mid fill:#f1f5f9,stroke:#64748b,color:#1f2937
+  classDef out fill:#dbeafe,stroke:#1d4ed8,color:#1f2937
+  classDef ui fill:#ede9fe,stroke:#7c3aed,color:#1f2937
+  classDef ext fill:#dcfce7,stroke:#15803d,color:#1f2937
+  class Sheet,Rules,Rep src
+  class Tsv,Viz,Img mid
+  class Priv,Fn,App out
+  class RepUI,ImgUI ui
+  class GCS,Lyr ext
 ```
+
+**読み方**
+
+- **黄色が①ソース**。手で編集するもので、失うと復元できない。
+- **灰色が②中間**。`nr sync:all` で全部作り直せるので、消えても困らない。
+- **矢印はほぼ一方向**（① → ② → ③）。逆流は `PATCH /api/editor/words`（アプリの編集画面 → シート）だけ。
+- 点線は「値を供給するが物としては流れない」関係。規則表は `words.tsv` を書き換えず、**解釈の仕方**を決める。
 
 **要点:** 語そのもののソースは Google Sheet ただ 1 つ。`words.tsv` 以下、`private/data.json`、GCS 画像、シートの `rankey`/`check` 列はすべて **そこから一方向に生成される派生キャッシュ**。アプリからシートへ戻る唯一の経路は EditorTab → Functions API のみ。
 
