@@ -21,7 +21,9 @@ REQ-FS-006 により全ての書き込みが Function 1 箇所を通るため、
 
 ## Invariants
 
-- `derived` は `slots` と `rules/*` のみから決まる。他の入力を持たない。
+- `derived` は `num` と `slots` と `rules/*` のみから決まる。他の入力を持たない。
+  (`rankey` は先頭0省略と中間省略の判定に `num` を要する。実データ 1940 件のうち
+  20 件で `num` の有無により結果が変わる)
 - 同じ入力からは常に同じ `derived` が出る (純粋関数)。
 - 呼び出し元が渡した `derived` は必ず捨てる (信用しない)。
 
@@ -32,3 +34,4 @@ REQ-FS-006 により全ての書き込みが Function 1 箇所を通るため、
 - REQ-DRV-003: WHEN 呼び出し元が `derived` を含む文書を渡す THE SYSTEM SHALL その値を捨てて計算し直す
 - REQ-DRV-004: IF かなが空 THEN THE SYSTEM SHALL 当該スロットの `derived` を空にする
 - REQ-DRV-005: IF かながエンコード不能 THEN THE SYSTEM SHALL `pt` を `null`・`rankey` を `null` とし、書き込み自体は成功させる
+- REQ-DRV-006: IF `num` が 3 桁でない THEN THE SYSTEM SHALL 計算せず例外を投げる (誤った値を黙って書かない)

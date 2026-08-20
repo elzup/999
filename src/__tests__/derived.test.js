@@ -65,12 +65,27 @@ describe('derived values', () => {
   })
 
   it('rankey reflects the number, not just the kana', () => {
-    // 先頭0の省略は num を見ないと判定できない
-    const short = {
-      num: '001',
-      slots: { wh1: { word: 'れい', kana: 'れい', imageUrl: '' } },
+    // 同じかな «ひっち» でも num によって結果が変わる。num を無視する実装なら
+    // どちらか一方が必ず外れる (以前のテストは num を消しても通る無意味なものだった)
+    const at122 = {
+      num: '122',
+      slots: { wh1: { word: 'X', kana: 'ひっち', imageUrl: '' } },
+    }
+    const at221 = {
+      num: '221',
+      slots: { wh1: { word: 'X', kana: 'ひっち', imageUrl: '' } },
     }
 
-    expect(computeDerived(short).rankeyBySlot.wh1).toBe('_CA|')
+    expect(computeDerived(at122).rankeyBySlot.wh1).not.toBe(
+      computeDerived(at221).rankeyBySlot.wh1
+    )
+  })
+
+  it('REQ-DRV-006: refuses to compute without a three-digit num', () => {
+    // num 無しで計算させると ~1% の語で «もっともらしいが誤った» rankey が入る
+    expect(() => computeDerived({ slots: {} })).toThrow(/3-digit num/)
+    expect(() => computeDerived({ num: '12', slots: {} })).toThrow(
+      /3-digit num/
+    )
   })
 })

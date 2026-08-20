@@ -1,40 +1,47 @@
 rules_version = '2';
 
-// 999 辞書。私的データなので既定は全面拒否し、読み取りだけ認証済みに開ける。
+// 999 辞書。私的データなので既定は全面拒否し、所有者だけに読ませる。
 // spec: .vsdd/firestore-store/specs/design-firestore-schema.md
 //
 // 書き込みはクライアントから直接行わせず、すべて Function 経由にする。
 // rules 言語はリスト要素 (ratings[].v) を検証できないため、rules 側で
 // REQ-FS-003 を強制できない。書き込み口を1つに絞り、そこで
 // src/firestore/number-doc.js#validateNumberDoc を必ず通す。
+// Admin SDK は rules を迂回するので Function からは書ける。
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
-      return request.auth != null;
+    // 「認証済みなら誰でも」では足りない。Anonymous 認証を有効にした瞬間や、
+    // 同じ Firebase プロジェクトの別アプリの利用者にも辞書全体が渡ってしまう。
+    // 読めるのは owners に列挙した uid だけ。
+    function isOwner() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/owners/$(request.auth.uid));
     }
 
-    // 辞書本体。読むのは認証済みのみ、書き込みは Admin SDK (Function) だけ。
-    // Admin SDK は rules を迂回するので allow write: if false で問題ない。
+    // 辞書本体。1 件ずつの get は許すが、list (全件列挙) は許さない。
+    // list を許すと bundles を介さず 1000 read で舐められ、
+    // design:read-bundles のコスト設計 (全件 10 read) が意味を失う。
     match /numbers/{num} {
-      allow read: if signedIn();
+      allow get: if isOwner();
+      allow list: if false;
       allow write: if false;
     }
 
-    // 読み込み用チャンクと規則表もサーバが作る。
+    // 読み込み用チャンクと規則表もサーバが作る。アプリはここだけ読む。
     match /bundles/{chunk} {
-      allow read: if signedIn();
+      allow read: if isOwner();
       allow write: if false;
     }
 
     match /rules/{table} {
-      allow read: if signedIn();
+      allow read: if isOwner();
       allow write: if false;
     }
 
-    // 上記以外は明示的に拒否する
-    match /{document=**} {
+    // 所有者名簿そのものはクライアントに見せない (Admin SDK でのみ管理)
+    match /owners/{uid} {
       allow read, write: if false;
     }
   }

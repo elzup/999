@@ -36,7 +36,7 @@ coherence:
 - ドキュメント ID は `num` と一致する。
 - `rep.picks` は重複なし、最大 2 件である。
 - `ratings` の同じ `{k,w}` に対するエントリは 1 件以下である。
-- `derived` はいかなる書き込み元からも直接書かれない (トリガのみが書く)。
+- `derived` はいかなる書き込み元からも直接書かれない (書き込み経路が計算し直す)。
 - 1 ドキュメントは 1 MiB を超えない。
 
 ## 書き込み口を 1 つに絞る
@@ -64,3 +64,6 @@ rules は「読み取りは認証済みのみ、書き込みは全面拒否」�
 - REQ-FS-005: IF クライアントが `derived` を含む書き込みを行う THEN THE SYSTEM SHALL その書き込みを拒否する
 - REQ-FS-006: THE SYSTEM SHALL クライアントからの `numbers/*` への直接書き込みを拒否する
 - REQ-FS-007: WHEN Function が書き込みを受ける THE SYSTEM SHALL `validateNumberDoc` を通してから永続化する
+- REQ-FS-008: IF 既存文書が `rep` または `ratings` を持ち、書き込み後にそれが失われる THEN THE SYSTEM SHALL 書き込みを拒否する
+- REQ-FS-009: THE SYSTEM SHALL `rep` / `ratings` を省略した文書と、明示的に空にした文書を区別する
+- REQ-FS-010: IF 検証対象が配列要素に `null` や非オブジェクトを含む THEN THE SYSTEM SHALL 例外を投げず `error` を返す

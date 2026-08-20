@@ -26,7 +26,7 @@ describe('firestore-store coherence graph', () => {
     const result = runCeg('graph')
 
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
-    expect(result.stdout).toContain('# CEG (7 nodes / 9 edges)')
+    expect(result.stdout).toContain('# CEG (8 nodes / 12 edges)')
     for (const id of [
       'design:firestore-schema',
       'design:derived-on-write',
@@ -35,6 +35,7 @@ describe('firestore-store coherence graph', () => {
       'spec:rep-migration',
       'spec:app-data-source',
       'spec:console-writes',
+      'review:adversary-r1',
     ]) {
       expect(result.stdout).toContain(id)
     }

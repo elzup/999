@@ -1,7 +1,7 @@
 // 派生値 (pt / rankey) の計算。
 // spec: .vsdd/firestore-store/specs/design-derived-on-write.md
 //
-// slots と規則表からのみ決まる純粋関数。同じ入力からは常に同じ結果が出る。
+// num と slots と規則表からのみ決まる純粋関数。同じ入力からは常に同じ結果が出る。
 // 書き込み経路が Function 1 箇所に絞られている (REQ-FS-006) ので、
 // 別トリガにせずその経路で呼ぶ。再帰の心配が無く、コード経路が 1 つで済む。
 
@@ -13,6 +13,12 @@ import { scoreWithLabel } from '../scorer.js'
  * かなが空のスロットは含めない。読めないかなは null を入れて処理は継続する。
  */
 export function computeDerived(doc) {
+  // rankey は先頭0省略と中間省略の判定に num を要する。実データ 1940 件のうち
+  // 20 件で num の有無により結果が変わるので、欠けたまま計算させない
+  if (!/^\d{3}$/.test(doc?.num ?? '')) {
+    throw new Error(`computeDerived requires a 3-digit num: ${doc?.num}`)
+  }
+
   const ptBySlot = {}
   const rankeyBySlot = {}
 
