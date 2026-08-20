@@ -110,6 +110,20 @@ function explain(error) {
       '  4. nr db:plan で差分を確認してから nr db:push',
     ].join('\n')
   }
+  if (message.includes('Missing or insufficient permissions')) {
+    return [
+      'Firestore への権限が無い認証情報を使っている。',
+      '',
+      'ADC は gcloud のログインアカウントを指す。別プロジェクトの',
+      'アカウントだと、API が有効でもここで弾かれる。',
+      '',
+      '  A. 対象プロジェクトの権限があるアカウントで ADC を取り直す',
+      '     gcloud auth application-default login',
+      '  B. Firestore 権限のあるサービスアカウント鍵を指定する',
+      '     FIRESTORE_KEY=<service account json> nr db:plan',
+      '     ※ 鍵には roles/datastore.user が要る',
+    ].join('\n')
+  }
   if (message.includes('Could not load the default credentials')) {
     return [
       '認証情報が無い。次のどちらかを用意する。',

@@ -27,10 +27,9 @@ DB → シートの書き戻し、競合解決、削除の伝播、ローカル 
 コード側は揃っている。残るのはクラウドリソースの作成だけ。
 
 ```bash
-# 1. Firestore データベースを作る (コンソール)
-#    https://console.firebase.google.com/project/anoz-memosupo/firestore
-#    ロケーションは asia-northeast1 (Functions と同じ)
-#    ※ ロケーションは後から変更できない
+# 1. Firestore データベースを作る
+#    ロケーションは asia-northeast1 (Functions と同じ)。後から変更できない
+firebase firestore:databases:create "(default)" --location asia-northeast1
 
 # 2. 認証 (どちらか)
 gcloud auth application-default login
@@ -57,6 +56,22 @@ nr db:push     # 実際に書き込む
 
 **既定は dry-run。** この移行の目的が「失うと復元できないデータを守ること」なので、
 書き込む前に必ず件数を目視できるようにしている。
+
+## 踏んだ罠
+
+**`firebase deploy --only firestore:rules` は DB を勝手に作る。**
+API 有効化のつもりで打つと、`--location` を渡す前に**既定ロケーション (nam5) で
+データベースが作られる**。ロケーションは後から変更できないので、作り直すには
+一度削除するしかない。削除後は **290 秒のクールダウン**があり、その間は同じ
+データベース ID を再作成できない。
+
+順序は必ず「作成 → rules デプロイ」にすること。
+
+**ADC は gcloud のログインアカウントを指す。**
+別プロジェクトのアカウントでログインしていると、API が有効でも
+`PERMISSION_DENIED` になる。`FIRESTORE_KEY` に `roles/datastore.user` を持つ
+サービスアカウント鍵を渡すか、対象プロジェクトの権限があるアカウントで
+`gcloud auth application-default login` し直す。
 
 ## コマンド
 
