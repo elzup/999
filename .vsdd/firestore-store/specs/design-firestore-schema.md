@@ -39,6 +39,22 @@ coherence:
 - `derived` はいかなる書き込み元からも直接書かれない (トリガのみが書く)。
 - 1 ドキュメントは 1 MiB を超えない。
 
+## 書き込み口を 1 つに絞る
+
+クライアントから Firestore に直接書かせない。すべて Function 経由にする。
+
+**理由**: rules 言語はリストの要素を走査できないため、`ratings[].v` が
+`-1 | 0 | 1 | 2` であること (REQ-FS-003) を rules では強制できない。
+`hasOnly` はリストの要素が map の場合には使えず、`map()` 相当も無い。
+書き込み口を 1 箇所にすれば、`validateNumberDoc` を必ず通せる。
+
+rules は「読み取りは認証済みのみ、書き込みは全面拒否」だけを担う
+(Admin SDK は rules を迂回するので Function からは書ける)。
+
+副作用として Firestore のオフライン書き込みキューは使えなくなるが、
+書き込みは編集時のみで頻度が低いため許容する。読み取りは
+`bundles/*` を直接読むのでオフラインキャッシュが効く。
+
 ## Requirements
 
 - REQ-FS-001: WHEN 任意の面が `numbers/{num}` を書く THE SYSTEM SHALL `updatedAt` と `source` を同時に更新する
@@ -46,3 +62,5 @@ coherence:
 - REQ-FS-003: IF `ratings[].v` が `-1 | 0 | 1 | 2` 以外 THEN THE SYSTEM SHALL 書き込みを拒否する
 - REQ-FS-004: IF `rep.picks` が 3 件以上 THEN THE SYSTEM SHALL 書き込みを拒否する
 - REQ-FS-005: IF クライアントが `derived` を含む書き込みを行う THEN THE SYSTEM SHALL その書き込みを拒否する
+- REQ-FS-006: THE SYSTEM SHALL クライアントからの `numbers/*` への直接書き込みを拒否する
+- REQ-FS-007: WHEN Function が書き込みを受ける THE SYSTEM SHALL `validateNumberDoc` を通してから永続化する

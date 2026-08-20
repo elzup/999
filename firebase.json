@@ -3,6 +3,9 @@
     "source": "functions",
     "runtime": "nodejs22"
   },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*"],
@@ -18,27 +21,57 @@
     "headers": [
       {
         "source": "/sw.js",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       },
       {
         "source": "/registerSW.js",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       },
       {
         "source": "/",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       },
       {
         "source": "/index.html",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       },
       {
         "source": "/manifest.webmanifest",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       },
       {
         "source": "**/*.json",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
     ]
   }

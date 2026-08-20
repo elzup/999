@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// 999 辞書。私的データなので既定は全面拒否し、読み取りだけ認証済みに開ける。
+// spec: .vsdd/firestore-store/specs/design-firestore-schema.md
+//
+// 書き込みはクライアントから直接行わせず、すべて Function 経由にする。
+// rules 言語はリスト要素 (ratings[].v) を検証できないため、rules 側で
+// REQ-FS-003 を強制できない。書き込み口を1つに絞り、そこで
+// src/firestore/number-doc.js#validateNumberDoc を必ず通す。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // 辞書本体。読むのは認証済みのみ、書き込みは Admin SDK (Function) だけ。
+    // Admin SDK は rules を迂回するので allow write: if false で問題ない。
+    match /numbers/{num} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // 読み込み用チャンクと規則表もサーバが作る。
+    match /bundles/{chunk} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /rules/{table} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // 上記以外は明示的に拒否する
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
