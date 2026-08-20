@@ -24,6 +24,9 @@
     "sheet:rankey": "node src/sheet-audit.mjs --write-rankey",
     "sheet:audit": "node src/sheet-audit.mjs",
     "sync:all": "npm run sync && npm run sync:tags && npm run sync:card && npm run sheet:rankey && npm run lyrics && npm run build:data",
+    "db:plan": "node src/db-sync.js",
+    "db:push": "node src/db-sync.js --apply",
+    "db:rules": "firebase deploy --only firestore:rules",
     "score": "node src/score-words.js",
     "stats:goro": "node src/analyze-goro-stats.js",
     "graph:alloc": "node src/generate-allocation-graph.js",
@@ -56,6 +59,7 @@
   "devDependencies": {
     "@google-cloud/storage": "^7.21.0",
     "@preact/preset-vite": "^2.10.3",
+    "firebase-admin": "^14.3.0",
     "lint-staged": "^17.0.5",
     "sharp": "^0.35.1",
     "simple-git-hooks": "^2.13.1",

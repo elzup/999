@@ -22,6 +22,42 @@ DB → シートの書き戻し、競合解決、削除の伝播、ローカル 
 6. `spec:rep-migration` — `word-rep.json` の移行
 7. `spec:app-data-source` — アプリの取得経路を DB に
 
+## 実接続の手順
+
+コード側は揃っている。残るのはクラウドリソースの作成だけ。
+
+```bash
+# 1. Firestore データベースを作る (コンソール)
+#    https://console.firebase.google.com/project/anoz-memosupo/firestore
+#    ロケーションは asia-northeast1 (Functions と同じ)
+#    ※ ロケーションは後から変更できない
+
+# 2. 認証 (どちらか)
+gcloud auth application-default login
+# または FIRESTORE_KEY=<service account json>
+
+# 3. セキュリティルールを反映
+nr db:rules
+
+# 4. owners/<uid> を作る (rules が参照する所有者名簿)
+#    これが無いと誰も読めない
+
+# 5. 差分を見てから書く
+nr db:plan     # dry-run。件数だけ出る
+nr db:push     # 実際に書き込む
+```
+
+`db:plan` / `db:push` は 3 段を順に実行する。`--only sync|migrate|bundles` で個別に。
+
+| 段 | 内容 |
+| --- | --- |
+| sync | シート (words.tsv) -> `numbers/{num}`。rep/ratings/imageUrl は保持 |
+| migrate | `word-rep.json` -> `numbers/{num}`。件数が合わなければ中止 |
+| bundles | `numbers/*` -> `bundles/chunk_0..9`。全件ロードを 10 read に |
+
+**既定は dry-run。** この移行の目的が「失うと復元できないデータを守ること」なので、
+書き込む前に必ず件数を目視できるようにしている。
+
 ## コマンド
 
 ```bash
