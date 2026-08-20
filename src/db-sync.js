@@ -18,6 +18,8 @@ import { planSheetSync } from './firestore/sheet-to-db.js'
 import { writeNumber } from './firestore/write.js'
 
 const APPLY = process.argv.includes('--apply')
+// DB に繋がずプランだけ出す。認証が通る前に投入内容を確認できる
+const OFFLINE = process.argv.includes('--offline')
 const only = (() => {
   const i = process.argv.indexOf('--only')
   return i >= 0 ? process.argv[i + 1] : null
@@ -41,15 +43,25 @@ async function applyWrites(db, writes, label) {
 }
 
 async function main() {
-  const db = connect()
-  log(APPLY ? '=== 適用モード ===' : '=== dry-run (--apply で書き込み) ===')
+  if (OFFLINE && APPLY) throw new Error('--offline と --apply は併用できない')
 
-  const existing = await db.readAllNumbers()
+  const db = OFFLINE ? null : connect()
+  log(
+    OFFLINE
+      ? '=== offline (DB に繋がずプランだけ出す) ==='
+      : APPLY
+      ? '=== 適用モード ==='
+      : '=== dry-run (--apply で書き込み) ==='
+  )
+
+  const existing = db ? await db.readAllNumbers() : {}
   log(`既存の numbers: ${Object.keys(existing).length} 件`)
 
-  if (wants('sync')) {
+  let syncPlan = { writes: [] }
+  if (wants('sync') || OFFLINE) {
     const rows = loadWordsTsv().filter((w) => availableSlots(w).length > 0)
     const plan = planSheetSync({ rows, existing, now, withDerived })
+    syncPlan = plan
     log('\n[sync] シート -> DB')
     log(`  書込対象 ${plan.writes.length} / 変更なし ${plan.unchanged}`)
     log(`  無視 ${plan.ignored} / 保持 ${plan.kept.length}`)
@@ -61,7 +73,12 @@ async function main() {
 
   if (wants('migrate')) {
     const store = JSON.parse(readFileSync(REP_PATH, 'utf8'))
-    const target = APPLY ? await db.readAllNumbers() : existing
+    // sync 適用後の状態に対して移行を計画する。offline では sync の結果を使う
+    const target = APPLY
+      ? await db.readAllNumbers()
+      : OFFLINE
+      ? Object.fromEntries(syncPlan.writes.map((w) => [w.num, w.doc]))
+      : existing
     const plan = planRepMigration({ store, existing: target, now })
     const checked = reconcile(plan, store)
     log('\n[migrate] word-rep.json -> numbers')
@@ -78,7 +95,13 @@ async function main() {
   }
 
   if (wants('bundles')) {
-    const docs = Object.values(APPLY ? await db.readAllNumbers() : existing)
+    const docs = Object.values(
+      APPLY
+        ? await db.readAllNumbers()
+        : OFFLINE
+        ? Object.fromEntries(syncPlan.writes.map((w) => [w.num, w.doc]))
+        : existing
+    )
     log('\n[bundles] 読み込み用チャンク再構築')
     if (docs.length === 0) {
       log('  numbers が空なのでチャンクは作らない')

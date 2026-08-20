@@ -42,7 +42,8 @@ nr db:rules
 #    これが無いと誰も読めない
 
 # 5. 差分を見てから書く
-nr db:plan     # dry-run。件数だけ出る
+nr db:offline  # DB に繋がずプランだけ出す (認証前に確認できる)
+nr db:plan     # dry-run。既存 DB と突き合わせて差分を出す
 nr db:push     # 実際に書き込む
 ```
 
@@ -53,6 +54,14 @@ nr db:push     # 実際に書き込む
 | sync | シート (words.tsv) -> `numbers/{num}`。rep/ratings/imageUrl は保持 |
 | migrate | `word-rep.json` -> `numbers/{num}`。件数が合わなければ中止 |
 | bundles | `numbers/*` -> `bundles/chunk_0..9`。全件ロードを 10 read に |
+
+実データでの `nr db:offline` の結果 (2026-08-21):
+
+```
+[sync]     書込対象 1000 / 変更なし 0
+[migrate]  書込対象 29 / 件数照合 OK
+[bundles]  10 個 / 最大 35 KB
+```
 
 **既定は dry-run。** この移行の目的が「失うと復元できないデータを守ること」なので、
 書き込む前に必ず件数を目視できるようにしている。

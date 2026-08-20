@@ -25,6 +25,7 @@
     "sheet:audit": "node src/sheet-audit.mjs",
     "sync:all": "npm run sync && npm run sync:tags && npm run sync:card && npm run sheet:rankey && npm run lyrics && npm run build:data",
     "db:plan": "node src/db-sync.js",
+    "db:offline": "node src/db-sync.js --offline",
     "db:push": "node src/db-sync.js --apply",
     "db:rules": "firebase deploy --only firestore:rules",
     "score": "node src/score-words.js",
