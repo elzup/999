@@ -41,7 +41,19 @@ coherence:
 
 ## 書き込み口を 1 つに絞る
 
-クライアントから Firestore に直接書かせない。すべて Function 経由にする。
+クライアントから Firestore に直接書かせない。すべて `writeNumber` (単一の検証付き
+書き込み関数) を通す。
+
+**第 1 段階で Firestore に書くのは、シート同期スクリプトとローカルコンソールだけ。**
+どちらもリポジトリ直下で動く Node なので `src/` をそのまま import でき、Admin SDK が
+rules を迂回して書ける。アプリの書き込みは現状どおりシート宛
+(`PATCH /api/editor/words`) に据え置く。
+
+この切り分けにより、`functions/` (CJS・`src/data/*.tsv` を持たない別パッケージ) から
+`src/firestore/derived.js` を読む必要が無くなる。`derived.js` は `scorer` → `table.js`
+経由で TSV を読み込み時にロードするため、そのままでは Function 内で落ちる。
+アプリからの直接書き込みを入れる段階で、規則表の読み込み経路ごと解決する
+(REQ-DRV-002 と同じ問題)。
 
 **理由**: rules 言語はリストの要素を走査できないため、`ratings[].v` が
 `-1 | 0 | 1 | 2` であること (REQ-FS-003) を rules では強制できない。
@@ -63,7 +75,9 @@ rules は「読み取りは認証済みのみ、書き込みは全面拒否」�
 - REQ-FS-004: IF `rep.picks` が 3 件以上 THEN THE SYSTEM SHALL 書き込みを拒否する
 - REQ-FS-005: IF クライアントが `derived` を含む書き込みを行う THEN THE SYSTEM SHALL その書き込みを拒否する
 - REQ-FS-006: THE SYSTEM SHALL クライアントからの `numbers/*` への直接書き込みを拒否する
-- REQ-FS-007: WHEN Function が書き込みを受ける THE SYSTEM SHALL `validateNumberDoc` を通してから永続化する
+- REQ-FS-007: WHEN `writeNumber` が呼ばれる THE SYSTEM SHALL `validateNumberDoc` と `assertPreserves` を通してから永続化する
 - REQ-FS-008: IF 既存文書が `rep` または `ratings` を持ち、書き込み後にそれが失われる THEN THE SYSTEM SHALL 書き込みを拒否する
 - REQ-FS-009: THE SYSTEM SHALL `rep` / `ratings` を省略した文書と、明示的に空にした文書を区別する
 - REQ-FS-010: IF 検証対象が配列要素に `null` や非オブジェクトを含む THEN THE SYSTEM SHALL 例外を投げず `error` を返す
+- REQ-FS-011: WHEN `writeNumber` が永続化する THE SYSTEM SHALL 読み取りから書き込みまでを 1 トランザクションで行う
+- REQ-FS-012: IF 読み取り後に他の面が同じ番号を書き換えていた THEN THE SYSTEM SHALL 書き込みを中止して競合を報告する
