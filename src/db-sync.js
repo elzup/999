@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs'
 import { availableSlots, loadWordsTsv, REP_PATH } from './rep-store.js'
 import { buildAllBundles } from './firestore/bundles.js'
 import { connect } from './firestore/db.js'
-import { withDerived } from './firestore/derived.js'
+import { connectRest } from './firestore/rest.js'
 import { planRepMigration, reconcile } from './firestore/rep-migration.js'
 import { planSheetSync } from './firestore/sheet-to-db.js'
 import { writeNumber } from './firestore/write.js'
@@ -25,6 +25,14 @@ const only = (() => {
   return i >= 0 ? process.argv[i + 1] : null
 })()
 const wants = (step) => !only || only === step
+
+/** .firebaserc の default を使う */
+function projectIdOf() {
+  if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID
+  return JSON.parse(
+    readFileSync(new URL('../.firebaserc', import.meta.url), 'utf8')
+  ).projects?.default
+}
 
 const now = new Date().toISOString()
 const log = (...args) => console.log(...args)
@@ -45,7 +53,14 @@ async function applyWrites(db, writes, label) {
 async function main() {
   if (OFFLINE && APPLY) throw new Error('--offline と --apply は併用できない')
 
-  const db = OFFLINE ? null : connect()
+  // GOOGLE_OAUTH_ACCESS_TOKEN があれば REST 経由。Admin SDK は cert か ADC しか
+  // 受け付けないので、gcloud のトークンを使うときはこちらに倒す
+  const token = process.env.GOOGLE_OAUTH_ACCESS_TOKEN
+  const db = OFFLINE
+    ? null
+    : token
+    ? connectRest({ projectId: projectIdOf(), token })
+    : connect()
   log(
     OFFLINE
       ? '=== offline (DB に繋がずプランだけ出す) ==='
@@ -60,7 +75,7 @@ async function main() {
   let syncPlan = { writes: [] }
   if (wants('sync') || OFFLINE) {
     const rows = loadWordsTsv().filter((w) => availableSlots(w).length > 0)
-    const plan = planSheetSync({ rows, existing, now, withDerived })
+    const plan = planSheetSync({ rows, existing, now })
     syncPlan = plan
     log('\n[sync] シート -> DB')
     log(`  書込対象 ${plan.writes.length} / 変更なし ${plan.unchanged}`)

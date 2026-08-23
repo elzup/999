@@ -137,9 +137,10 @@ describe('sheet to db one-way sync', () => {
     expect(plan().writes[0].expectedUpdatedAt).toBe(null)
   })
 
-  it('REQ-SYN-010: recomputes derived for every write', () => {
-    const write = plan().writes[0]
+  it('REQ-SYN-010: leaves derived out so the write gate can compute it', () => {
+    // プランで derived を付けると validateNumberDoc が «サーバ所有» として弾く
+    const write = planSheetSync({ rows, existing: {}, now }).writes[0]
 
-    expect(write.doc.derived.rankeyBySlot.wh1).toBe('_AA|')
+    expect('derived' in write.doc).toBe(false)
   })
 })

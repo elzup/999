@@ -23,6 +23,20 @@ function credential() {
   if (path && existsSync(path)) {
     return { credential: cert(JSON.parse(readFileSync(path, 'utf8'))) }
   }
+  // gcloud auth print-access-token で取ったトークンを使う。
+  // ADC (application-default) と gcloud のログインは別物で、
+  // ADC だけ別プロジェクトのアカウントを指していることがある
+  const token = process.env.GOOGLE_OAUTH_ACCESS_TOKEN
+  if (token) {
+    return {
+      credential: {
+        getAccessToken: async () => ({
+          access_token: token,
+          expires_in: 3600,
+        }),
+      },
+    }
+  }
   // 未指定なら ADC (gcloud auth application-default login)
   return {}
 }

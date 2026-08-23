@@ -35,4 +35,4 @@ DB 側にしか存在しない項目 (`rep` / `ratings` / `derived`) は同期�
 - REQ-SYN-007: IF 同じ `num` の行がシートに複数ある THEN THE SYSTEM SHALL 衝突として報告し、どちらも書き込まない
 - REQ-SYN-008: IF `num` が文字列でない (Sheets API が数値で返す等) THEN THE SYSTEM SHALL 中断せず文字列として解釈する
 - REQ-SYN-009: WHEN 書き込みプランを作る THE SYSTEM SHALL 読み取り時の `updatedAt` を添え、適用時の競合検出に使えるようにする
-- REQ-SYN-010: WHEN 書き込みプランを作る THE SYSTEM SHALL `derived` を再計算して含める
+- REQ-SYN-010: WHEN 書き込みプランを作る THE SYSTEM SHALL `derived` を含めない (書き込み口 `writeNumber` が計算する。プランで付けると `validateNumberDoc` が «derived はサーバ所有» として弾く)
