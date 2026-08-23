@@ -27,7 +27,20 @@ function credential() {
   return {}
 }
 
-export function connect({ projectId = process.env.FIREBASE_PROJECT_ID } = {}) {
+/** .firebaserc の default を既定にする。env 未設定でも別プロジェクトを向かない */
+function defaultProjectId() {
+  if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID
+  const path = new URL('../../.firebaserc', import.meta.url)
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')).projects?.default
+  } catch {
+    return undefined
+  }
+}
+
+export function connect({ projectId = defaultProjectId() } = {}) {
+  if (!projectId)
+    throw new Error('project id が解決できない (.firebaserc を確認)')
   const app = getApps()[0] ?? initializeApp({ projectId, ...credential() })
   const store = getFirestore(app)
 
