@@ -83,4 +83,5 @@ nr sync:all
 ## Docs
 
 - [かな数字対応表](docs/kana-number-table.md) - 対応表・桁数判定ルール・想起ツリー・スコア計算
+- [1 番号に対する操作の一覧](docs/num-actions.md) - 何ができて何ができないか、どの面から操作するか
 - [ゴロ割り当て分布統計](docs/goro-stats.md) - `_YZ` / `XY_` / `X_Z` の 2 桁ゴロ分布（`nr stats:goro` で再生成）
