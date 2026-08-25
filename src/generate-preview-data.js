@@ -6,6 +6,7 @@ import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
 import { WEIGHTS } from './scorer.js'
 import { classify } from './goro-extract.js'
 import { extractName, isKanaOnly, loadWords, toHiragana } from './words.js'
+import { buildYomiUse } from './yomi.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 // data.json は辞書本体 (私的連想) を含むため、公開 hosting (public/→dist) には出さず
@@ -233,7 +234,10 @@ for (const n of numbers) {
   }
 }
 
-const out = { numbers, cards, rules }
+// 2文字読み (拗音/長音) ごとの割当番号。読みドリルで「この読みを使う語がどれだけあるか」を出す。
+const yomiUse = buildYomiUse(numbers)
+
+const out = { numbers, cards, rules, yomiUse }
 mkdirSync(privateDir, { recursive: true })
 writeFileSync(join(privateDir, 'data.json'), JSON.stringify(out))
 console.log(

@@ -107,10 +107,16 @@ export const RulesDataSchema = z.object({
 
 export type RulesData = z.infer<typeof RulesDataSchema>
 
+/** かな2文字の読み → その読みを割り当てている番号 (build:data で集計) */
+export const YomiUseSchema = z.record(z.string(), z.array(z.string()))
+
+export type YomiUse = z.infer<typeof YomiUseSchema>
+
 export const AppDataSchema = z.object({
   numbers: z.array(NumberEntrySchema),
   cards: z.array(CardEntrySchema),
   rules: RulesDataSchema.optional(),
+  yomiUse: YomiUseSchema.optional(),
 })
 
 export type AppData = z.infer<typeof AppDataSchema>
