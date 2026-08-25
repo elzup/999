@@ -1,16 +1,20 @@
 import { useRef, useState } from 'preact/hooks'
 import { vibrate } from '../lib/haptics'
+import Numpad from './Numpad'
 import type { QuizSummary } from './ChoiceQuiz'
 import type { ReviewItem } from './ReviewPanel'
 
 // 一桁ずつキーで答えるクイズ。答えの桁数だけ入力すると自動採点。
 //   pad='hex' → 0-F の16キー(4x4グリッド) / pad='bin' → 0,1 の2キー
+//   pad='dec' → 共通テンキー(Numpad)を流用した 0-9
 // 答え長は question.answer の長さから決まる(hex1桁 / bin4桁 / bin8桁 など)。
 
 export type KeypadQuestion = {
   prompt: string
   answer: string
   promptClass?: string
+  /** 採点後に問題の下へ出す補足 (例: その読みの割当数) */
+  note?: string
 }
 
 type GradeGuard = { current: boolean }
@@ -45,9 +49,11 @@ export function buildKeypadSummary(
   }
 }
 
+export type KeypadPad = 'hex' | 'bin' | 'dec'
+
 type Props = {
   title: string
-  pad: 'hex' | 'bin'
+  pad: KeypadPad
   questions: KeypadQuestion[]
   onQuit: () => void
   onComplete: (s: QuizSummary) => void
@@ -227,68 +233,88 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
               正解: {q.answer}
             </div>
           )}
+          {revealed && q.note && (
+            <div
+              style={{
+                textAlign: 'center',
+                fontSize: 12,
+                color: 'var(--text2)',
+                marginBottom: 12,
+              }}
+            >
+              {q.note}
+            </div>
+          )}
         </div>
       </div>
 
       {/* キーパッド(画面下部に固定・親指で届く位置) */}
-      <div
-        style={{
-          flexShrink: 0,
-          background: 'var(--surface)',
-          borderTop: '1px solid var(--border)',
-          padding: '10px 12px 14px',
-        }}
-      >
+      {pad === 'dec' ? (
+        <Numpad
+          onTapDigit={(d) => press(String(d))}
+          onBackspace={backspace}
+          backspaceDisabled={revealed || typed.length === 0}
+        />
+      ) : (
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns:
-              pad === 'hex' ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
-            gap: 8,
-            width: '100%',
-            maxWidth: pad === 'hex' ? 420 : 320,
-            margin: '0 auto',
+            flexShrink: 0,
+            background: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
+            padding: '10px 12px 14px',
           }}
         >
-          {keys.map((k) => (
-            <button
-              key={k}
-              disabled={revealed}
-              onClick={() => press(k)}
-              style={{
-                padding: pad === 'hex' ? '18px 0' : '24px 0',
-                fontSize: 24,
-                fontWeight: 700,
-                fontFamily: 'ui-monospace, monospace',
-                borderRadius: 12,
-                border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-                background: 'var(--surface2, #1e212a)',
-                color: 'var(--text)',
-                cursor: revealed ? 'default' : 'pointer',
-              }}
-            >
-              {k}
-            </button>
-          ))}
-          <button
-            disabled={revealed || typed.length === 0}
-            onClick={backspace}
+          <div
             style={{
-              gridColumn: pad === 'hex' ? 'span 4' : 'span 2',
-              padding: '12px 0',
-              fontSize: 16,
-              fontWeight: 600,
-              borderRadius: 12,
-              border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-              background: 'transparent',
-              color: 'var(--text2)',
-              cursor: 'pointer',
+              display: 'grid',
+              gridTemplateColumns:
+                pad === 'hex' ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
+              gap: 8,
+              width: '100%',
+              maxWidth: pad === 'hex' ? 420 : 320,
+              margin: '0 auto',
             }}
           >
-            ⌫ 消す
-          </button>
+            {keys.map((k) => (
+              <button
+                key={k}
+                disabled={revealed}
+                onClick={() => press(k)}
+                style={{
+                  padding: pad === 'hex' ? '18px 0' : '24px 0',
+                  fontSize: 24,
+                  fontWeight: 700,
+                  fontFamily: 'ui-monospace, monospace',
+                  borderRadius: 12,
+                  border: '1.5px solid var(--line, rgba(255,255,255,.12))',
+                  background: 'var(--surface2, #1e212a)',
+                  color: 'var(--text)',
+                  cursor: revealed ? 'default' : 'pointer',
+                }}
+              >
+                {k}
+              </button>
+            ))}
+            <button
+              disabled={revealed || typed.length === 0}
+              onClick={backspace}
+              style={{
+                gridColumn: pad === 'hex' ? 'span 4' : 'span 2',
+                padding: '12px 0',
+                fontSize: 16,
+                fontWeight: 600,
+                borderRadius: 12,
+                border: '1.5px solid var(--line, rgba(255,255,255,.12))',
+                background: 'transparent',
+                color: 'var(--text2)',
+                cursor: 'pointer',
+              }}
+            >
+              ⌫ 消す
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
