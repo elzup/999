@@ -149,6 +149,8 @@ export function App() {
           numbers={data.numbers}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
+          rules={data.rules}
+          yomiUse={data.yomiUse}
         />
       )}
       {tab === 'card' && (

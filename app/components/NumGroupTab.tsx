@@ -1,20 +1,29 @@
 import { h } from 'preact'
 import { useState, useCallback } from 'preact/hooks'
-import type { NumberEntry } from '../data/schema'
+import type { NumberEntry, RulesData, YomiUse } from '../data/schema'
 import NumberTab from './NumberTab'
 import DigitTab from './DigitTab'
 import NumMapTab from './NumMapTab'
 import AssocTestTab from './AssocTestTab'
+import YomiTab from './YomiTab'
 
 type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
+  rules?: RulesData
+  yomiUse?: YomiUse
 }
 
-type SubTab = 'all' | 'd2' | 'map' | 'test'
+type SubTab = 'all' | 'd2' | 'yomi' | 'map' | 'test'
 
-function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
+function NumGroupTab({
+  numbers,
+  bookmarks,
+  onToggleBm,
+  rules,
+  yomiUse,
+}: Props) {
   const [sub, setSub] = useState<SubTab>('all')
 
   const handleSub = useCallback((s: SubTab) => {
@@ -45,6 +54,12 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
           2桁
         </button>
         <button
+          class={'sub-tab-btn' + (sub === 'yomi' ? ' active' : '')}
+          onClick={() => handleSub('yomi')}
+        >
+          読み
+        </button>
+        <button
           class={'sub-tab-btn' + (sub === 'map' ? ' active' : '')}
           onClick={() => handleSub('map')}
         >
@@ -71,6 +86,7 @@ function NumGroupTab({ numbers, bookmarks, onToggleBm }: Props) {
           onToggleBm={onToggleBm}
         />
       )}
+      {sub === 'yomi' && <YomiTab rules={rules} yomiUse={yomiUse} />}
       {sub === 'map' && (
         <NumMapTab
           numbers={numbers}
