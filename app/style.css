@@ -806,6 +806,9 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
+  /* width 指定がないと flex コンテナ (.test-footer) 内で auto margin により
+     shrink-to-fit になり、キーが文字幅まで縮んでしまう */
+  width: 100%;
   max-width: min(440px, 94vw);
   margin: 0 auto;
 }
@@ -823,6 +826,7 @@ body {
   border: 1px solid var(--border);
   font-family: monospace;
   user-select: none;
+  touch-action: manipulation;
 }
 .np-numkey.zero {
   grid-column: 2;
@@ -1231,13 +1235,28 @@ body {
   color: var(--text2);
   margin-right: 1px;
 }
-/* D3 numpad (0-6 only) */
+/* D3 numpad (0-6 only)。キー数が少ないぶん幅が余るので、共通テンキー
+   (.np-numpad) と同じ横幅まで広げてタップ領域を大きく取る。 */
 .d3-numpad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-  max-width: 280px;
+  gap: 6px;
+  width: 100%;
+  max-width: min(440px, 94vw);
   margin: 0 auto;
+}
+.d3-numpad .np-numkey {
+  /* 幅が広がるぶん aspect-ratio だと縦が伸びすぎるので固定高にする */
+  aspect-ratio: auto;
+  height: 68px;
+  font-size: 30px;
+}
+/* 横向き等の低い画面ではキーを詰める (グリッドの表示領域を残す) */
+@media (max-height: 600px) {
+  .d3-numpad .np-numkey {
+    height: 52px;
+    font-size: 26px;
+  }
 }
 
 /* Search */
