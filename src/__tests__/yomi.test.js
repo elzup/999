@@ -41,19 +41,25 @@ describe('buildYomiUse', () => {
       { num: '283', w1k: '', w2k: 'ちゃぶだい' },
       { num: '058', w1k: 'ふぁん', w2k: '' },
     ])
-    expect(use['ちゃ']).toEqual(['283', '428'])
-    expect(use['ふぁ']).toEqual(['058'])
+    expect(use['ちゃ']).toEqual([
+      { num: '283', slot: 'w2' },
+      { num: '428', slot: 'w1' },
+    ])
+    expect(use['ふぁ']).toEqual([{ num: '058', slot: 'w1' }])
   })
 
-  it('同じ番号は重複させない', () => {
+  it('同じ番号・同じスロットは重複させない (スロット違いは残す)', () => {
     const use = buildYomiUse([{ num: '288', w1k: 'ちゃちゃ', w2k: 'ちゃ' }])
-    expect(use['ちゃ']).toEqual(['288'])
+    expect(use['ちゃ']).toEqual([
+      { num: '288', slot: 'w1' },
+      { num: '288', slot: 'w2' },
+    ])
   })
 
   it('全ての読みをキーに持ち、未使用は空配列', () => {
     const use = buildYomiUse([])
     expect(Object.keys(use)).toHaveLength(TWO_CHAR_YOMI.length)
-    expect(Object.values(use).every((nums) => nums.length === 0)).toBe(true)
+    expect(Object.values(use).every((hits) => hits.length === 0)).toBe(true)
   })
 
   it('表に無いかなを含む語は飛ばす (throw しない)', () => {

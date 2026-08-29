@@ -1,14 +1,17 @@
 import { useState, useMemo, useCallback } from 'preact/hooks'
-import type { RulesData, YomiUse } from '../data/schema'
+import type { NumberEntry, RulesData, YomiUse } from '../data/schema'
 import KeypadQuiz from './KeypadQuiz'
-import type { QuizSummary } from './ChoiceQuiz'
+import ChoiceQuiz, { type QuizSummary } from './ChoiceQuiz'
 import ReviewPanel from './ReviewPanel'
 import RecordPanel from './RecordPanel'
 import TestFeatureList from './TestFeatureList'
 import { useQuizRecords } from '../lib/useQuizRecords'
+import { makeRng } from '../lib/kukuQuiz'
 import {
   buildYomiItems,
   buildYomiQuestions,
+  buildYomiWordQuestions,
+  yomiWordPool,
   filterScope,
   usageNote,
   YOMI_COUNT_OPTIONS,
@@ -20,48 +23,84 @@ import {
 } from '../lib/yomiDrill'
 
 type Props = {
+  numbers: NumberEntry[]
   rules?: RulesData
   yomiUse?: YomiUse
 }
 
-const RECORD_KEY = 'yomi_2char'
+/** 出題の向き。digit = 読み→数字 (テンキー) / word = 番号→語 (4択) */
+type QuizKind = 'digit' | 'word'
+
+const RECORD_KEY: Record<QuizKind, string> = {
+  digit: 'yomi_2char',
+  word: 'yomi_word4',
+}
+
 const TITLE = '2文字読み'
 
-function YomiTab({ rules, yomiUse }: Props) {
+const QUIZ_TITLE: Record<QuizKind, string> = {
+  digit: `${TITLE} → 数字`,
+  word: `番号 → 語 (${TITLE})`,
+}
+
+type Run =
+  | { kind: 'digit'; id: number; qs: ReturnType<typeof buildYomiQuestions> }
+  | { kind: 'word'; id: number; qs: ReturnType<typeof buildYomiWordQuestions> }
+
+function YomiTab({ numbers, rules, yomiUse }: Props) {
   const [scope, setScope] = useState<YomiScope>('all')
   const [count, setCount] = useState<number>(0)
   const [opened, setOpened] = useState<string | null>(null)
-  const [run, setRun] = useState<{
-    id: number
-    qs: ReturnType<typeof buildYomiQuestions>
-  } | null>(null)
+  const [run, setRun] = useState<Run | null>(null)
   const [summary, setSummary] = useState<QuizSummary | null>(null)
-  const [showRecords, setShowRecords] = useState(false)
-  const records = useQuizRecords(RECORD_KEY)
+  const [showRecords, setShowRecords] = useState<QuizKind | null>(null)
+  const digitRecords = useQuizRecords(RECORD_KEY.digit)
+  const wordRecords = useQuizRecords(RECORD_KEY.word)
 
   const items = useMemo(() => buildYomiItems(rules, yomiUse), [rules, yomiUse])
   const scoped = useMemo(() => filterScope(items, scope), [items, scope])
+  // 範囲内の読みを使う語。空なら 4択は成立しない (選択肢が作れない)。
+  const wordPool = useMemo(
+    () => yomiWordPool(numbers, scoped),
+    [numbers, scoped]
+  )
 
-  const start = useCallback(() => {
+  const startDigit = useCallback(() => {
     setSummary(null)
     setRun((prev) => ({
+      kind: 'digit',
       id: (prev?.id ?? 0) + 1,
       qs: buildYomiQuestions(scoped, count),
     }))
   }, [scoped, count])
 
+  const startWord = useCallback(() => {
+    const qs = buildYomiWordQuestions(wordPool, count, makeRng(Date.now()))
+    if (qs.length === 0) return
+    setSummary(null)
+    setRun((prev) => ({ kind: 'word', id: (prev?.id ?? 0) + 1, qs }))
+  }, [wordPool, count])
+
   const onComplete = useCallback(
     (s: QuizSummary) => {
       setSummary(s)
-      records.addRecord(s)
+      if (!run) return
+      const target = run.kind === 'digit' ? digitRecords : wordRecords
+      target.addRecord(s)
     },
-    [records]
+    [run, digitRecords, wordRecords]
   )
+
+  const recordsOf = (kind: QuizKind) =>
+    kind === 'digit' ? digitRecords : wordRecords
+  // 出題数チップは「全部 (0)」を範囲の全件として扱う。
+  const askCount = (poolSize: number) =>
+    count === 0 ? poolSize : Math.min(count, poolSize)
 
   if (run && summary) {
     return (
       <ReviewPanel
-        title={TITLE}
+        title={QUIZ_TITLE[run.kind]}
         score={summary.score}
         total={summary.total}
         time={summary.time}
@@ -74,11 +113,23 @@ function YomiTab({ rules, yomiUse }: Props) {
     )
   }
 
+  if (run && run.kind === 'word') {
+    return (
+      <ChoiceQuiz
+        key={run.id}
+        title={QUIZ_TITLE.word}
+        questions={run.qs}
+        onQuit={() => setRun(null)}
+        onComplete={onComplete}
+      />
+    )
+  }
+
   if (run) {
     return (
       <KeypadQuiz
         key={run.id}
-        title={`${TITLE} → 数字`}
+        title={QUIZ_TITLE.digit}
         pad="dec"
         questions={run.qs}
         onQuit={() => setRun(null)}
@@ -103,11 +154,11 @@ function YomiTab({ rules, yomiUse }: Props) {
     <div class="content">
       {showRecords && (
         <RecordPanel
-          title={TITLE}
-          records={records.records}
-          onDelete={records.deleteRecord}
-          onClear={records.clearRecords}
-          onClose={() => setShowRecords(false)}
+          title={QUIZ_TITLE[showRecords]}
+          records={recordsOf(showRecords).records}
+          onDelete={recordsOf(showRecords).deleteRecord}
+          onClear={recordsOf(showRecords).clearRecords}
+          onClose={() => setShowRecords(null)}
         />
       )}
 
@@ -134,14 +185,21 @@ function YomiTab({ rules, yomiUse }: Props) {
         features={[
           {
             id: 'yomi2digit',
-            title: `読み → 数字 (${
-              count === 0 ? scoped.length : Math.min(count, scoped.length)
-            }問)`,
+            title: `読み → 数字 (${askCount(scoped.length)}問)`,
             inputMethod: 'number',
-            hasRecords: records.records.length > 0,
-            lastDone: Boolean(records.last),
-            onStart: start,
-            onShowRecords: () => setShowRecords(true),
+            hasRecords: digitRecords.records.length > 0,
+            lastDone: Boolean(digitRecords.last),
+            onStart: startDigit,
+            onShowRecords: () => setShowRecords('digit'),
+          },
+          {
+            id: 'yomiWord4',
+            title: `番号 → 語 4択 (${askCount(wordPool.length)}問)`,
+            inputMethod: 'choice',
+            hasRecords: wordRecords.records.length > 0,
+            lastDone: Boolean(wordRecords.last),
+            onStart: startWord,
+            onShowRecords: () => setShowRecords('word'),
           },
         ]}
       />

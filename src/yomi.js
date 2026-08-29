@@ -42,15 +42,20 @@ export function toYomiKey(token) {
 }
 
 /**
- * 各2文字読みを実際に割り当てている番号を集める。
+ * 各2文字読みを実際に割り当てている「番号 × スロット」を集める。
  * 対象は本命語 (w1k) と対抗語 (w2k) のみ。予備語 (w1_2/w2_2) は編集途中の候補なので数えない。
- * @returns {Record<string, string[]>} かな → 番号 (重複なし・昇順)
+ *
+ * 番号だけでなく slot も残すのが要点。キーは濁点を畳んだ表キー (びょ → ひょ) なので、
+ * 受け手がかなの部分一致でスロットを当て直すことはできない。番号だけ渡すと
+ * 773 (本命 ななみん / 対抗 にゅさ) のように、読みを含まない語を出題してしまう。
+ * @returns {Record<string, {num: string, slot: 'w1'|'w2'}[]>} かな → 割当先 (重複なし・番号昇順)
  */
 export function buildYomiUse(entries) {
-  const use = new Map(TWO_CHAR_YOMI.map((y) => [y.kana, new Set()]))
+  const use = new Map(TWO_CHAR_YOMI.map((y) => [y.kana, new Map()]))
 
   for (const entry of entries) {
-    for (const kana of [entry.w1k, entry.w2k]) {
+    for (const slot of ['w1', 'w2']) {
+      const kana = entry[slot + 'k']
       if (!kana) continue
       let tokens
       try {
@@ -61,12 +66,18 @@ export function buildYomiUse(entries) {
       }
       for (const token of tokens) {
         const key = toYomiKey(token.kana)
-        if (key) use.get(key).add(entry.num)
+        if (key)
+          use.get(key).set(entry.num + ':' + slot, { num: entry.num, slot })
       }
     }
   }
 
   return Object.fromEntries(
-    [...use].map(([kana, nums]) => [kana, [...nums].sort()])
+    [...use].map(([kana, hits]) => [
+      kana,
+      [...hits.values()].sort(
+        (a, b) => a.num.localeCompare(b.num) || a.slot.localeCompare(b.slot)
+      ),
+    ])
   )
 }

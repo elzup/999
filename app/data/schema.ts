@@ -107,8 +107,16 @@ export const RulesDataSchema = z.object({
 
 export type RulesData = z.infer<typeof RulesDataSchema>
 
-/** かな2文字の読み → その読みを割り当てている番号 (build:data で集計) */
-export const YomiUseSchema = z.record(z.string(), z.array(z.string()))
+/** かな2文字の読み → 割当先 (build:data で集計)。
+ *  2文字読みの割当先。slot = 本命語(w1) / 対抗語(w2) のどちらが根拠か */
+export const YomiUseHitSchema = z.object({
+  num: z.string(),
+  slot: z.enum(['w1', 'w2']),
+})
+
+export const YomiUseSchema = z.record(z.string(), z.array(YomiUseHitSchema))
+
+export type YomiUseHit = z.infer<typeof YomiUseHitSchema>
 
 export type YomiUse = z.infer<typeof YomiUseSchema>
 

@@ -86,7 +86,9 @@ function NumGroupTab({
           onToggleBm={onToggleBm}
         />
       )}
-      {sub === 'yomi' && <YomiTab rules={rules} yomiUse={yomiUse} />}
+      {sub === 'yomi' && (
+        <YomiTab numbers={numbers} rules={rules} yomiUse={yomiUse} />
+      )}
       {sub === 'map' && (
         <NumMapTab
           numbers={numbers}

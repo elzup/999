@@ -1,12 +1,18 @@
 import { describe, it, expect } from 'vitest'
-import type { RulesData } from '../data/schema'
+import type { NumberEntry, RulesData } from '../data/schema'
 import {
   buildYomiItems,
   buildYomiQuestions,
+  buildYomiWordQuestions,
+  yomiWordPool,
   filterScope,
   shuffle,
   usageNote,
 } from '../lib/yomiDrill'
+
+/** かな → 割当先。テストでは既定で本命語 (w1) を根拠にする */
+const use = (...nums: string[]) =>
+  nums.map((num) => ({ num, slot: 'w1' as const }))
 
 const emptyMatrix = () =>
   Array.from({ length: 10 }, () =>
@@ -24,7 +30,7 @@ function makeRules(): RulesData {
 
 describe('buildYomiItems', () => {
   it('かな2文字だけを数字付きで取り出す', () => {
-    const items = buildYomiItems(makeRules(), { ちゃ: ['428', '283'] })
+    const items = buildYomiItems(makeRules(), { ちゃ: use('428', '283') })
     expect(items.map((i) => i.kana)).toEqual(['ちゃ', 'つぁ', 'かー'])
     expect(items[0]).toMatchObject({
       digits: '28',
@@ -61,7 +67,7 @@ describe('shuffle', () => {
 })
 
 describe('buildYomiQuestions', () => {
-  const items = buildYomiItems(makeRules(), { ちゃ: ['428'] })
+  const items = buildYomiItems(makeRules(), { ちゃ: use('428') })
 
   it('全部モードは重複なしで全件出す', () => {
     const qs = buildYomiQuestions(items, 0)
@@ -90,13 +96,102 @@ describe('buildYomiQuestions', () => {
 describe('usageNote', () => {
   it('未使用は 0 と明示する', () => {
     expect(
-      usageNote({ kana: 'かー', digits: '98', kind: 'long', nums: [] })
+      usageNote({
+        kana: 'かー',
+        digits: '98',
+        kind: 'long',
+        uses: [],
+        nums: [],
+      })
     ).toContain('割当 0')
   })
 
   it('7件以上は先頭6件 + 残数', () => {
     const nums = ['001', '002', '003', '004', '005', '006', '007', '008']
-    const note = usageNote({ kana: 'しゃ', digits: '48', kind: 'youon', nums })
+    const note = usageNote({
+      kana: 'しゃ',
+      digits: '48',
+      kind: 'youon',
+      uses: use(...nums),
+      nums,
+    })
     expect(note).toBe('割当 8 番号 · 001 002 003 004 005 006 +2')
+  })
+})
+
+const entry = (num: string, w1: string, w2 = '') =>
+  ({ num, w1, w1k: '', w2, w2k: '' } as unknown as NumberEntry)
+
+describe('yomiWordPool', () => {
+  const numbers = [
+    entry('428', 'チャンピオン'),
+    entry('283', 'ちゃぶ台'),
+    entry('999', 'ケーキ'),
+  ]
+  const items = buildYomiItems(makeRules(), { ちゃ: use('428', '283') })
+
+  it('範囲内の読みを使う番号だけを集める', () => {
+    expect(yomiWordPool(numbers, items).map((p) => p.num)).toEqual([
+      '428',
+      '283',
+    ])
+  })
+
+  it('根拠が対抗語なら対抗語を出す (773 ななみん / にゅさ の取り違え)', () => {
+    const items773 = buildYomiItems(makeRules(), {
+      ちゃ: [{ num: '773', slot: 'w2' as const }],
+    })
+    const numbers773 = [entry('773', 'ななみん', '入札')]
+    expect(yomiWordPool(numbers773, items773)).toEqual([
+      { num: '773', word: '入札' },
+    ])
+  })
+
+  it('タグと末尾ラベルは落とす', () => {
+    const tagged = [entry('428', 'チャンピオン -j#g')]
+    expect(yomiWordPool(tagged, items)[0].word).toBe('チャンピオン')
+  })
+
+  it('語を持たない番号は落とす (4択の選択肢にできないため)', () => {
+    const noWord = [entry('428', ''), entry('283', 'ちゃぶ台')]
+    expect(yomiWordPool(noWord, items).map((p) => p.num)).toEqual(['283'])
+  })
+
+  it('scope で絞った items を渡せば範囲も狭まる', () => {
+    const long = filterScope(items, 'long')
+    expect(yomiWordPool(numbers, long)).toEqual([])
+  })
+})
+
+describe('buildYomiWordQuestions', () => {
+  const pool = [
+    { num: '428', word: 'チャンピオン' },
+    { num: '283', word: 'ちゃぶ台' },
+    { num: '288', word: 'ちゃちゃ' },
+  ]
+
+  it('番号を出題し、正解語が選択肢に入る', () => {
+    const qs = buildYomiWordQuestions(pool, 0, () => 0)
+    expect(qs).toHaveLength(3)
+    for (const q of qs) {
+      expect(q.prompt).toMatch(/^\d{3}$/)
+      expect(q.choices).toContain(q.answer)
+      expect(new Set(q.choices).size).toBe(q.choices.length)
+    }
+  })
+
+  it('誤答は同じ範囲の語からしか採らない', () => {
+    const words = new Set(pool.map((p) => p.word))
+    for (const q of buildYomiWordQuestions(pool, 0, () => 0)) {
+      expect(q.choices.every((c) => words.has(c))).toBe(true)
+    }
+  })
+
+  it('count を指定すればその問数に切る', () => {
+    expect(buildYomiWordQuestions(pool, 2, () => 0)).toHaveLength(2)
+  })
+
+  it('pool が空なら 0 問 (テストを開始させない)', () => {
+    expect(buildYomiWordQuestions([], 0, () => 0)).toEqual([])
   })
 })

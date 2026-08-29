@@ -1,13 +1,22 @@
-import type { RulesData, YomiUse } from '../data/schema'
+import type {
+  NumberEntry,
+  RulesData,
+  YomiUse,
+  YomiUseHit,
+} from '../data/schema'
 import type { KeypadQuestion } from '../components/KeypadQuiz'
+import type { ChoiceQuestion } from '../components/ChoiceQuiz'
+import { buildAssocQuiz, type AssocItem } from './assocQuiz'
+import { candidateAt } from './choice'
 
 export type YomiKind = 'youon' | 'long'
 
-/** かな2文字の読み1件。nums = その読みを割り当てている番号 */
+/** かな2文字の読み1件。uses = 割当先 (番号 × スロット)、nums = その番号 (重複なし) */
 export type YomiItem = {
   kana: string
   digits: string
   kind: YomiKind
+  uses: YomiUseHit[]
   nums: string[]
 }
 
@@ -29,12 +38,16 @@ function fromMatrix(
 ): YomiItem[] {
   return matrix.flatMap((row, r) =>
     row.flatMap((kanas, c) =>
-      kanas.filter(isTwoChar).map((kana) => ({
-        kana,
-        digits: `${r}${c}`,
-        kind,
-        nums: yomiUse?.[kana] ?? [],
-      }))
+      kanas.filter(isTwoChar).map((kana) => {
+        const uses = yomiUse?.[kana] ?? []
+        return {
+          kana,
+          digits: `${r}${c}`,
+          kind,
+          uses,
+          nums: [...new Set(uses.map((use) => use.num))],
+        }
+      })
     )
   )
 }
@@ -100,4 +113,55 @@ export function buildYomiQuestions(
     answer: item.digits,
     note: usageNote(item),
   }))
+}
+
+/** scope 内の読みを 1 つでも使っている番号の集合 */
+export function scopedNums(items: readonly YomiItem[]): Set<string> {
+  return new Set(items.flatMap((item) => item.nums))
+}
+
+/**
+ * 語からタグ (#akn) と末尾ラベル (-j) を落とす。4択の選択肢に編集用の記号が
+ * 混ざると、語そのものより記号で見分けられてしまう。
+ */
+const quizWord = (word: string) =>
+  word
+    .split('#')[0]
+    .replace(/\s+-\w+$/, '')
+    .trim()
+
+/**
+ * 範囲内の読みを使う番号を (num, word) に落とす。
+ * word は yomiUse が記録している根拠スロットの語。番号だけで先頭候補を採ると、
+ * 773 (本命 ななみん / 対抗 にゅさ=入札) のように読みを含まない語が出てしまう。
+ * 同じ番号が複数スロットで当たる場合は最初の 1 つだけ出題する。
+ */
+export function yomiWordPool(
+  entries: readonly NumberEntry[],
+  items: readonly YomiItem[]
+): AssocItem[] {
+  const slotsByNum = new Map<string, YomiUseHit['slot'][]>()
+  for (const item of items) {
+    for (const use of item.uses) {
+      slotsByNum.set(use.num, [...(slotsByNum.get(use.num) ?? []), use.slot])
+    }
+  }
+  return entries.flatMap((entry) => {
+    const slots = slotsByNum.get(entry.num)
+    if (!slots) return []
+    for (const slot of slots) {
+      const word = quizWord(candidateAt(entry, slot)?.word ?? '')
+      if (word) return [{ num: entry.num, word }]
+    }
+    return []
+  })
+}
+
+/** 番号 → 語 の4択。count が 0 なら pool の全件。 */
+export function buildYomiWordQuestions(
+  pool: readonly AssocItem[],
+  count: number,
+  rng: () => number = Math.random
+): ChoiceQuestion[] {
+  return buildAssocQuiz(pool, count > 0 ? count : pool.length, rng)
 }
