@@ -125,6 +125,9 @@ export const AppDataSchema = z.object({
   cards: z.array(CardEntrySchema),
   rules: RulesDataSchema.optional(),
   yomiUse: YomiUseSchema.optional(),
+  // 私的データ。公開バンドルではなくこの payload で届く
+  ff: z.array(z.record(z.string(), z.unknown())).optional(),
+  kuku: z.array(z.record(z.string(), z.unknown())).optional(),
 })
 
 export type AppData = z.infer<typeof AppDataSchema>

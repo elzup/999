@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'preact/hooks'
-import kukuData from '../data/kuku.json'
 import TestFeatureList from './TestFeatureList'
 import ChoiceQuiz, { type ChoiceQuestion, type QuizSummary } from './ChoiceQuiz'
 import RecordPanel from './RecordPanel'
@@ -10,13 +9,13 @@ import {
   buildQuestion,
   shuffle,
   makeRng,
+  getKukuItems,
   type KukuItem,
 } from '../lib/kukuQuiz'
 import { loadKukuAbScores, saveKukuAbScores } from '../data/storage'
 
 const RECORDS_KEY = 'kuku999'
 
-const ITEMS = kukuData as KukuItem[]
 const QUIZ_LEN = 10
 
 // ABxC の AB (先頭の2桁) を取り出す。AB ごとの練習/スコアに使う。
@@ -24,22 +23,22 @@ const abOf = (it: KukuItem) => it.expr.split('x')[0]
 
 const AB_LIST: string[] = (() => {
   const seen = new Set<string>()
-  for (const it of ITEMS) seen.add(abOf(it))
+  for (const it of getKukuItems()) seen.add(abOf(it))
   return [...seen].sort((a, b) => Number(a) - Number(b))
 })()
 
 const AB_COUNTS: Record<string, number> = (() => {
   const m: Record<string, number> = {}
-  for (const it of ITEMS) m[abOf(it)] = (m[abOf(it)] || 0) + 1
+  for (const it of getKukuItems()) m[abOf(it)] = (m[abOf(it)] || 0) + 1
   return m
 })()
 
 /** 指定 AB の全 C を出題。誤答は全体から採って選択肢に変化をつける。 */
 function buildAbQuestions(ab: string): ChoiceQuestion[] {
-  const pool = ITEMS.filter((it) => abOf(it) === ab)
+  const pool = getKukuItems().filter((it) => abOf(it) === ab)
   const rng = makeRng(Date.now())
   return shuffle(pool, rng).map((item) => {
-    const q = buildQuestion(item, ITEMS, rng)
+    const q = buildQuestion(item, getKukuItems(), rng)
     return { prompt: q.left, answer: q.answer, choices: q.choices }
   })
 }
@@ -70,7 +69,7 @@ function chunk<T>(arr: T[], size: number) {
 
 /** 左辺読みクイズを組んで ChoiceQuiz 用の設問に変換する */
 function buildKukuQuestions(tier: TierKey): ChoiceQuestion[] {
-  const pool = ITEMS.filter((it) => it.tier === tier)
+  const pool = getKukuItems().filter((it) => it.tier === tier)
   return buildQuiz(pool, QUIZ_LEN, makeRng(Date.now())).map((q) => ({
     prompt: q.left,
     answer: q.answer,
@@ -88,7 +87,7 @@ function KukuTab() {
   const [showRecords, setShowRecords] = useState(false)
   const [abScores, setAbScores] = useState(loadKukuAbScores)
   const rec = useQuizRecords(RECORDS_KEY)
-  const items = ITEMS.filter((it) => it.tier === tier)
+  const items = getKukuItems().filter((it) => it.tier === tier)
   const active = TIERS.find((t) => t.key === tier)!
 
   const startQuiz = useCallback(() => {
@@ -156,7 +155,9 @@ function KukuTab() {
     return (
       <ChoiceQuiz
         key={run.id}
-        title={run.ab ? `九九 ${run.ab}の段` : `九九 読みテスト（${active.label}）`}
+        title={
+          run.ab ? `九九 ${run.ab}の段` : `九九 読みテスト（${active.label}）`
+        }
         questions={run.questions}
         promptClass="kuku-quiz-face"
         onQuit={() => setRun(null)}
@@ -271,16 +272,12 @@ function KukuTab() {
                 (ratio < 0
                   ? ''
                   : ratio >= 0.9
-                    ? ' ok'
-                    : ratio >= 0.6
-                      ? ' mid'
-                      : ' low')
+                  ? ' ok'
+                  : ratio >= 0.6
+                  ? ' mid'
+                  : ' low')
               return (
-                <button
-                  key={ab}
-                  class={cls}
-                  onClick={() => startAbQuiz(ab)}
-                >
+                <button key={ab} class={cls} onClick={() => startAbQuiz(ab)}>
                   <span class="kuku-ab-num">{ab}</span>
                   <span class="kuku-ab-score">
                     {sc ? `${sc.best}/${sc.total}` : `${AB_COUNTS[ab]}問`}

@@ -1,15 +1,27 @@
-import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { beforeAll, describe, expect, it } from 'vitest'
 import {
   FF_DIRS,
-  FF_ROWS,
   buildFfQuestions,
   buildNibble,
+  getFfRows,
   isValidFfRow,
+  setFfRows,
+  type FfRow,
 } from '../lib/ffQuiz'
+
+// 本番はデータを認証付き payload から注入する。テストでは同じ注入口を使って
+// private/ff.json を読む (公開バンドルには入っていないため import はできない)
+const FF_ROWS: FfRow[] = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'private/ff.json'), 'utf8')
+)
+
+beforeAll(() => setFfRows(FF_ROWS))
 
 describe('FF data', () => {
   it('REQ-FF-001: contains every 00-FF value exactly once', () => {
-    expect(FF_ROWS).toHaveLength(256)
+    expect(getFfRows()).toHaveLength(256)
     expect(new Set(FF_ROWS.map((row) => row.hex)).size).toBe(256)
 
     FF_ROWS.forEach((row, value) => {

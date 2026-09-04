@@ -10,7 +10,7 @@ import { loadRep, loadWordsTsv } from '../rep-store.js'
 
 const lyricsDir = resolve(process.cwd(), 'lyrics')
 const ffRows = JSON.parse(
-  readFileSync(resolve(process.cwd(), 'app/data/ff.json'), 'utf8')
+  readFileSync(resolve(process.cwd(), 'private/ff.json'), 'utf8')
 )
 
 function readingsIn(file) {

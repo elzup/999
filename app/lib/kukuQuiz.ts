@@ -104,3 +104,13 @@ export function makeRng(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
+
+// 九九データも私的データ。静的 import して公開バンドルに焼くと未認証で
+// 落とせてしまうので、認証付き payload (/api/app/data) から注入する。
+let kukuItems: KukuItem[] = []
+
+export function setKukuItems(items: KukuItem[]) {
+  kukuItems = items
+}
+
+export const getKukuItems = (): KukuItem[] => kukuItems

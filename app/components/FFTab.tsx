@@ -13,7 +13,7 @@ import {
 import { useQuizRecords } from '../lib/useQuizRecords'
 import { loadSubTab, saveSubTab } from '../data/storage'
 import {
-  FF_ROWS,
+  getFfRows,
   FF_DIRS,
   buildFfQuestions,
   ffDirTitle,
@@ -300,7 +300,7 @@ function FFTab() {
 
       {sub === 'ref' && (
         <div class="content" style={{ padding: '8px 12px', overflow: 'auto' }}>
-          {FF_ROWS.map((r) => (
+          {getFfRows().map((r) => (
             <div
               key={r.hex}
               style={{
@@ -334,7 +334,7 @@ function FFTab() {
 
       {sub === 'bin' && (
         <div class="content" style={{ padding: '8px 12px', overflow: 'auto' }}>
-          {FF_ROWS.map((r) => (
+          {getFfRows().map((r) => (
             <div
               key={r.hex}
               style={{

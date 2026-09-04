@@ -1,5 +1,4 @@
 import type { ChoiceQuestion } from '../components/ChoiceQuiz'
-import ffJson from '../data/ff.json'
 
 export type FfRow = {
   hex: string
@@ -11,7 +10,16 @@ export type FfRow = {
   read: string
 }
 
-export const FF_ROWS = ffJson as FfRow[]
+// 語データは静的 import しない。私的データなので公開バンドルに焼くと
+// 未認証で誰でも落とせてしまう。認証付き payload (/api/app/data) が届いた
+// 時点で setFfRows で注入する。
+let ffRows: FfRow[] = []
+
+export function setFfRows(rows: FfRow[]) {
+  ffRows = rows
+}
+
+export const getFfRows = (): FfRow[] => ffRows
 
 // テストの「語」面: phonetic(いーごひよこ)ではなく語/かな。漢字語があればそれを優先。
 const readLabel = (r: FfRow) => r.word || r.kana
@@ -25,14 +33,19 @@ export const isValidFfRow = (row: FfRow) =>
     MISSING_MARKER.test(value)
   )
 
-const VALID = FF_ROWS.filter(isValidFfRow)
-const READ_LABEL_COUNTS = VALID.reduce<Map<string, number>>((counts, row) => {
-  const label = readLabel(row)
-  return new Map(counts).set(label, (counts.get(label) ?? 0) + 1)
-}, new Map())
-const UNIQUE_READ_ROWS = VALID.filter(
-  (row) => READ_LABEL_COUNTS.get(readLabel(row)) === 1
-)
+// 語データが注入されるまで中身が決まらないので、module 定数ではなく都度計算する。
+// 256 行なので出題のたびに数えても問題にならない
+const validRows = () => ffRows.filter(isValidFfRow)
+
+/** 読み面が 1 対 1 の行だけ。read2hex は答えが割れる語を出すと採点できない */
+const uniqueReadRows = (valid: FfRow[]) => {
+  const counts = valid.reduce<Map<string, number>>(
+    (acc, row) =>
+      new Map(acc).set(readLabel(row), (acc.get(readLabel(row)) ?? 0) + 1),
+    new Map()
+  )
+  return valid.filter((row) => counts.get(readLabel(row)) === 1)
+}
 
 export type FfDir = 'hex2read' | 'read2hex' | 'bin2hex' | 'hex2bin'
 
@@ -110,10 +123,11 @@ export function buildFfQuestions(
   count = FF_QUIZ_LEN
 ): ChoiceQuestion[] {
   const cfg = DIR[dir]
-  const pool = [...new Set(VALID.map(cfg.pool))]
+  const valid = validRows()
+  const pool = [...new Set(valid.map(cfg.pool))]
   const n = Math.min(cfg.choices, pool.length)
   const questionCount = normalizeQuestionCount(count)
-  const rows = dir === 'read2hex' ? UNIQUE_READ_ROWS : VALID
+  const rows = dir === 'read2hex' ? uniqueReadRows(valid) : valid
   return shuffle(rows)
     .slice(0, questionCount)
     .map((r) => {

@@ -237,11 +237,18 @@ for (const n of numbers) {
 // 2文字読み (拗音/長音) ごとの割当番号。読みドリルで「この読みを使う語がどれだけあるか」を出す。
 const yomiUse = buildYomiUse(numbers)
 
-const out = { numbers, cards, rules, yomiUse }
+// ff / kuku も私的データ。公開バンドルに焼かず、認証付き Function が返す
+// この payload に載せる (未認証では 1 バイトも出さない)
+const ff = JSON.parse(readFileSync(join(privateDir, 'ff.json'), 'utf8'))
+const kuku = JSON.parse(readFileSync(join(privateDir, 'kuku.json'), 'utf8'))
+
+const out = { numbers, cards, rules, yomiUse, ff, kuku }
 mkdirSync(privateDir, { recursive: true })
 writeFileSync(join(privateDir, 'data.json'), JSON.stringify(out))
 console.log(
-  `Generated private/data.json (${numbers.length} numbers, ${
-    cards.length
-  } cards, rules: ${Object.keys(rules.singleByDigit).length} digits)`
+  `Generated private/data.json (${numbers.length} numbers, ff ${
+    ff.length
+  }, kuku ${kuku.length}, ${cards.length} cards, rules: ${
+    Object.keys(rules.singleByDigit).length
+  } digits)`
 )
