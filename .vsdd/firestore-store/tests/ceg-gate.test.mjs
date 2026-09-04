@@ -26,15 +26,19 @@ describe('firestore-store coherence graph', () => {
     const result = runCeg('graph')
 
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
-    expect(result.stdout).toContain('# CEG (8 nodes / 12 edges)')
+    expect(result.stdout).toContain('# CEG (12 nodes / 21 edges)')
     for (const id of [
       'design:firestore-schema',
       'design:derived-on-write',
       'design:read-bundles',
+      'design:sheet-projection',
       'spec:sheet-to-db-sync',
       'spec:rep-migration',
       'spec:app-data-source',
       'spec:console-writes',
+      'spec:number-api',
+      'spec:source-of-truth-switch',
+      'spec:number-detail-view',
       'review:adversary-r1',
     ]) {
       expect(result.stdout).toContain(id)
@@ -53,6 +57,14 @@ describe('firestore-store coherence graph', () => {
     // アプリの取得経路はチャンクが出来てから差し替える
     expect(order.indexOf('spec:app-data-source')).toBeGreaterThan(
       order.indexOf('design:read-bundles')
+    )
+    // 統合ビューは書き込み口が開いてから作る。口が無いと画面から保存できない
+    expect(order.indexOf('spec:number-detail-view')).toBeGreaterThan(
+      order.indexOf('spec:number-api')
+    )
+    // 正本を切り替える前に投影を決める。決めずに切り替えるとシートが取り残される
+    expect(order.indexOf('spec:source-of-truth-switch')).toBeGreaterThan(
+      order.indexOf('design:sheet-projection')
     )
   })
 })

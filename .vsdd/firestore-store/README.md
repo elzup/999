@@ -2,15 +2,30 @@
 
 現状の問題（この作業中に実際に踏んだもの）と、第 1 段階で何を解決するか。
 
-| 問題 | 現状 | 第1段階後 |
-| --- | --- | --- |
-| `word-rep.json` の喪失 | ローカル 1 箇所のみ。git 操作で数件失い復元不可だった | DB にあり、写しが増える |
-| 変更にビルドが要る | 語を 1 つ直すたび `sync:all` → `deploy` | DB 直読みで再デプロイ不要 |
-| 派生値の作り直し忘れ | `lyrics` / シートの `rankey` が何度も古くなった | 書き込みトリガで自動再計算 |
-| `push` が列を消す | 21 列で全上書きし `rankey`/`check` が消える | 同期を片方向にし、DB 側項目を保持 |
+| 問題                   | 現状                                                  | 第 1 段階後                       |
+| ---------------------- | ----------------------------------------------------- | --------------------------------- |
+| `word-rep.json` の喪失 | ローカル 1 箇所のみ。git 操作で数件失い復元不可だった | DB にあり、写しが増える           |
+| 変更にビルドが要る     | 語を 1 つ直すたび `sync:all` → `deploy`               | DB 直読みで再デプロイ不要         |
+| 派生値の作り直し忘れ   | `lyrics` / シートの `rankey` が何度も古くなった       | 書き込みトリガで自動再計算        |
+| `push` が列を消す      | 21 列で全上書きし `rankey`/`check` が消える           | 同期を片方向にし、DB 側項目を保持 |
 
 **第 1 段階のスコープ外**（第 2 段階以降）:
 DB → シートの書き戻し、競合解決、削除の伝播、ローカル JSON の廃止。
+
+## 第 2 段階 — Firestore を単一ソースにする（2026-08-28 決定）
+
+第 1 段階を終えた時点で **Firestore はどの項目についても正本ではなく、全部が写し**
+だった。この状態で編集の入り口を増やすと、写しに書いた分が次の `db:push` で消える。
+そこで正本を Firestore に移し、シートは投影で追随する副本にする。
+
+| spec                          | 役割                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `design:sheet-projection`     | DB → シートの投影。式セルと派生列に触れず、衝突は書かずに報告する                       |
+| `spec:number-api`             | アプリからの `numbers/{num}` 読み書き。Auth 導入を待たず既存トークンで Functions を挟む |
+| `spec:source-of-truth-switch` | 正本の切替を項目単位で行う。切替済み項目は旧経路からの投入を止める                      |
+| `spec:number-detail-view`     | 番号単位の統合ビュー。`docs/num-actions.md` の A / B / C / E / F                        |
+
+`word-rep.json` などの旧正本は削除せず、読み取り専用のバックアップとして残す。
 
 ## 実装順（`ceg.mjs topo` の出力そのまま）
 
@@ -21,6 +36,13 @@ DB → シートの書き戻し、競合解決、削除の伝播、ローカル 
 5. `spec:console-writes` — コンソールの書き込み先を DB に
 6. `spec:rep-migration` — `word-rep.json` の移行
 7. `spec:app-data-source` — アプリの取得経路を DB に
+
+第 2 段階（同じ `topo` の続き）:
+
+8. `design:sheet-projection` — DB → シートの投影
+9. `spec:number-api` — アプリからの番号読み書き口
+10. `spec:source-of-truth-switch` — 正本の切替
+11. `spec:number-detail-view` — 番号単位の統合ビュー
 
 ## 実接続の手順
 
@@ -49,11 +71,11 @@ nr db:push     # 実際に書き込む
 
 `db:plan` / `db:push` は 3 段を順に実行する。`--only sync|migrate|bundles` で個別に。
 
-| 段 | 内容 |
-| --- | --- |
-| sync | シート (words.tsv) -> `numbers/{num}`。rep/ratings/imageUrl は保持 |
-| migrate | `word-rep.json` -> `numbers/{num}`。件数が合わなければ中止 |
-| bundles | `numbers/*` -> `bundles/chunk_0..9`。全件ロードを 10 read に |
+| 段      | 内容                                                               |
+| ------- | ------------------------------------------------------------------ |
+| sync    | シート (words.tsv) -> `numbers/{num}`。rep/ratings/imageUrl は保持 |
+| migrate | `word-rep.json` -> `numbers/{num}`。件数が合わなければ中止         |
+| bundles | `numbers/*` -> `bundles/chunk_0..9`。全件ロードを 10 read に       |
 
 実データでの `nr db:offline` の結果 (2026-08-21):
 
