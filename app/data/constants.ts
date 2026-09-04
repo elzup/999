@@ -443,6 +443,7 @@ export const VALID_TABS = [
   'slide',
   'bm',
   'hex',
+  'edit',
   'misc',
 ] as const
 export type TabId = typeof VALID_TABS[number]
@@ -457,5 +458,6 @@ export const BAR_TAB_LABELS: Record<TabId, string> = {
   slide: 'スライド',
   bm: 'ブックマーク',
   hex: 'hex',
+  edit: '編集',
   misc: '設定',
 }

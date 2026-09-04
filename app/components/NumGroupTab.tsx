@@ -13,6 +13,7 @@ type Props = {
   onToggleBm: (key: string) => void
   rules?: RulesData
   yomiUse?: YomiUse
+  onEditWord?: (num: string, slot: string) => void
 }
 
 type SubTab = 'all' | 'd2' | 'yomi' | 'map' | 'test'
@@ -23,6 +24,7 @@ function NumGroupTab({
   onToggleBm,
   rules,
   yomiUse,
+  onEditWord,
 }: Props) {
   const [sub, setSub] = useState<SubTab>('all')
 
@@ -77,6 +79,7 @@ function NumGroupTab({
           numbers={numbers}
           bookmarks={bookmarks}
           onToggleBm={onToggleBm}
+          onEditWord={onEditWord}
         />
       )}
       {sub === 'd2' && (
