@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'preact/hooks'
+import { useState, useCallback, useEffect, useRef } from 'preact/hooks'
 import { validateAppData } from './data/parse'
 import {
   loadBookmarks,
@@ -9,6 +9,9 @@ import {
   saveTab,
   loadTabVisibility,
   saveTabVisibility,
+  loadAppDataCache,
+  saveAppDataCache,
+  clearAppDataCache,
 } from './data/storage'
 import type { AppData } from './data/schema'
 import type { TabId } from './data/constants'
@@ -24,10 +27,19 @@ import KukuTab from './components/KukuTab'
 import SlideshowTab from './components/SlideshowTab'
 import BookmarkTab from './components/BookmarkTab'
 import FFTab from './components/FFTab'
+import NumberDetailTab from './components/NumberDetailTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
-import { fetchAppData } from './lib/appDataApi'
+import {
+  fetchAppData,
+  UnauthorizedError,
+  type AppDataProgress,
+} from './lib/appDataApi'
+import { setFfRows, type FfRow } from './lib/ffQuiz'
+import { setKukuItems } from './lib/kukuQuiz'
+import type { KukuItem } from './lib/kukuQuiz'
 import { isBookmarkReviewDue } from './lib/bookmarkReview'
+import { useBackGuard } from './lib/useBackGuard'
 import {
   IconNum,
   IconCard,
@@ -39,6 +51,7 @@ import {
   IconStar,
   IconSlide,
   IconHex,
+  IconEdit,
 } from './components/Icons'
 
 const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
@@ -51,6 +64,7 @@ const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
   slide: <IconSlide />,
   bm: <IconStar />,
   hex: <IconHex />,
+  edit: <IconEdit />,
   misc: <IconStats />,
 }
 
@@ -63,9 +77,35 @@ export function App() {
   }, [])
   const [data, setData] = useState<AppData | null>(null)
   const [locked, setLocked] = useState(false)
+  const [progress, setProgress] = useState<AppDataProgress>({
+    phase: 'connecting',
+  })
+  const [revalidating, setRevalidating] = useState(false)
   const [bookmarks, setBookmarks] = useState(loadBookmarks)
   const [bmViews, setBmViews] = useState(loadBookmarkViews)
   const [visibility, setVisibility] = useState(loadTabVisibility)
+  // 999 タブで語をタップして編集へ入ったときの行き先 (REQ-NDV-012)
+  const [editTarget, setEditTarget] = useState<{
+    num: string
+    slot: string
+  } | null>(null)
+
+  const openEditor = useCallback(
+    (num: string, slot: string) => {
+      setEditTarget({ num, slot })
+      setTab('edit')
+    },
+    [setTab]
+  )
+
+  const closeEditor = useCallback(() => {
+    setEditTarget(null)
+    setTab('num')
+  }, [setTab])
+
+  // 端末の «戻る» で編集を閉じる。積まないと PWA ではアプリごと閉じて
+  // 編集中の内容が消える (Android のジェスチャーナビで実際に踏んだ)
+  useBackGuard(Boolean(editTarget), closeEditor)
 
   const updateVisibility = useCallback((next: TabVisibility) => {
     saveTabVisibility(next)
@@ -80,14 +120,50 @@ export function App() {
     }
 
     let cancelled = false
-    fetchAppData(token)
-      .then((raw) => {
+    let hasData = false
+    let cachedText: string | null = null
+
+    const applyData = (raw: unknown) => {
+      const parsed = validateAppData(raw)
+      // ff / kuku は公開バンドルに焼かず、この認証付き payload で届く。
+      // 描画前に注入しないと出題側が空データで動いてしまう
+      setFfRows((parsed.ff ?? []) as unknown as FfRow[])
+      setKukuItems((parsed.kuku ?? []) as unknown as KukuItem[])
+      setData(parsed)
+      hasData = true
+    }
+
+    // SWR: 前回取得したキャッシュがあれば即表示し、裏で最新を取り直す。
+    // 辞書は日次同期なので、表示中に数秒遅れで差し替わる程度は許容する
+    const cached = loadAppDataCache()
+    if (cached) {
+      try {
+        applyData(JSON.parse(cached))
+        cachedText = cached
+        setRevalidating(true)
+      } catch {
+        // キャッシュが壊れていてもネットワーク取得に倒せばよい
+        clearAppDataCache()
+      }
+    }
+
+    fetchAppData(token, (next) => {
+      if (!cancelled) setProgress(next)
+    })
+      .then(({ text, json }) => {
         if (cancelled) return
-        setData(validateAppData(raw))
+        setRevalidating(false)
+        // キャッシュと完全一致なら再描画も再保存も要らない
+        if (text === cachedText) return
+        saveAppDataCache(text)
+        applyData(json)
       })
-      .catch(() => {
-        // 401 (無効トークン) やネットワーク失敗はロック画面へ。
-        if (!cancelled) setLocked(true)
+      .catch((error) => {
+        if (cancelled) return
+        setRevalidating(false)
+        // 401 はトークン失効なのでキャッシュ表示中でもロックする。
+        // オフライン等の通信失敗でキャッシュ表示済みなら、そのまま使い続ける
+        if (error instanceof UnauthorizedError || !hasData) setLocked(true)
       })
 
     return () => {
@@ -133,17 +209,12 @@ export function App() {
   }
 
   if (!data) {
-    return (
-      <div
-        style={{ padding: '40px', textAlign: 'center', color: 'var(--text2)' }}
-      >
-        Loading...
-      </div>
-    )
+    return <LoadingScreen progress={progress} />
   }
 
   return (
     <>
+      {revalidating && <div class="revalidating-note">更新を確認中…</div>}
       {tab === 'num' && (
         <NumGroupTab
           numbers={data.numbers}
@@ -151,6 +222,7 @@ export function App() {
           onToggleBm={toggleBm}
           rules={data.rules}
           yomiUse={data.yomiUse}
+          onEditWord={openEditor}
         />
       )}
       {tab === 'card' && (
@@ -199,6 +271,16 @@ export function App() {
         />
       )}
       {tab === 'hex' && <FFTab />}
+      {tab === 'edit' && (
+        <NumberDetailTab
+          token={token}
+          initialNum={editTarget?.num}
+          focusSlot={editTarget?.slot}
+          // 戻る (popstate) が実際の状態遷移を行う。ここで直接閉じると
+          // 積んだ履歴が 1 つ残り、次の «戻る» が空振りする
+          onClose={editTarget ? closeEditor : undefined}
+        />
+      )}
       {tab === 'misc' && (
         <MiscTab
           numbers={data.numbers}
@@ -252,5 +334,42 @@ function TabButton({
       {icon}
       <span>{label}</span>
     </button>
+  )
+}
+
+function formatKb(bytes: number): string {
+  return `${Math.round(bytes / 1024)} KB`
+}
+
+function LoadingScreen({ progress }: { progress: AppDataProgress }) {
+  // totalBytes は gzip 配信 (chunked) では取れない。その場合は受信量だけ出す
+  const ratio =
+    progress.phase === 'downloading' && progress.totalBytes
+      ? progress.loadedBytes / progress.totalBytes
+      : progress.phase === 'parsing'
+      ? 1
+      : null
+
+  const label =
+    progress.phase === 'connecting'
+      ? 'サーバーに接続中…'
+      : progress.phase === 'downloading'
+      ? progress.totalBytes
+        ? `辞書データを受信中… ${Math.round(
+            (progress.loadedBytes / progress.totalBytes) * 100
+          )}%`
+        : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
+      : '辞書データを展開中…'
+
+  return (
+    <div class="loading-screen">
+      <div class="loading-label">{label}</div>
+      <div class="loading-bar">
+        <div
+          class={'loading-bar-fill' + (ratio === null ? ' indeterminate' : '')}
+          style={ratio === null ? undefined : { width: `${ratio * 100}%` }}
+        />
+      </div>
+    </div>
   )
 }

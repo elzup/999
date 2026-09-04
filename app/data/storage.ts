@@ -26,6 +26,32 @@ function saveJson(key: string, data: unknown) {
   localStorage.setItem(key, JSON.stringify(data))
 }
 
+// 辞書本体 (/api/app/data) の SWR キャッシュ。次回起動を即表示にするための
+// 生 JSON 文字列 (~1MB) を丸ごと保持する。鮮度は起動時の再取得で担保し、
+// 壊れていたら呼び出し側が捨ててネットワーク取得に倒す
+const APP_DATA_CACHE_KEY = 'appDataCache999'
+
+export function loadAppDataCache(): string | null {
+  try {
+    return localStorage.getItem(APP_DATA_CACHE_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function saveAppDataCache(text: string) {
+  try {
+    localStorage.setItem(APP_DATA_CACHE_KEY, text)
+  } catch {
+    // quota (5MB) 超過など。キャッシュは起動高速化のためだけなので、
+    // 保存できなくても動作には影響しない
+  }
+}
+
+export function clearAppDataCache() {
+  localStorage.removeItem(APP_DATA_CACHE_KEY)
+}
+
 // Bookmarks
 export function loadBookmarks(): Set<string> {
   try {
@@ -214,6 +240,7 @@ export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
   slide: false,
   bm: true,
   hex: false,
+  edit: false,
   misc: true,
 }
 
