@@ -22,10 +22,15 @@ import { loadManifest, readJson, writeJson } from './images/store.js'
 import { rankey } from './rankey.js'
 import { scoreWithLabel } from './scorer.js'
 
-const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
+const srcDir = dirname(fileURLToPath(import.meta.url))
+const dataDir = join(srcDir, 'data')
+const privateDir = join(srcDir, '..', 'private')
 const wordsPath = join(dataDir, 'words.tsv')
 
-export const REP_PATH = join(dataDir, 'word-rep.json')
+// 代表語と主観評価は «読み + 語» の組なので、辞書そのものと同じ私的データ。
+// このリポジトリは public なので src/data/ に置くとコミットで公開されてしまう
+// (実際に 2026-08-31 まで追跡されていた)。gitignore 済みの private/ に置く。
+export const REP_PATH = join(privateDir, 'word-rep.json')
 
 // 表示順(人→物でグループ) / 既定の代表優先順(人トップ→物トップ→2番手…)
 export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3']
