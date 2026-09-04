@@ -1,8 +1,8 @@
-const { createSign, timingSafeEqual } = require('node:crypto')
-const { readFileSync } = require('node:fs')
-const { join } = require('node:path')
-const { onRequest } = require('firebase-functions/v2/https')
-const { defineSecret } = require('firebase-functions/params')
+import { createSign, timingSafeEqual } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { onRequest } from 'firebase-functions/v2/https'
+import { defineSecret } from 'firebase-functions/params'
+import { handleNumbersRequest } from './numbers-route.js'
 
 const EDIT_TOKEN = defineSecret('EDIT_TOKEN')
 const GOOGLE_SERVICE_ACCOUNT_JSON = defineSecret('GOOGLE_SERVICE_ACCOUNT_JSON')
@@ -53,7 +53,7 @@ const PATCH_ALIASES = {
   w2_2Img: 'wm2Img',
 }
 
-exports.api = onRequest(
+export const api = onRequest(
   {
     region: process.env.FUNCTION_REGION || 'asia-northeast1',
     secrets: [EDIT_TOKEN, GOOGLE_SERVICE_ACCOUNT_JSON],
@@ -100,6 +100,22 @@ exports.api = onRequest(
         return
       }
 
+      // 番号 1 件の読み書き (spec:number-api)。統合ビューはここだけを見る
+      const numberMatch = path.match(/^\/numbers\/(\d{3})$/)
+      if (numberMatch) {
+        const { db, writes } = await loadFirestoreLib()
+        const { status, payload } = await handleNumbersRequest({
+          method: req.method,
+          num: numberMatch[1],
+          body: req.body || {},
+          db,
+          writes,
+          now: new Date().toISOString(),
+        })
+        res.status(status).json(payload)
+        return
+      }
+
       res.status(404).json({ ok: false, error: 'not_found' })
     } catch (error) {
       const status = Number(error.statusCode || 500)
@@ -111,6 +127,25 @@ exports.api = onRequest(
     }
   }
 )
+
+// functions/lib は scripts/sync-functions-lib.sh が作る src/ の写し (ESM)。
+// 初回に触ったリクエストでだけ読む。Sheets しか使わない経路に Firestore の
+// 初期化コストを負わせないため、モジュールごと遅延させる
+let firestoreLib = null
+async function loadFirestoreLib() {
+  if (!firestoreLib) {
+    const [{ connect }, writes] = await Promise.all([
+      import('./lib/firestore/db.js'),
+      import('./lib/firestore/console-writes.js'),
+    ])
+    // Cloud Functions の ADC はこの関数のサービスアカウントを指す。
+    // .firebaserc は同梱されないので projectId は実行環境から取る
+    const projectId =
+      process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT
+    firestoreLib = { db: connect({ projectId }), writes }
+  }
+  return firestoreLib
+}
 
 function setNoStore(res) {
   res.set('cache-control', 'no-store')
@@ -124,7 +159,9 @@ const privateJsonCache = new Map()
 function readPrivateJson(name) {
   if (!privateJsonCache.has(name)) {
     try {
-      const raw = readFileSync(join(__dirname, 'private', name), 'utf8')
+      // ESM なので __dirname は無い。name は呼び出し側の固定文字列だけ
+      const path = new URL('./private/' + name, import.meta.url)
+      const raw = readFileSync(path, 'utf8')
       privateJsonCache.set(name, JSON.parse(raw))
     } catch (cause) {
       const error = new Error('private_data_unavailable')

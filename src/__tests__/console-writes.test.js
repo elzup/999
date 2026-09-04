@@ -4,6 +4,7 @@ import {
   nameOf,
   saveRating,
   saveRep,
+  saveSlots,
   staleImages,
 } from '../firestore/console-writes.js'
 
@@ -197,5 +198,106 @@ describe('console partial writes', () => {
         now,
       })
     ).toMatchObject({ error: 'unknown num' })
+  })
+})
+
+describe('saveSlots — 語の編集・並べ替え・追加・削除', () => {
+  const save = (slots, db) =>
+    saveSlots(db, { num: '051', slots, current: stored, now, source: 'app' })
+
+  it('語とかなを直しても rep / ratings に触れない', async () => {
+    const db = fakeDb({ '051': stored })
+    await save(
+      {
+        wh1: { word: '鯉のぼり', kana: 'こいのぼり', imageUrl: '' },
+        wm1: stored.slots.wm1,
+      },
+      db
+    )
+
+    expect(db.docs['051'].slots.wh1.word).toBe('鯉のぼり')
+    expect(db.docs['051'].rep).toEqual(stored.rep)
+    expect(db.docs['051'].ratings).toEqual(stored.ratings)
+  })
+
+  it('並べ替えは語ごと別のキーへ移すこと。画像も一緒に移る', async () => {
+    const db = fakeDb({ '051': stored })
+    // wh1 にあった鯉を wh2 へ、コインを wh1 へ
+    await save(
+      {
+        wh1: { ...stored.slots.wm1 },
+        wh2: { ...stored.slots.wh1 },
+      },
+      db
+    )
+
+    const slots = db.docs['051'].slots
+    expect(slots.wh1.word).toBe('コイン')
+    expect(slots.wh2.word).toBe('鯉')
+    expect(slots.wh2.imageUrl).toBe('https://x.test/a.webp')
+    expect(slots.wm1).toBeUndefined()
+  })
+
+  it('送らなかった枠は消える (削除)。評価は値で残る', async () => {
+    const db = fakeDb({ '051': stored })
+    await save({ wh1: stored.slots.wh1 }, db)
+
+    expect(Object.keys(db.docs['051'].slots)).toEqual(['wh1'])
+    // 語を消しても «この語呂はアリか» の判断は生きている
+    expect(db.docs['051'].ratings).toEqual(stored.ratings)
+  })
+
+  it('語もかなも空の枠は保存しない (空欄で消せる)', async () => {
+    const db = fakeDb({ '051': stored })
+    await save(
+      {
+        wh1: stored.slots.wh1,
+        wh2: { word: '  ', kana: '', imageUrl: '' },
+      },
+      db
+    )
+
+    expect(Object.keys(db.docs['051'].slots)).toEqual(['wh1'])
+  })
+
+  it('新しい枠を足せる。imageUrl 未指定でも検証を通る', async () => {
+    const db = fakeDb({ '051': stored })
+    const result = await save(
+      { ...stored.slots, wh2: { word: '恋', kana: 'こい' } },
+      db
+    )
+
+    expect(result).toMatchObject({ ok: true })
+    expect(db.docs['051'].slots.wh2).toMatchObject({ word: '恋', imageUrl: '' })
+  })
+
+  it('確定時点の語 (confirmedFor) は送られた分だけ保つ', async () => {
+    const db = fakeDb({ '051': stored })
+    await save(
+      {
+        wh1: { ...stored.slots.wh1, confirmedFor: '鯉' },
+        wm1: stored.slots.wm1,
+      },
+      db
+    )
+
+    expect(db.docs['051'].slots.wh1.confirmedFor).toBe('鯉')
+  })
+
+  it('知らないスロット名は書き込みごと拒否される', async () => {
+    const db = fakeDb({ '051': stored })
+    const result = await save({ wx9: { word: 'x', kana: 'えっくす' } }, db)
+
+    expect(result).toMatchObject({ error: 'unknown slot: wx9' })
+    expect(db.docs['051']).toBe(stored)
+  })
+
+  it('slots がオブジェクトでなければ何も書かない', async () => {
+    const db = fakeDb({ '051': stored })
+
+    expect(await save([], db)).toMatchObject({
+      error: 'slots must be an object',
+    })
+    expect(db.docs['051']).toBe(stored)
   })
 })

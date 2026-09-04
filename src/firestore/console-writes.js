@@ -21,6 +21,8 @@ const sameValue = (a, b) => {
 }
 
 /** 現在の文書を土台に、指定フィールドだけ差し替える */
+// source は «最後に書いた面»。既定はコンソールで、アプリからは 'app' を渡す。
+// undefined が来ても既定に落ちるよう、分割代入の既定値で受ける
 function patch(current, field, value, { now, source = 'console' }) {
   if (!current) return { error: 'unknown num' }
   const next = { ...current, [field]: value, updatedAt: now, source }
@@ -31,8 +33,11 @@ function patch(current, field, value, { now, source = 'console' }) {
 /**
  * 代表語を保存する。ratings には触れない (REQ-CON-001)。
  */
-export async function saveRep(db, { num, picks, confirmed, current, now }) {
-  const built = patch(current, 'rep', { picks, confirmed }, { now })
+export async function saveRep(
+  db,
+  { num, picks, confirmed, current, now, source }
+) {
+  const built = patch(current, 'rep', { picks, confirmed }, { now, source })
   if (built.error) return built
   return writeNumber(db, {
     num,
@@ -46,14 +51,14 @@ export async function saveRep(db, { num, picks, confirmed, current, now }) {
  * 主観評価を 1 件保存する。rep と確定状態には触れない (REQ-CON-002)。
  * v が null なら該当エントリを削除する。0 として保存しない (REQ-CON-003)。
  */
-export async function saveRating(db, { num, k, w, v, current, now }) {
+export async function saveRating(db, { num, k, w, v, current, now, source }) {
   if (v !== null && !RATINGS.includes(v)) return { error: 'invalid rating' }
   if (!current) return { error: 'unknown num' }
 
   const kept = (current.ratings ?? []).filter((r) => !sameValue(r, { k, w }))
   const next = v === null ? kept : [...kept, { ...valueOf({ k, w }), v }]
 
-  const built = patch(current, 'ratings', next, { now })
+  const built = patch(current, 'ratings', next, { now, source })
   if (built.error) return built
   return writeNumber(db, {
     num,
@@ -64,10 +69,56 @@ export async function saveRating(db, { num, k, w, v, current, now }) {
 }
 
 /**
+ * 候補スロットをまとめて差し替える。語・かなの編集、並べ替え、追加、削除が
+ * すべてこの 1 つに乗る。どれも «slots がどうあるべきか» を送る操作だから。
+ *
+ * 呼び出し側は読み取った文書の slot オブジェクトを丸ごと送ること。部分的に
+ * 送ると imageUrl / confirmedFor が落ちる。並べ替えは «語ごと別のキーへ移す»
+ * ことなので、画像も評価も語に付いて回る。
+ *
+ * rep と ratings には触れない。語を消しても評価は値 ({k,w}) で残り、
+ * その語を戻せばまた効く。代表が消えた語を指していれば stale として扱う
+ * (値は捨てない: spec:rep-migration の REQ-MIG-003 と同じ方針)。
+ */
+export async function saveSlots(db, { num, slots, current, now, source }) {
+  if (!current) return { error: 'unknown num' }
+  if (!slots || typeof slots !== 'object' || Array.isArray(slots)) {
+    return { error: 'slots must be an object' }
+  }
+
+  const next = {}
+  for (const [slot, value] of Object.entries(slots)) {
+    const word = String(value?.word ?? '').trim()
+    const kana = String(value?.kana ?? '').trim()
+    // 語もかなも空なら «その枠は無い» と解釈する (削除の表現)
+    if (!word && !kana) continue
+    next[slot] = {
+      word,
+      kana,
+      // validateNumberDoc が string を要求する。未設定は空文字で埋める
+      imageUrl: String(value?.imageUrl ?? ''),
+      ...(value?.confirmedFor ? { confirmedFor: value.confirmedFor } : {}),
+    }
+  }
+
+  const built = patch(current, 'slots', next, { now, source })
+  if (built.error) return built
+  return writeNumber(db, {
+    num,
+    doc: built.doc,
+    expectedUpdatedAt: current.updatedAt ?? null,
+    intent: ['slots'],
+  })
+}
+
+/**
  * 画像を確定する。確定時点の語を併せて残す (REQ-CON-004)。
  * これが無いと、sync で語が差し替わっても確定が外れず、前の語で取った画像が残る。
  */
-export async function confirmImage(db, { num, slot, imageUrl, current, now }) {
+export async function confirmImage(
+  db,
+  { num, slot, imageUrl, current, now, source }
+) {
   if (!current) return { error: 'unknown num' }
   const slotNow = current.slots?.[slot]
   if (!slotNow) return { error: `unknown slot: ${slot}` }
@@ -76,7 +127,7 @@ export async function confirmImage(db, { num, slot, imageUrl, current, now }) {
     ...current.slots,
     [slot]: { ...slotNow, imageUrl, confirmedFor: slotNow.word },
   }
-  const built = patch(current, 'slots', slots, { now })
+  const built = patch(current, 'slots', slots, { now, source })
   if (built.error) return built
   return writeNumber(db, {
     num,

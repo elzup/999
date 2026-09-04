@@ -29,3 +29,6 @@ src/sheet-audit.out.json
 
 # 生成物: 語呂/FF の歌詞テキスト (src/gen-words-lyrics.js が正本)
 lyrics/
+
+# functions/lib は scripts/sync-functions-lib.sh が作る src/ の写し
+functions/lib/

@@ -75,6 +75,12 @@ export function connect({ projectId = defaultProjectId() } = {}) {
       })
     },
 
+    /** 1 件だけ読む。書き込み前の現在値取得と統合ビューの表示に使う */
+    async readNumber(num) {
+      const snap = await store.collection(NUMBERS).doc(num).get()
+      return snap.exists ? snap.data() : undefined
+    },
+
     /** 既存の numbers を全部読む (同期・移行のプラン作成用) */
     async readAllNumbers() {
       const snap = await store.collection(NUMBERS).get()
