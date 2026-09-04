@@ -2,7 +2,8 @@ const SCORE_MIN = 1
 const SCORE_MAX = 5
 
 type Props = {
-  label: string
+  // rankey を色付きで差し込むので、文字列に限定しない
+  label: preact.ComponentChildren
   score: number
   error?: string
 }

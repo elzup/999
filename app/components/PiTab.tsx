@@ -651,12 +651,9 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
                   onToggleBm={onToggleBm}
                 />
               ))}
-              <div style={{ padding: '0 12px 8px' }}>
-                <button
-                  class="d2-mode-btn"
-                  style={{ padding: '4px 10px', width: '100%' }}
-                  onClick={() => setSelected(null)}
-                >
+              {/* 複数枚まとめて 1 つの閉じる。詳細カード側は閉じるを持たない */}
+              <div class="panel-foot">
+                <button class="btn-wide" onClick={() => setSelected(null)}>
                   閉じる
                 </button>
               </div>

@@ -3,11 +3,14 @@ import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
 import { candidatesOf } from '../lib/choice'
+import { useBackGuard } from '../lib/useBackGuard'
 
 type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
+  /** 語をタップして編集へ (REQ-NDV-012) */
+  onEditWord?: (num: string, slot: string) => void
 }
 
 function scoreColor(score: number | null): string | null {
@@ -128,10 +131,9 @@ function DigitFilterPads({
   )
 }
 
-function NumberTab({ numbers, bookmarks, onToggleBm }: Props) {
+function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
   const [df, setDf] = useState<DigitFilter>([null, null, null])
-  const [showFilter, setShowFilter] = useState(false)
   const [filterMode, setFilterMode] = useState<FilterMode>('rows')
 
   const filtered = useMemo(() => {
@@ -171,6 +173,10 @@ function NumberTab({ numbers, bookmarks, onToggleBm }: Props) {
     setSelected(null)
   }, [])
 
+  // 番号を選んだ状態は «開いている» とみなす。戻るで閉じないと、
+  // Android のジェスチャーナビでアプリごと終了してしまう
+  useBackGuard(selected !== null, () => setSelected(null))
+
   const hasFilter = df[0] !== null || df[1] !== null || df[2] !== null
   const filterLabel = df.map((d) => (d === null ? '*' : d)).join('')
 
@@ -186,26 +192,28 @@ function NumberTab({ numbers, bookmarks, onToggleBm }: Props) {
     >
       <div class="sticky-wrap">
         {selectedData ? (
-          <NumDetailPanel
-            d={selectedData}
-            bookmarks={bookmarks}
-            onToggleBm={onToggleBm}
-            onClose={() => setSelected(null)}
-          />
+          <>
+            <NumDetailPanel
+              d={selectedData}
+              bookmarks={bookmarks}
+              onToggleBm={onToggleBm}
+              onEditWord={
+                onEditWord && selectedData
+                  ? (slot) => onEditWord(selectedData.num, slot)
+                  : undefined
+              }
+            />
+            {/* 閉じるはカードの外に 1 つ。カード内に置くと、複数枚並ぶ面
+                (π / 年号 / 2桁) で «閉じる» が枚数ぶん並んでしまう */}
+            <div class="panel-foot">
+              <button class="btn-wide" onClick={() => setSelected(null)}>
+                閉じる
+              </button>
+            </div>
+          </>
         ) : (
           <div class="sticky-empty">
             <span>番号を選択</span>
-            <button
-              class="filter-btn"
-              style={{
-                fontSize: '12px',
-                padding: '4px 10px',
-                marginLeft: '12px',
-              }}
-              onClick={() => setShowFilter(!showFilter)}
-            >
-              {showFilter ? '閉じる' : '検索'}
-            </button>
             {hasFilter ? (
               <>
                 <span
@@ -268,53 +276,53 @@ function NumberTab({ numbers, bookmarks, onToggleBm }: Props) {
           })}
         </div>
       </div>
-      {showFilter ? (
-        <div class="np-filter-bar">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '4px',
-            }}
-          >
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button
-                class={'filter-btn' + (filterMode === 'rows' ? ' active' : '')}
-                style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
-                onClick={() => setFilterMode('rows')}
-              >
-                3段
-              </button>
-              <button
-                class={'filter-btn' + (filterMode === 'pads' ? ' active' : '')}
-                style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
-                onClick={() => setFilterMode('pads')}
-              >
-                テンキー
-              </button>
-            </div>
-            {hasFilter ? (
-              <button class="np-filter-clear" onClick={clearFilter}>
-                C
-              </button>
-            ) : null}
+      {/* フィルターは常時表示。開閉トグルを挟むと、絞り込み中かどうかが
+          画面から消えて «なぜ件数が減っているのか» が分からなくなる */}
+      <div class="np-filter-bar">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '4px',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              class={'filter-btn' + (filterMode === 'rows' ? ' active' : '')}
+              style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
+              onClick={() => setFilterMode('rows')}
+            >
+              3段
+            </button>
+            <button
+              class={'filter-btn' + (filterMode === 'pads' ? ' active' : '')}
+              style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
+              onClick={() => setFilterMode('pads')}
+            >
+              テンキー
+            </button>
           </div>
-          {filterMode === 'rows' ? (
-            <DigitFilterRows
-              df={df}
-              onTapDigit={tapDigitAt}
-              onClearPos={clearPosAt}
-            />
-          ) : (
-            <DigitFilterPads
-              df={df}
-              onTapDigit={tapDigitAt}
-              onClearPos={clearPosAt}
-            />
-          )}
+          {hasFilter ? (
+            <button class="np-filter-clear" onClick={clearFilter}>
+              C
+            </button>
+          ) : null}
         </div>
-      ) : null}
+        {filterMode === 'rows' ? (
+          <DigitFilterRows
+            df={df}
+            onTapDigit={tapDigitAt}
+            onClearPos={clearPosAt}
+          />
+        ) : (
+          <DigitFilterPads
+            df={df}
+            onTapDigit={tapDigitAt}
+            onClearPos={clearPosAt}
+          />
+        )}
+      </div>
     </div>
   )
 }

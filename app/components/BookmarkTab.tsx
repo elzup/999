@@ -109,12 +109,18 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
     >
       <div class="sticky-wrap">
         {selectedNum ? (
-          <NumDetailPanel
-            d={selectedNum}
-            bookmarks={bookmarks}
-            onToggleBm={onToggleBm}
-            onClose={() => setSelected(null)}
-          />
+          <>
+            <NumDetailPanel
+              d={selectedNum}
+              bookmarks={bookmarks}
+              onToggleBm={onToggleBm}
+            />
+            <div class="panel-foot">
+              <button class="btn-wide" onClick={() => setSelected(null)}>
+                閉じる
+              </button>
+            </div>
+          </>
         ) : selectedCard ? (
           <CardDetailPanel
             c={selectedCard}
