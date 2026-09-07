@@ -4,6 +4,7 @@ import type { NumberEntry, RulesData } from '../data/schema'
 import type { TabVisibility } from '../data/storage'
 import StorageEstimatePanel from './StorageEstimatePanel'
 import TagPanel from './TagPanel'
+import HitoMonoPanel from './HitoMonoPanel'
 import RulesPanel from './RulesPanel'
 import RecallTab from './RecallTab'
 import ActivatePanel from './ActivatePanel'
@@ -19,7 +20,7 @@ type Props = {
   onSelectTab: (id: TabId) => void
 }
 
-type SubTab = 'tags' | 'rules' | 'recall' | 'stats' | 'tabs'
+type SubTab = 'tags' | 'hm' | 'rules' | 'recall' | 'stats' | 'tabs'
 
 function MiscTab({
   numbers,
@@ -52,6 +53,12 @@ function MiscTab({
           タグ
         </button>
         <button
+          class={'sub-tab-btn' + (sub === 'hm' ? ' active' : '')}
+          onClick={() => handleSub('hm')}
+        >
+          人モノ
+        </button>
+        <button
           class={'sub-tab-btn' + (sub === 'rules' ? ' active' : '')}
           onClick={() => handleSub('rules')}
         >
@@ -77,6 +84,7 @@ function MiscTab({
         </button>
       </div>
       {sub === 'tags' && <TagPanel numbers={numbers} />}
+      {sub === 'hm' && <HitoMonoPanel numbers={numbers} />}
       {sub === 'rules' &&
         (rules ? (
           <RulesPanel rules={rules} />

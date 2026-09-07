@@ -82,7 +82,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,wasm}'],
         // 辞書は静的配信しない (認証付き /api/app/data)。
         // /api/** は SW でキャッシュせず、常にネットワーク (no-store) に委ねる。
         navigateFallbackDenylist: [/^\/api\//],
