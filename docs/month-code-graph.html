@@ -286,7 +286,7 @@
             <div class="metrics" id="stage-metrics"></div>
           </div>
           <div class="svg-wrap" id="stage-svg"></div>
-          <div class="legend">
+          <div class="legend" id="legend">
             <span><i style="background: #f97316"></i>+3 (31日)</span>
             <span><i style="background: #38bdf8"></i>+2 (30日)</span>
             <span><i style="background: #94a3b8"></i>±0 (2月28日)</span>
@@ -314,8 +314,10 @@
           <h3>対応表</h3>
           <table id="table"></table>
 
-          <h3>エッジの正体</h3>
+          <h3>矢印の意味</h3>
           <p class="note" style="margin: 0">
+            矢印は <b>その月 → 翌月</b> で、ラベルは
+            <b>コードの増分</b> (例: 1月 c0 →+3→ 2月 c3)。<br />
             次の月のコード = 今月のコード + (今月の日数 mod 7)。<br />
             31日 → +3 / 30日 → +2 / 2月(28日) → ±0。<br />
             12月→1月だけは 31日 (+3) なのに年が 365 日 (mod 7 = 1)
@@ -545,7 +547,7 @@
         parts.push('</defs>')
 
         // 同コードエッジ (破線)
-        if (o.edge !== 'seq') {
+        if (o.edge === 'code' || o.edge === 'both') {
           for (const g of CODE_GROUPS) {
             for (let a = 0; a + 1 < g.months.length; a++) {
               const A = P[g.months[a] - 1]
@@ -562,7 +564,7 @@
         }
 
         // 順行エッジ
-        if (o.edge !== 'code') {
+        if (o.edge === 'seq' || o.edge === 'both') {
           for (let i = 0; i < N; i++) {
             const A = P[i]
             const B = P[(i + 1) % N]
@@ -664,7 +666,7 @@
       // --- ui --------------------------------------------------------------
       const state = {
         layout: '6x2s',
-        edge: 'both',
+        edge: 'none',
         delta: true,
         bow: true,
         sort: 'score',
@@ -692,8 +694,9 @@
         const eb = document.getElementById('edge-btns')
         eb.innerHTML = ''
         for (const [k, label] of [
-          ['seq', '順行のみ'],
-          ['code', '同コードのみ'],
+          ['none', 'なし (対応だけ)'],
+          ['seq', '順行 (月→翌月)'],
+          ['code', '同コード'],
           ['both', '両方'],
         ])
           eb.append(
@@ -764,9 +767,13 @@
           big: true,
         })
         document.getElementById('stage-note').textContent =
-          l.m.adj === N
-            ? '連続する12本すべてが隣接。1月から指でなぞって一筆書きできる配置。'
-            : `隣接していないエッジが ${N - l.m.adj} 本。跳ぶ箇所を覚える必要がある。`
+          state.edge === 'none'
+            ? '各マスは 月 / コード。指標はエッジを描いた場合の値。'
+            : l.m.adj === N
+              ? '連続する12本すべてが隣接。1月から指でなぞって一筆書きできる配置。'
+              : `隣接していないエッジが ${N - l.m.adj} 本。跳ぶ箇所を覚える必要がある。`
+        document.getElementById('legend').style.display =
+          state.edge === 'none' ? 'none' : 'flex'
         renderGallery()
         renderControls()
       }
