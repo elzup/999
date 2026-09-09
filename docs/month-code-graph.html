@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>月コード ノードグラフ / 配置探索</title>
+    <style>
+      :root {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --surface2: #22262f;
+        --border: #2a2d37;
+        --text: #e5e7eb;
+        --text2: #8b8f9a;
+        --accent: #4ecdc4;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
+          sans-serif;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      header {
+        padding: 16px 16px 4px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 0;
+      }
+      .lead {
+        margin: 0;
+        color: var(--text2);
+        font-size: 12px;
+      }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+      }
+      .wrap {
+        padding: 12px 16px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      .ctl {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .ctl-label {
+        color: var(--text2);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+      }
+      .btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      button {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 9px;
+        font-size: 11px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: #3d4250;
+      }
+      button.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #0f1117;
+        font-weight: 700;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 12px;
+        align-items: start;
+      }
+      @media (max-width: 860px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .stage-head {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .metrics {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-left: auto;
+      }
+      .chip {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 2px 9px;
+        font-size: 11px;
+        color: var(--text2);
+      }
+      .chip b {
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+      .chip.good b {
+        color: #4ade80;
+      }
+      .chip.bad b {
+        color: #f87171;
+      }
+      .svg-wrap {
+        display: flex;
+        justify-content: center;
+        overflow-x: auto;
+        padding: 4px 0;
+      }
+      .svg-wrap svg {
+        max-width: 100%;
+        height: auto;
+      }
+      .note {
+        color: var(--text2);
+        font-size: 11px;
+        margin: 8px 0 0;
+      }
+      .legend {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 6px;
+      }
+      .legend i {
+        display: inline-block;
+        width: 16px;
+        height: 3px;
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-right: 4px;
+      }
+      .ref h3 {
+        font-size: 12px;
+        margin: 14px 0 6px;
+        color: var(--text2);
+        font-weight: 600;
+      }
+      .ref h3:first-child {
+        margin-top: 0;
+      }
+      .code-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+      .code-badge {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #0f1117;
+        flex: none;
+      }
+      .months {
+        font-size: 12px;
+      }
+      .ref table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 11px;
+      }
+      .ref td {
+        border: 1px solid var(--border);
+        padding: 2px 4px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .ref td.h {
+        color: var(--text2);
+        background: var(--surface2);
+      }
+      .gal {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .card {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        cursor: pointer;
+      }
+      .card:hover {
+        border-color: var(--accent);
+      }
+      .card.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+      .card-title {
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+      .card-sub {
+        font-size: 10px;
+        color: var(--text2);
+        font-variant-numeric: tabular-nums;
+      }
+      .card-svg {
+        display: flex;
+        justify-content: center;
+        padding: 6px 0 2px;
+      }
+      .gal-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>月コード ノードグラフ</h1>
+      <p class="lead">
+        曜日計算の月コード (1月:0 … 12月:5) を 1月→12月の有向グラフとして、6×2 /
+        4×3 などいろいろな配置で並べて見比べるツール。
+      </p>
+    </header>
+
+    <div class="wrap">
+      <section class="panel controls">
+        <div class="ctl">
+          <span class="ctl-label">配置</span>
+          <div class="btns" id="layout-btns"></div>
+        </div>
+        <div class="ctl">
+          <span class="ctl-label">エッジ</span>
+          <div class="btns" id="edge-btns"></div>
+        </div>
+        <div class="ctl">
+          <span class="ctl-label">表示</span>
+          <div class="btns" id="opt-btns"></div>
+        </div>
+      </section>
+
+      <main>
+        <section class="panel stage">
+          <div class="stage-head">
+            <h2 id="stage-title"></h2>
+            <div class="metrics" id="stage-metrics"></div>
+          </div>
+          <div class="svg-wrap" id="stage-svg"></div>
+          <div class="legend">
+            <span><i style="background: #f97316"></i>+3 (31日)</span>
+            <span><i style="background: #38bdf8"></i>+2 (30日)</span>
+            <span><i style="background: #94a3b8"></i>±0 (2月28日)</span>
+            <span><i style="background: #a78bfa"></i>+2 (12→1月 / 年跨ぎ)</span>
+            <span
+              ><i
+                style="
+                  background: repeating-linear-gradient(
+                    90deg,
+                    #6b7280 0 4px,
+                    transparent 4px 7px
+                  );
+                "
+              ></i
+              >同コード</span
+            >
+          </div>
+          <p class="note" id="stage-note"></p>
+        </section>
+
+        <aside class="panel ref">
+          <h3>コード別グループ</h3>
+          <div id="groups"></div>
+
+          <h3>対応表</h3>
+          <table id="table"></table>
+
+          <h3>エッジの正体</h3>
+          <p class="note" style="margin: 0">
+            次の月のコード = 今月のコード + (今月の日数 mod 7)。<br />
+            31日 → +3 / 30日 → +2 / 2月(28日) → ±0。<br />
+            12月→1月だけは 31日 (+3) なのに年が 365 日 (mod 7 = 1)
+            進むぶん -1 されて <b>+2</b>。<br />
+            差分列: 3 0 3 2 3 2 3 3 2 3 2 <b>2</b><br />
+            ※ 閏年は 1月・2月のみ -1 補正。
+          </p>
+
+          <h3>指標の見かた</h3>
+          <p class="note" style="margin: 0">
+            <b>隣接</b>: 連続する月どうしが上下左右で隣り合っている本数 /
+            12。多いほど順路がなぞりやすい。<br />
+            <b>交差</b>: 直線で描いたときのエッジ交差数。0 が理想。<br />
+            <b>同コード</b>: 同じコードを持つ月ペアの平均距離 (セル単位,
+            1.00 が最小)。小さいほど同色が固まる。<br />
+            <b>総合</b> = 隣接率×100 − 交差×3 − (同コード−1)×8。
+          </p>
+        </aside>
+      </main>
+
+      <section class="panel gallery">
+        <div class="gal-head">
+          <h2>配置カタログ</h2>
+          <span class="ctl-label">並べ替え</span>
+          <div class="btns" id="sort-btns"></div>
+        </div>
+        <div class="gal" id="gal"></div>
+      </section>
+    </div>
+
+    <script>
+      // --- data ------------------------------------------------------------
+      // app/lib/weekday.ts の MONTH_CODES と同じ値
+      const CODES = [0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5]
+      const DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      const CODE_COLORS = [
+        '#5b8def',
+        '#4ecdc4',
+        '#ffbe3d',
+        '#e11d48',
+        '#fb7185',
+        '#ea580c',
+        '#9ca3af',
+      ]
+      const N = 12
+
+      /** エッジ i: (i+1)月 → ((i+1)%12+1)月 */
+      function edgeInfo(i) {
+        const delta = (CODES[(i + 1) % N] - CODES[i] + 7) % 7
+        if (i === N - 1)
+          return { delta, color: '#a78bfa', why: '31日 +3 / 年跨ぎ -1' }
+        if (delta === 0) return { delta, color: '#94a3b8', why: '28日' }
+        if (delta === 3) return { delta, color: '#f97316', why: '31日' }
+        return { delta, color: '#38bdf8', why: '30日' }
+      }
+      const EDGES = Array.from({ length: N }, (_, i) => edgeInfo(i))
+
+      const CODE_GROUPS = Array.from({ length: 7 }, (_, c) => ({
+        code: c,
+        months: CODES.map((v, i) => (v === c ? i + 1 : 0)).filter(Boolean),
+      }))
+
+      // --- layouts ---------------------------------------------------------
+      function grid(cols, opt) {
+        const { serp = false, colMajor = false } = opt || {}
+        const rows = Math.ceil(N / cols)
+        return Array.from({ length: N }, (_, i) => {
+          if (colMajor) {
+            const c = Math.floor(i / rows)
+            let r = i % rows
+            if (serp && c % 2 === 1) r = rows - 1 - r
+            return { x: c, y: r }
+          }
+          const r = Math.floor(i / cols)
+          let c = i % cols
+          if (serp && r % 2 === 1) c = cols - 1 - c
+          return { x: c, y: r }
+        })
+      }
+      function clock() {
+        const R = 2.4
+        return Array.from({ length: N }, (_, i) => {
+          const a = (i * Math.PI) / 6 - Math.PI / 2
+          return { x: R + R * Math.cos(a), y: R + R * Math.sin(a) }
+        })
+      }
+      function byCode() {
+        const seen = {}
+        return CODES.map((c) => {
+          seen[c] = (seen[c] === undefined ? -1 : seen[c]) + 1
+          return { x: c, y: seen[c] }
+        })
+      }
+      function codeRows() {
+        // y = コード (0-6), x = そのコード内の並び順
+        const seen = {}
+        return CODES.map((c) => {
+          seen[c] = (seen[c] === undefined ? -1 : seen[c]) + 1
+          return { x: seen[c], y: c }
+        })
+      }
+
+      const LAYOUTS = [
+        { id: '6x2', name: '6×2 行順', pos: grid(6) },
+        { id: '6x2s', name: '6×2 蛇行', pos: grid(6, { serp: true }) },
+        { id: '4x3', name: '4×3 行順', pos: grid(4) },
+        { id: '4x3s', name: '4×3 蛇行', pos: grid(4, { serp: true }) },
+        { id: '3x4', name: '3×4 行順', pos: grid(3) },
+        { id: '3x4s', name: '3×4 蛇行', pos: grid(3, { serp: true }) },
+        { id: '2x6', name: '2×6 行順', pos: grid(2) },
+        { id: '2x6s', name: '2×6 蛇行', pos: grid(2, { serp: true }) },
+        { id: '6x2c', name: '6×2 列順', pos: grid(6, { colMajor: true }) },
+        {
+          id: '6x2cs',
+          name: '6×2 列順蛇行',
+          pos: grid(6, { colMajor: true, serp: true }),
+        },
+        { id: '4x3c', name: '4×3 列順', pos: grid(4, { colMajor: true }) },
+        {
+          id: '4x3cs',
+          name: '4×3 列順蛇行',
+          pos: grid(4, { colMajor: true, serp: true }),
+        },
+        { id: '12x1', name: '12×1 一列', pos: grid(12) },
+        { id: 'clock', name: '円環 (時計)', pos: clock() },
+        { id: 'code', name: 'コード列 (x=コード)', pos: byCode() },
+        { id: 'coderow', name: 'コード行 (y=コード)', pos: codeRows() },
+      ]
+
+      // --- metrics ---------------------------------------------------------
+      const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y)
+
+      function minSpacing(pos) {
+        let m = Infinity
+        for (let i = 0; i < N; i++)
+          for (let j = i + 1; j < N; j++) m = Math.min(m, dist(pos[i], pos[j]))
+        return m || 1
+      }
+      function orient(a, b, c) {
+        const v = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+        return Math.abs(v) < 1e-9 ? 0 : Math.sign(v)
+      }
+      function onSeg(a, b, p) {
+        return (
+          p.x >= Math.min(a.x, b.x) - 1e-9 &&
+          p.x <= Math.max(a.x, b.x) + 1e-9 &&
+          p.y >= Math.min(a.y, b.y) - 1e-9 &&
+          p.y <= Math.max(a.y, b.y) + 1e-9
+        )
+      }
+      function segCross(p1, q1, p2, q2) {
+        const o1 = orient(p1, q1, p2)
+        const o2 = orient(p1, q1, q2)
+        const o3 = orient(p2, q2, p1)
+        const o4 = orient(p2, q2, q1)
+        if (o1 !== o2 && o3 !== o4) return true
+        if (o1 === 0 && onSeg(p1, q1, p2)) return true
+        if (o2 === 0 && onSeg(p1, q1, q2)) return true
+        if (o3 === 0 && onSeg(p2, q2, p1)) return true
+        if (o4 === 0 && onSeg(p2, q2, q1)) return true
+        return false
+      }
+
+      function metrics(pos) {
+        const s = minSpacing(pos)
+        let adj = 0
+        for (let i = 0; i < N; i++)
+          if (dist(pos[i], pos[(i + 1) % N]) <= s * 1.01) adj++
+
+        let cross = 0
+        for (let i = 0; i < N; i++)
+          for (let j = i + 1; j < N; j++) {
+            if (j === i + 1 || (i === 0 && j === N - 1)) continue // 端点共有
+            if (
+              segCross(
+                pos[i],
+                pos[(i + 1) % N],
+                pos[j],
+                pos[(j + 1) % N]
+              )
+            )
+              cross++
+          }
+
+        const ds = []
+        for (const g of CODE_GROUPS)
+          for (let a = 0; a < g.months.length; a++)
+            for (let b = a + 1; b < g.months.length; b++)
+              ds.push(dist(pos[g.months[a] - 1], pos[g.months[b] - 1]) / s)
+        const codeDist = ds.reduce((x, y) => x + y, 0) / ds.length
+
+        const score = (100 * adj) / N - 3 * cross - 8 * (codeDist - 1)
+        return { adj, cross, codeDist, score }
+      }
+
+      for (const l of LAYOUTS) l.m = metrics(l.pos)
+
+      // --- render ----------------------------------------------------------
+      let uid = 0
+
+      function buildSvg(pos, o) {
+        const cell = o.cell
+        const r = cell * 0.32
+        const pad = cell * 0.75
+        const s = minSpacing(pos)
+        const k = cell / s
+        const px = pos.map((p) => ({ x: p.x * k, y: p.y * k }))
+        const minX = Math.min(...px.map((p) => p.x))
+        const minY = Math.min(...px.map((p) => p.y))
+        const P = px.map((p) => ({
+          x: p.x - minX + pad,
+          y: p.y - minY + pad,
+        }))
+        const W = Math.max(...P.map((p) => p.x)) + pad
+        const H = Math.max(...P.map((p) => p.y)) + pad
+        const id = 'g' + uid++
+
+        const parts = []
+        const colors = [...new Set(EDGES.map((e) => e.color))]
+        parts.push('<defs>')
+        for (const c of colors) {
+          const mid = id + '-' + c.slice(1)
+          parts.push(
+            `<marker id="${mid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="${c}"/></marker>`
+          )
+        }
+        parts.push('</defs>')
+
+        // 同コードエッジ (破線)
+        if (o.edge !== 'seq') {
+          for (const g of CODE_GROUPS) {
+            for (let a = 0; a + 1 < g.months.length; a++) {
+              const A = P[g.months[a] - 1]
+              const B = P[g.months[a + 1] - 1]
+              parts.push(
+                `<path d="${curve(A, B, r, true, 0.22)}" fill="none" stroke="${
+                  CODE_COLORS[g.code]
+                }" stroke-width="${o.cell * 0.035}" stroke-dasharray="${
+                  o.cell * 0.09
+                } ${o.cell * 0.07}" opacity="0.75"/>`
+              )
+            }
+          }
+        }
+
+        // 順行エッジ
+        if (o.edge !== 'code') {
+          for (let i = 0; i < N; i++) {
+            const A = P[i]
+            const B = P[(i + 1) % N]
+            const e = EDGES[i]
+            const long = dist(A, B) > cell * 1.35
+            const bow = o.bow && long
+            const d = curve(A, B, r + cell * 0.02, bow, 0.16)
+            parts.push(
+              `<path d="${d}" fill="none" stroke="${e.color}" stroke-width="${
+                cell * 0.045
+              }" marker-end="url(#${id}-${e.color.slice(1)})" opacity="0.95"/>`
+            )
+            if (o.delta) {
+              const m = midOf(A, B, bow, 0.16, cell * 0.22)
+              parts.push(
+                `<text x="${m.x}" y="${m.y}" fill="${
+                  e.color
+                }" font-size="${cell * 0.17}" font-weight="700" text-anchor="middle" dominant-baseline="central" paint-order="stroke" stroke="${
+                  '#0f1117'
+                }" stroke-width="${cell * 0.06}">${
+                  e.delta === 0 ? '±0' : '+' + e.delta
+                }</text>`
+              )
+            }
+          }
+        }
+
+        // ノード
+        for (let i = 0; i < N; i++) {
+          const p = P[i]
+          const c = CODE_COLORS[CODES[i]]
+          parts.push(
+            `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${c}" stroke="#0f1117" stroke-width="${
+              cell * 0.03
+            }"/>`
+          )
+          if (o.big) {
+            parts.push(
+              `<text x="${p.x}" y="${p.y - r * 0.18}" fill="#0f1117" font-size="${
+                cell * 0.26
+              }" font-weight="800" text-anchor="middle" dominant-baseline="central">${
+                i + 1
+              }</text>`
+            )
+            parts.push(
+              `<text x="${p.x}" y="${p.y + r * 0.45}" fill="#0f1117" font-size="${
+                cell * 0.16
+              }" font-weight="700" text-anchor="middle" dominant-baseline="central" opacity="0.75">c${
+                CODES[i]
+              }</text>`
+            )
+          } else {
+            parts.push(
+              `<text x="${p.x}" y="${p.y}" fill="#0f1117" font-size="${
+                cell * 0.36
+              }" font-weight="800" text-anchor="middle" dominant-baseline="central">${
+                i + 1
+              }</text>`
+            )
+          }
+        }
+
+        return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${parts.join(
+          ''
+        )}</svg>`
+      }
+
+      function curve(a, b, trim, bow, amp) {
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const len = Math.hypot(dx, dy) || 1
+        const ux = dx / len
+        const uy = dy / len
+        const A = { x: a.x + ux * trim, y: a.y + uy * trim }
+        const B = { x: b.x - ux * trim, y: b.y - uy * trim }
+        if (!bow) return `M${A.x.toFixed(1)},${A.y.toFixed(1)} L${B.x.toFixed(
+          1
+        )},${B.y.toFixed(1)}`
+        const off = len * amp
+        const cx = (A.x + B.x) / 2 - uy * off
+        const cy = (A.y + B.y) / 2 + ux * off
+        return `M${A.x.toFixed(1)},${A.y.toFixed(1)} Q${cx.toFixed(
+          1
+        )},${cy.toFixed(1)} ${B.x.toFixed(1)},${B.y.toFixed(1)}`
+      }
+      function midOf(a, b, bow, amp, extra) {
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const len = Math.hypot(dx, dy) || 1
+        const ux = dx / len
+        const uy = dy / len
+        const off = (bow ? len * amp * 0.5 : 0) + (extra || 0)
+        return {
+          x: (a.x + b.x) / 2 - uy * off,
+          y: (a.y + b.y) / 2 + ux * off,
+        }
+      }
+
+      // --- ui --------------------------------------------------------------
+      const state = {
+        layout: '6x2s',
+        edge: 'both',
+        delta: true,
+        bow: true,
+        sort: 'score',
+      }
+
+      function btn(label, active, onClick) {
+        const b = document.createElement('button')
+        b.textContent = label
+        if (active) b.classList.add('active')
+        b.onclick = onClick
+        return b
+      }
+
+      function renderControls() {
+        const lb = document.getElementById('layout-btns')
+        lb.innerHTML = ''
+        for (const l of LAYOUTS)
+          lb.append(
+            btn(l.name, state.layout === l.id, () => {
+              state.layout = l.id
+              render()
+            })
+          )
+
+        const eb = document.getElementById('edge-btns')
+        eb.innerHTML = ''
+        for (const [k, label] of [
+          ['seq', '順行のみ'],
+          ['code', '同コードのみ'],
+          ['both', '両方'],
+        ])
+          eb.append(
+            btn(label, state.edge === k, () => {
+              state.edge = k
+              render()
+            })
+          )
+
+        const ob = document.getElementById('opt-btns')
+        ob.innerHTML = ''
+        ob.append(
+          btn('Δラベル', state.delta, () => {
+            state.delta = !state.delta
+            render()
+          })
+        )
+        ob.append(
+          btn('長辺を弧に', state.bow, () => {
+            state.bow = !state.bow
+            render()
+          })
+        )
+
+        const sb = document.getElementById('sort-btns')
+        sb.innerHTML = ''
+        for (const [k, label] of [
+          ['score', '総合'],
+          ['adj', '隣接'],
+          ['cross', '交差'],
+          ['codeDist', '同コード'],
+          ['default', '既定'],
+        ])
+          sb.append(
+            btn(label, state.sort === k, () => {
+              state.sort = k
+              renderGallery()
+              renderControls()
+            })
+          )
+      }
+
+      function chip(label, value, tone) {
+        return `<span class="chip ${tone || ''}">${label} <b>${value}</b></span>`
+      }
+
+      function metricChips(m, full) {
+        return [
+          chip('隣接', m.adj + '/12', m.adj === 12 ? 'good' : ''),
+          chip('交差', m.cross, m.cross === 0 ? 'good' : 'bad'),
+          chip('同コード', m.codeDist.toFixed(2)),
+          full ? chip('総合', Math.round(m.score)) : '',
+        ].join('')
+      }
+
+      function render() {
+        const l = LAYOUTS.find((x) => x.id === state.layout)
+        document.getElementById('stage-title').textContent = l.name
+        document.getElementById('stage-metrics').innerHTML = metricChips(
+          l.m,
+          true
+        )
+        document.getElementById('stage-svg').innerHTML = buildSvg(l.pos, {
+          cell: 92,
+          edge: state.edge,
+          delta: state.delta,
+          bow: state.bow,
+          big: true,
+        })
+        document.getElementById('stage-note').textContent =
+          l.m.adj === N
+            ? '連続する12本すべてが隣接。1月から指でなぞって一筆書きできる配置。'
+            : `隣接していないエッジが ${N - l.m.adj} 本。跳ぶ箇所を覚える必要がある。`
+        renderGallery()
+        renderControls()
+      }
+
+      function renderGallery() {
+        const gal = document.getElementById('gal')
+        const list = [...LAYOUTS]
+        if (state.sort === 'score') list.sort((a, b) => b.m.score - a.m.score)
+        else if (state.sort === 'adj') list.sort((a, b) => b.m.adj - a.m.adj)
+        else if (state.sort === 'cross')
+          list.sort((a, b) => a.m.cross - b.m.cross)
+        else if (state.sort === 'codeDist')
+          list.sort((a, b) => a.m.codeDist - b.m.codeDist)
+
+        gal.innerHTML = ''
+        for (const l of list) {
+          const card = document.createElement('div')
+          card.className = 'card' + (l.id === state.layout ? ' active' : '')
+          card.innerHTML =
+            `<div class="card-title">${l.name}</div>` +
+            `<div class="card-sub">隣接 ${l.m.adj}/12 ・ 交差 ${
+              l.m.cross
+            } ・ 同コード ${l.m.codeDist.toFixed(2)} ・ 総合 ${Math.round(
+              l.m.score
+            )}</div>` +
+            `<div class="card-svg">${buildSvg(l.pos, {
+              cell: 34,
+              edge: state.edge,
+              delta: false,
+              bow: state.bow,
+              big: false,
+            })}</div>`
+          card.onclick = () => {
+            state.layout = l.id
+            render()
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }
+          gal.append(card)
+        }
+      }
+
+      function renderRef() {
+        const g = document.getElementById('groups')
+        g.innerHTML = CODE_GROUPS.map(
+          (x) =>
+            `<div class="code-row"><span class="code-badge" style="background:${
+              CODE_COLORS[x.code]
+            }">${x.code}</span><span class="months">${x.months
+              .map((m) => m + '月')
+              .join(' ・ ')}</span></div>`
+        ).join('')
+
+        const t = document.getElementById('table')
+        const head =
+          '<tr><td class="h">月</td>' +
+          CODES.map((_, i) => `<td class="h">${i + 1}</td>`).join('') +
+          '</tr>'
+        const body =
+          '<tr><td class="h">コード</td>' +
+          CODES.map(
+            (c) =>
+              `<td style="background:${CODE_COLORS[c]};color:#0f1117;font-weight:700">${c}</td>`
+          ).join('') +
+          '</tr>'
+        t.innerHTML = head + body
+      }
+
+      renderRef()
+      render()
+    </script>
+  </body>
+</html>
