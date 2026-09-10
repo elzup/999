@@ -279,7 +279,7 @@
           <div class="btns" id="edge-btns"></div>
         </div>
         <div class="ctl" id="ctl-opt">
-          <span class="ctl-label">表示</span>
+          <span class="ctl-label">辺ラベル</span>
           <div class="btns" id="opt-btns"></div>
         </div>
       </section>
@@ -292,6 +292,10 @@
           </div>
           <div class="svg-wrap" id="stage-svg"></div>
           <div class="legend" id="legend-seq">
+            <span
+              >矢印 = 月 → 翌月、ラベル = コードの増分。例: 1月(c0) →+3→
+              2月(c3)</span
+            >
             <span><i style="background: #f97316"></i>+3 (31日)</span>
             <span><i style="background: #38bdf8"></i>+2 (30日)</span>
             <span><i style="background: #94a3b8"></i>±0 (2月28日)</span>
@@ -432,10 +436,12 @@
           return { x: c, y: r }
         })
       }
-      function clock() {
+      /** start = 1月を置く角度 (既定 -90° = 上) */
+      function clock(start) {
         const R = 2.4
+        const s0 = start === undefined ? -Math.PI / 2 : start
         return Array.from({ length: N }, (_, i) => {
-          const a = (i * Math.PI) / 6 - Math.PI / 2
+          const a = (i * Math.PI) / 6 + s0
           return { x: R + R * Math.cos(a), y: R + R * Math.sin(a) }
         })
       }
@@ -477,7 +483,8 @@
           pos: grid(4, { colMajor: true, serp: true }),
         },
         { id: '12x1', name: '12×1 一列', pos: grid(12) },
-        { id: 'clock', name: '円環 (時計)', pos: clock() },
+        { id: 'clock', name: '円環 (1が上)', pos: clock() },
+        { id: 'clockL', name: '円環 (1が左)', pos: clock(Math.PI) },
         { id: 'code', name: 'コード列 (x=コード)', pos: byCode() },
         { id: 'coderow', name: 'コード行 (y=コード)', pos: codeRows() },
       ]
@@ -624,8 +631,18 @@
         return p
       }
 
+      /** 電話パッドのように 1-12 を 3 列に積み、0 だけ下にはみ出させる */
+      function mapPhone() {
+        const p = []
+        for (let m = 1; m <= 12; m++)
+          p[m] = { x: (m - 1) % 3, y: Math.floor((m - 1) / 3) }
+        p[0] = { x: 1, y: 4 }
+        return p
+      }
+
       const MAP_LAYOUTS = [
         { id: 'struct', name: '構造 (成分ごと)', pos: mapStruct() },
+        { id: 'phone', name: '電話パッド (3列 + 0)', pos: mapPhone() },
         { id: 'bycode', name: 'コード基準 (ぶら下げ)', pos: mapByCode() },
         { id: 'tworow', name: '2段 (0-6 / 7-12)', pos: mapTwoRow() },
         { id: 'ring13', name: '13角形', pos: mapCircle() },
@@ -736,16 +753,21 @@
                 cell * 0.045
               }" marker-end="url(#${id}-${e.color.slice(1)})" opacity="0.95"/>`
             )
-            if (o.delta) {
-              const m = midOf(A, B, bow, 0.16, cell * 0.22)
+            if (o.label && o.label !== 'none') {
+              const days = o.label === 'days'
+              const txt = days
+                ? DAYS[i] + '日'
+                : e.delta === 0
+                  ? '±0'
+                  : '+' + e.delta
+              const fs = cell * (days ? 0.145 : 0.17)
+              const m = midOf(A, B, bow, 0.16, cell * 0.26)
               parts.push(
-                `<text x="${m.x}" y="${m.y}" fill="${
-                  e.color
-                }" font-size="${cell * 0.17}" font-weight="700" text-anchor="middle" dominant-baseline="central" paint-order="stroke" stroke="${
-                  '#0f1117'
-                }" stroke-width="${cell * 0.06}">${
-                  e.delta === 0 ? '±0' : '+' + e.delta
-                }</text>`
+                `<text x="${m.x}" y="${
+                  m.y
+                }" fill="${e.color}" font-size="${fs}" font-weight="700" text-anchor="middle" dominant-baseline="central" paint-order="stroke" stroke="#0f1117" stroke-width="${
+                  cell * 0.06
+                }">${txt}</text>`
               )
             }
           }
@@ -918,7 +940,7 @@
         layout: '6x2s',
         mapLayout: 'struct',
         edge: 'none',
-        delta: true,
+        label: 'delta',
         bow: true,
         sort: 'score',
       }
@@ -980,12 +1002,17 @@
 
         const ob = document.getElementById('opt-btns')
         ob.innerHTML = ''
-        ob.append(
-          btn('Δラベル', state.delta, () => {
-            state.delta = !state.delta
-            render()
-          })
-        )
+        for (const [k, label] of [
+          ['none', 'なし'],
+          ['delta', 'コード差'],
+          ['days', '日数'],
+        ])
+          ob.append(
+            btn(label, state.label === k, () => {
+              state.label = k
+              render()
+            })
+          )
         ob.append(
           btn('長辺を弧に', state.bow, () => {
             state.bow = !state.bow
@@ -1060,7 +1087,7 @@
           : buildSvg(l.pos, {
               cell,
               edge: state.edge,
-              delta: cell > 60 && state.delta,
+              label: cell > 60 ? state.label : 'none',
               bow: state.bow,
               big: cell > 60,
             })
