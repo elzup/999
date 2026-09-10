@@ -436,6 +436,17 @@
           return { x: c, y: r }
         })
       }
+      /** 各行の個数から中央揃えのピラミッド座標を作る */
+      function pyramid(rowSizes) {
+        const w = Math.max(...rowSizes)
+        const p = []
+        rowSizes.forEach((n, r) => {
+          const x0 = (w - n) / 2
+          for (let k = 0; k < n; k++) p.push({ x: x0 + k, y: r })
+        })
+        return p
+      }
+
       /** start = 1月を置く角度 (既定 -90° = 上) */
       function clock(start) {
         const R = 2.4
@@ -483,6 +494,9 @@
           pos: grid(4, { colMajor: true, serp: true }),
         },
         { id: '12x1', name: '12×1 一列', pos: grid(12) },
+        { id: 'pyr246', name: 'ピラミッド 2-4-6', pos: pyramid([2, 4, 6]) },
+        { id: 'pyr345', name: 'ピラミッド 3-4-5', pos: pyramid([3, 4, 5]) },
+        { id: 'pyrInv', name: '逆ピラミッド 6-4-2', pos: pyramid([6, 4, 2]) },
         { id: 'clock', name: '円環 (1が上)', pos: clock() },
         { id: 'clockL', name: '円環 (1が左)', pos: clock(Math.PI) },
         { id: 'code', name: 'コード列 (x=コード)', pos: byCode() },
@@ -572,22 +586,41 @@
       /** 0 = コードだけ / 1-6 = 月でもコード / 7-12 = 月だけ */
       const roleOf = (n) => (n === 0 ? 'code' : n <= 6 ? 'both' : 'month')
 
-      function mapGrid(cols, opt) {
+      /** 1-12 をグリッドに詰め、0 だけ下にはみ出させる (電話パッド式) */
+      function mapMonthGrid(cols, opt) {
         const { serp = false } = opt || {}
-        return Array.from({ length: MAP_N }, (_, i) => {
+        const rows = Math.ceil(12 / cols)
+        const p = []
+        for (let m = 1; m <= 12; m++) {
+          const i = m - 1
           const r = Math.floor(i / cols)
           let c = i % cols
           if (serp && r % 2 === 1) c = cols - 1 - c
-          return { x: c, y: r }
-        })
+          p[m] = { x: c, y: r }
+        }
+        p[0] = { x: (cols - 1) / 2, y: rows }
+        return p
       }
-      function mapCircle() {
-        const R = 2.6
-        return Array.from({ length: MAP_N }, (_, i) => {
-          const a = (i * 2 * Math.PI) / MAP_N - Math.PI / 2
-          return { x: R + R * Math.cos(a), y: R + R * Math.sin(a) }
-        })
+      /** 1-12 をピラミッドに積み、0 を頂点 (または底) に置く */
+      function mapPyramid(rowSizes, zx, zy) {
+        const body = pyramid(rowSizes)
+        const p = []
+        for (let m = 1; m <= 12; m++) p[m] = body[m - 1]
+        p[0] = { x: zx, y: zy }
+        return p
       }
+      /** 1-12 を円に並べ、0 を中心に置く */
+      function mapRing0() {
+        const R = 2.4
+        const p = []
+        for (let m = 1; m <= 12; m++) {
+          const a = ((m - 1) * Math.PI) / 6 - Math.PI / 2
+          p[m] = { x: R + R * Math.cos(a), y: R + R * Math.sin(a) }
+        }
+        p[0] = { x: R, y: R }
+        return p
+      }
+      /** 上段にコード 0-6、下段に月だけの 7-12 */
       function mapTwoRow() {
         return Array.from({ length: MAP_N }, (_, n) =>
           n <= 6 ? { x: n, y: 0 } : { x: n - 7, y: 1.6 }
@@ -631,29 +664,44 @@
         return p
       }
 
-      /** 電話パッドのように 1-12 を 3 列に積み、0 だけ下にはみ出させる */
-      function mapPhone() {
-        const p = []
-        for (let m = 1; m <= 12; m++)
-          p[m] = { x: (m - 1) % 3, y: Math.floor((m - 1) / 3) }
-        p[0] = { x: 1, y: 4 }
-        return p
-      }
-
       const MAP_LAYOUTS = [
         { id: 'struct', name: '構造 (成分ごと)', pos: mapStruct() },
-        { id: 'phone', name: '電話パッド (3列 + 0)', pos: mapPhone() },
+        {
+          id: 'pyr246',
+          name: 'ピラミッド 2-4-6 (0が頂点)',
+          pos: mapPyramid([2, 4, 6], 2.5, -1),
+        },
+        {
+          id: 'pyr345',
+          name: 'ピラミッド 3-4-5 (0が頂点)',
+          pos: mapPyramid([3, 4, 5], 2, -1),
+        },
+        {
+          id: 'pyrInv',
+          name: '逆ピラミッド 6-4-2 (0が底)',
+          pos: mapPyramid([6, 4, 2], 2.5, 3),
+        },
+        { id: 'phone', name: '電話パッド 3×4 (+0)', pos: mapMonthGrid(3) },
+        {
+          id: 'phones',
+          name: '電話パッド 3×4 蛇行 (+0)',
+          pos: mapMonthGrid(3, { serp: true }),
+        },
+        { id: 'g6', name: '6×2 (+0)', pos: mapMonthGrid(6) },
+        {
+          id: 'g6s',
+          name: '6×2 蛇行 (+0)',
+          pos: mapMonthGrid(6, { serp: true }),
+        },
+        { id: 'g4', name: '4×3 (+0)', pos: mapMonthGrid(4) },
+        {
+          id: 'g4s',
+          name: '4×3 蛇行 (+0)',
+          pos: mapMonthGrid(4, { serp: true }),
+        },
+        { id: 'ring0', name: '円環 (0が中心)', pos: mapRing0() },
         { id: 'bycode', name: 'コード基準 (ぶら下げ)', pos: mapByCode() },
-        { id: 'tworow', name: '2段 (0-6 / 7-12)', pos: mapTwoRow() },
-        { id: 'ring13', name: '13角形', pos: mapCircle() },
-        { id: 'g7', name: '7×2 行順', pos: mapGrid(7) },
-        { id: 'g7s', name: '7×2 蛇行', pos: mapGrid(7, { serp: true }) },
-        { id: 'g5', name: '5×3 行順', pos: mapGrid(5) },
-        { id: 'g5s', name: '5×3 蛇行', pos: mapGrid(5, { serp: true }) },
-        { id: 'g4', name: '4×4 行順', pos: mapGrid(4) },
-        { id: 'g4s', name: '4×4 蛇行', pos: mapGrid(4, { serp: true }) },
-        { id: 'g3', name: '3×5 行順', pos: mapGrid(3) },
-        { id: 'g13', name: '13×1 一列', pos: mapGrid(13) },
+        { id: 'tworow', name: '2段 (コード / 月だけ)', pos: mapTwoRow() },
       ]
 
       function mapMetrics(pos) {
