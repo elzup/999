@@ -258,22 +258,27 @@
     <header>
       <h1>月コード ノードグラフ</h1>
       <p class="lead">
-        曜日計算の月コード (1月:0 … 12月:5) を 1月→12月の有向グラフとして、6×2 /
-        4×3 などいろいろな配置で並べて見比べるツール。
+        曜日計算の月コード (1月:0 … 12月:5) を有向グラフにして、いろいろな配置で
+        並べて見比べるツール。<b>対応</b>=「月 → そのコード」(13 ノード)、
+        <b>順路</b>=「月 → 翌月」(12 ノード)。
       </p>
     </header>
 
     <div class="wrap">
       <section class="panel controls">
         <div class="ctl">
+          <span class="ctl-label">グラフ</span>
+          <div class="btns" id="graph-btns"></div>
+        </div>
+        <div class="ctl">
           <span class="ctl-label">配置</span>
           <div class="btns" id="layout-btns"></div>
         </div>
-        <div class="ctl">
+        <div class="ctl" id="ctl-edge">
           <span class="ctl-label">エッジ</span>
           <div class="btns" id="edge-btns"></div>
         </div>
-        <div class="ctl">
+        <div class="ctl" id="ctl-opt">
           <span class="ctl-label">表示</span>
           <div class="btns" id="opt-btns"></div>
         </div>
@@ -286,7 +291,7 @@
             <div class="metrics" id="stage-metrics"></div>
           </div>
           <div class="svg-wrap" id="stage-svg"></div>
-          <div class="legend" id="legend">
+          <div class="legend" id="legend-seq">
             <span><i style="background: #f97316"></i>+3 (31日)</span>
             <span><i style="background: #38bdf8"></i>+2 (30日)</span>
             <span><i style="background: #94a3b8"></i>±0 (2月28日)</span>
@@ -304,6 +309,13 @@
               >同コード</span
             >
           </div>
+          <div class="legend" id="legend-map">
+            <span><b style="color: var(--text)">●</b> 0-6 = コード</span>
+            <span><b style="color: var(--text)">◎</b> 1-6 = 月でもコード</span>
+            <span><b style="color: var(--text)">○</b> 7-12 = 月だけ</span>
+            <span>矢印: 月 → その月のコード (色 = 行き先のコード色)</span>
+            <span>↻ = 自己ループ (3月 → 3)</span>
+          </div>
           <p class="note" id="stage-note"></p>
         </section>
 
@@ -314,6 +326,28 @@
           <h3>対応表</h3>
           <table id="table"></table>
 
+          <div id="ref-map">
+            <h3>対応グラフの成分</h3>
+            <p class="note" style="margin: 0">
+              「月 → その月のコード」を辺にすると 0-12 の
+              <b>13 ノード</b>の有向グラフになり、3 つの成分に分かれる。<br />
+              <b>0 に落ちる</b>: 9・12 → 5 → 1 → 0 ← 10<br />
+              <b>3 の自己ループ</b>: 8 → 2 → 3 ↻ ← 11<br />
+              <b>4 ⇄ 6 の相互ループ</b>: 7 → 6 ⇄ 4<br />
+              0 は「コードだけで月がない」唯一のノード。7-12 は月だけ、1-6
+              は月でもコードでもある。
+            </p>
+            <h3>指標の見かた</h3>
+            <p class="note" style="margin: 0">
+              <b>隣接</b>: 12本のうち上下左右で隣り合っている辺の数
+              (自己ループを除く)。<br />
+              <b>交差</b>: 直線で描いたときの辺の交差数。0 が理想。<br />
+              <b>辺長</b>: 平均の辺の長さ (セル単位, 1.00 が最小)。<br />
+              <b>総合</b> = 隣接率×100 − 交差×4 − (辺長−1)×6。
+            </p>
+          </div>
+
+          <div id="ref-seq">
           <h3>矢印の意味</h3>
           <p class="note" style="margin: 0">
             矢印は <b>その月 → 翌月</b> で、ラベルは
@@ -335,6 +369,7 @@
             1.00 が最小)。小さいほど同色が固まる。<br />
             <b>総合</b> = 隣接率×100 − 交差×3 − (同コード−1)×8。
           </p>
+          </div>
         </aside>
       </main>
 
@@ -452,8 +487,9 @@
 
       function minSpacing(pos) {
         let m = Infinity
-        for (let i = 0; i < N; i++)
-          for (let j = i + 1; j < N; j++) m = Math.min(m, dist(pos[i], pos[j]))
+        for (let i = 0; i < pos.length; i++)
+          for (let j = i + 1; j < pos.length; j++)
+            m = Math.min(m, dist(pos[i], pos[j]))
         return m || 1
       }
       function orient(a, b, c) {
@@ -468,17 +504,24 @@
           p.y <= Math.max(a.y, b.y) + 1e-9
         )
       }
-      function segCross(p1, q1, p2, q2) {
+      function segCross(p1, q1, p2, q2, bowed) {
         const o1 = orient(p1, q1, p2)
         const o2 = orient(p1, q1, q2)
         const o3 = orient(p2, q2, p1)
         const o4 = orient(p2, q2, q1)
         if (o1 !== o2 && o3 !== o4) return true
-        if (o1 === 0 && onSeg(p1, q1, p2)) return true
-        if (o2 === 0 && onSeg(p1, q1, q2)) return true
-        if (o3 === 0 && onSeg(p2, q2, p1)) return true
-        if (o4 === 0 && onSeg(p2, q2, q1)) return true
-        return false
+        const overlap =
+          (o1 === 0 && onSeg(p1, q1, p2)) ||
+          (o2 === 0 && onSeg(p1, q1, q2)) ||
+          (o3 === 0 && onSeg(p2, q2, p1)) ||
+          (o4 === 0 && onSeg(p2, q2, q1))
+        if (!overlap) return false
+        // 弧で描く場合、一直線に重なる辺どうしは
+        // 向きが同じとき (= 同じ側に膨らむとき) だけ重なって見える
+        if (!bowed) return true
+        const d =
+          (q1.x - p1.x) * (q2.x - p2.x) + (q1.y - p1.y) * (q2.y - p2.y)
+        return d > 0
       }
 
       function metrics(pos) {
@@ -514,6 +557,122 @@
       }
 
       for (const l of LAYOUTS) l.m = metrics(l.pos)
+
+      // --- 対応グラフ (月 → コード / ノード 0-12) ---------------------------
+      const MAP_N = 13
+      /** 12本の辺: from = 月 (1-12), to = コード (0-6)。3月→3 は自己ループ */
+      const MAP_EDGES = CODES.map((c, i) => ({ from: i + 1, to: c }))
+      /** 0 = コードだけ / 1-6 = 月でもコード / 7-12 = 月だけ */
+      const roleOf = (n) => (n === 0 ? 'code' : n <= 6 ? 'both' : 'month')
+
+      function mapGrid(cols, opt) {
+        const { serp = false } = opt || {}
+        return Array.from({ length: MAP_N }, (_, i) => {
+          const r = Math.floor(i / cols)
+          let c = i % cols
+          if (serp && r % 2 === 1) c = cols - 1 - c
+          return { x: c, y: r }
+        })
+      }
+      function mapCircle() {
+        const R = 2.6
+        return Array.from({ length: MAP_N }, (_, i) => {
+          const a = (i * 2 * Math.PI) / MAP_N - Math.PI / 2
+          return { x: R + R * Math.cos(a), y: R + R * Math.sin(a) }
+        })
+      }
+      function mapTwoRow() {
+        return Array.from({ length: MAP_N }, (_, n) =>
+          n <= 6 ? { x: n, y: 0 } : { x: n - 7, y: 1.6 }
+        )
+      }
+      /** 成分ごとに手で置いた配置 */
+      function mapStruct() {
+        const S = {
+          // 0 に落ちる成分
+          9: [1, 0],
+          12: [0, 1],
+          5: [1, 1],
+          1: [2, 1],
+          0: [3, 1],
+          10: [4, 1],
+          // 3 の自己ループ成分
+          8: [0, 3],
+          2: [1, 3],
+          3: [2, 3],
+          11: [2, 4],
+          // 4 ⇄ 6 成分
+          7: [0, 6],
+          6: [1, 6],
+          4: [2, 6],
+        }
+        return Array.from({ length: MAP_N }, (_, n) => ({
+          x: S[n][0],
+          y: S[n][1],
+        }))
+      }
+      /** コードを横一列に置き、月だけのノードをその下にぶら下げる */
+      function mapByCode() {
+        const p = []
+        for (let c = 0; c <= 6; c++) p[c] = { x: c, y: 0 }
+        const seen = {}
+        for (let m = 7; m <= 12; m++) {
+          const c = CODES[m - 1]
+          seen[c] = (seen[c] === undefined ? 0 : seen[c]) + 1
+          p[m] = { x: c, y: seen[c] }
+        }
+        return p
+      }
+
+      const MAP_LAYOUTS = [
+        { id: 'struct', name: '構造 (成分ごと)', pos: mapStruct() },
+        { id: 'bycode', name: 'コード基準 (ぶら下げ)', pos: mapByCode() },
+        { id: 'tworow', name: '2段 (0-6 / 7-12)', pos: mapTwoRow() },
+        { id: 'ring13', name: '13角形', pos: mapCircle() },
+        { id: 'g7', name: '7×2 行順', pos: mapGrid(7) },
+        { id: 'g7s', name: '7×2 蛇行', pos: mapGrid(7, { serp: true }) },
+        { id: 'g5', name: '5×3 行順', pos: mapGrid(5) },
+        { id: 'g5s', name: '5×3 蛇行', pos: mapGrid(5, { serp: true }) },
+        { id: 'g4', name: '4×4 行順', pos: mapGrid(4) },
+        { id: 'g4s', name: '4×4 蛇行', pos: mapGrid(4, { serp: true }) },
+        { id: 'g3', name: '3×5 行順', pos: mapGrid(3) },
+        { id: 'g13', name: '13×1 一列', pos: mapGrid(13) },
+      ]
+
+      function mapMetrics(pos) {
+        const s = minSpacing(pos)
+        const es = MAP_EDGES.filter((e) => e.from !== e.to)
+        let adj = 0
+        let sum = 0
+        for (const e of es) {
+          const d = dist(pos[e.from], pos[e.to])
+          sum += d
+          if (d <= s * 1.01) adj++
+        }
+        let cross = 0
+        for (let i = 0; i < es.length; i++)
+          for (let j = i + 1; j < es.length; j++) {
+            const a = es[i]
+            const b = es[j]
+            // 端点を共有する辺どうしは交差とみなさない
+            if (
+              a.from === b.from ||
+              a.from === b.to ||
+              a.to === b.from ||
+              a.to === b.to
+            )
+              continue
+            if (
+              segCross(pos[a.from], pos[a.to], pos[b.from], pos[b.to], true)
+            )
+              cross++
+          }
+        const len = sum / es.length / s
+        const score = (100 * adj) / es.length - 4 * cross - 6 * (len - 1)
+        return { adj, total: es.length, cross, len, score }
+      }
+
+      for (const l of MAP_LAYOUTS) l.m = mapMetrics(l.pos)
 
       // --- render ----------------------------------------------------------
       let uid = 0
@@ -663,13 +822,112 @@
         }
       }
 
+      function loopPath(p, r) {
+        const a1 = -Math.PI * 0.78
+        const a2 = -Math.PI * 0.22
+        const p1 = { x: p.x + r * Math.cos(a1), y: p.y + r * Math.sin(a1) }
+        const p2 = { x: p.x + r * Math.cos(a2), y: p.y + r * Math.sin(a2) }
+        return (
+          `M${p1.x.toFixed(1)},${p1.y.toFixed(1)} ` +
+          `C${(p1.x - r * 1.1).toFixed(1)},${(p1.y - r * 2.3).toFixed(1)} ` +
+          `${(p2.x + r * 1.1).toFixed(1)},${(p2.y - r * 2.3).toFixed(1)} ` +
+          `${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
+        )
+      }
+
+      function buildMapSvg(pos, o) {
+        const cell = o.cell
+        const r = cell * 0.3
+        const pad = cell * 0.9
+        const s = minSpacing(pos)
+        const k = cell / s
+        const px = pos.map((p) => ({ x: p.x * k, y: p.y * k }))
+        const minX = Math.min(...px.map((p) => p.x))
+        const minY = Math.min(...px.map((p) => p.y))
+        const P = px.map((p) => ({ x: p.x - minX + pad, y: p.y - minY + pad }))
+        const W = Math.max(...P.map((p) => p.x)) + pad
+        const H = Math.max(...P.map((p) => p.y)) + pad
+        const id = 'm' + uid++
+
+        const parts = ['<defs>']
+        for (const c of CODE_COLORS)
+          parts.push(
+            `<marker id="${id}-${c.slice(
+              1
+            )}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="${c}"/></marker>`
+          )
+        parts.push('</defs>')
+
+        for (const e of MAP_EDGES) {
+          const col = CODE_COLORS[e.to]
+          const d =
+            e.from === e.to
+              ? loopPath(P[e.from], r + cell * 0.02)
+              : curve(P[e.from], P[e.to], r + cell * 0.02, true, 0.19)
+          parts.push(
+            `<path d="${d}" fill="none" stroke="${col}" stroke-width="${
+              cell * 0.045
+            }" marker-end="url(#${id}-${col.slice(1)})" opacity="0.95"/>`
+          )
+        }
+
+        for (let n = 0; n < MAP_N; n++) {
+          const p = P[n]
+          const rl = roleOf(n)
+          if (rl === 'month') {
+            parts.push(
+              `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="#22262f" stroke="#8b8f9a" stroke-width="${
+                cell * 0.035
+              }"/>`
+            )
+            parts.push(
+              `<text x="${p.x}" y="${p.y}" fill="#e5e7eb" font-size="${
+                cell * 0.34
+              }" font-weight="800" text-anchor="middle" dominant-baseline="central">${n}</text>`
+            )
+          } else {
+            if (rl === 'both')
+              parts.push(
+                `<circle cx="${p.x}" cy="${p.y}" r="${
+                  r * 1.22
+                }" fill="#0f1117" stroke="#e5e7eb" stroke-width="${
+                  cell * 0.03
+                }"/>`
+              )
+            parts.push(
+              `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${
+                CODE_COLORS[n]
+              }" stroke="#0f1117" stroke-width="${cell * 0.03}"/>`
+            )
+            parts.push(
+              `<text x="${p.x}" y="${p.y}" fill="#0f1117" font-size="${
+                cell * 0.34
+              }" font-weight="800" text-anchor="middle" dominant-baseline="central">${n}</text>`
+            )
+          }
+        }
+
+        return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${parts.join(
+          ''
+        )}</svg>`
+      }
+
       // --- ui --------------------------------------------------------------
       const state = {
+        graph: 'map',
         layout: '6x2s',
+        mapLayout: 'struct',
         edge: 'none',
         delta: true,
         bow: true,
         sort: 'score',
+      }
+      const isMap = () => state.graph === 'map'
+      const curList = () => (isMap() ? MAP_LAYOUTS : LAYOUTS)
+      const curId = () => (isMap() ? state.mapLayout : state.layout)
+      function pickLayout(id) {
+        if (isMap()) state.mapLayout = id
+        else state.layout = id
       }
 
       function btn(label, active, onClick) {
@@ -681,12 +939,26 @@
       }
 
       function renderControls() {
+        const gb = document.getElementById('graph-btns')
+        gb.innerHTML = ''
+        for (const [k, label] of [
+          ['map', '対応 (月→コード)'],
+          ['seq', '順路 (月→翌月)'],
+        ])
+          gb.append(
+            btn(label, state.graph === k, () => {
+              state.graph = k
+              state.sort = 'score'
+              render()
+            })
+          )
+
         const lb = document.getElementById('layout-btns')
         lb.innerHTML = ''
-        for (const l of LAYOUTS)
+        for (const l of curList())
           lb.append(
-            btn(l.name, state.layout === l.id, () => {
-              state.layout = l.id
+            btn(l.name, curId() === l.id, () => {
+              pickLayout(l.id)
               render()
             })
           )
@@ -723,13 +995,22 @@
 
         const sb = document.getElementById('sort-btns')
         sb.innerHTML = ''
-        for (const [k, label] of [
-          ['score', '総合'],
-          ['adj', '隣接'],
-          ['cross', '交差'],
-          ['codeDist', '同コード'],
-          ['default', '既定'],
-        ])
+        const sorts = isMap()
+          ? [
+              ['score', '総合'],
+              ['adj', '隣接'],
+              ['cross', '交差'],
+              ['len', '辺長'],
+              ['default', '既定'],
+            ]
+          : [
+              ['score', '総合'],
+              ['adj', '隣接'],
+              ['cross', '交差'],
+              ['codeDist', '同コード'],
+              ['default', '既定'],
+            ]
+        for (const [k, label] of sorts)
           sb.append(
             btn(label, state.sort === k, () => {
               state.sort = k
@@ -744,6 +1025,17 @@
       }
 
       function metricChips(m, full) {
+        if (isMap())
+          return [
+            chip(
+              '隣接',
+              m.adj + '/' + m.total,
+              m.adj === m.total ? 'good' : ''
+            ),
+            chip('交差', m.cross, m.cross === 0 ? 'good' : 'bad'),
+            chip('辺長', m.len.toFixed(2)),
+            full ? chip('総合', Math.round(m.score)) : '',
+          ].join('')
         return [
           chip('隣接', m.adj + '/12', m.adj === 12 ? 'good' : ''),
           chip('交差', m.cross, m.cross === 0 ? 'good' : 'bad'),
@@ -752,62 +1044,80 @@
         ].join('')
       }
 
+      function cardSub(m) {
+        return isMap()
+          ? `隣接 ${m.adj}/${m.total} ・ 交差 ${m.cross} ・ 辺長 ${m.len.toFixed(
+              2
+            )} ・ 総合 ${Math.round(m.score)}`
+          : `隣接 ${m.adj}/12 ・ 交差 ${m.cross} ・ 同コード ${m.codeDist.toFixed(
+              2
+            )} ・ 総合 ${Math.round(m.score)}`
+      }
+
+      function drawSvg(l, cell) {
+        return isMap()
+          ? buildMapSvg(l.pos, { cell })
+          : buildSvg(l.pos, {
+              cell,
+              edge: state.edge,
+              delta: cell > 60 && state.delta,
+              bow: state.bow,
+              big: cell > 60,
+            })
+      }
+
       function render() {
-        const l = LAYOUTS.find((x) => x.id === state.layout)
+        const map = isMap()
+        document.getElementById('ctl-edge').style.display = map ? 'none' : 'flex'
+        document.getElementById('ctl-opt').style.display = map ? 'none' : 'flex'
+        document.getElementById('legend-seq').style.display =
+          !map && state.edge !== 'none' ? 'flex' : 'none'
+        document.getElementById('legend-map').style.display = map
+          ? 'flex'
+          : 'none'
+        document.getElementById('ref-map').style.display = map ? 'block' : 'none'
+        document.getElementById('ref-seq').style.display = map ? 'none' : 'block'
+
+        const l = curList().find((x) => x.id === curId()) || curList()[0]
+        pickLayout(l.id)
         document.getElementById('stage-title').textContent = l.name
         document.getElementById('stage-metrics').innerHTML = metricChips(
           l.m,
           true
         )
-        document.getElementById('stage-svg').innerHTML = buildSvg(l.pos, {
-          cell: 92,
-          edge: state.edge,
-          delta: state.delta,
-          bow: state.bow,
-          big: true,
-        })
-        document.getElementById('stage-note').textContent =
-          state.edge === 'none'
+        document.getElementById('stage-svg').innerHTML = drawSvg(l, 92)
+        document.getElementById('stage-note').textContent = map
+          ? '矢印は 月 → その月のコード。0 はコードだけで月がなく、3 は自分自身に戻る (3月→3)。'
+          : state.edge === 'none'
             ? '各マスは 月 / コード。指標はエッジを描いた場合の値。'
             : l.m.adj === N
               ? '連続する12本すべてが隣接。1月から指でなぞって一筆書きできる配置。'
               : `隣接していないエッジが ${N - l.m.adj} 本。跳ぶ箇所を覚える必要がある。`
-        document.getElementById('legend').style.display =
-          state.edge === 'none' ? 'none' : 'flex'
         renderGallery()
         renderControls()
       }
 
       function renderGallery() {
         const gal = document.getElementById('gal')
-        const list = [...LAYOUTS]
+        const list = [...curList()]
         if (state.sort === 'score') list.sort((a, b) => b.m.score - a.m.score)
         else if (state.sort === 'adj') list.sort((a, b) => b.m.adj - a.m.adj)
         else if (state.sort === 'cross')
           list.sort((a, b) => a.m.cross - b.m.cross)
         else if (state.sort === 'codeDist')
           list.sort((a, b) => a.m.codeDist - b.m.codeDist)
+        else if (state.sort === 'len') list.sort((a, b) => a.m.len - b.m.len)
 
         gal.innerHTML = ''
         for (const l of list) {
           const card = document.createElement('div')
-          card.className = 'card' + (l.id === state.layout ? ' active' : '')
+          card.className = 'card' + (l.id === curId() ? ' active' : '')
           card.innerHTML =
             `<div class="card-title">${l.name}</div>` +
-            `<div class="card-sub">隣接 ${l.m.adj}/12 ・ 交差 ${
-              l.m.cross
-            } ・ 同コード ${l.m.codeDist.toFixed(2)} ・ 総合 ${Math.round(
-              l.m.score
-            )}</div>` +
-            `<div class="card-svg">${buildSvg(l.pos, {
-              cell: 34,
-              edge: state.edge,
-              delta: false,
-              bow: state.bow,
-              big: false,
-            })}</div>`
+            `<div class="card-sub">${cardSub(l.m)}</div>` +
+            `<div class="card-svg">${drawSvg(l, isMap() ? 30 : 34)}</div>`
           card.onclick = () => {
-            state.layout = l.id
+            pickLayout(l.id)
             render()
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }
