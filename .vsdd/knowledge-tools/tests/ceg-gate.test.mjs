@@ -25,8 +25,9 @@ describe('VCSDD coherence graph', () => {
     const result = runCeg('graph')
 
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
-    expect(result.stdout).toContain('# CEG (13 nodes / 36 edges)')
+    expect(result.stdout).toContain('# CEG (14 nodes / 37 edges)')
     expect(result.stdout).toContain('design:tab-registry')
+    expect(result.stdout).toContain('design:memo-target')
     expect(result.stdout).toContain('spec:ff-practice')
     expect(result.stdout).toContain('spec:representative-console')
     expect(result.stdout).toContain('test:knowledge-tools')

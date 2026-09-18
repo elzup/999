@@ -34,6 +34,7 @@
     "check:kana": "node src/check-kana.js",
     "check:digits": "node src/check-digits.js",
     "check:errors": "node src/check-errors.js",
+    "check:words": "node src/check-words.js",
     "viz": "node src/generate-viz.js",
     "dev": "portless run vite",
     "dev:raw": "vite",

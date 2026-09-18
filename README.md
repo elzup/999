@@ -36,6 +36,7 @@ nr stats:goro  # ゴロ割り当て分布統計 (docs/goro-stats.md) を生成
 nr check:kana  # かなカバレッジチェック
 nr check:digits # 桁数チェック
 nr check:errors # エラーチェック
+nr check:words  # 語の衝突チェック (数字/カード/hex をまたいだ重複割当)
 nr viz         # 単語ダッシュボード可視化HTML生成
 nr lyrics      # 代表語/FF の歌詞テキスト (lyrics/) を再生成
 nr sheet:audit # シート監査 (dry-run。書込プランを sheet-audit.out.json に出す)

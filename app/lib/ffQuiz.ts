@@ -1,5 +1,11 @@
 import type { ChoiceQuestion } from '../components/ChoiceQuiz'
 import ffJson from '../data/ff.json'
+import { containsJunk } from '../../src/data/junk.js'
+import {
+  buildWordIndex,
+  entriesOfHex,
+  isUniqueLabel,
+} from '../../src/data/memo-target.js'
 
 export type FfRow = {
   hex: string
@@ -16,22 +22,19 @@ export const FF_ROWS = ffJson as FfRow[]
 // テストの「語」面: phonetic(いーごひよこ)ではなく語/かな。漢字語があればそれを優先。
 const readLabel = (r: FfRow) => r.word || r.kana
 
-// テスト出題に使える行(語/かな・hex・bin が揃っていて欠損記号を含まない)
-const MISSING_MARKER = /—|＿|#REF!|#N\/A|#ERROR!|#VALUE!|^(?:FALSE|TRUE)$/
-
+// 出題に使える行(語/かな・hex・bin が揃っていて欠損記号を含まない)。
+// 欠損記号の一覧は src/data/junk.js が正本 (lyrics/json 生成側と共有する)。
 export const isValidFfRow = (row: FfRow) =>
   Boolean(readLabel(row) && row.hex && row.bin) &&
-  ![readLabel(row), row.hex, row.bin].some((value) =>
-    MISSING_MARKER.test(value)
-  )
+  ![readLabel(row), row.hex, row.bin].some(containsJunk)
 
 const VALID = FF_ROWS.filter(isValidFfRow)
-const READ_LABEL_COUNTS = VALID.reduce<Map<string, number>>((counts, row) => {
-  const label = readLabel(row)
-  return new Map(counts).set(label, (counts.get(label) ?? 0) + 1)
-}, new Map())
-const UNIQUE_READ_ROWS = VALID.filter(
-  (row) => READ_LABEL_COUNTS.get(readLabel(row)) === 1
+
+// 語 → 対象 の逆引き (多対多)。同じ語が複数 hex を指す行を弾くのに使う。
+// 3 領域共通の索引なので、数字・カードと突き合わせるときも同じ形で引ける。
+const WORD_INDEX = buildWordIndex(VALID.flatMap(entriesOfHex))
+const UNIQUE_READ_ROWS = VALID.filter((row) =>
+  isUniqueLabel(WORD_INDEX, readLabel(row))
 )
 
 export type FfDir = 'hex2read' | 'read2hex' | 'bin2hex' | 'hex2bin'

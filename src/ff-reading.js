@@ -4,6 +4,8 @@
 //   NN/CC: 語読み(G/H or F括弧内)
 // row の並び: [num, hex, type, bin, exp, F(参照), G(人), H(物)]
 
+import { isJunk } from './data/junk.js'
+
 // hex 各文字の名前読み(ひらがな)。数字=数字名、英字=アルファベット名。
 export const HEX_NAME = {
   0: 'ぜろ',
@@ -24,20 +26,10 @@ export const HEX_NAME = {
   F: 'えふ',
 }
 
-const JUNK = new Set([
-  '',
-  '—',
-  '#REF!',
-  '#N/A',
-  '#ERROR!',
-  '#VALUE!',
-  'FALSE',
-  'TRUE',
-])
 const FF_TYPES = new Set(['NN', 'NC', 'CN', 'CC'])
 
 export const clean = (s) => String(s ?? '').trim()
-export const usable = (s) => Boolean(s) && !JUNK.has(s)
+export const usable = (s) => Boolean(s) && !isJunk(s)
 
 /** 生成元が 00-FF の完全な順序集合であることを確認する。 */
 export function validateFfRows(rows) {

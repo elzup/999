@@ -10,6 +10,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    // app から src/data/*.js (node スクリプトと共有する正本) を読むため
+    "allowJs": true,
     "isolatedModules": true,
     "noEmit": true,
     "paths": {

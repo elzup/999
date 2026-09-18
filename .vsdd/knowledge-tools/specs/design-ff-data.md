@@ -2,7 +2,7 @@
 id: design:ff-data
 title: 00-FF 学習データ
 coherence:
-  depends_on: []
+  depends_on: [design:memo-target]
 ---
 
 # design:ff-data
@@ -20,6 +20,8 @@ FF 学習データは 0 から 255 までを 1 行ずつ持ち、表示・クイ
 - 語クイズは合成読み `read` ではなく、記憶対象の `word || kana` を回答面に使う。
 - `語→hex` は `word || kana` が出題可能行の中で一意な行だけを使い、同じ語が複数 hex
   を指す曖昧な逆引きを出題しない。`hex→語` は重複語を許容する。
+- 一意判定と欠損値の判定は design:memo-target の索引 / `src/data/junk.js` を通す。
+  どの語がどの hex と競合しているかは `nr check:words` で出す。
 
 ## Implementation
 
