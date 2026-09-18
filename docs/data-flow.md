@@ -121,7 +121,7 @@ flowchart LR
 | ------------------ | ------------------------------ | ---- | ------------------------------------------------------------ |
 | Legacy             | `w1`, `w2`, `w1_2`, `w2_2`     | 4    | 旧スキーマ。**画像 manifest / GCS はこの名前でしか持たない** |
 | シート/TSV（現行） | `wh1..wh3`(人), `wm1..wm3`(物) | 6    | `words.tsv` の実列                                           |
-| Editor UI          | `wh1..wh5`, `wm1..wm5`         | 10   | 編集可能枠                                                   |
+| Editor UI          | `wh1..wh3`, `wm1..wm3`         | 6    | 編集可能枠。枠数は `src/data/slots.js` が正本                |
 
 アプリ表示層のブリッジ（`app/data/parse.ts`, `app/lib/choice.ts`）:
 `wh1←w1, wh2←w1_2, wm1←w2, wm2←w2_2`（wh3/wm3 は legacy 無し）。
@@ -337,7 +337,7 @@ EditorTab.tsx
   → Sheets v4 values:batchUpdate  → 999/gid0 の num 一致行の各列
 ```
 
-- EditorTab で編集: `hito` / `mono` / `gainen`、スロット `wh1..wh5`・`wm1..wm5`（語/かな/画像。かなは先頭 3 行のみ保存）。100 帯 →10 帯 →10 件の一覧編集、`jump` で番号直接移動。
+- EditorTab で編集: `hito` / `mono` / `gainen`、スロット `wh1..wh3`・`wm1..wm3`（語/かな/画像）。枠数は `src/data/slots.js` の `CANDIDATE_DEPTH` が正本で、シート・`functions/index.js` の `SLOT_HEADERS`・zod スキーマと `src/__tests__/entry-schema.test.js` で突き合わせている。100 帯 →10 帯 →10 件の一覧編集、`jump` で番号直接移動。
 - Functions（単一 `api` 関数, `functions/index.js`）:
 
 | メソッド/パス                   | 処理                               | 対象             |

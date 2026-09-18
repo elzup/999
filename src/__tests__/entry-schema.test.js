@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   ALL_SLOT_KEYS,
@@ -54,6 +57,22 @@ describe('every consumer agrees with src/data/slots.js', () => {
 
   it('辞書の共通モデル', () => {
     expect(ROLES.num).toEqual(ALL_SLOT_KEYS)
+  })
+
+  // functions/ は CJS の別パッケージで src/ を import できない。
+  // 列の一覧が同じであることだけ、ソースを読んで確かめる。
+  it('編集 API (functions/index.js) が受け付ける列', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+    const source = readFileSync(join(root, 'functions', 'index.js'), 'utf8')
+    const block = source.match(/const SLOT_HEADERS = \{([\s\S]*?)\n\}/)
+    expect(block, 'SLOT_HEADERS が見つからない').not.toBeNull()
+    const declared = [...block[1].matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1])
+
+    const expected = SLOT_KEYS.flatMap((slot) => {
+      const field = slotFields(slot)
+      return [field.word, field.kana, field.image]
+    })
+    expect([...declared].sort()).toEqual([...expected].sort())
   })
 
   it('zod スキーマ (キーは明示列挙なので、ずれたらここで落ちる)', () => {

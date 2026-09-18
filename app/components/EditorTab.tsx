@@ -3,6 +3,7 @@ import type { NumberEntry } from '../data/schema'
 import { saveWordPatch, type EditableWordPatch } from '../lib/editorApi'
 import { clearEditorToken } from '../lib/editorAuth'
 import Rankey from './Rankey'
+import { CANDIDATE_DEPTH, slotFields } from '../../src/data/slots.js'
 
 type SlotPrefix = 'wh' | 'wm'
 
@@ -22,12 +23,24 @@ type Draft = {
 
 const SLOT_CONFIG: Array<{ prefix: SlotPrefix; label: string; sheet: string }> =
   [
-    { prefix: 'wh', label: 'wh candidates', sheet: 'wh1..wh5' },
-    { prefix: 'wm', label: 'wm candidates', sheet: 'wm1..wm5' },
+    {
+      prefix: 'wh',
+      label: 'wh candidates',
+      sheet: `wh1..wh${CANDIDATE_DEPTH}`,
+    },
+    {
+      prefix: 'wm',
+      label: 'wm candidates',
+      sheet: `wm1..wm${CANDIDATE_DEPTH}`,
+    },
   ]
 
 const HUNDRED_GROUPS = Array.from({ length: 10 }, (_, index) => index)
-const MAX_SLOT_COUNT = 5
+
+// 枠数の正本は src/data/slots.js。ここに独自の上限を置くと、シートと
+// functions の列が無い枠を編集できてしまい、保存しても読み戻せなくなる。
+const MAX_SLOT_COUNT = CANDIDATE_DEPTH
+const SLOT_RANKS = Array.from({ length: MAX_SLOT_COUNT }, (_, i) => i + 1)
 
 export default function EditorTab({
   numbers,
@@ -640,12 +653,12 @@ function getPatternLabel(kana: string) {
     tokens.length >= 4
       ? 'DD+D'
       : tokens.length === 3
-      ? hasSmall || hasSokuon
-        ? 'DD+D'
-        : 'D+D+D'
-      : tokens.length === 2
-      ? 'D+D'
-      : 'D'
+        ? hasSmall || hasSokuon
+          ? 'DD+D'
+          : 'D+D+D'
+        : tokens.length === 2
+          ? 'D+D'
+          : 'D'
   return hasSokuon ? `${base} / っ` : base
 }
 
@@ -683,17 +696,14 @@ function readSlotItems(
   entry: NumberEntry | undefined,
   prefix: SlotPrefix
 ): SlotItem[] {
-  const ranks = [1, 2, 3] as const
-  return ranks
-    .slice(0, MAX_SLOT_COUNT)
-    .map((slot) => {
-      return {
-        word: readEntryField(entry, `${prefix}${slot}`),
-        kana: readEntryField(entry, `${prefix}${slot}k`),
-        image: readEntryField(entry, `${prefix}${slot}Img`),
-      }
-    })
-    .filter((item) => item.word || item.kana || item.image)
+  return SLOT_RANKS.map((rank) => {
+    const field = slotFields(`${prefix}${rank}`)
+    return {
+      word: readEntryField(entry, field.word as keyof NumberEntry),
+      kana: readEntryField(entry, field.kana as keyof NumberEntry),
+      image: readEntryField(entry, field.image as keyof NumberEntry),
+    }
+  }).filter((item) => item.word || item.kana || item.image)
 }
 
 function readEntryField(
@@ -715,19 +725,19 @@ function draftToPatch(draft: Draft): EditableWordPatch {
 
 function serializeSlotPatch(prefix: SlotPrefix, items: SlotItem[]) {
   const patch: Record<string, string> = {}
-  for (let index = 0; index < MAX_SLOT_COUNT; index++) {
-    const slot = items[index]
-    const slotNo = index + 1
-    patch[`${prefix}${slotNo}`] = slot?.word?.trim() || ''
-    patch[`${prefix}${slotNo}k`] = slotNo <= 3 ? slot?.kana?.trim() || '' : ''
-    patch[`${prefix}${slotNo}Img`] = slot?.image?.trim() || ''
+  for (const rank of SLOT_RANKS) {
+    const slot = items[rank - 1]
+    const field = slotFields(`${prefix}${rank}`)
+    patch[field.word] = slot?.word?.trim() || ''
+    patch[field.kana] = slot?.kana?.trim() || ''
+    patch[field.image] = slot?.image?.trim() || ''
   }
   return patch
 }
 
 function countSlots(entry: NumberEntry, prefix: SlotPrefix) {
-  return Array.from({ length: MAX_SLOT_COUNT }, (_, index) => index + 1).filter(
-    (slot) => readEntryField(entry, `${prefix}${slot}` as keyof NumberEntry)
+  return SLOT_RANKS.filter((rank) =>
+    readEntryField(entry, `${prefix}${rank}` as keyof NumberEntry)
   ).length
 }
 
@@ -736,8 +746,7 @@ function blankSlotItem(): SlotItem {
 }
 
 function entryWords(entry: NumberEntry, prefix: SlotPrefix) {
-  const words = Array.from({ length: MAX_SLOT_COUNT }, (_, index) =>
-    readEntryField(entry, `${prefix}${index + 1}` as keyof NumberEntry)
+  return SLOT_RANKS.map((rank) =>
+    readEntryField(entry, `${prefix}${rank}` as keyof NumberEntry)
   ).filter(Boolean)
-  return words
 }
