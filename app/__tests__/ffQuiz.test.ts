@@ -59,18 +59,36 @@ describe('FF choice questions', () => {
     }
   })
 
-  it('REQ-FF-002/003: reverse word prompts map to exactly one hex', () => {
-    const labelCounts = new Map<string, number>()
+  it('REQ-FF-003: asks each reverse word once and accepts every hex it maps to', () => {
+    const hexesByLabel = new Map<string, string[]>()
     for (const row of FF_ROWS.filter(isValidFfRow)) {
       const label = row.word || row.kana
-      labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1)
+      hexesByLabel.set(label, [...(hexesByLabel.get(label) ?? []), row.hex])
     }
+    // 同じ語が複数 hex を指す行が実データに存在する (ピッピ = 1B / B1 など)
+    const ambiguous = [...hexesByLabel].filter(([, hexes]) => hexes.length > 1)
+    expect(ambiguous.length).toBeGreaterThan(0)
 
     const questions = buildFfQuestions('read2hex', 256)
 
-    expect(questions.length).toBeGreaterThan(0)
+    // 出題は語ごとに 1 問。曖昧な語も除外せず出す
+    expect(questions).toHaveLength(hexesByLabel.size)
+    expect(new Set(questions.map((q) => q.prompt)).size).toBe(questions.length)
+
     for (const question of questions) {
-      expect(labelCounts.get(question.prompt)).toBe(1)
+      const hexes = hexesByLabel.get(question.prompt)
+      expect(hexes, question.prompt).toBeDefined()
+      const accepted = question.answers ?? [question.answer]
+      expect([...accepted].sort()).toEqual([...(hexes ?? [])].sort())
+      // 受け付ける hex はすべて選択肢に並ぶ
+      for (const hex of accepted) expect(question.choices).toContain(hex)
+    }
+  })
+
+  it('REQ-FF-003: leaves unambiguous questions with a single answer', () => {
+    const questions = buildFfQuestions('hex2read', 32)
+    for (const question of questions) {
+      expect(question.answers).toBeUndefined()
     }
   })
 

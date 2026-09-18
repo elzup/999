@@ -6,10 +6,22 @@ import type { ReviewItem } from './ReviewPanel'
 export type ChoiceQuestion = {
   prompt: string
   answer: string
+  /**
+   * 正解が 1 つに定まらない出題の許容集合 (例: 同じ語を 2 つの hex に割り当てて
+   * いる場合の逆引き)。省略時は [answer]。answer はこの中に含める。
+   */
+  answers?: string[]
   choices: string[]
   /** 振り返りでブックマークする際のキー(例: 'n:573')。無ければ★を出さない。 */
   bmKey?: string
 }
+
+/** この設問で正解として受け付ける値 */
+export const acceptedOf = (q: ChoiceQuestion) => q.answers ?? [q.answer]
+
+/** 選んだ値が正解か。複数正解ならどれでも正解 */
+export const isCorrectChoice = (q: ChoiceQuestion, choice: string) =>
+  acceptedOf(q).includes(choice)
 
 export type QuizSummary = {
   score: number
@@ -91,7 +103,8 @@ function ChoiceQuiz({
     (choice: string) => {
       if (picked !== null) return
       vibrate()
-      const correct = choice === q.answer
+      const accepted = acceptedOf(q)
+      const correct = isCorrectChoice(q, choice)
       dispatch({
         type: 'pick',
         choice,
@@ -100,7 +113,8 @@ function ChoiceQuiz({
           label: q.prompt,
           correct,
           userAnswer: choice,
-          rightAnswer: q.answer,
+          // 複数正解なら全部見せる (どれでも良かったことが振り返りで分かる)
+          rightAnswer: accepted.join(' / '),
           bmKey: q.bmKey,
         },
       })
@@ -113,7 +127,7 @@ function ChoiceQuiz({
   // 回答後、一定時間で自動送り。誤答は長め。アンマウント/再回答で解除。
   useEffect(() => {
     if (picked === null || finished) return
-    const correct = picked === q.answer
+    const correct = isCorrectChoice(q, picked)
     const timer = setTimeout(advance, correct ? DELAY_CORRECT : DELAY_WRONG)
     return () => clearTimeout(timer)
   }, [picked, finished, q, advance])
@@ -196,7 +210,7 @@ function ChoiceQuiz({
 
           <div class="cm-choice-list">
             {q.choices.map((choice, i) => {
-              const isAnswer = choice === q.answer
+              const isAnswer = acceptedOf(q).includes(choice)
               const isPicked = choice === picked
               const cls =
                 'cm-choice-btn' +

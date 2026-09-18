@@ -4,7 +4,7 @@ import { containsJunk } from '../../src/data/junk.js'
 import {
   buildWordIndex,
   entriesOfHex,
-  isUniqueLabel,
+  targetsOf,
 } from '../../src/data/memo-target.js'
 
 export type FfRow = {
@@ -30,11 +30,20 @@ export const isValidFfRow = (row: FfRow) =>
 
 const VALID = FF_ROWS.filter(isValidFfRow)
 
-// 語 → 対象 の逆引き (多対多)。同じ語が複数 hex を指す行を弾くのに使う。
-// 3 領域共通の索引なので、数字・カードと突き合わせるときも同じ形で引ける。
+// 語 → 対象 の逆引き (多対多)。3 領域共通の索引なので、数字・カードと
+// 突き合わせるときも同じ形で引ける。
 const WORD_INDEX = buildWordIndex(VALID.flatMap(entriesOfHex))
-const UNIQUE_READ_ROWS = VALID.filter((row) =>
-  isUniqueLabel(WORD_INDEX, readLabel(row))
+
+/** その語が指す hex すべて。ピッピ (1B / B1) のような重複割当は 2 件返る */
+const hexesOf = (label: string) =>
+  targetsOf(WORD_INDEX, label).map((t) => t.key)
+
+// 語 → hex は同じ語が複数の hex を指しうる。以前はその語を丸ごと出題から
+// 外していたが (6 行が黙って練習対象外だった)、語ごとに 1 問へまとめ、
+// 指している hex はどれを選んでも正解として扱う。
+const READ_ROWS = VALID.filter(
+  (row, i, rows) =>
+    rows.findIndex((other) => readLabel(other) === readLabel(row)) === i
 )
 
 export type FfDir = 'hex2read' | 'read2hex' | 'bin2hex' | 'hex2bin'
@@ -46,6 +55,8 @@ const DIR: Record<
     title: string
     prompt: (r: FfRow) => string
     answer: (r: FfRow) => string
+    /** 正解として受け付ける値。省略時は answer だけ */
+    accepted?: (r: FfRow) => string[]
     pool: (r: FfRow) => string
     choices: number
     promptClass?: string
@@ -63,6 +74,7 @@ const DIR: Record<
     title: '語 → hex',
     prompt: (r) => readLabel(r),
     answer: (r) => r.hex,
+    accepted: (r) => hexesOf(readLabel(r)),
     pool: (r) => r.hex,
     choices: 4,
   },
@@ -97,9 +109,16 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function withDistractors(pool: string[], answer: string, n: number): string[] {
-  const others = shuffle(pool.filter((v) => v !== answer)).slice(0, n - 1)
-  return shuffle([answer, ...others])
+function withDistractors(
+  pool: string[],
+  accepted: string[],
+  n: number
+): string[] {
+  const others = shuffle(pool.filter((v) => !accepted.includes(v))).slice(
+    0,
+    Math.max(0, n - accepted.length)
+  )
+  return shuffle([...accepted, ...others])
 }
 
 export const FF_QUIZ_LEN = 10
@@ -116,15 +135,17 @@ export function buildFfQuestions(
   const pool = [...new Set(VALID.map(cfg.pool))]
   const n = Math.min(cfg.choices, pool.length)
   const questionCount = normalizeQuestionCount(count)
-  const rows = dir === 'read2hex' ? UNIQUE_READ_ROWS : VALID
+  const rows = dir === 'read2hex' ? READ_ROWS : VALID
   return shuffle(rows)
     .slice(0, questionCount)
     .map((r) => {
       const answer = cfg.answer(r)
+      const accepted = cfg.accepted?.(r) ?? [answer]
       return {
         prompt: cfg.prompt(r),
         answer,
-        choices: withDistractors(pool, answer, n),
+        ...(accepted.length > 1 ? { answers: accepted } : {}),
+        choices: withDistractors(pool, accepted, n),
       }
     })
 }
