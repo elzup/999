@@ -18,6 +18,10 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  PRIORITY_KEYS as DEFAULT_PRIORITY,
+  SLOT_KEYS as SLOT_ORDER,
+} from './data/slots.js'
 import { loadManifest, readJson, writeJson } from './images/store.js'
 import { rankey } from './rankey.js'
 import { scoreWithLabel } from './scorer.js'
@@ -27,9 +31,9 @@ const wordsPath = join(dataDir, 'words.tsv')
 
 export const REP_PATH = join(dataDir, 'word-rep.json')
 
-// 表示順(人→物でグループ) / 既定の代表優先順(人トップ→物トップ→2番手…)
-export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3']
-export const DEFAULT_PRIORITY = ['wh1', 'wm1', 'wh2', 'wm2', 'wh3', 'wm3']
+// 表示順(人→物でグループ) / 既定の代表優先順(人トップ→物トップ→2番手…)。
+// どちらも src/data/slots.js が正本。
+export { SLOT_ORDER, DEFAULT_PRIORITY }
 // 画像 manifest は旧スロットで保存(w1=人1, w1_2=人2, w2=物1, w2_2=物2)。人物3番手は無し。
 const SLOT_IMG = { wh1: 'w1', wh2: 'w1_2', wm1: 'w2', wm2: 'w2_2' }
 const MAX_REP = 2

@@ -15,6 +15,8 @@
 // 依存を持たない素の ESM。node のスクリプト (src/) と vite のアプリ (app/) が
 // 同じものを読む。
 
+import { ALL_SLOT_KEYS, slotFields } from './slots.js'
+
 /**
  * @typedef {{ kind: 'num' | 'card' | 'hex', key: string }} MemoTarget
  * @typedef {{
@@ -32,7 +34,7 @@ export const KINDS = /** @type {const} */ (['num', 'card', 'hex'])
 
 /** 語が置かれる面。kind ごとに意味が違うので共通語彙にはしない */
 export const ROLES = {
-  num: ['w1', 'w2', 'wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3'],
+  num: ALL_SLOT_KEYS,
   card: ['person', 'object', 'action'],
   hex: ['word'],
 }
@@ -83,13 +85,14 @@ const filled = (entries) => entries.filter((e) => e.label !== '')
 export function entriesOfNumber(number) {
   const target = { kind: 'num', key: text(number?.num) }
   return filled(
-    ROLES.num.map((role) =>
-      entry(target, role, {
-        word: number?.[role],
-        kana: number?.[`${role}k`],
-        imageUrl: number?.[`${role}Img`],
+    ROLES.num.map((role) => {
+      const field = slotFields(role)
+      return entry(target, role, {
+        word: number?.[field.word],
+        kana: number?.[field.kana],
+        imageUrl: number?.[field.image],
       })
-    )
+    })
   )
 }
 

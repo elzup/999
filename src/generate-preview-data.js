@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { z } from 'zod'
 import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
+import { CardEntrySchema, NumberEntrySchema } from './data/entry-schema.js'
 import { WEIGHTS } from './scorer.js'
 import { classify } from './goro-extract.js'
 import { extractName, isKanaOnly, loadWords, toHiragana } from './words.js'
@@ -13,60 +13,13 @@ const baseDir = dirname(fileURLToPath(import.meta.url))
 // gitignore 済みの private/ に書き出す。配信は認証付き Cloud Function 経由のみ。
 const privateDir = join(baseDir, '..', 'private')
 
-function buildCandidateSlotShape(prefix) {
-  const shape = {}
-  for (let i = 1; i <= 3; i++) {
-    shape[`${prefix}${i}`] = z.string().default('')
-    shape[`${prefix}${i}k`] = z.string().default('')
-    shape[`${prefix}${i}Img`] = z.string().optional()
-  }
-  return shape
-}
-
-const NumberSchema = z.object({
-  num: z.string().regex(/^\d{3}$/),
-  w1: z.string().default(''),
-  w1k: z.string().default(''),
-  w2: z.string().default(''),
-  w2k: z.string().default(''),
-  hito: z.string().default(''),
-  mono: z.string().default(''),
-  gainen: z.string().default(''),
-  catScore: z.number().nullable().default(null),
-  w1Score: z.number().nullable().default(null),
-  w1Pattern: z.string().optional(),
-  w1Error: z.union([z.boolean(), z.string()]).optional(),
-  // rankey: 3桁の内訳記法 (編集画面で表示する)
-  w1Rk: z.string().default(''),
-  w2Score: z.number().nullable().default(null),
-  w2Error: z.union([z.boolean(), z.string()]).optional(),
-  w2Rk: z.string().default(''),
-  w1Img: z.string().optional(),
-  w2Img: z.string().optional(),
-  ...buildCandidateSlotShape('wh'),
-  ...buildCandidateSlotShape('wm'),
-})
-
-const CardSchema = z.object({
-  suit: z.enum(['S', 'H', 'C', 'D']),
-  rank: z.string().min(1),
-  person: z.string().default(''),
-  actionP: z.string().default(''),
-  personScore: z.number().nullable().default(null),
-  object: z.string().default(''),
-  actionO: z.string().default(''),
-  objectScore: z.number().nullable().default(null),
-  action: z.string().default(''),
-  actionScore: z.number().nullable().default(null),
-})
-
 // Numbers data
 const vizData = JSON.parse(
   readFileSync(join(baseDir, 'visualize-words.data.json'), 'utf8')
 )
 const numbers = vizData.data
   .map((d) => {
-    const result = NumberSchema.safeParse(d)
+    const result = NumberEntrySchema.safeParse(d)
     if (!result.success) {
       console.warn(`Skip number: ${d.num}`, result.error.issues[0]?.message)
       return null
@@ -121,7 +74,7 @@ const cards = cardLines
       action: cols[colIdx('action')] ?? '',
       actionScore: parseScore(cols[colIdx('score_a')] ?? ''),
     }
-    const result = CardSchema.safeParse(raw)
+    const result = CardEntrySchema.safeParse(raw)
     if (!result.success) {
       console.warn(`Skip card: ${mark}`, result.error.issues[0]?.message)
       return null

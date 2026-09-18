@@ -1,132 +1,35 @@
+// 辞書データのスキーマは src/data/entry-schema.js が正本 (生成する node の
+// スクリプトと同じものを使う)。ここは型を取り出してアプリに配るだけ。
+// アプリだけが使う localStorage 系のスキーマは下に置く。
 import { z } from 'zod'
 
-const GoroSlotSchema = z.object({ k: z.string(), d: z.string() }).nullable()
+export {
+  GoroAllocSchema,
+  NumberEntrySchema,
+  CardEntrySchema,
+  TierBucketSchema,
+  RulesDataSchema,
+  YomiUseHitSchema,
+  YomiUseSchema,
+  AppDataSchema,
+} from '../../src/data/entry-schema.js'
 
-const CandidateSlotSchema = {
-  word: z.string().optional(),
-  kana: z.string().optional(),
-  image: z.string().optional(),
-}
-
-type CandidateRank = 1 | 2 | 3
-type CandidateSlotShape<Prefix extends 'wh' | 'wm'> = {
-  [Key in `${Prefix}${CandidateRank}`]: typeof CandidateSlotSchema.word
-} & {
-  [Key in `${Prefix}${CandidateRank}k`]: typeof CandidateSlotSchema.kana
-} & {
-  [Key in `${Prefix}${CandidateRank}Img`]: typeof CandidateSlotSchema.image
-}
-
-function buildCandidateSlotShape<Prefix extends 'wh' | 'wm'>(
-  prefix: Prefix
-): CandidateSlotShape<Prefix> {
-  return {
-    [`${prefix}1`]: CandidateSlotSchema.word,
-    [`${prefix}1k`]: CandidateSlotSchema.kana,
-    [`${prefix}1Img`]: CandidateSlotSchema.image,
-    [`${prefix}2`]: CandidateSlotSchema.word,
-    [`${prefix}2k`]: CandidateSlotSchema.kana,
-    [`${prefix}2Img`]: CandidateSlotSchema.image,
-    [`${prefix}3`]: CandidateSlotSchema.word,
-    [`${prefix}3k`]: CandidateSlotSchema.kana,
-    [`${prefix}3Img`]: CandidateSlotSchema.image,
-  } as CandidateSlotShape<Prefix>
-}
-
-export const GoroAllocSchema = z.object({
-  t1: GoroSlotSchema,
-  t2: GoroSlotSchema,
-  t3: GoroSlotSchema.optional(),
-  t4: GoroSlotSchema.optional(),
-  h1: GoroSlotSchema,
-  h2: GoroSlotSchema,
-  h3: GoroSlotSchema.optional(),
-  h4: GoroSlotSchema.optional(),
-})
+import {
+  GoroAllocSchema,
+  NumberEntrySchema,
+  CardEntrySchema,
+  RulesDataSchema,
+  YomiUseHitSchema,
+  YomiUseSchema,
+  AppDataSchema,
+} from '../../src/data/entry-schema.js'
 
 export type GoroAlloc = z.infer<typeof GoroAllocSchema>
-
-export const NumberEntrySchema = z.object({
-  num: z.string().regex(/^\d{3}$/),
-  w1: z.string().default(''),
-  w1k: z.string().default(''),
-  w2: z.string().default(''),
-  w2k: z.string().default(''),
-  hito: z.string().default(''),
-  mono: z.string().default(''),
-  gainen: z.string().default(''),
-  catScore: z.number().nullable().default(null),
-  w1Score: z.number().nullable().default(null),
-  w1Pattern: z.string().optional(),
-  w1Error: z.union([z.boolean(), z.string()]).optional(),
-  // rankey: 3桁の内訳記法。編集画面でだけ出す (学習中は邪魔なので)
-  w1Rk: z.string().optional(),
-  w2Score: z.number().nullable().default(null),
-  w2Error: z.union([z.boolean(), z.string()]).optional(),
-  w2Rk: z.string().optional(),
-  w1Img: z.string().optional(),
-  w2Img: z.string().optional(),
-  w1_2: z.string().optional(),
-  w2_2: z.string().optional(),
-  w1_2Img: z.string().optional(),
-  w2_2Img: z.string().optional(),
-  ...buildCandidateSlotShape('wh'),
-  ...buildCandidateSlotShape('wm'),
-  ga: GoroAllocSchema.optional(),
-})
-
 export type NumberEntry = z.infer<typeof NumberEntrySchema>
-
-export const CardEntrySchema = z.object({
-  suit: z.enum(['S', 'H', 'C', 'D']),
-  rank: z.string().min(1),
-  person: z.string().default(''),
-  actionP: z.string().default(''),
-  personScore: z.number().nullable().default(null),
-  object: z.string().default(''),
-  actionO: z.string().default(''),
-  objectScore: z.number().nullable().default(null),
-  action: z.string().default(''),
-  actionScore: z.number().nullable().default(null),
-})
-
 export type CardEntry = z.infer<typeof CardEntrySchema>
-
-export const TierBucketSchema = z.object({
-  core: z.array(z.string()).default([]),
-  sub: z.array(z.string()).default([]),
-  bad: z.array(z.string()).default([]),
-})
-
-export const RulesDataSchema = z.object({
-  singleByDigit: z.record(z.string(), TierBucketSchema),
-  doubleMatrix: z.array(z.array(z.array(z.string()))),
-  longMatrix: z.array(z.array(z.array(z.string()))),
-  weights: z.record(z.string(), z.number()),
-})
-
 export type RulesData = z.infer<typeof RulesDataSchema>
-
-/** かな2文字の読み → 割当先 (build:data で集計)。
- *  2文字読みの割当先。slot = 本命語(w1) / 対抗語(w2) のどちらが根拠か */
-export const YomiUseHitSchema = z.object({
-  num: z.string(),
-  slot: z.enum(['w1', 'w2']),
-})
-
-export const YomiUseSchema = z.record(z.string(), z.array(YomiUseHitSchema))
-
 export type YomiUseHit = z.infer<typeof YomiUseHitSchema>
-
 export type YomiUse = z.infer<typeof YomiUseSchema>
-
-export const AppDataSchema = z.object({
-  numbers: z.array(NumberEntrySchema),
-  cards: z.array(CardEntrySchema),
-  rules: RulesDataSchema.optional(),
-  yomiUse: YomiUseSchema.optional(),
-})
-
 export type AppData = z.infer<typeof AppDataSchema>
 
 export const RecordSchema = z.object({
