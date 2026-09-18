@@ -40,6 +40,37 @@ function NumGroupTab({
         overflow: 'hidden',
       }}
     >
+      {sub === 'all' && (
+        <NumberTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
+      {sub === 'd2' && (
+        <DigitTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
+      {sub === 'yomi' && (
+        <YomiTab numbers={numbers} rules={rules} yomiUse={yomiUse} />
+      )}
+      {sub === 'map' && (
+        <NumMapTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
+      {sub === 'test' && (
+        <AssocTestTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
       <div class="sub-tab-switch">
         <button
           class={'sub-tab-btn' + (sub === 'all' ? ' active' : '')}
@@ -72,37 +103,6 @@ function NumGroupTab({
           テスト
         </button>
       </div>
-      {sub === 'all' && (
-        <NumberTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
-      {sub === 'd2' && (
-        <DigitTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
-      {sub === 'yomi' && (
-        <YomiTab numbers={numbers} rules={rules} yomiUse={yomiUse} />
-      )}
-      {sub === 'map' && (
-        <NumMapTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
-      {sub === 'test' && (
-        <AssocTestTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
     </div>
   )
 }

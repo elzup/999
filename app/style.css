@@ -911,28 +911,47 @@ body {
   color: var(--accent);
 }
 
-/* Sub-tab switch */
+/* Sub-tab switch
+   スマホの親指が届く位置で切り替えたいので、タブ内の最下部 (グローバルな
+   .bottom-bar の直上) に置く。margin-top:auto で、中身が短いパネルでも
+   バーだけは下端に貼り付く。 */
 .sub-tab-switch {
   display: flex;
   gap: 0;
+  margin-top: auto;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
 .sub-tab-btn {
   flex: 1;
-  padding: 8px 4px;
+  min-height: 44px;
+  padding: 10px 4px;
   border: none;
   background: none;
   color: var(--text2);
   font-size: 13px;
   font-weight: bold;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-top: 2px solid transparent;
 }
 .sub-tab-btn.active {
   color: var(--accent);
-  border-bottom-color: var(--accent);
+  border-top-color: var(--accent);
+}
+
+/* タブ内の操作バー。サブタブと同じくコンテンツの下 (サブタブの上) に固定する。 */
+.tab-bottom-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab-bottom-bar .d2-mode-btn {
+  min-height: 36px;
 }
 
 .tag-panel {
@@ -2011,6 +2030,7 @@ body {
 }
 .assoc-pool-switch .sub-tab-btn {
   flex: 0 0 auto;
+  min-height: 36px;
   padding: 6px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;

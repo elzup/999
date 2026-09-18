@@ -118,8 +118,8 @@ function D3CheckGrid({
               ? ' correct'
               : ' wrong'
             : i > checkIdx
-            ? ' pending'
-            : '')
+              ? ' pending'
+              : '')
         return (
           <div key={xyz} class={cls}>
             <span class="d3-check-xy">{xy}</span>
@@ -542,28 +542,6 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
           <D3CheckGrid order={order} answers={answers} checkIdx={checkIdx} />
         ) : (
           <>
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-              <button
-                class={'d2-mode-btn' + (viewMode === 'group' ? ' active' : '')}
-                onClick={() => setViewMode('group')}
-              >
-                末尾グループ
-              </button>
-              <button
-                class={'d2-mode-btn' + (viewMode === 'seq' ? ' active' : '')}
-                onClick={() => setViewMode('seq')}
-              >
-                数字順
-              </button>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-                <button class="d2-mode-btn" onClick={revealAll}>
-                  全表示
-                </button>
-                <button class="d2-mode-btn" onClick={hideAll}>
-                  全隠す
-                </button>
-              </div>
-            </div>
             <div class="d3-mark-legend">
               <span>
                 <span class="d3-digit mark-eq">桁</span>=Z
@@ -620,6 +598,30 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
           </>
         )}
       </div>
+
+      {/* 表示切替は下部に固定して片手で届くようにする (check 中はテンキーを優先)。 */}
+      {mode !== 'check' ? (
+        <div class="tab-bottom-bar">
+          <button
+            class={'d2-mode-btn' + (viewMode === 'group' ? ' active' : '')}
+            onClick={() => setViewMode('group')}
+          >
+            末尾グループ
+          </button>
+          <button
+            class={'d2-mode-btn' + (viewMode === 'seq' ? ' active' : '')}
+            onClick={() => setViewMode('seq')}
+          >
+            数字順
+          </button>
+          <button class="d2-mode-btn" onClick={revealAll}>
+            全表示
+          </button>
+          <button class="d2-mode-btn" onClick={hideAll}>
+            全隠す
+          </button>
+        </div>
+      ) : null}
 
       {/* Footer (check mode only): 1問戻る + テンキー 0-6 */}
       {mode === 'check' ? (

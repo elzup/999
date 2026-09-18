@@ -26,7 +26,7 @@ import {
 } from '../lib/ffQuiz'
 
 const FF_SUB_TABS = ['ref', 'bin', 'test'] as const
-type Sub = typeof FF_SUB_TABS[number]
+type Sub = (typeof FF_SUB_TABS)[number]
 const FF_SUB_KEY = 'subtab.ff'
 export type FfRun =
   | { kind: 'ff'; dir: FfDir; questions: ChoiceQuestion[]; id: number }
@@ -277,27 +277,6 @@ function FFTab() {
         overflow: 'hidden',
       }}
     >
-      <div class="sub-tab-switch">
-        <button
-          class={'sub-tab-btn' + (sub === 'ref' ? ' active' : '')}
-          onClick={() => handleSub('ref')}
-        >
-          確認
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'bin' ? ' active' : '')}
-          onClick={() => handleSub('bin')}
-        >
-          binary
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'test' ? ' active' : '')}
-          onClick={() => handleSub('test')}
-        >
-          テスト
-        </button>
-      </div>
-
       {sub === 'ref' && (
         <div class="content" style={{ padding: '8px 12px', overflow: 'auto' }}>
           {FF_ROWS.map((r) => (
@@ -457,6 +436,27 @@ function FFTab() {
           </div>
         </div>
       )}
+
+      <div class="sub-tab-switch">
+        <button
+          class={'sub-tab-btn' + (sub === 'ref' ? ' active' : '')}
+          onClick={() => handleSub('ref')}
+        >
+          確認
+        </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'bin' ? ' active' : '')}
+          onClick={() => handleSub('bin')}
+        >
+          binary
+        </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'test' ? ' active' : '')}
+          onClick={() => handleSub('test')}
+        >
+          テスト
+        </button>
+      </div>
 
       {showBinRecords && (
         <RecordPanel

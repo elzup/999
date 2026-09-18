@@ -38,6 +38,21 @@ function WeekdayTab({ numbers, bookmarks, onToggleBm }: Props) {
         overflow: 'hidden',
       }}
     >
+      {sub === 'code' && (
+        <D3Tab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
+      {sub === 'map' && (
+        <YearMapTab
+          numbers={numbers}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      )}
+      {sub === 'calc' && <WeekdayCalcTab />}
       <div class="sub-tab-switch">
         <button
           class={'sub-tab-btn' + (sub === 'code' ? ' active' : '')}
@@ -58,17 +73,6 @@ function WeekdayTab({ numbers, bookmarks, onToggleBm }: Props) {
           曜日計算
         </button>
       </div>
-      {sub === 'code' && (
-        <D3Tab numbers={numbers} bookmarks={bookmarks} onToggleBm={onToggleBm} />
-      )}
-      {sub === 'map' && (
-        <YearMapTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
-      {sub === 'calc' && <WeekdayCalcTab />}
     </div>
   )
 }

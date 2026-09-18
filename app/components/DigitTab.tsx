@@ -214,29 +214,6 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
         )}
       </div>
       <div class="content" style={{ flex: 1, paddingBottom: '4px' }}>
-        <div
-          class="d2-mode-switch"
-          style={{ padding: '0', marginBottom: '6px' }}
-        >
-          <button
-            class={'d2-mode-btn' + (mode === 'upper' ? ' active' : '')}
-            onClick={() => {
-              setMode('upper')
-              clearSel()
-            }}
-          >
-            上2桁 (XY_)
-          </button>
-          <button
-            class={'d2-mode-btn' + (mode === 'lower' ? ' active' : '')}
-            onClick={() => {
-              setMode('lower')
-              clearSel()
-            }}
-          >
-            下2桁 (_YZ)
-          </button>
-        </div>
         <FavList
           favD2={favD2}
           selected={selected}
@@ -268,6 +245,27 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
             )
           })}
         </div>
+      </div>
+      {/* 上2桁/下2桁は頻繁に切り替えるので、親指の届く下部に固定する。 */}
+      <div class="tab-bottom-bar">
+        <button
+          class={'d2-mode-btn' + (mode === 'upper' ? ' active' : '')}
+          onClick={() => {
+            setMode('upper')
+            clearSel()
+          }}
+        >
+          上2桁 (XY_)
+        </button>
+        <button
+          class={'d2-mode-btn' + (mode === 'lower' ? ' active' : '')}
+          onClick={() => {
+            setMode('lower')
+            clearSel()
+          }}
+        >
+          下2桁 (_YZ)
+        </button>
       </div>
     </div>
   )

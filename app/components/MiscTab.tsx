@@ -44,38 +44,6 @@ function MiscTab({
         overflow: 'hidden',
       }}
     >
-      <div class="sub-tab-switch">
-        <button
-          class={'sub-tab-btn' + (sub === 'tags' ? ' active' : '')}
-          onClick={() => handleSub('tags')}
-        >
-          タグ
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'rules' ? ' active' : '')}
-          onClick={() => handleSub('rules')}
-        >
-          ルール
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'recall' ? ' active' : '')}
-          onClick={() => handleSub('recall')}
-        >
-          想起
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'stats' ? ' active' : '')}
-          onClick={() => handleSub('stats')}
-        >
-          統計
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'tabs' ? ' active' : '')}
-          onClick={() => handleSub('tabs')}
-        >
-          タブ
-        </button>
-      </div>
       {sub === 'tags' && <TagPanel numbers={numbers} />}
       {sub === 'rules' &&
         (rules ? (
@@ -119,6 +87,38 @@ function MiscTab({
           <StorageEstimatePanel />
         </div>
       )}
+      <div class="sub-tab-switch">
+        <button
+          class={'sub-tab-btn' + (sub === 'tags' ? ' active' : '')}
+          onClick={() => handleSub('tags')}
+        >
+          タグ
+        </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'rules' ? ' active' : '')}
+          onClick={() => handleSub('rules')}
+        >
+          ルール
+        </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'recall' ? ' active' : '')}
+          onClick={() => handleSub('recall')}
+        >
+          想起
+        </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'stats' ? ' active' : '')}
+          onClick={() => handleSub('stats')}
+        >
+          統計
+        </button>
+        <button
+          class={'sub-tab-btn' + (sub === 'tabs' ? ' active' : '')}
+          onClick={() => handleSub('tabs')}
+        >
+          タブ
+        </button>
+      </div>
     </div>
   )
 }
