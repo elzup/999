@@ -10,17 +10,22 @@ import { fetchNumber, patchNumber, type PatchOp } from '../lib/numberApi'
 import {
   applyFailure,
   applySaved,
-  freeSlotFamily,
+  nextFreeSlot,
+  type SlotFamily,
+  mergeDraftRows,
   moveItem,
   nextRatingValue,
   RATING_VALUES,
   slotRows,
   slotsFromRows,
-  toggleRepPick,
+  setRepPick,
   type DetailState,
   type SlotRow,
 } from '../lib/numberDetail'
 import Rankey from './Rankey'
+
+const REP_RANKS = [1, 2] as const
+const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
 
 const RATING_LABEL: Record<number, string> = {
   [-1]: '−1',
@@ -82,7 +87,9 @@ export default function NumberDetailTab({
           // 読んだ時点を添える。ここが古ければサーバが 409 で止める
           expectedUpdatedAt: doc.updatedAt ?? null,
         })
-        setDrafts({})
+        // 代表・評価の保存で未保存の編集 (追加したばかりの候補など) を捨てない。
+        // 下書きは slots を保存したときだけ保存済みの内容に置き換わる
+        if (op.op === 'slots') setDrafts({})
         setState((prev) => applySaved(prev, saved, message))
       } catch (error) {
         setState((prev) => applyFailure(prev, error))
@@ -93,9 +100,7 @@ export default function NumberDetailTab({
 
   const doc = state.doc
   // 表示行 = 保存済みの内容に、未保存の編集を重ねたもの
-  const rows: SlotRow[] = doc
-    ? slotRows(doc).map((row) => drafts[row.slot] ?? row)
-    : []
+  const rows: SlotRow[] = doc ? mergeDraftRows(slotRows(doc), drafts) : []
   const picks = doc?.rep?.picks ?? []
   const dirty = Object.keys(drafts).length > 0
 
@@ -129,30 +134,30 @@ export default function NumberDetailTab({
     [num]
   )
 
-  const addRow = useCallback(() => {
-    const family = freeSlotFamily(rows)
-    if (!family) {
-      setState((prev) => ({
+  const addRow = useCallback(
+    (family: SlotFamily) => {
+      const slot = nextFreeSlot(rows, family)
+      if (!slot) {
+        setState((prev) => ({
+          ...prev,
+          status: '空き枠がありません (各 3 つまで)',
+        }))
+        return
+      }
+      setDrafts((prev) => ({
         ...prev,
-        status: '空き枠がありません (各 3 つまで)',
+        [slot]: {
+          slot,
+          word: '',
+          kana: '',
+          imageStale: false,
+          rating: null,
+          repRank: 0,
+        },
       }))
-      return
-    }
-    const slot = `${family}${
-      rows.filter((r) => r.slot.startsWith(family)).length + 1
-    }`
-    setDrafts((prev) => ({
-      ...prev,
-      [slot]: {
-        slot,
-        word: '',
-        kana: '',
-        imageStale: false,
-        rating: null,
-        repRank: 0,
-      },
-    }))
-  }, [rows])
+    },
+    [rows]
+  )
 
   return (
     <main class="content nd-panel">
@@ -193,6 +198,7 @@ export default function NumberDetailTab({
                 index={index}
                 focused={row.slot === focusSlot}
                 saving={state.saving}
+                isSaved={Boolean(doc.slots?.[row.slot])}
                 dragging={dragFrom === index}
                 onDragStart={() => setDragFrom(index)}
                 onDragEnd={() => setDragFrom(null)}
@@ -208,11 +214,11 @@ export default function NumberDetailTab({
                     '削除しました'
                   )
                 }
-                onToggleRep={() =>
+                onPickRep={(rank) =>
                   send(
                     {
                       op: 'rep',
-                      picks: toggleRepPick(doc, row.slot),
+                      picks: setRepPick(doc, row.slot, rank),
                       confirmed: Boolean(doc.rep?.confirmed),
                     },
                     '代表を変更しました'
@@ -234,8 +240,19 @@ export default function NumberDetailTab({
           </ul>
 
           <div class="nd-actions">
-            <button class="nd-add" onClick={addRow} disabled={state.saving}>
-              ＋ 候補を追加
+            <button
+              class="nd-add"
+              onClick={() => addRow('wh')}
+              disabled={state.saving || !nextFreeSlot(rows, 'wh')}
+            >
+              ＋ 人
+            </button>
+            <button
+              class="nd-add"
+              onClick={() => addRow('wm')}
+              disabled={state.saving || !nextFreeSlot(rows, 'wm')}
+            >
+              ＋ 物
             </button>
             {dirty ? (
               <button
@@ -276,26 +293,29 @@ function SlotCard({
   index,
   focused,
   saving,
+  isSaved,
   dragging,
   onDragStart,
   onDragEnd,
   onDropAt,
   onEdit,
   onDelete,
-  onToggleRep,
+  onPickRep,
   onRate,
 }: {
   row: SlotRow
   index: number
   focused: boolean
   saving: boolean
+  /** サーバに保存済みの枠か。追加しただけの候補は代表・評価の対象にできない */
+  isSaved: boolean
   dragging: boolean
   onDragStart: () => void
   onDragEnd: () => void
   onDropAt: () => void
   onEdit: (patch: Partial<SlotRow>) => void
   onDelete: () => void
-  onToggleRep: () => void
+  onPickRep: (rank: 1 | 2) => void
   onRate: (value: number) => void
 }) {
   return (
@@ -318,14 +338,6 @@ function SlotCard({
           ⠿
         </span>
         <span class="nd-slot">{row.slot}</span>
-        <button
-          class={'nd-rank' + (row.repRank ? ' on' : '')}
-          disabled={saving}
-          onClick={onToggleRep}
-          title="代表にする / 外す"
-        >
-          {row.repRank === 1 ? '①' : row.repRank === 2 ? '②' : '–'}
-        </button>
         {row.imageUrl ? (
           <img
             class={'nd-img' + (row.imageStale ? ' stale' : '')}
@@ -365,12 +377,30 @@ function SlotCard({
       <div class="nd-card-foot">
         {row.rankey ? <Rankey value={row.rankey} /> : null}
         {row.pt != null ? <span class="nd-pt">{row.pt.toFixed(1)}</span> : null}
+        <div class="nd-rank-group" role="group" aria-label="代表">
+          {REP_RANKS.map((rank) => (
+            <button
+              key={rank}
+              class={'nd-rank' + (row.repRank === rank ? ' on' : '')}
+              disabled={saving || !isSaved || !row.word}
+              aria-pressed={row.repRank === rank}
+              onClick={() => onPickRep(rank)}
+              title={
+                isSaved
+                  ? `代表${REP_LABEL[rank]}にする / 外す`
+                  : '保存してから代表にできます'
+              }
+            >
+              {REP_LABEL[rank]}
+            </button>
+          ))}
+        </div>
         <div class="nd-rate">
           {RATING_VALUES.map((value) => (
             <button
               key={value}
               class={'nd-rate-btn' + (row.rating === value ? ' on' : '')}
-              disabled={saving || !row.word}
+              disabled={saving || !row.word || !isSaved}
               onClick={() => onRate(value)}
             >
               {RATING_LABEL[value]}

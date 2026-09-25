@@ -10,7 +10,7 @@ type Props = {
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
   /** 語をタップして編集へ (REQ-NDV-012) */
-  onEditWord?: (num: string, slot: string) => void
+  onEditWord?: (num: string, slot?: string) => void
 }
 
 function scoreColor(score: number | null): string | null {
@@ -197,9 +197,9 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
               d={selectedData}
               bookmarks={bookmarks}
               onToggleBm={onToggleBm}
-              onEditWord={
+              onEdit={
                 onEditWord && selectedData
-                  ? (slot) => onEditWord(selectedData.num, slot)
+                  ? () => onEditWord(selectedData.num)
                   : undefined
               }
             />

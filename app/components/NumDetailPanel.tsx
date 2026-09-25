@@ -5,39 +5,33 @@
 // (積んだ枚数だけ «閉じる» が並んでしまう)。閉じるは並べた側が 1 つだけ持つ。
 
 import type { NumberEntry } from '../data/schema'
-import ScoreBar from './ScoreBar'
 import Rankey from './Rankey'
 import { IconEdit, IconStar, IconStarOutline } from './Icons'
 import { parseTaggedItems } from '../lib/tags'
+import { nameOf } from '../lib/numberDetail'
 
 type Props = {
   d: NumberEntry
   bookmarks?: Set<string>
   onToggleBm?: (key: string) => void
-  /** 語をタップして編集に入る (REQ-NDV-012)。渡されたときだけ鉛筆が出る */
-  onEditWord?: (slot: string) => void
+  /** この番号の編集を開く (REQ-NDV-012)。渡されたときだけ鉛筆が出る */
+  onEdit?: () => void
 }
 
 type WordRow = {
   slot: string
-  label: string
   word: string
   kana?: string
   img?: string
-  score?: number | null
-  error?: string | boolean
   rk?: string
   dim?: boolean
 }
-
-const scoreErrorLabel = (error: string | boolean | undefined) =>
-  typeof error === 'string' ? error : error ? 'error' : undefined
 
 /**
  * 表示する語の行を組み立てる。
  *
  * 2 枠目の穴埋め (mono が空なら人の 2 人目、hito が空なら物の 2 つ目) は
- * 元の表示規則をそのまま踏襲している。スコアと rankey を持つのは 1 番手だけ。
+ * 元の表示規則をそのまま踏襲している。rankey を持つのは 1 番手だけ。
  */
 function wordRows(d: NumberEntry): WordRow[] {
   const rows: WordRow[] = []
@@ -47,24 +41,18 @@ function wordRows(d: NumberEntry): WordRow[] {
   if (wh1) {
     rows.push({
       slot: 'wh1',
-      label: 'WH1',
       word: wh1,
       kana: d.wh1k || d.w1k,
       img: d.wh1Img || d.w1Img,
-      score: d.w1Score,
-      error: d.w1Error,
       rk: d.w1Rk,
     })
   }
   if (wm1) {
     rows.push({
       slot: 'wm1',
-      label: 'WM1',
       word: wm1,
       kana: d.wm1k || d.w2k,
       img: d.wm1Img || d.w2Img,
-      score: d.w2Score,
-      error: d.w2Error,
       rk: d.w2Rk,
       dim: true,
     })
@@ -72,7 +60,6 @@ function wordRows(d: NumberEntry): WordRow[] {
   if (!wm1 && (d.wh2 || d.w1_2)) {
     rows.push({
       slot: 'wh2',
-      label: 'WH2',
       word: (d.wh2 || d.w1_2) as string,
       img: d.wh2Img || d.w1_2Img,
       dim: true,
@@ -81,7 +68,6 @@ function wordRows(d: NumberEntry): WordRow[] {
   if (!wh1 && (d.wm2 || d.w2_2)) {
     rows.push({
       slot: 'wm2',
-      label: 'WM2',
       word: (d.wm2 || d.w2_2) as string,
       img: d.wm2Img || d.w2_2Img,
       dim: true,
@@ -90,10 +76,13 @@ function wordRows(d: NumberEntry): WordRow[] {
   return rows
 }
 
-function NumDetailPanel({ d, bookmarks, onToggleBm, onEditWord }: Props) {
+function NumDetailPanel({ d, bookmarks, onToggleBm, onEdit }: Props) {
   const bmKey = 'n:' + d.num
   const isBm = bookmarks ? bookmarks.has(bmKey) : false
   const rows = wordRows(d)
+  // 語の行にはタグ込みの語 (鯉#g) がそのまま出ている。同じものを
+  // タグ行にもう一度出すと、1 枚のカードに同じ語が 2 回並ぶ
+  const shownNames = new Set(rows.map((row) => nameOf(row.word)))
   const tagged = [
     ['人', parseTaggedItems(d.hito)],
     ['物', parseTaggedItems(d.mono)],
@@ -103,20 +92,32 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onEditWord }: Props) {
   return (
     <div class="detail-panel">
       <div class="detail-row1">
-        {/* 番号の下は 28px の見出しに対して行が余るので、そこに星を置く。
-            番号に付く操作 (ブックマーク) と語に付く操作 (編集) を位置で分ける */}
+        {/* 番号の下は 28px の見出しに対して行が余るので、そこに操作を置く。
+            どちらも «この番号に対する» 操作なので同じ列にまとめる */}
         <div class="detail-idcol">
           <span class="detail-id">{d.num}</span>
-          {onToggleBm && (
-            <button
-              class={'ico sm' + (isBm ? ' on' : '')}
-              onClick={() => onToggleBm(bmKey)}
-              aria-pressed={isBm}
-              aria-label={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
-            >
-              {isBm ? <IconStar /> : <IconStarOutline />}
-            </button>
-          )}
+          <div class="detail-idcol-actions">
+            {onToggleBm && (
+              <button
+                class={'ico sm' + (isBm ? ' on' : '')}
+                onClick={() => onToggleBm(bmKey)}
+                aria-pressed={isBm}
+                aria-label={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
+              >
+                {isBm ? <IconStar /> : <IconStarOutline />}
+              </button>
+            )}
+            {onEdit && (
+              <button
+                class="ico sm edit"
+                onClick={onEdit}
+                aria-label={`${d.num} を編集`}
+                title={`${d.num} を編集`}
+              >
+                <IconEdit />
+              </button>
+            )}
+          </div>
         </div>
 
         <div class="word-list">
@@ -138,26 +139,13 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onEditWord }: Props) {
                   <span class="detail-sub-word"> {row.kana}</span>
                 ) : null}
               </span>
-              <span class="wl-meta">
-                {row.rk ? <Rankey value={row.rk} /> : null}
-                {row.score != null ? (
-                  <ScoreBar
-                    label={row.label}
-                    score={row.score}
-                    error={scoreErrorLabel(row.error)}
-                  />
-                ) : null}
-                {onEditWord && (
-                  <button
-                    class="ico sm edit"
-                    onClick={() => onEditWord(row.slot)}
-                    aria-label={`${row.slot} を編集`}
-                    title={`${row.slot} を編集`}
-                  >
-                    <IconEdit />
-                  </button>
-                )}
-              </span>
+              {/* 出すのは rankey だけ。スコアのチップ (min-width 120px) を
+                  行に置くと縮む余地が無くなり、横スクロールが出ていた */}
+              {row.rk ? (
+                <span class="wl-meta">
+                  <Rankey value={row.rk} />
+                </span>
+              ) : null}
             </div>
           ))}
         </div>
@@ -210,12 +198,20 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onEditWord }: Props) {
       </div>
 
       {tagged.some(([, items]) =>
-        items.some((item) => item.tags.length > 0)
+        items.some(
+          (item) =>
+            item.tags.length > 0 &&
+            !shownNames.has(nameOf(item.base || item.label))
+        )
       ) ? (
         <div class="detail-tag-row">
           {tagged.map(([label, items]) =>
             items
-              .filter((item) => item.tags.length > 0)
+              .filter(
+                (item) =>
+                  item.tags.length > 0 &&
+                  !shownNames.has(nameOf(item.base || item.label))
+              )
               .map((item) => (
                 <div key={`${label}-${item.label}`} class="detail-tag-chip">
                   <span class="detail-tag-cat">{label}</span>

@@ -96,19 +96,29 @@ export function nextRatingValue(
 }
 
 /**
- * 代表 ①② の指定。押されたスロットが既に代表なら外し、そうでなければ
- * 末尾に足す。上限は 2 件で、超える分は古い方から落とす。
+ * 代表 ① / ② のラジオ。rank の位置をこのスロットの語にする (その語が他方にいれば外す)。
+ * 既にその位置にいる語をもう一度押すと外す。
+ *
+ * picks は ①② を詰めた配列で穴を持てないので、① が空いたら ② が繰り上がり、
+ * ① が空のまま ② を押した語は ① になる。
  */
-export function toggleRepPick(doc: NumberDoc, slot: string): RepPick[] {
+export function setRepPick(
+  doc: NumberDoc,
+  slot: string,
+  rank: 1 | 2
+): RepPick[] {
   const value = doc.slots?.[slot]
-  if (!value) return doc.rep?.picks ?? []
+  const picks = doc.rep?.picks ?? []
+  if (!value) return picks
 
   const target = { k: value.kana, w: value.word }
-  const picks = doc.rep?.picks ?? []
-  if (picks.some((pick) => sameValue(pick, target))) {
-    return picks.filter((pick) => !sameValue(pick, target))
+  if (picks[rank - 1] && sameValue(picks[rank - 1], target)) {
+    return picks.filter((_, i) => i !== rank - 1)
   }
-  return [...picks, target].slice(-2)
+  const others = picks.filter((pick) => !sameValue(pick, target))
+  const next =
+    rank === 1 ? [target, ...others.slice(1, 2)] : [others[0], target]
+  return next.filter(Boolean)
 }
 
 /** 代表 ①② の入替。2 件無いときは何もしない (REQ-NDV-002 の代表側) */
@@ -151,6 +161,25 @@ export function slotsFromRows(
   return next
 }
 
+/**
+ * 保存済みの行に、未保存の編集を重ねた表示行。
+ *
+ * 保存済みスロットを走査するだけだと、«候補を追加» で作った新しいスロットの
+ * draft がどこにも現れず、追加が効かないように見える (実際に踏んだ)。
+ * draft にしか無いスロットも SLOT_ORDER の位置に混ぜる。
+ */
+export function mergeDraftRows(
+  saved: SlotRow[],
+  drafts: Record<string, SlotRow>
+): SlotRow[] {
+  const bySlot = new Map(saved.map((row) => [row.slot, row]))
+  for (const [slot, draft] of Object.entries(drafts)) bySlot.set(slot, draft)
+
+  return SLOT_ORDER.filter((slot) => bySlot.has(slot)).map(
+    (slot) => bySlot.get(slot) as SlotRow
+  )
+}
+
 /** 配列内の 1 件を別の位置へ移す (ドラッグの結果そのもの) */
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
   if (from === to || from < 0 || to < 0 || from >= list.length) return list
@@ -160,16 +189,19 @@ export function moveItem<T>(list: T[], from: number, to: number): T[] {
   return next
 }
 
-/** 追加できる空き枠。wh / wm それぞれ 3 つまで */
-export function freeSlotFamily(rows: SlotRow[]): 'wh' | 'wm' | null {
-  const used = { wh: 0, wm: 0 }
-  for (const row of rows) {
-    if (row.slot.startsWith('wm')) used.wm += 1
-    else used.wh += 1
-  }
-  if (used.wh < 3) return 'wh'
-  if (used.wm < 3) return 'wm'
-  return null
+export type SlotFamily = 'wh' | 'wm'
+
+/**
+ * 人 (wh) / 物 (wm) の指定した側で次に使える枠。各 3 つまで、埋まっていれば null。
+ * 件数 + 1 で名付けると wh1・wh3 だけ残っているときに wh3 と衝突するので、空いている番号を探す。
+ */
+export function nextFreeSlot(
+  rows: SlotRow[],
+  family: SlotFamily
+): string | null {
+  const used = new Set(rows.map((row) => row.slot))
+  const free = [1, 2, 3].find((i) => !used.has(`${family}${i}`))
+  return free === undefined ? null : `${family}${free}`
 }
 
 export type DetailState = {

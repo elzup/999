@@ -3,7 +3,8 @@ import type { NumberDoc } from '../lib/numberApi'
 import {
   applyFailure,
   applySaved,
-  freeSlotFamily,
+  nextFreeSlot,
+  mergeDraftRows,
   moveItem,
   nextRatingValue,
   ratedCount,
@@ -12,7 +13,7 @@ import {
   slotRows,
   slotsFromRows,
   swapRepPicks,
-  toggleRepPick,
+  setRepPick,
 } from '../lib/numberDetail'
 
 const doc: NumberDoc = {
@@ -97,18 +98,23 @@ describe('rep picks', () => {
     expect(repRankOf(doc, 'wh2')).toBe(0)
   })
 
-  it('代表でないスロットを押すと末尾に足す', () => {
-    expect(toggleRepPick(doc, 'wh2')).toEqual([
+  it('② を押すとその語が ② になる', () => {
+    expect(setRepPick(doc, 'wh2', 2)).toEqual([
       { k: 'こい', w: '鯉' },
       { k: 'こい', w: '恋' },
     ])
   })
 
-  it('代表のスロットを押すと外す', () => {
-    expect(toggleRepPick(doc, 'wh1')).toEqual([])
+  it('① にいる語の ① を押すと外す', () => {
+    expect(setRepPick(doc, 'wh1', 1)).toEqual([])
   })
 
-  it('3 件目を足すと古い方から落として 2 件に保つ', () => {
+  it('① が空のまま ② を押すと ① に詰まる', () => {
+    const empty: NumberDoc = { ...doc, rep: { picks: [], confirmed: false } }
+    expect(setRepPick(empty, 'wh2', 2)).toEqual([{ k: 'こい', w: '恋' }])
+  })
+
+  it('ラジオ: 別の語の ① を押すと入れ替わり、同じ語は ①② を兼ねない', () => {
     const two: NumberDoc = {
       ...doc,
       rep: {
@@ -119,10 +125,15 @@ describe('rep picks', () => {
         confirmed: false,
       },
     }
-    expect(toggleRepPick(two, 'wm1')).toEqual([
-      { k: 'こい', w: '恋' },
+    // ① を別の語へ: ② はそのまま
+    expect(setRepPick(two, 'wm1', 1)).toEqual([
       { k: 'こいん', w: 'コイン' },
+      { k: 'こい', w: '恋' },
     ])
+    // ② の語を ① へ: ② から抜けて ① に上がる
+    expect(setRepPick(two, 'wh2', 1)).toEqual([{ k: 'こい', w: '恋' }])
+    // ① を外すと ② が繰り上がる
+    expect(setRepPick(two, 'wh1', 1)).toEqual([{ k: 'こい', w: '恋' }])
   })
 
   it('入替は 2 件揃っているときだけ効く', () => {
@@ -181,8 +192,37 @@ describe('並べ替え・追加・削除 (REQ-NDV-002 / 010 / 011)', () => {
     ])
   })
 
-  it('空き枠は wh → wm の順に埋める。埋まったら null', () => {
-    expect(freeSlotFamily(slotRows(doc))).toBe('wh')
+  it('追加した空スロットの draft も表示行に出る (候補を追加が効かない原因)', () => {
+    const saved = slotRows(doc)
+    const draft = {
+      wh3: {
+        slot: 'wh3',
+        word: '',
+        kana: '',
+        imageStale: false,
+        rating: null,
+        repRank: 0,
+      },
+    }
+
+    const merged = mergeDraftRows(saved, draft)
+
+    // 保存済みスロットだけを走査すると wh3 が落ちる
+    expect(merged.map((row) => row.slot)).toEqual(['wh1', 'wh2', 'wh3', 'wm1'])
+  })
+
+  it('既存スロットの draft は保存済みの行を置き換える', () => {
+    const saved = slotRows(doc)
+    const draft = { wh1: { ...saved[0], word: '鯉のぼり' } }
+
+    const merged = mergeDraftRows(saved, draft)
+
+    expect(merged).toHaveLength(saved.length)
+    expect(merged[0].word).toBe('鯉のぼり')
+  })
+
+  it('人 / 物 それぞれ空いている番号を返す。埋まったら null', () => {
+    expect(nextFreeSlot(slotRows(doc), 'wm')).not.toBeNull()
 
     const full = {
       ...doc,
@@ -193,7 +233,8 @@ describe('並べ替え・追加・削除 (REQ-NDV-002 / 010 / 011)', () => {
         ])
       ),
     }
-    expect(freeSlotFamily(slotRows(full))).toBe('wm')
+    expect(nextFreeSlot(slotRows(full), 'wh')).toBeNull()
+    expect(nextFreeSlot(slotRows(full), 'wm')).toBe('wm3')
 
     const packed = {
       ...doc,
@@ -204,7 +245,18 @@ describe('並べ替え・追加・削除 (REQ-NDV-002 / 010 / 011)', () => {
         ])
       ),
     }
-    expect(freeSlotFamily(slotRows(packed))).toBeNull()
+    expect(nextFreeSlot(slotRows(packed), 'wm')).toBeNull()
+  })
+
+  it('歯抜けの番号を埋める (件数 + 1 だと既存と衝突する)', () => {
+    const gap = {
+      ...doc,
+      slots: {
+        wh1: { word: 'x', kana: 'えっくす' },
+        wh3: { word: 'y', kana: 'わい' },
+      },
+    }
+    expect(nextFreeSlot(slotRows(gap), 'wh')).toBe('wh2')
   })
 })
 
