@@ -70,8 +70,8 @@ flowchart LR
 
 **読み方**
 
-- **黄色が①ソース**。手で編集するもので、失うと復元できない。
-- **灰色が②中間**。`nr sync:all` で全部作り直せるので、消えても困らない。
+- **黄色が ① ソース**。手で編集するもので、失うと復元できない。
+- **灰色が ② 中間**。`nr sync:all` で全部作り直せるので、消えても困らない。
 - **矢印はほぼ一方向**（① → ② → ③）。逆流は `PATCH /api/editor/words`（アプリの編集画面 → シート）だけ。
 - 点線は「値を供給するが物としては流れない」関係。規則表は `words.tsv` を書き換えず、**解釈の仕方**を決める。
 
@@ -284,6 +284,20 @@ deploy        = build:preview → build → sync:private → firebase deploy --o
 
 **2 つの軸は独立**している。代表(picks)を決めても評価は動かず、評価しても確定状態は
 動かない。書込は `writeJson`（tmp→rename）でアトミック。
+
+#### 多重起動は拒否する（単一インスタンス）
+
+`console/rep-lock.js` が checkout ごとのロックを `$TMPDIR` に取る。**ポートが違っても**
+2 個目は起動できず、こう出て終わる（起動中のサーバは落とさない）:
+
+```
+rep console: already running at http://127.0.0.1:6001 (pid 75699)
+  止めるなら: nr console:kill
+```
+
+`PORT` を変えた背後起動は EADDRINUSE をすり抜けるので、これが無いと 1 プロセス
+130MB 級が居残り続ける。`kill -9` で残った stale ロックは pid とコマンド名を見て
+奪うため、手で消す必要はない。居残りの確認は `nr console:ps`。
 
 確定が増えたら `nr lyrics` で `lyrics/` を再生成する必要がある（`sync:all` に含む）。
 

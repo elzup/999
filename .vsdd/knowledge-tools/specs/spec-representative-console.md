@@ -22,6 +22,8 @@ coherence:
   THE SYSTEM SHALL 403 を返す。
 - **REQ-REP-006 (Event):** WHEN 候補を選択、入替、一括確定する THE SYSTEM SHALL
   保存成功後の順序と確定状態だけを画面 state に反映する。
+- **REQ-REP-008 (Unwanted):** IF コンソールサーバーが既に起動している THEN THE SYSTEM
+  SHALL ポートが異なる場合でも新しい起動を拒否し、起動中のサーバーを停止させない。
 
 ## Boundaries
 

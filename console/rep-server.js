@@ -4,12 +4,14 @@
 //   POST /api/score {num,slot,v}           候補語 1 件の主観評価を更新 (v=null で解除)
 //   静的: console/rep.html, console/rep.js
 // ※ ファイル書込が必要なため、loopback 限定で待ち受ける。
+// ※ 直接実行時のみ単一インスタンスロックを取る (console/rep-lock.js)。
 
 import { createReadStream, realpathSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { dirname, extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+import { acquireLock, releaseLock } from './rep-lock.js'
 import {
   buildRepState,
   RATINGS,
@@ -210,6 +212,12 @@ export function startRepServer({
   ...serverOptions
 } = {}) {
   const server = createRepServer(serverOptions)
+  server.on('error', (error) => {
+    if (error.code !== 'EADDRINUSE') throw error
+    // 既に起動済み。stack trace を吐くより「もう動いている」と伝えた方が役に立つ
+    log(`rep console: port ${port} is already in use — もう起動しています`)
+    process.exitCode = 1
+  })
   server.listen(port, REP_HOST, () => {
     const address = server.address()
     const actualPort =
@@ -220,5 +228,18 @@ export function startRepServer({
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  startRepServer()
+  const lock = acquireLock({ port: DEFAULT_PORT })
+  if (!lock.ok) {
+    const { url, pid } = lock.holder || {}
+    console.log(`rep console: already running at ${url} (pid ${pid})`)
+    console.log('  止めるなら: nr console:kill')
+    process.exitCode = 1
+  } else {
+    // listen 失敗で終わる場合も含めて exit で必ず外す。SIGINT/SIGTERM は既定では
+    // exit イベントを起こさないので、明示的に exit へ流して残骸を残さない。
+    process.on('exit', () => releaseLock())
+    process.on('SIGINT', () => process.exit(130))
+    process.on('SIGTERM', () => process.exit(143))
+    startRepServer()
+  }
 }
