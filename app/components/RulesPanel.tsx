@@ -1,4 +1,5 @@
 import type { RulesData } from '../data/schema'
+import RulesSummaryTable from './RulesSummaryTable'
 
 type Props = {
   rules: RulesData
@@ -193,6 +194,7 @@ function RulesPanel({ rules }: Props) {
   return (
     <div class="content rules-panel">
       <SingleDigitTable rules={rules} />
+      <RulesSummaryTable rules={rules} />
       <MatrixTable
         title="2桁マッピング"
         desc="行=第1桁(子音グループ)、列=第2桁(母音/拗音末尾)。pattern行/列が代表ラベル。"
