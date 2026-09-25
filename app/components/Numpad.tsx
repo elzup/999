@@ -1,77 +1,49 @@
 import { h } from 'preact'
 import { DIGIT_COLORS } from '../data/constants'
-import { vibrate } from '../lib/haptics'
+import TestPad, { type PadKey } from './TestPad'
 
 type Props = {
   onTapDigit: (digit: number) => void
   colored?: boolean
+  /** 出す最大の数字。0-6 のテスト (年コード) は 6 を渡す */
   maxDigit?: number
   onBackspace?: () => void
   backspaceDisabled?: boolean
+  /** パッドの上に置くもの (TestNavBar など) */
+  header?: h.JSX.Element | null
 }
 
-// 共通テンキー。タップ時に振動し、onBackspace を渡すと ⌫ キーを表示する。
+/**
+ * 数字テンキー。1..maxDigit を並べ、0 は最下段に置く。
+ * ⌫ を出すときは 0 を中央のままにして左を空ける (指の位置を変えないため)。
+ */
 function Numpad({
   onTapDigit,
   colored,
   maxDigit = 9,
   onBackspace,
   backspaceDisabled,
+  header,
 }: Props) {
-  const digits = Array.from({ length: maxDigit }, (_, i) => i + 1)
-
-  const handleDigit = (digit: number) => {
-    vibrate()
-    onTapDigit(digit)
-  }
-
-  const handleBackspace = () => {
-    if (backspaceDisabled) return
-    vibrate()
-    onBackspace?.()
-  }
+  const digit = (n: number): PadKey => ({
+    value: String(n),
+    color: colored ? DIGIT_COLORS[n] : undefined,
+  })
+  const keys: PadKey[] = [
+    ...Array.from({ length: maxDigit }, (_, i) => digit(i + 1)),
+    ...(onBackspace ? [{ value: 'spacer', spacer: true } as PadKey] : []),
+    { ...digit(0), col: onBackspace ? undefined : 2 },
+  ]
 
   return (
-    <div
-      style={{
-        flexShrink: 0,
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: '8px 12px',
-      }}
-    >
-      <div class="np-numpad">
-        {digits.map((digit) => (
-          <div
-            key={digit}
-            class="np-numkey"
-            style={colored ? { color: DIGIT_COLORS[digit] } : {}}
-            onClick={() => handleDigit(digit)}
-          >
-            {digit}
-          </div>
-        ))}
-        {onBackspace ? (
-          <div class="np-numkey np-empty" aria-hidden="true" />
-        ) : null}
-        <div
-          key={0}
-          class={'np-numkey' + (onBackspace ? '' : ' zero')}
-          style={colored ? { color: DIGIT_COLORS[0] } : {}}
-          onClick={() => handleDigit(0)}
-        >
-          0
-        </div>
-        {onBackspace ? (
-          <div
-            class={'np-numkey np-back' + (backspaceDisabled ? ' disabled' : '')}
-            onClick={handleBackspace}
-          >
-            ⌫
-          </div>
-        ) : null}
-      </div>
-    </div>
+    <TestPad
+      keys={keys}
+      cols={3}
+      onPress={(value) => onTapDigit(Number(value))}
+      onBackspace={onBackspace}
+      backspaceDisabled={backspaceDisabled}
+      header={header}
+    />
   )
 }
 

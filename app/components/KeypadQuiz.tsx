@@ -1,6 +1,9 @@
 import { useRef, useState } from 'preact/hooks'
 import { vibrate } from '../lib/haptics'
 import Numpad from './Numpad'
+import TestPad from './TestPad'
+import MarkButton from './MarkButton'
+import { applyMarks, useReviewMarks } from '../lib/reviewMarks'
 import type { QuizSummary } from './ChoiceQuiz'
 import type { ReviewItem } from './ReviewPanel'
 
@@ -70,6 +73,10 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
   const reviewsRef = useRef<ReviewItem[]>([])
   const startRef = useRef(Date.now())
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { marks, toggle: toggleMark } = useReviewMarks()
+  // 採点タイマーの中から最新の印を読む (setTimeout は押した時点の marks を閉じ込める)
+  const marksRef = useRef(marks)
+  marksRef.current = marks
 
   const q = questions[idx]
   const keys = pad === 'hex' ? HEX : ['0', '1']
@@ -100,7 +107,7 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
               questions.length,
               startRef.current,
               Date.now(),
-              reviewsRef.current
+              applyMarks(reviewsRef.current, marksRef.current)
             )
           )
         } else {
@@ -120,11 +127,6 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
 
   // 入力スロット表示(答え桁数ぶん)。bin は4桁ごとに空ける。
   const slots = Array.from({ length: q.answer.length }, (_, i) => i)
-  const slotColor = revealed
-    ? correct
-      ? 'var(--green, #34d399)'
-      : 'var(--red, #f87171)'
-    : 'var(--text)'
 
   return (
     <div
@@ -146,13 +148,18 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
           <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
             {idx + 1}/{questions.length}
           </span>
+          <span style={{ marginLeft: 'auto' }}>
+            <MarkButton
+              on={marks.has(q.prompt)}
+              onToggle={() => toggleMark(q.prompt)}
+            />
+          </span>
           <button
             class="filter-btn"
             style={{
               fontSize: '12px',
               minWidth: '50px',
               padding: '4px 10px',
-              marginLeft: 'auto',
             }}
             onClick={() => {
               if (timerRef.current) clearTimeout(timerRef.current)
@@ -191,34 +198,37 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
             </div>
           </div>
 
-          {/* 入力スロット */}
+          {/* 入力フォーム: 答えの桁数ぶんのマス。今どこを打っているかを出す */}
           <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 6,
-              margin: '4px 0 16px',
-              fontFamily: 'ui-monospace, monospace',
-              fontSize: 26,
-              fontWeight: 700,
-            }}
+            class={
+              'kq-slots' + (revealed ? (correct ? ' is-ok' : ' is-ng') : '')
+            }
           >
             {slots.map((i) => (
               <span
                 key={i}
-                style={{
-                  minWidth: 22,
-                  textAlign: 'center',
-                  color: typed[i] ? slotColor : 'var(--muted, #6b7280)',
-                  borderBottom: `2px solid ${
-                    typed[i] ? slotColor : 'var(--line, rgba(255,255,255,.18))'
-                  }`,
-                  marginRight: pad === 'bin' && (i + 1) % 4 === 0 ? 10 : 0,
-                }}
+                class={
+                  'kq-slot' +
+                  (typed[i] ? ' is-filled' : '') +
+                  (!revealed && i === typed.length ? ' is-active' : '') +
+                  (pad === 'bin' && (i + 1) % 4 === 0 ? ' is-nibble-end' : '')
+                }
               >
-                {typed[i] ?? '·'}
+                {typed[i] ?? ''}
               </span>
             ))}
+          </div>
+          <div class="kq-hint">
+            {revealed
+              ? correct
+                ? '正解'
+                : '不正解'
+              : q.answer.length +
+                '桁 (' +
+                typed.length +
+                '/' +
+                q.answer.length +
+                ')'}
           </div>
           {revealed && !correct && (
             <div
@@ -248,7 +258,7 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
         </div>
       </div>
 
-      {/* キーパッド(画面下部に固定・親指で届く位置) */}
+      {/* 入力パッド(画面下部に固定・親指で届く位置)。形は全テスト共通 */}
       {pad === 'dec' ? (
         <Numpad
           onTapDigit={(d) => press(String(d))}
@@ -256,64 +266,13 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
           backspaceDisabled={revealed || typed.length === 0}
         />
       ) : (
-        <div
-          style={{
-            flexShrink: 0,
-            background: 'var(--surface)',
-            borderTop: '1px solid var(--border)',
-            padding: '10px 12px 14px',
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                pad === 'hex' ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
-              gap: 8,
-              width: '100%',
-              maxWidth: pad === 'hex' ? 420 : 320,
-              margin: '0 auto',
-            }}
-          >
-            {keys.map((k) => (
-              <button
-                key={k}
-                disabled={revealed}
-                onClick={() => press(k)}
-                style={{
-                  padding: pad === 'hex' ? '18px 0' : '24px 0',
-                  fontSize: 24,
-                  fontWeight: 700,
-                  fontFamily: 'ui-monospace, monospace',
-                  borderRadius: 12,
-                  border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-                  background: 'var(--surface2, #1e212a)',
-                  color: 'var(--text)',
-                  cursor: revealed ? 'default' : 'pointer',
-                }}
-              >
-                {k}
-              </button>
-            ))}
-            <button
-              disabled={revealed || typed.length === 0}
-              onClick={backspace}
-              style={{
-                gridColumn: pad === 'hex' ? 'span 4' : 'span 2',
-                padding: '12px 0',
-                fontSize: 16,
-                fontWeight: 600,
-                borderRadius: 12,
-                border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-                background: 'transparent',
-                color: 'var(--text2)',
-                cursor: 'pointer',
-              }}
-            >
-              ⌫ 消す
-            </button>
-          </div>
-        </div>
+        <TestPad
+          cols={pad === 'hex' ? 4 : 2}
+          keys={keys.map((k) => ({ value: k, disabled: revealed }))}
+          onPress={press}
+          onBackspace={backspace}
+          backspaceDisabled={revealed || typed.length === 0}
+        />
       )}
     </div>
   )

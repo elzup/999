@@ -45,6 +45,9 @@ import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import TestNavBar from './TestNavBar'
+import MarkButton from './MarkButton'
+import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
+import Numpad from './Numpad'
 import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
@@ -192,6 +195,9 @@ function YearViewRow({
   )
 }
 
+/** 振り返り行の label と同じ文字列。印はこれで問題を識別する */
+const yearLabel = (item: YearItem) => `${item.year} ${item.event}`
+
 function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
@@ -207,6 +213,7 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
   const [elapsed, setElapsed] = useState(0)
   const timerRef = useRef<number | null>(null)
+  const marks = useReviewMarks()
 
   useEffect(() => {
     if (mode === 'check') {
@@ -236,18 +243,22 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
     saveYearRecords([])
   }, [])
 
-  const startCheck = useCallback((era: EraId) => {
-    const items = filterByEra(era)
-    if (items.length === 0) return
-    setCheckItems(items)
-    setMode('check')
-    setCheckIdx(0)
-    setInputDigits([])
-    setResults([])
-    setStartTime(Date.now())
-    setElapsed(0)
-    setSelected(null)
-  }, [])
+  const startCheck = useCallback(
+    (era: EraId) => {
+      const items = filterByEra(era)
+      if (items.length === 0) return
+      setCheckItems(items)
+      setMode('check')
+      setCheckIdx(0)
+      setInputDigits([])
+      setResults([])
+      setStartTime(Date.now())
+      setElapsed(0)
+      setSelected(null)
+      marks.reset()
+    },
+    [marks.reset]
+  )
 
   const endCheck = useCallback(
     (finalResults?: CheckResult[]) => {
@@ -268,18 +279,19 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
       const items: ReviewItem[] = used.map((r) => {
         const item = checkItems.find((ci) => ci.no === r.no)
         return {
-          label: item ? `${item.year} ${item.event}` : `#${r.no}`,
+          label: item ? yearLabel(item) : `#${r.no}`,
           correct: r.correct,
           userAnswer: r.correct ? undefined : r.input || 'パス',
           rightAnswer: r.xyz,
+          num: r.xyz,
         }
       })
-      setReviewItems(items)
+      setReviewItems(applyMarks(items, marks.marks))
       setReviewMeta({ score: correctCount, total: used.length, time: el })
 
       setMode('view')
     },
-    [startTime, results, records, checkItems]
+    [startTime, results, records, checkItems, marks.marks]
   )
 
   // 結果を確定し、次の未回答問題へ進む（全問終了なら集計へ）
@@ -432,6 +444,14 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
                   {elapsed}秒 {checkIdx + 1}/{checkItems.length}{' '}
                   {results.filter((r) => r.correct).length}正解
                 </span>
+                {checkItems[checkIdx] ? (
+                  <MarkButton
+                    on={marks.marks.has(yearLabel(checkItems[checkIdx]))}
+                    onToggle={() =>
+                      marks.toggle(yearLabel(checkItems[checkIdx]))
+                    }
+                  />
+                ) : null}
                 <button
                   class="filter-btn"
                   style={{
@@ -592,43 +612,19 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
         </div>
       </div>
       {mode === 'check' ? (
-        <div class="test-footer">
-          <TestNavBar
-            onPrev={prevQuestion}
-            prevDisabled={results.length === 0}
-            onSkip={skipQuestion}
-          />
-          <div class="np-numpad">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-              <div
-                key={digit}
-                class="np-numkey"
-                style={{ color: DIGIT_COLORS[digit] }}
-                onClick={() => tapDigit(digit)}
-              >
-                {digit}
-              </div>
-            ))}
-            <div class="np-numkey np-empty" aria-hidden="true" />
-            <div
-              key={0}
-              class="np-numkey"
-              style={{ color: DIGIT_COLORS[0] }}
-              onClick={() => tapDigit(0)}
-            >
-              0
-            </div>
-            <div
-              class={
-                'np-numkey np-back' +
-                (inputDigits.length === 0 ? ' disabled' : '')
-              }
-              onClick={tapBackspace}
-            >
-              ⌫
-            </div>
-          </div>
-        </div>
+        <Numpad
+          colored
+          onTapDigit={tapDigit}
+          onBackspace={tapBackspace}
+          backspaceDisabled={inputDigits.length === 0}
+          header={
+            <TestNavBar
+              onPrev={prevQuestion}
+              prevDisabled={results.length === 0}
+              onSkip={skipQuestion}
+            />
+          }
+        />
       ) : null}
     </div>
   )

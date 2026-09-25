@@ -10,6 +10,9 @@ import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import TestNavBar from './TestNavBar'
+import MarkButton from './MarkButton'
+import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
+import Numpad from './Numpad'
 import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
@@ -58,31 +61,6 @@ function shuffle<T>(arr: readonly T[]): T[] {
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
-}
-
-function D3Numpad({ onTapDigit }: { onTapDigit: (digit: number) => void }) {
-  return (
-    <div class="d3-numpad">
-      {[1, 2, 3, 4, 5, 6].map((digit) => (
-        <div
-          key={digit}
-          class="np-numkey"
-          style={{ color: DIGIT_COLORS[digit] }}
-          onClick={() => onTapDigit(digit)}
-        >
-          {digit}
-        </div>
-      ))}
-      <div
-        key={0}
-        class="np-numkey"
-        style={{ color: DIGIT_COLORS[0], gridColumn: '1' }}
-        onClick={() => onTapDigit(0)}
-      >
-        0
-      </div>
-    </div>
-  )
 }
 
 function D3CheckGrid({
@@ -171,6 +149,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
   const [lastAnswers, setLastAnswers] = useState<Map<string, Answer>>(new Map())
   const [elapsed, setElapsed] = useState(0)
   const timerRef = useRef<number | null>(null)
+  const marks = useReviewMarks()
 
   useEffect(() => {
     if (mode === 'check' && !finished) {
@@ -234,7 +213,8 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     setStartTime(Date.now())
     setFinished(false)
     setSelected(null)
-  }, [])
+    marks.reset()
+  }, [marks.reset])
 
   const endCheck = useCallback(
     (finalAnswers?: Answer[]) => {
@@ -260,22 +240,24 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
 
       // Build review items
       const items: ReviewItem[] = used.map((a) => {
-        const xyz = D3_LIST[a.idx]
+        // a.idx はシャッフル後の出題順の位置。D3_LIST で引くと別の問題の答えになる
+        const xyz = order[a.idx]
         const correctDigit = xyz[2]
         return {
           label: a.xy,
           correct: a.correct,
           userAnswer: a.correct ? undefined : a.digit,
           rightAnswer: correctDigit,
+          num: xyz,
         }
       })
-      setReviewItems(items)
+      setReviewItems(applyMarks(items, marks.marks))
       setReviewMeta({ score: correctCount, total: used.length, time: elapsed })
 
       setMode('view')
       setFinished(true)
     },
-    [startTime, answers, records]
+    [startTime, answers, records, order, marks.marks]
   )
 
   const tapDigit = useCallback(
@@ -416,6 +398,12 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
                   {elapsed}秒 {answers.filter((a) => a.correct).length}/
                   {answers.length}
                 </span>
+                {!finished && order[checkIdx] ? (
+                  <MarkButton
+                    on={marks.marks.has(order[checkIdx].slice(0, 2))}
+                    onToggle={() => marks.toggle(order[checkIdx].slice(0, 2))}
+                  />
+                ) : null}
                 <button
                   class="filter-btn"
                   style={{
@@ -623,13 +611,17 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
 
       {/* Footer (check mode only): 1問戻る + テンキー 0-6 */}
       {mode === 'check' ? (
-        <div class="test-footer">
-          <TestNavBar
-            onPrev={prevQuestion}
-            prevDisabled={answers.length === 0}
-          />
-          <D3Numpad onTapDigit={tapDigit} />
-        </div>
+        <Numpad
+          colored
+          maxDigit={6}
+          onTapDigit={tapDigit}
+          header={
+            <TestNavBar
+              onPrev={prevQuestion}
+              prevDisabled={answers.length === 0}
+            />
+          }
+        />
       ) : null}
     </div>
   )

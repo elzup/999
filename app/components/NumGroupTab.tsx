@@ -13,7 +13,7 @@ type Props = {
   onToggleBm: (key: string) => void
   rules?: RulesData
   yomiUse?: YomiUse
-  onEditWord?: (num: string, slot: string) => void
+  onEditWord?: (num: string, slot?: string) => void
 }
 
 type SubTab = 'all' | 'd2' | 'yomi' | 'map' | 'test'

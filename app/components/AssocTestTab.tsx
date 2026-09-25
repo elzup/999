@@ -17,12 +17,15 @@ type Props = {
 
 const RECORDS_KEY = 'assoc999'
 const QUIZ_LEN = 10
+// 自己採点は 1 回で 1000 件近く並ぶと最後まで使わないので、百の位ごと (100 件) に区切る
+const BLOCKS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 type Pool = 'all' | 'bm'
 type QuizRun = { questions: ChoiceQuestion[]; id: number }
 
 function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [pool, setPool] = useState<Pool>('all')
+  const [block, setBlock] = useState(0)
   const [run, setRun] = useState<QuizRun | null>(null)
   const [recall, setRecall] = useState<{
     entries: NumberEntry[]
@@ -42,6 +45,12 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
 
   const poolLabel = pool === 'bm' ? '★のみ' : '全体'
 
+  const blockCounts = useMemo(
+    () =>
+      BLOCKS.map((b) => entries.filter((n) => n.num[0] === String(b)).length),
+    [entries]
+  )
+
   const startChoice = useCallback(() => {
     setSummary(null)
     const items = assocPool(entries)
@@ -52,8 +61,9 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
   }, [entries])
 
   const startRecall = useCallback(() => {
-    setRecall((prev) => ({ entries, id: (prev?.id ?? 0) + 1 }))
-  }, [entries])
+    const inBlock = entries.filter((n) => n.num[0] === String(block))
+    setRecall((prev) => ({ entries: inBlock, id: (prev?.id ?? 0) + 1 }))
+  }, [entries, block])
 
   const onComplete = useCallback(
     (s: QuizSummary) => {
@@ -67,7 +77,7 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
     return (
       <RecallListQuiz
         key={recall.id}
-        title={`連想 自己採点（${poolLabel}）`}
+        title={`連想 自己採点（${block}xx・${poolLabel}）`}
         entries={recall.entries}
         bookmarks={bookmarks}
         onToggleBm={onToggleBm}
@@ -136,13 +146,29 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
       </p>
 
       <div class="assoc-mode-list">
+        <div class="assoc-block-grid">
+          {BLOCKS.map((b) => (
+            <button
+              key={b}
+              class={'assoc-block-btn' + (block === b ? ' active' : '')}
+              disabled={blockCounts[b] === 0}
+              onClick={() => setBlock(b)}
+            >
+              <span class="assoc-block-label">{b}xx</span>
+              <span class="assoc-block-count">{blockCounts[b]}</span>
+            </button>
+          ))}
+        </div>
         <button
           class="assoc-mode-btn"
-          disabled={!canStart}
+          disabled={blockCounts[block] === 0}
           onClick={startRecall}
         >
-          <span class="assoc-mode-title">連想 自己採点</span>
-          <span class="assoc-mode-sub">縦長・答えを見て○×</span>
+          <span class="assoc-mode-title">連想 自己採点 {block}xx</span>
+          <span class="assoc-mode-sub">
+            {block * 100}〜{block * 100 + 99}・{blockCounts[block]}
+            件・答えを見て○×
+          </span>
         </button>
         <button
           class="assoc-mode-btn"

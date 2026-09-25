@@ -13,6 +13,8 @@ import { loadWeekdayRecords, saveWeekdayRecords } from '../data/storage'
 import RecordPanel from './RecordPanel'
 import ReviewPanel, { type ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
+import MarkButton from './MarkButton'
+import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 
 type Answer = {
   questionId: string
@@ -115,6 +117,7 @@ function WeekdayCalcTab() {
   >({})
   const [records, setRecords] = useState<TestRecord[]>(loadWeekdayRecords)
   const [showRecords, setShowRecords] = useState(false)
+  const marks = useReviewMarks()
 
   useEffect(() => {
     if (
@@ -149,16 +152,19 @@ function WeekdayCalcTab() {
   // 結果は他テストと同様に ReviewPanel ページで表示する。
   const reviewItems = useMemo<ReviewItem[]>(
     () =>
-      quiz.map((q) => {
-        const a = answerMap.get(q.id)
-        return {
-          label: q.date,
-          correct: a?.correct ?? false,
-          userAnswer: a ? WEEKDAY_NAMES_JA[a.selected] : '—',
-          rightAnswer: `${q.result.weekdayJa}曜`,
-        }
-      }),
-    [quiz, answerMap]
+      applyMarks(
+        quiz.map((q) => {
+          const a = answerMap.get(q.id)
+          return {
+            label: q.date,
+            correct: a?.correct ?? false,
+            userAnswer: a ? WEEKDAY_NAMES_JA[a.selected] : '—',
+            rightAnswer: `${q.result.weekdayJa}曜`,
+          }
+        }),
+        marks.marks
+      ),
+    [quiz, answerMap, marks.marks]
   )
 
   const handleExplain = useCallback(() => {
@@ -191,7 +197,8 @@ function WeekdayCalcTab() {
     setQuestionStartedAt(now)
     setElapsedMs(0)
     setOpenExplanations({})
-  }, [])
+    marks.reset()
+  }, [marks.reset])
 
   const handleAnswer = useCallback(
     (selected: number) => {
@@ -262,6 +269,12 @@ function WeekdayCalcTab() {
             解説と10問テスト
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+            {viewMode === 'test' && currentQuestion && !finished ? (
+              <MarkButton
+                on={marks.marks.has(currentQuestion.date)}
+                onToggle={() => marks.toggle(currentQuestion.date)}
+              />
+            ) : null}
             <button
               class={'d2-mode-btn' + (viewMode === 'explain' ? ' active' : '')}
               onClick={() => setViewMode('explain')}

@@ -346,6 +346,24 @@ body {
   gap: 6px;
   flex-shrink: 0;
 }
+/* 番号に対する操作 (ブックマーク / 編集) を番号の下にまとめる */
+.detail-idcol-actions {
+  display: flex;
+  gap: 2px;
+}
+/* 語は折り返す。nowrap + flex-shrink:0 のままだと縮む余地がゼロになり、
+   カードごと横スクロールする (実際に踏んだ) */
+.word-line .detail-main-word {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  flex-shrink: 1;
+  min-width: 0;
+}
+/* 詳細カードは横に溢れない。中で溢れる要素が出ても画面ごと動かさない */
+.detail-panel {
+  max-width: 100%;
+  overflow-x: hidden;
+}
 .detail-main-word.dim {
   color: var(--text2);
 }
@@ -972,27 +990,32 @@ body {
 }
 
 /* Sub-tab switch */
+/* サブタブ切替は Tab Bar のすぐ上 (2 段目) に置く。上端だと片手で指が届かない。
+   JSX の並びは変えず、order で最後に回し margin-top: auto で下端へ寄せる
+   (中身が短い画面でも途中に浮かない) */
 .sub-tab-switch {
   display: flex;
   gap: 0;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
+  order: 1;
+  margin-top: auto;
 }
 .sub-tab-btn {
   flex: 1;
-  padding: 8px 4px;
+  padding: 11px 4px;
   border: none;
   background: none;
   color: var(--text2);
   font-size: 13px;
   font-weight: bold;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-top: 2px solid transparent;
 }
 .sub-tab-btn.active {
   color: var(--accent);
-  border-bottom-color: var(--accent);
+  border-top-color: var(--accent);
 }
 
 .tag-panel {
@@ -1923,6 +1946,75 @@ body {
   font-size: 18px;
   flex-shrink: 0;
 }
+/* テスト中に付けた «あとで見返す» 印。★ (黄色の星) と区別できるよう帯で示す */
+.review-item.is-marked {
+  background: rgba(251, 191, 36, 0.08);
+  box-shadow: inset 3px 0 0 var(--warn);
+  padding-left: 8px;
+}
+.review-mark {
+  color: var(--warn);
+  flex-shrink: 0;
+}
+.review-item.is-openable {
+  cursor: pointer;
+}
+.review-mark-filter {
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--warn);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.review-mark-filter.on {
+  border-color: var(--warn);
+  background: rgba(251, 191, 36, 0.15);
+}
+/* 結果ビューの上に詳細パネルを重ねる。閉じると結果ビューに戻る */
+.review-detail {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.review-detail-body {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85%;
+  overflow-y: auto;
+  background: var(--bg);
+  border-radius: 12px 12px 0 0;
+  padding-top: 8px;
+}
+/* 結果ビューから開いた編集。テスト画面・結果ビュー (z-index 100) より上 */
+.edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--safe-bottom);
+}
+/* テストヘッダーの印ボタン */
+.mark-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text2);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.mark-btn.on {
+  color: var(--warn);
+  border-color: var(--warn);
+  background: rgba(251, 191, 36, 0.15);
+}
 
 /* 連想テスト: 自己採点の縦長リスト */
 .recall-list-screen {
@@ -2060,6 +2152,42 @@ body {
   font-size: 12px;
   color: var(--text2);
   margin-left: 4px;
+}
+/* 自己採点の範囲 (百の位)。5 列 × 2 段で親指が届く大きさを保つ */
+.assoc-block-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.assoc-block-btn {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.assoc-block-btn.active {
+  border-color: var(--accent);
+  background: var(--accent2);
+}
+.assoc-block-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.assoc-block-label {
+  font-family: ui-monospace, monospace;
+  font-size: 16px;
+  font-weight: 700;
+}
+.assoc-block-count {
+  font-size: 11px;
+  color: var(--text2);
 }
 .assoc-test-desc {
   font-size: 12px;
@@ -2374,6 +2502,77 @@ body {
 }
 .cm-choice-btn:disabled {
   cursor: default;
+}
+
+/* ---- 4択テスト (ChoiceQuiz) の画面レイアウト ----
+   問題は上の帯いっぱいに広げ、選択肢は下端 (.test-footer) に寄せる。
+   以前は .content に justify-content:center を当てていたため、問題も選択肢も
+   画面中央の小さなかたまりになり、上下に大きな余白が空いたうえ
+   選択肢が親指の届かない高さに浮いていた。 */
+.quiz-screen.is-choice {
+  display: flex;
+  flex-direction: column;
+}
+.quiz-screen.is-choice .content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.quiz-screen.is-choice .cm-quiz-wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  gap: 0;
+  padding: 0;
+}
+/* 余った高さは余白ではなく問題領域として使う */
+.quiz-screen.is-choice .cm-card-prompt {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 12px;
+  padding: 16px 14px;
+  overflow-y: auto;
+}
+/* 進捗はヘッダに出ているので、問題カード側の "1 / 10" は畳む */
+.quiz-screen.is-choice .cm-card-order {
+  display: none;
+}
+.quiz-screen.is-choice .cm-card-face {
+  font-size: clamp(32px, 9vw, 56px);
+  word-break: break-word;
+}
+/* 選択肢は数字テストのテンキーと同じ .test-footer に入れて位置を揃える。
+   safe-area は .test-screen 側で確保済みなので、ここで env() を足さない */
+.quiz-screen.is-choice .cm-choice-list {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  gap: 8px;
+}
+.quiz-screen.is-choice .cm-choice-btn {
+  padding: 13px 14px;
+}
+/* 低い画面では問題を詰めて選択肢の面積を優先する */
+@media (max-height: 600px) {
+  .quiz-screen.is-choice .cm-card-prompt {
+    margin: 6px 12px;
+    padding: 10px 12px;
+  }
+  .quiz-screen.is-choice .cm-card-face {
+    font-size: clamp(26px, 7vw, 40px);
+  }
+  .quiz-screen.is-choice .cm-choice-btn {
+    padding: 10px 14px;
+    font-size: 16px;
+  }
 }
 .kuku-test {
   margin-top: 6px;
@@ -3128,6 +3327,132 @@ body {
 .rules-toggle-btn:hover {
   color: var(--text);
   border-color: var(--accent);
+}
+
+/* ─── Rules Summary Table (整理可視化) ─── */
+.rules-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rules-summary-controls {
+  display: flex;
+  gap: 4px;
+}
+.rules-switch-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rules-switch-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.rules-switch-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.rules-summary-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.rules-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: ui-monospace, monospace;
+}
+.rules-summary-table th {
+  background: var(--surface2);
+  color: var(--text2);
+  font-weight: 600;
+  font-size: 11px;
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.rules-summary-table th.col-1d-num,
+.rules-summary-table th.col-2d-num {
+  text-align: center;
+  width: 50px;
+}
+.rules-summary-table th.col-1d-kana {
+  width: 90px;
+}
+.rules-summary-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.rules-summary-table tr.group-first td {
+  border-top: 2px solid var(--border);
+}
+.rules-summary-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+.rules-summary-table .cell-1d-num.primary {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 14px;
+  text-align: center;
+}
+.rules-summary-table .cell-1d-num.secondary {
+  color: var(--text2);
+  font-size: 12px;
+  opacity: 0.6;
+  text-align: center;
+}
+.rules-summary-table .cell-2d-num {
+  font-weight: 700;
+  color: #60a5fa;
+  text-align: center;
+}
+.rules-tier-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.rules-double-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.rules-double-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text);
+}
+.rules-double-item.is-long {
+  color: #38bdf8;
+}
+.rules-long-badge {
+  font-size: 9px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.rules-cell-empty {
+  color: var(--text2);
+  opacity: 0.3;
 }
 
 /* --- Recall tree (想起ツリー) --- */
@@ -5034,7 +5359,13 @@ body {
 .nd-rate {
   display: flex;
   gap: 3px;
+}
+/* 代表と評価はまとめて右端へ。代表 ①② が評価のすぐ左に来る */
+.nd-rank-group {
+  display: flex;
+  gap: 3px;
   margin-left: auto;
+  margin-right: 6px;
 }
 .nd-rate-btn {
   min-width: 2.2em;

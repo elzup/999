@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'preact/hooks'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'preact/hooks'
 import { validateAppData } from './data/parse'
 import {
   loadBookmarks,
@@ -40,6 +40,7 @@ import { setKukuItems } from './lib/kukuQuiz'
 import type { KukuItem } from './lib/kukuQuiz'
 import { isBookmarkReviewDue } from './lib/bookmarkReview'
 import { useBackGuard } from './lib/useBackGuard'
+import { NumberContext, type NumberContextValue } from './lib/numberContext'
 import {
   IconNum,
   IconCard,
@@ -87,11 +88,11 @@ export function App() {
   // 999 タブで語をタップして編集へ入ったときの行き先 (REQ-NDV-012)
   const [editTarget, setEditTarget] = useState<{
     num: string
-    slot: string
+    slot?: string
   } | null>(null)
 
   const openEditor = useCallback(
-    (num: string, slot: string) => {
+    (num: string, slot?: string) => {
       setEditTarget({ num, slot })
       setTab('edit')
     },
@@ -202,6 +203,22 @@ export function App() {
     })
   }, [])
 
+  // テストの結果ビューから開く編集。タブを切り替えると結果ビューごと消えるので、
+  // 今のタブの上に重ねて開き、閉じたら結果ビューへ戻る
+  const [overlayEditNum, setOverlayEditNum] = useState<string | null>(null)
+  const closeOverlayEditor = useCallback(() => setOverlayEditNum(null), [])
+  useBackGuard(Boolean(overlayEditNum), closeOverlayEditor)
+
+  const numberCtx = useMemo<NumberContextValue>(
+    () => ({
+      numbers: data?.numbers ?? [],
+      bookmarks,
+      onToggleBm: toggleBm,
+      openEditor: setOverlayEditNum,
+    }),
+    [data, bookmarks, toggleBm]
+  )
+
   const bmReviewDue = isBookmarkReviewDue(bookmarks, bmViews, Date.now())
 
   if (locked) {
@@ -213,7 +230,7 @@ export function App() {
   }
 
   return (
-    <>
+    <NumberContext.Provider value={numberCtx}>
       {revalidating && <div class="revalidating-note">更新を確認中…</div>}
       {tab === 'num' && (
         <NumGroupTab
@@ -303,7 +320,16 @@ export function App() {
           />
         ))}
       </div>
-    </>
+      {overlayEditNum ? (
+        <div class="edit-overlay">
+          <NumberDetailTab
+            token={token}
+            initialNum={overlayEditNum}
+            onClose={closeOverlayEditor}
+          />
+        </div>
+      ) : null}
+    </NumberContext.Provider>
   )
 }
 

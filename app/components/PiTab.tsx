@@ -13,11 +13,20 @@ import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
 import type { ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
+import MarkButton from './MarkButton'
+import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 
 type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
+}
+
+// 振り返り行の label と同じ文字列。印はこれで問題を識別する
+const digitLabel = (idx: number) => `${idx + 1}桁目`
+const chunkLabel = (idx: number) => {
+  const pos = idx * 3 + 1
+  return `${pos}-${pos + 2}桁`
 }
 
 type Answer = { idx: number; digit: string; correct: boolean }
@@ -361,6 +370,7 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [recordsKind, setRecordsKind] = useState<RecordKind>('check')
   const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
+  const marks = useReviewMarks()
 
   // 4択モード state
   const [choicePos, setChoicePos] = useState(0)
@@ -426,7 +436,8 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
     setStartTime(Date.now())
     setFinished(false)
     setSelected(null)
-  }, [])
+    marks.reset()
+  }, [marks.reset])
 
   const startChoice = useCallback(
     (variant: ChoiceVariant) => {
@@ -438,8 +449,9 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
       setStartTime(Date.now())
       setFinished(false)
       setSelected(null)
+      marks.reset()
     },
-    [chunkAt]
+    [chunkAt, marks.reset]
   )
 
   const endCheck = useCallback(
@@ -461,21 +473,20 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
 
       // Build review — group by 3-digit blocks, show only wrong ones individually
       const items: ReviewItem[] = used.map((a) => {
-        const pos = a.idx + 1
         return {
-          label: `${pos}桁目`,
+          label: digitLabel(a.idx),
           correct: a.correct,
           userAnswer: a.correct ? undefined : a.digit,
           rightAnswer: digits[a.idx],
         }
       })
-      setReviewItems(items)
+      setReviewItems(applyMarks(items, marks.marks))
       setReviewMeta({ score: correctCount, total: used.length, time: elapsed })
 
       setMode('view')
       setFinished(true)
     },
-    [startTime, answers, records, storageKey, digits]
+    [startTime, answers, records, storageKey, digits, marks.marks]
   )
 
   const endChoice = useCallback(
@@ -498,21 +509,22 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
       savePiRecords(newRecords, store.key)
 
       const items: ReviewItem[] = used.map((a) => {
-        const pos = a.idx * 3 + 1
+        const chunk = chunkAt(a.idx)
         return {
-          label: `${pos}-${pos + 2}桁`,
+          label: chunkLabel(a.idx),
           correct: a.correct,
           userAnswer: a.correct ? undefined : a.picked,
-          rightAnswer: chunkAt(a.idx),
+          rightAnswer: chunk,
+          num: /^\d{3}$/.test(chunk) ? chunk : undefined,
         }
       })
-      setReviewItems(items)
+      setReviewItems(applyMarks(items, marks.marks))
       setReviewMeta({ score: correctCount, total: used.length, time: elapsed })
 
       setMode('view')
       setFinished(true)
     },
-    [startTime, choiceAnswers, choiceVariant, storeOf, chunkAt]
+    [startTime, choiceAnswers, choiceVariant, storeOf, chunkAt, marks.marks]
   )
 
   const tapDigit = useCallback(
@@ -635,6 +647,15 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
         onStartChoice={startChoice}
         onEndCheck={() => endCheck()}
         onEndChoice={() => endChoice()}
+        markLabel={
+          mode === 'check'
+            ? digitLabel(checkPos)
+            : mode === 'choice'
+            ? chunkLabel(choicePos)
+            : null
+        }
+        marks={marks.marks}
+        onToggleMark={marks.toggle}
         onShowRecords={() => openRecords('check')}
         onShowChoiceRecords={() => openRecords('choice')}
         onShowMaskedRecords={() => openRecords('masked')}
@@ -751,6 +772,10 @@ type PiHeaderProps = {
   onStartChoice: (variant: ChoiceVariant) => void
   onEndCheck: () => void
   onEndChoice: () => void
+  /** 今の問題の印キー (振り返り行の label)。テスト中でなければ null */
+  markLabel: string | null
+  marks: Set<string>
+  onToggleMark: (label: string) => void
   onShowRecords: () => void
   onShowChoiceRecords: () => void
   onShowMaskedRecords: () => void
@@ -773,6 +798,9 @@ function PiHeader({
   onStartChoice,
   onEndCheck,
   onEndChoice,
+  markLabel,
+  marks,
+  onToggleMark,
   onShowRecords,
   onShowChoiceRecords,
   onShowMaskedRecords,
@@ -861,6 +889,12 @@ function PiHeader({
                 {checkPos - 1}桁目 {answers.filter((a) => a.correct).length}/
                 {answers.length}
               </span>
+              {!finished && markLabel ? (
+                <MarkButton
+                  on={marks.has(markLabel)}
+                  onToggle={() => onToggleMark(markLabel)}
+                />
+              ) : null}
               <button
                 class="filter-btn"
                 style={{
@@ -886,6 +920,12 @@ function PiHeader({
                 {choiceAnswers.filter((a) => a.correct).length}/
                 {choiceAnswers.length}
               </span>
+              {!finished && markLabel ? (
+                <MarkButton
+                  on={marks.has(markLabel)}
+                  onToggle={() => onToggleMark(markLabel)}
+                />
+              ) : null}
               <button
                 class="filter-btn"
                 style={{

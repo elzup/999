@@ -16,6 +16,8 @@ import CardDetailPanel from './CardDetailPanel'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
 import TestNavBar from './TestNavBar'
+import MarkButton from './MarkButton'
+import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import type { ReviewItem } from './ReviewPanel'
 import { vibrate } from '../lib/haptics'
 import TestFeatureList from './TestFeatureList'
@@ -131,6 +133,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
   const [showRecords, setShowRecords] = useState(false)
   const [reviewItems, setReviewItems] = useState<ReviewItem[] | null>(null)
   const [reviewMeta, setReviewMeta] = useState({ score: 0, total: 0, time: 0 })
+  const marks = useReviewMarks()
   const [trainSettings, setTrainSettings] = useState<CardTrainSettings>(
     loadCardTrainSettings
   )
@@ -221,7 +224,8 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
     setFinished(false)
     setMode('check')
     setSelected(null)
-  }, [cards])
+    marks.reset()
+  }, [cards, marks.reset])
 
   const startTrain = useCallback(() => {
     const groups = buildTrainGroups()
@@ -297,7 +301,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
           rightAnswer: card?.value ?? '',
         }
       })
-      setReviewItems(items)
+      setReviewItems(applyMarks(items, marks.marks))
       setReviewMeta({
         score: correctCount,
         total: used.length,
@@ -307,7 +311,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
       setMode('view')
       setFinished(true)
     },
-    [startTime, results, records, stats, allItems]
+    [startTime, results, records, stats, allItems, marks.marks]
   )
 
   const tapChoice = useCallback(
@@ -486,7 +490,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
                         !revealed && toggleReveal(key, bmKey, revealed, isBm)
                       }
                     >
-                      {revealed ? (prompt?.value ?? '—') : '答えを見る'}
+                      {revealed ? prompt?.value ?? '—' : '答えを見る'}
                     </div>
                     <div class="cm-train-cardtools">
                       <button
@@ -570,18 +574,32 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
             <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
               {Math.min(checkIdx + 1, allItems.length)}/{allItems.length}
             </span>
-            <button
-              class="filter-btn"
+            <span
               style={{
-                fontSize: '12px',
-                minWidth: '50px',
-                padding: '4px 10px',
                 marginLeft: 'auto',
+                display: 'flex',
+                gap: '6px',
+                alignItems: 'center',
               }}
-              onClick={() => endCheck()}
             >
-              終了
-            </button>
+              {!finished && currentItem ? (
+                <MarkButton
+                  on={marks.marks.has(formatCardId(currentItem.card))}
+                  onToggle={() => marks.toggle(formatCardId(currentItem.card))}
+                />
+              ) : null}
+              <button
+                class="filter-btn"
+                style={{
+                  fontSize: '12px',
+                  minWidth: '50px',
+                  padding: '4px 10px',
+                }}
+                onClick={() => endCheck()}
+              >
+                終了
+              </button>
+            </span>
           </div>
         </div>
 

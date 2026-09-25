@@ -1,6 +1,9 @@
 import { useEffect, useReducer, useCallback, useRef } from 'preact/hooks'
 import { vibrate } from '../lib/haptics'
 import type { ReviewItem } from './ReviewPanel'
+import TestNavBar from './TestNavBar'
+import MarkButton from './MarkButton'
+import { applyMarks, useReviewMarks } from '../lib/reviewMarks'
 
 /** 4択クイズ1問。prompt(問題表示) / answer(正解) / choices(選択肢, answer含む) */
 export type ChoiceQuestion = {
@@ -44,6 +47,7 @@ type State = {
 type Action =
   | { type: 'pick'; choice: string; correct: boolean; review: ReviewItem }
   | { type: 'next' }
+  | { type: 'prev' }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -57,6 +61,18 @@ function reducer(state: State, action: Action): State {
       }
     case 'next':
       return { ...state, idx: state.idx + 1, picked: null }
+    // 1問戻る。直前の解答を取り消して出題し直す。
+    // 回答表示中 (picked !== null) は自動送りタイマーと競合するので受け付けない。
+    case 'prev': {
+      if (state.idx === 0 || state.picked !== null) return state
+      const last = state.reviews[state.reviews.length - 1]
+      return {
+        idx: state.idx - 1,
+        picked: null,
+        score: state.score - (last && last.correct ? 1 : 0),
+        reviews: state.reviews.slice(0, -1),
+      }
+    }
     default:
       return state
   }
@@ -81,6 +97,8 @@ function ChoiceQuiz({
     reviews: [],
   })
   const { idx, picked, score, reviews } = state
+  // 呼び出し側が出題ごとに key を変えて作り直すので、印はこの 1 回で使い捨てになる
+  const { marks, toggle: toggleMark } = useReviewMarks()
   const finished = idx >= questions.length
   const q = questions[idx]
 
@@ -109,6 +127,7 @@ function ChoiceQuiz({
   )
 
   const advance = useCallback(() => dispatch({ type: 'next' }), [])
+  const back = useCallback(() => dispatch({ type: 'prev' }), [])
 
   // 回答後、一定時間で自動送り。誤答は長め。アンマウント/再回答で解除。
   useEffect(() => {
@@ -126,9 +145,9 @@ function ChoiceQuiz({
       score,
       total: questions.length,
       time: Math.round((Date.now() - startRef.current) / 1000),
-      reviews,
+      reviews: applyMarks(reviews, marks),
     })
-  }, [finished, score, reviews, questions.length, onComplete])
+  }, [finished, score, reviews, marks, questions.length, onComplete])
 
   // 全問終了後は独自の結果画面を出さず、呼び出し側が ReviewPanel を自動表示する
   // (年号/年コード/カード/π と同じ「終了→結果オーバーレイ自動表示」の流れに統一)。
@@ -138,8 +157,8 @@ function ChoiceQuiz({
 
   return (
     <div
-      class="test-screen quiz-screen"
-      style={{ display: 'flex', flexDirection: 'column' }}
+      class="test-screen quiz-screen is-choice"
+      onClick={revealed ? advance : undefined}
     >
       <div class="pi-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -156,15 +175,23 @@ function ChoiceQuiz({
           <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
             {idx + 1}/{questions.length}
           </span>
+          <span style={{ marginLeft: 'auto' }}>
+            <MarkButton
+              on={marks.has(q.prompt)}
+              onToggle={() => toggleMark(q.prompt)}
+            />
+          </span>
           <button
             class="filter-btn"
             style={{
               fontSize: '12px',
               minWidth: '50px',
               padding: '4px 10px',
-              marginLeft: 'auto',
             }}
-            onClick={onQuit}
+            onClick={(e) => {
+              e.stopPropagation()
+              onQuit()
+            }}
           >
             終了
           </button>
@@ -172,16 +199,7 @@ function ChoiceQuiz({
       </div>
 
       {/* 回答後はどこをタップしても即次へ(待ち time をスキップ) */}
-      <div
-        class="content"
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}
-        onClick={revealed ? advance : undefined}
-      >
+      <div class="content">
         <div class="cm-quiz-wrap">
           <div class="cm-card-prompt">
             <div class="cm-card-order">
@@ -193,30 +211,34 @@ function ChoiceQuiz({
               {q.prompt}
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="cm-choice-list">
-            {q.choices.map((choice, i) => {
-              const isAnswer = choice === q.answer
-              const isPicked = choice === picked
-              const cls =
-                'cm-choice-btn' +
-                (revealed && isAnswer ? ' is-correct' : '') +
-                (revealed && isPicked && !isAnswer ? ' is-wrong' : '')
-              return (
-                <button
-                  key={choice}
-                  class={cls}
-                  disabled={revealed}
-                  onClick={() => pick(choice)}
-                >
-                  <span class="cm-choice-index">
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  <span class="cm-choice-value">{choice}</span>
-                </button>
-              )
-            })}
-          </div>
+      {/* 入力は画面下端の .test-footer に固定。数字テストのテンキーと同じ位置 */}
+      <div class="test-footer">
+        <TestNavBar onPrev={back} prevDisabled={idx === 0 || revealed} />
+        <div class="cm-choice-list">
+          {q.choices.map((choice, i) => {
+            const isAnswer = choice === q.answer
+            const isPicked = choice === picked
+            const cls =
+              'cm-choice-btn' +
+              (revealed && isAnswer ? ' is-correct' : '') +
+              (revealed && isPicked && !isAnswer ? ' is-wrong' : '')
+            return (
+              <button
+                key={choice}
+                class={cls}
+                disabled={revealed}
+                onClick={() => pick(choice)}
+              >
+                <span class="cm-choice-index">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span class="cm-choice-value">{choice}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
