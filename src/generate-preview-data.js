@@ -5,7 +5,13 @@ import { z } from 'zod'
 import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
 import { WEIGHTS } from './scorer.js'
 import { classify } from './goro-extract.js'
-import { extractName, isKanaOnly, loadWords, toHiragana } from './words.js'
+import {
+  categoryScore,
+  extractName,
+  isKanaOnly,
+  loadWords,
+  toHiragana,
+} from './words.js'
 import { buildYomiUse } from './yomi.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
@@ -45,6 +51,12 @@ const NumberSchema = z.object({
   w2Img: z.string().optional(),
   ...buildCandidateSlotShape('wh'),
   ...buildCandidateSlotShape('wm'),
+})
+
+// 日付 (10〜12月) の 4 桁エントリ。1〜9月は numbers をそのまま使う。
+// スコア/rankey は 3 桁前提なので付けない。
+const DateSchema = NumberSchema.extend({
+  num: z.string().regex(/^\d{4}$/),
 })
 
 const CardSchema = z.object({
@@ -237,11 +249,30 @@ for (const n of numbers) {
 // 2文字読み (拗音/長音) ごとの割当番号。読みドリルで「この読みを使う語がどれだけあるか」を出す。
 const yomiUse = buildYomiUse(numbers)
 
-const out = { numbers, cards, rules, yomiUse }
+// 日付辞書 (sync で words.tsv とは別に書き出した 4 桁行)
+const datesPath = join(baseDir, 'data', 'dates.tsv')
+const dates = existsSync(datesPath)
+  ? loadWords('dates.tsv')
+      .map((entry) => {
+        const { catScore } = categoryScore(entry)
+        const result = DateSchema.safeParse({ ...entry, catScore })
+        if (!result.success) {
+          console.warn(
+            `Skip date: ${entry.num}`,
+            result.error.issues[0]?.message
+          )
+          return null
+        }
+        return result.data
+      })
+      .filter(Boolean)
+  : []
+
+const out = { numbers, cards, rules, yomiUse, dates }
 mkdirSync(privateDir, { recursive: true })
 writeFileSync(join(privateDir, 'data.json'), JSON.stringify(out))
 console.log(
   `Generated private/data.json (${numbers.length} numbers, ${
-    cards.length
-  } cards, rules: ${Object.keys(rules.singleByDigit).length} digits)`
+    dates.length
+  } dates, ${cards.length} cards, rules: ${Object.keys(rules.singleByDigit).length} digits)`
 )

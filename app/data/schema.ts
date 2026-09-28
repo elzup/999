@@ -120,8 +120,14 @@ export type YomiUseHit = z.infer<typeof YomiUseHitSchema>
 
 export type YomiUse = z.infer<typeof YomiUseSchema>
 
+/** 日付 (10〜12月) の 4 桁エントリ。1〜9月は numbers の 3 桁をそのまま使う */
+export const DateEntrySchema = NumberEntrySchema.extend({
+  num: z.string().regex(/^\d{4}$/),
+})
+
 export const AppDataSchema = z.object({
   numbers: z.array(NumberEntrySchema),
+  dates: z.array(DateEntrySchema).default([]),
   cards: z.array(CardEntrySchema),
   rules: RulesDataSchema.optional(),
   yomiUse: YomiUseSchema.optional(),

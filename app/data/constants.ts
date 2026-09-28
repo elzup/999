@@ -435,6 +435,7 @@ export const YEAR_DATA: YearItem[] = (
 
 export const VALID_TABS = [
   'num',
+  'date',
   'card',
   'pi',
   'year',
@@ -445,10 +446,11 @@ export const VALID_TABS = [
   'hex',
   'misc',
 ] as const
-export type TabId = typeof VALID_TABS[number]
+export type TabId = (typeof VALID_TABS)[number]
 
 export const BAR_TAB_LABELS: Record<TabId, string> = {
   num: '数字',
+  date: '日付',
   card: 'カード',
   pi: 'π',
   year: '年号',

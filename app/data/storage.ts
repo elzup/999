@@ -206,6 +206,7 @@ export type TabVisibility = Record<TabId, boolean>
 
 export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
   num: true,
+  date: true,
   card: true,
   pi: true,
   year: true,
