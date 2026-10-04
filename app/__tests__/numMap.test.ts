@@ -44,6 +44,25 @@ describe('buildNumMap', () => {
     }
   })
 
+  it('定義済みの百はどれも 100 件を重複なく配置し、矩形が重ならない', () => {
+    for (const key of Object.keys(HUNDRED_LAYOUTS)) {
+      const hundred = Number(key)
+      const entries = Array.from({ length: 100 }, (_, i) =>
+        num(String(hundred * 100 + i).padStart(3, '0'))
+      )
+      const cells = buildNumMap(entries, hundred)!
+      const tiles = cells.flatMap((c) => c.tiles)
+      expect(new Set(tiles.map((t) => t.num)).size).toBe(100)
+
+      const units = cells.flatMap((c) =>
+        Array.from({ length: c.w * c.h }, (_, i) =>
+          [c.x + (i % c.w), c.y + Math.floor(i / c.w)].join(',')
+        )
+      )
+      expect(new Set(units).size).toBe(units.length)
+    }
+  })
+
   it('tens グループ 1X0 のセルに 1X0-1X9 が入る', () => {
     const cells = buildNumMap(ALL_1XX, 1)!
     const g15 = cells.filter((c) => c.group === '150').flatMap((c) => c.tiles)

@@ -28,6 +28,30 @@ export const HUNDRED_LAYOUTS: Record<number, LayoutCell[]> = {
     { label: '190', x: 11, y: 5, w: 5, h: 2, color: '#facc15' },
     { label: '160', x: 13, y: 7, w: 3, h: 4, color: '#16a34a' },
   ],
+  2: [
+    { label: '220-', x: 9, y: 13, w: 4, h: 3, color: '#4ecdc4' },
+    { label: '200-', x: 14, y: 16, w: 5, h: 2, color: '#ffbe3d' },
+    { label: '210-', x: 9, y: 16, w: 5, h: 2, color: '#5b8def' },
+    { label: '230-', x: 13, y: 14, w: 5, h: 2, color: '#86cd4c' },
+    { label: '240-', x: 15, y: 11, w: 4, h: 3, color: '#a04bcd' },
+    { label: '250-', x: 12, y: 9, w: 3, h: 4, color: '#cd4c4c' },
+    { label: '260-', x: 9, y: 9, w: 3, h: 4, color: '#a04ccd' },
+    { label: '290-', x: 15, y: 8, w: 4, h: 3, color: '#4ecdc4' },
+    { label: '270-', x: 9, y: 7, w: 5, h: 2, color: '#ffbf3d' },
+    { label: '280-', x: 14, y: 6, w: 5, h: 2, color: '#5b8def' },
+  ],
+  3: [
+    { label: '300-', x: 4, y: 16, w: 5, h: 2, color: '#ffbe3d' },
+    { label: '310-', x: 5, y: 14, w: 5, h: 2, color: '#5b8def' },
+    { label: '320-', x: 9, y: 16, w: 5, h: 2, color: '#4ecdc4' },
+    { label: '330-', x: 10, y: 13, w: 4, h: 3, color: '#86cd4c' },
+    { label: '340-', x: 6, y: 11, w: 4, h: 3, color: '#a04bcd' },
+    { label: '350-', x: 4, y: 9, w: 2, h: 5, color: '#cd4c4c' },
+    { label: '360-', x: 7, y: 8, w: 4, h: 3, color: '#a04ccd' },
+    { label: '370-', x: 11, y: 7, w: 2, h: 5, color: '#ffbf3d' },
+    { label: '380-', x: 8, y: 5, w: 5, h: 2, color: '#5b8def' },
+    { label: '390-', x: 4, y: 5, w: 3, h: 4, color: '#4ecdc4' },
+  ],
 }
 
 export function hasHundredLayout(hundred: number): boolean {
