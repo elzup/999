@@ -167,6 +167,10 @@ async function recropTop(num, slot, btn) {
 // \b があるので #ipra のような別タグには誤爆しない。
 const hasITag = (w) => typeof w === 'string' && /#i\b/.test(w)
 
+// images:avatar-i が焼いた画像か (manifest の sourcePage が 'dicebear:<style>')
+const isDicebear = (img) =>
+  String(img?.sourcePage || '').startsWith('dicebear:')
+
 // 語からタグ(#x)・ラベル(-a)・別名(,以降)・括弧注記を落とした本体。
 // src/words.js の extractName と同じ規則 (クライアントからは import できない)。
 function nameOf(w) {
@@ -311,7 +315,10 @@ function slotEl(w, slot) {
   // #i (プライベートな友人) は DiceBear アバターで固定。実写に差し替わると困るので
   // コンソールからは触れないようにする。images:avatar-i が keep も立てている。
   const isAvatarI = hasITag(word)
-  const kept = isAvatarI || Boolean(state.keep?.[`${num}:${slot}`])
+  // タグだけ見て確定扱いにすると、後から #i を付けた枠 (実写のまま・keep 無し) が
+  // 「🔒アバター」表示なのに未確定フィルタに出る。表示もフィルタと同じ keep を正にする。
+  const kept = Boolean(state.keep?.[`${num}:${slot}`])
+  const isAvatarPending = isAvatarI && !(kept && isDicebear(img))
   const unconfirmed = Boolean(img) && !kept
 
   const thumb = document.createElement('div')
@@ -328,7 +335,9 @@ function slotEl(w, slot) {
     thumb.textContent = st === 'error' ? '取得失敗' : '未取得'
   }
   if (isAvatarI) {
-    thumb.title = '#i は DiceBear アバター固定 (操作不可)'
+    thumb.title = isAvatarPending
+      ? '#i だがアバター未生成。nr images:avatar-i を実行する'
+      : '#i は DiceBear アバター固定 (操作不可)'
   } else {
     thumb.title = readOnly ? '' : 'クリックで redo トグル'
     thumb.onclick = () => toggleRedo(num, slot)
@@ -343,8 +352,16 @@ function slotEl(w, slot) {
   label.appendChild(wspan)
   if (img) {
     const stat = document.createElement('span')
-    stat.className = 'slot-stat ' + (kept ? 'is-kept' : 'is-unconf')
-    stat.textContent = isAvatarI ? '🔒アバター' : kept ? '🔒確定' : '未確定'
+    stat.className =
+      'slot-stat ' +
+      (isAvatarPending ? 'is-changed' : kept ? 'is-kept' : 'is-unconf')
+    stat.textContent = isAvatarPending
+      ? '⚠️アバター未生成'
+      : isAvatarI
+      ? '🔒アバター'
+      : kept
+      ? '🔒確定'
+      : '未確定'
     label.appendChild(stat)
     // 画像は前の語で取ったもの。確定済みでも当ては外れているので目立たせる
     if (!isAvatarI && wordChanged(num, slot, word)) {

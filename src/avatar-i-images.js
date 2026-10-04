@@ -63,11 +63,14 @@ const DATA_PATH = join(baseDir, 'visualize-words.data.json')
 
 const hasITag = (w) => typeof w === 'string' && /#i\b/.test(w)
 
+// 2 候補目 (w1_2 / w2_2) も console に出る枠なので対象に含める
+const AVATAR_SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
+
 function collectTargets() {
   const { data } = JSON.parse(readFileSync(DATA_PATH, 'utf8'))
   const targets = []
   for (const n of data) {
-    for (const slot of ['w1', 'w2']) {
+    for (const slot of AVATAR_SLOTS) {
       if (!hasITag(n[slot])) continue
       const seed = extractName(n[slot])
       if (!seed) continue
