@@ -20,13 +20,12 @@ async function getVqd(query) {
 
 /**
  * @param {string} query
- * @param {string[]} rejected  redo 時に避ける既出URL
  * @param {boolean} safe  セーフサーチ (既定 ON)
- * @returns {Promise<{imageUrl:string, sourcePage:string}|null>}
+ * @returns {Promise<{imageUrl:string, sourcePage:string}[]>}
  */
-export async function ddgSearchImage(query, rejected = [], safe = true) {
+export async function ddgSearchImages(query, safe = true) {
   const vqd = await getVqd(query)
-  if (!vqd) return null
+  if (!vqd) throw new Error('DDG vqd トークンが取れない')
   // p=1: strict / p=-1: off
   const p = safe ? '1' : '-1'
   const url =
@@ -38,12 +37,7 @@ export async function ddgSearchImage(query, rejected = [], safe = true) {
   })
   if (!res.ok) throw new Error(`DDG ${res.status}`)
   const data = await res.json()
-  const rej = new Set(rejected)
-  const results = (data.results || []).filter(
-    (r) => r.image && !rej.has(r.image)
-  )
-  const pick =
-    results.find((r) => /\.(jpe?g|png|webp)(\?|$)/i.test(r.image)) || results[0]
-  if (!pick) return null
-  return { imageUrl: pick.image, sourcePage: pick.url || '' }
+  return (data.results || [])
+    .filter((r) => r.image)
+    .map((r) => ({ imageUrl: r.image, sourcePage: r.url || '' }))
 }

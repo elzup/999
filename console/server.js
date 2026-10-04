@@ -21,7 +21,7 @@ import {
 import { downloadImage } from '../src/images/download.js'
 import { toWebp, toWebpTop, hashKey } from '../src/images/process.js'
 import { uploadWebp } from '../src/images/upload.js'
-import { ddgSearchImage } from '../src/images/ddg.js'
+import { searchImages } from '../src/images/search.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
@@ -194,14 +194,31 @@ async function recropTop({ num, slot }) {
   }
 }
 
+// 先頭候補はホットリンク拒否・HTML 応答・巨大画像で落ちやすいので、上位を順に試す
+const MAX_DOWNLOAD_TRIES = 5
+
+/** 候補を上から DL→webp 変換し、最初に通ったものを返す。全滅なら最後の理由で throw */
+async function fetchFirstUsable(results) {
+  let lastError = null
+  for (const result of results.slice(0, MAX_DOWNLOAD_TRIES)) {
+    try {
+      const { buffer } = await downloadImage(result.imageUrl)
+      return { result, webp: await toWebp(buffer) }
+    } catch (err) {
+      console.error(`  DL失敗 ${result.imageUrl}: ${err.message || err}`)
+      lastError = err
+    }
+  }
+  throw new Error(`候補の取得に全部失敗: ${lastError?.message || lastError}`)
+}
+
 /** 任意の検索ワードで画像を取得して差し替える (未取得スロットの救済にも) */
 async function searchCustom({ num, slot, query }) {
   if (!query || !query.trim()) return { ok: false, error: '検索ワードが空' }
   try {
-    const r = await ddgSearchImage(query.trim(), [], true)
-    if (!r?.imageUrl) return { ok: false, error: '見つからない' }
-    const { buffer } = await downloadImage(r.imageUrl)
-    const webp = await toWebp(buffer)
+    const results = await searchImages(query.trim(), [], true)
+    if (results.length === 0) return { ok: false, error: '見つからない' }
+    const { result: r, webp } = await fetchFirstUsable(results)
     const { hash, key } = hashKey(webp)
     const { url } = await uploadWebp(webp, key)
     const manifest = loadManifest()

@@ -13,7 +13,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildSearchWord } from './images/query.js'
-import { ddgSearchImage } from './images/ddg.js'
+import { searchImage as searchKeyless } from './images/search.js'
 import {
   PATHS,
   loadCandidates,
@@ -93,7 +93,7 @@ function targetSlots() {
 
 async function searchOne(query, ctx, rejected = []) {
   if (PROVIDER === 'cse') return searchImage(query, ctx.key, ctx.cx)
-  return ddgSearchImage(query, rejected, SAFE)
+  return searchKeyless(query, rejected, SAFE)
 }
 
 async function main() {
