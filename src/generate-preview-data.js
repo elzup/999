@@ -5,7 +5,13 @@ import { z } from 'zod'
 import { SINGLE_DIGIT, SINGLE_TIER, DOUBLE_DIGIT, LONG_DIGIT } from './table.js'
 import { WEIGHTS } from './scorer.js'
 import { classify } from './goro-extract.js'
-import { extractName, isKanaOnly, loadWords, toHiragana } from './words.js'
+import {
+  categoryScore,
+  extractName,
+  isKanaOnly,
+  loadWords,
+  toHiragana,
+} from './words.js'
 import { buildYomiUse } from './yomi.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
@@ -45,6 +51,12 @@ const NumberSchema = z.object({
   w2Img: z.string().optional(),
   ...buildCandidateSlotShape('wh'),
   ...buildCandidateSlotShape('wm'),
+})
+
+// 日付 (10〜12月) の 4 桁エントリ。1〜9月は numbers をそのまま使う。
+// スコア/rankey は 3 桁前提なので付けない。
+const DateSchema = NumberSchema.extend({
+  num: z.string().regex(/^\d{4}$/),
 })
 
 const CardSchema = z.object({
@@ -242,13 +254,32 @@ const yomiUse = buildYomiUse(numbers)
 const ff = JSON.parse(readFileSync(join(privateDir, 'ff.json'), 'utf8'))
 const kuku = JSON.parse(readFileSync(join(privateDir, 'kuku.json'), 'utf8'))
 
-const out = { numbers, cards, rules, yomiUse, ff, kuku }
+// 日付辞書 (sync で words.tsv とは別に書き出した 4 桁行)
+const datesPath = join(baseDir, 'data', 'dates.tsv')
+const dates = existsSync(datesPath)
+  ? loadWords('dates.tsv')
+      .map((entry) => {
+        const { catScore } = categoryScore(entry)
+        const result = DateSchema.safeParse({ ...entry, catScore })
+        if (!result.success) {
+          console.warn(
+            `Skip date: ${entry.num}`,
+            result.error.issues[0]?.message
+          )
+          return null
+        }
+        return result.data
+      })
+      .filter(Boolean)
+  : []
+
+const out = { numbers, cards, rules, yomiUse, ff, kuku, dates }
 mkdirSync(privateDir, { recursive: true })
 writeFileSync(join(privateDir, 'data.json'), JSON.stringify(out))
 console.log(
-  `Generated private/data.json (${numbers.length} numbers, ff ${
-    ff.length
-  }, kuku ${kuku.length}, ${cards.length} cards, rules: ${
-    Object.keys(rules.singleByDigit).length
-  } digits)`
+  `Generated private/data.json (${numbers.length} numbers, ${
+    dates.length
+  } dates, ff ${ff.length}, kuku ${kuku.length}, ${
+    cards.length
+  } cards, rules: ${Object.keys(rules.singleByDigit).length} digits)`
 )

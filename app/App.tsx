@@ -18,6 +18,7 @@ import type { TabId } from './data/constants'
 import { BAR_TAB_LABELS, VALID_TABS } from './data/constants'
 import type { TabVisibility } from './data/storage'
 import NumGroupTab from './components/NumGroupTab'
+import DateTab from './components/DateTab'
 import CardTab from './components/CardTab'
 import PiTab from './components/PiTab'
 import YearTab from './components/YearTab'
@@ -45,6 +46,7 @@ import { useBackGuard } from './lib/useBackGuard'
 import { NumberContext, type NumberContextValue } from './lib/numberContext'
 import {
   IconNum,
+  IconDate,
   IconCard,
   IconPi,
   IconYear,
@@ -59,6 +61,7 @@ import {
 
 const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
   num: <IconNum />,
+  date: <IconDate />,
   card: <IconCard />,
   pi: <IconPi />,
   year: <IconYear />,
@@ -257,6 +260,14 @@ export function App() {
           rules={data.rules}
           yomiUse={data.yomiUse}
           onEditWord={openEditor}
+        />
+      )}
+      {tab === 'date' && (
+        <DateTab
+          numbers={data.numbers}
+          dates={data.dates}
+          bookmarks={bookmarks}
+          onToggleBm={toggleBm}
         />
       )}
       {tab === 'card' && (

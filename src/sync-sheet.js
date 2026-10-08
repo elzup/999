@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { splitConceptFields } from './words.js'
+import { isDateKey4 } from './date-keys.js'
 import {
   getSheetTitleByGid,
   getSheetValuesByTitle,
@@ -90,7 +91,8 @@ function parseTsv(tsv) {
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split('\t')
     const num = cols[numIdx]?.trim()
-    if (!num || !/^\d{3}$/.test(num)) continue
+    // 3桁 = num 辞書、4桁 = 日付 (10〜12月) 辞書。それ以外は行として扱わない
+    if (!num || !(/^\d{3}$/.test(num) || isDateKey4(num))) continue
 
     const hito = cols[hitoIdx]?.trim() || ''
     const monoRaw = cols[monoIdx]?.trim() || ''
@@ -188,11 +190,18 @@ async function main() {
   const tsv = await fetchSheet()
 
   console.log('Parsing...')
-  const entries = parseTsv(tsv)
+  const all = parseTsv(tsv)
+  // 4桁の日付行は words.tsv に混ぜない (下流は 3 桁前提のものが多い)
+  const entries = all.filter((e) => e.num.length === 3)
+  const dates = all.filter((e) => e.num.length === 4)
 
   const outPath = join(dataDir, 'words.tsv')
   writeFileSync(outPath, toTsv(entries))
   console.log(`Saved ${entries.length} entries to ${outPath}`)
+
+  const datesPath = join(dataDir, 'dates.tsv')
+  writeFileSync(datesPath, toTsv(dates))
+  console.log(`Saved ${dates.length} date entries to ${datesPath}`)
 
   const filled = entries.filter((e) => e.wh1k)
   console.log(`  wh1k filled: ${filled.length}/${entries.length}`)

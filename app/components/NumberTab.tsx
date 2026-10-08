@@ -24,7 +24,7 @@ type NumCellProps = {
   onSelect: () => void
 }
 
-function NumCell({ d, selected, onSelect }: NumCellProps) {
+export function NumCell({ d, selected, onSelect }: NumCellProps) {
   const hasWord = candidatesOf(d).length > 0
   const sc = d.w1Score != null ? d.w1Score : d.w2Score
   const color = scoreColor(sc)
