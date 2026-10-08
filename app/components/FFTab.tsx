@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'preact/hooks'
+import { useState, useCallback, useMemo } from 'preact/hooks'
 import TestFeatureList, { type TestFeatureAction } from './TestFeatureList'
+import SlideLauncher from './SlideLauncher'
+import { ffDeck } from './slideDecks'
 import ChoiceQuiz, { type ChoiceQuestion, type QuizSummary } from './ChoiceQuiz'
 import ReviewPanel from './ReviewPanel'
 import RecordPanel from './RecordPanel'
@@ -90,6 +92,8 @@ function FFTab() {
     setSub(next)
   }, [])
   const [run, setRun] = useState<FfRun | null>(null)
+  // 語データは描画前に注入済み (App の applyData)。マウント中は変わらない
+  const slideDeck = useMemo(ffDeck, [])
   const [summary, setSummary] = useState<QuizSummary | null>(null)
   const [showRecords, setShowRecords] = useState<TestId | null>(null)
 
@@ -378,6 +382,16 @@ function FFTab() {
             語データを使った 10問・4択テスト
           </div>
           <TestFeatureList features={choiceFeatures} />
+          <div
+            style={{
+              fontSize: 12,
+              color: 'var(--text2)',
+              margin: '16px 0 6px',
+            }}
+          >
+            hex を見て語を思い出す（送るだけ）
+          </div>
+          <SlideLauncher deck={slideDeck} />
 
           <div
             style={{

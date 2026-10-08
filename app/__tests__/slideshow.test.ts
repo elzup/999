@@ -7,7 +7,8 @@ import {
   initSlide,
   HISTORY_CAP,
   MAX_BACK,
-  SLIDE_SPEEDS,
+  initialPhase,
+  phaseDelay,
 } from '../lib/slideshow'
 
 const POOL = ['000', '111', '222', '333', '444', '555', '666', '777']
@@ -79,8 +80,14 @@ describe('slideshow logic', () => {
     expect(canGoBack(s)).toBe(false)
   })
 
-  it('速度は3段階', () => {
-    expect(SLIDE_SPEEDS).toHaveLength(3)
-    expect(SLIDE_SPEEDS[0]).toBeGreaterThan(SLIDE_SPEEDS[2])
+  it('問題面の待ちがあれば問題面から、0 なら答えから始まる', () => {
+    expect(initialPhase({ promptMs: 2000, answerMs: 3000 })).toBe('prompt')
+    expect(initialPhase({ promptMs: 0, answerMs: 3000 })).toBe('answer')
+  })
+
+  it('段階ごとの待ち時間を返す', () => {
+    const delays = { promptMs: 2000, answerMs: 3000 }
+    expect(phaseDelay('prompt', delays)).toBe(2000)
+    expect(phaseDelay('answer', delays)).toBe(3000)
   })
 })

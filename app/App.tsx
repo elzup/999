@@ -25,6 +25,8 @@ import WeekdayTab from './components/WeekdayTab'
 import MiscTab from './components/MiscTab'
 import KukuTab from './components/KukuTab'
 import SlideshowTab from './components/SlideshowTab'
+import SlideTestGroup from './components/SlideTestGroup'
+import { cardDeck, kukuDeck, piDeck, yearDeck } from './components/slideDecks'
 import BookmarkTab from './components/BookmarkTab'
 import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
@@ -219,13 +221,28 @@ export function App() {
     [data, bookmarks, toggleBm]
   )
 
+  // サブタブを持たないグループのスライド用デッキ。kuku は applyData で注入済みの
+  // データを読むので、data が差し替わったら作り直す
+  const slideDecks = useMemo(
+    () =>
+      data
+        ? {
+            card: cardDeck(data.cards),
+            pi: piDeck(data.numbers),
+            year: yearDeck(),
+            kuku: kukuDeck(),
+          }
+        : null,
+    [data]
+  )
+
   const bmReviewDue = isBookmarkReviewDue(bookmarks, bmViews, Date.now())
 
   if (locked) {
     return <LockedScreen invalid={Boolean(token)} />
   }
 
-  if (!data) {
+  if (!data || !slideDecks) {
     return <LoadingScreen progress={progress} />
   }
 
@@ -243,25 +260,43 @@ export function App() {
         />
       )}
       {tab === 'card' && (
-        <CardTab
-          cards={data.cards}
+        <SlideTestGroup
+          group="card"
+          mainLabel="カード"
+          deck={slideDecks.card}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
-        />
+        >
+          <CardTab
+            cards={data.cards}
+            bookmarks={bookmarks}
+            onToggleBm={toggleBm}
+          />
+        </SlideTestGroup>
       )}
       {tab === 'pi' && (
-        <PiTab
-          numbers={data.numbers}
+        <SlideTestGroup
+          group="pi"
+          mainLabel="π"
+          deck={slideDecks.pi}
           bookmarks={bookmarks}
           onToggleBm={toggleBm}
-        />
+        >
+          <PiTab
+            numbers={data.numbers}
+            bookmarks={bookmarks}
+            onToggleBm={toggleBm}
+          />
+        </SlideTestGroup>
       )}
       {tab === 'year' && (
-        <YearTab
-          numbers={data.numbers}
-          bookmarks={bookmarks}
-          onToggleBm={toggleBm}
-        />
+        <SlideTestGroup group="year" mainLabel="年号" deck={slideDecks.year}>
+          <YearTab
+            numbers={data.numbers}
+            bookmarks={bookmarks}
+            onToggleBm={toggleBm}
+          />
+        </SlideTestGroup>
       )}
       {tab === 'weekday' && (
         <WeekdayTab
@@ -270,7 +305,11 @@ export function App() {
           onToggleBm={toggleBm}
         />
       )}
-      {tab === 'kuku' && <KukuTab />}
+      {tab === 'kuku' && (
+        <SlideTestGroup group="kuku" mainLabel="九九" deck={slideDecks.kuku}>
+          <KukuTab />
+        </SlideTestGroup>
+      )}
       {tab === 'slide' && (
         <SlideshowTab
           numbers={data.numbers}

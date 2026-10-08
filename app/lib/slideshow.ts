@@ -3,9 +3,28 @@
 
 export type SlideMode = 'order' | 'random'
 
-// 自動送りの速度3段階 (ms)。index 0=遅い / 1=普通 / 2=速い。
-export const SLIDE_SPEEDS = [6000, 3500, 1800] as const
-export const SLIDE_SPEED_LABELS = ['遅い', '普通', '速い'] as const
+// 1 枚は「問題面だけ」→「答えも表示」の 2 段階で進む。
+export type SlidePhase = 'prompt' | 'answer'
+
+// スライダーで選べる待ち時間 (ms)。0.5 秒刻みで、暗記の確認に使う範囲に絞る。
+export const SLIDE_DELAY_STEP = 500
+export const SLIDE_DELAY_MAX = 10000
+// 問題面は 0 を許す (= 最初から答えを見せる、従来の流し見)。
+export const PROMPT_DELAY_MIN = 0
+// 答え面は 0 だと読めないまま次へ送られるので最低 1 刻みは残す。
+export const ANSWER_DELAY_MIN = SLIDE_DELAY_STEP
+
+export type SlideDelays = { promptMs: number; answerMs: number }
+
+/** 新しい 1 枚を出すときの段階。問題面の待ちが 0 なら最初から答えを出す。 */
+export function initialPhase(delays: SlideDelays): SlidePhase {
+  return delays.promptMs > 0 ? 'prompt' : 'answer'
+}
+
+/** 今の段階に留まる時間 (自動送りのタイマー長)。 */
+export function phaseDelay(phase: SlidePhase, delays: SlideDelays): number {
+  return phase === 'prompt' ? delays.promptMs : delays.answerMs
+}
 
 // 「一つ前に戻る」は最大5個まで。現在 + 過去5 = 6 件を保持する。
 export const MAX_BACK = 5

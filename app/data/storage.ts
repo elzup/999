@@ -203,10 +203,14 @@ export function saveKukuAbScores(scores: Record<string, KukuAbScore>) {
   localStorage.setItem('kukuAbScores999', JSON.stringify(scores))
 }
 
-// スライドショー設定 (モード / 速度 / 絞り込み) を永続化する。
+// スライドショー設定 (モード / 待ち時間 / 絞り込み) を永続化する。全デッキ共通。
+// 旧形式 (speed: 0-2) は読み捨てて待ち時間を既定値に戻す。
+const DEFAULT_PROMPT_MS = 2000
+const DEFAULT_ANSWER_MS = 3500
 const SlideSettingsSchema = z.object({
   mode: z.enum(['order', 'random']).default('order'),
-  speed: z.number().int().min(0).max(2).default(1),
+  promptMs: z.number().min(0).default(DEFAULT_PROMPT_MS),
+  answerMs: z.number().positive().default(DEFAULT_ANSWER_MS),
   bmOnly: z.boolean().default(false),
   skipOk: z.boolean().default(false),
 })
@@ -216,7 +220,8 @@ export type SlideSettings = z.infer<typeof SlideSettingsSchema>
 export function loadSlideSettings(): SlideSettings {
   return loadJson('slideSettings999', SlideSettingsSchema, {
     mode: 'order',
-    speed: 1,
+    promptMs: DEFAULT_PROMPT_MS,
+    answerMs: DEFAULT_ANSWER_MS,
     bmOnly: false,
     skipOk: false,
   })
@@ -261,16 +266,21 @@ export function saveTabVisibility(visibility: TabVisibility) {
   saveJson('tabVisibility999', visibility)
 }
 
-// スライドショーで「一応OK」印を付けた数字の集合 (bm とは別管理)。
-export function loadSlideOk(): Set<string> {
+// スライドショーで「一応OK」印を付けたアイテムの集合 (bm とは別管理)。デッキごとに持つ。
+// 数字デッキだけは分割前のキーをそのまま使い、付けた印を引き継ぐ。
+const SLIDE_OK_LEGACY_DECK = 'num'
+const slideOkKey = (deckId: string) =>
+  deckId === SLIDE_OK_LEGACY_DECK ? 'slideOk999' : `slideOk999.${deckId}`
+
+export function loadSlideOk(deckId: string): Set<string> {
   try {
-    const raw = localStorage.getItem('slideOk999')
+    const raw = localStorage.getItem(slideOkKey(deckId))
     return raw ? new Set(JSON.parse(raw)) : new Set()
   } catch {
     return new Set()
   }
 }
 
-export function saveSlideOk(ok: Set<string>) {
-  localStorage.setItem('slideOk999', JSON.stringify([...ok]))
+export function saveSlideOk(deckId: string, ok: Set<string>) {
+  localStorage.setItem(slideOkKey(deckId), JSON.stringify([...ok]))
 }

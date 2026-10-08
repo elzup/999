@@ -8,6 +8,8 @@ import { useQuizRecords } from '../lib/useQuizRecords'
 import { assocPool, buildAssocQuiz } from '../lib/assocQuiz'
 import { candidatesOf } from '../lib/choice'
 import { makeRng } from '../lib/kukuQuiz'
+import SlideLauncher from './SlideLauncher'
+import { numberDeck } from './slideDecks'
 
 type Props = {
   numbers: NumberEntry[]
@@ -42,6 +44,8 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
       return withWord.filter((n) => bookmarks.has('n:' + n.num))
     return withWord
   }, [numbers, pool, bookmarks])
+
+  const slideDeck = useMemo(() => numberDeck(numbers), [numbers])
 
   const poolLabel = pool === 'bm' ? '★のみ' : '全体'
 
@@ -179,6 +183,12 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
           <span class="assoc-mode-sub">選んで採点・記録あり</span>
         </button>
       </div>
+
+      <SlideLauncher
+        deck={slideDeck}
+        bookmarks={bookmarks}
+        onToggleBm={onToggleBm}
+      />
 
       {rec.last ? (
         <div class="assoc-record-line">
