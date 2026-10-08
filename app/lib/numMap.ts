@@ -52,6 +52,18 @@ export const HUNDRED_LAYOUTS: Record<number, LayoutCell[]> = {
     { label: '380-', x: 8, y: 5, w: 5, h: 2, color: '#5b8def' },
     { label: '390-', x: 4, y: 5, w: 3, h: 4, color: '#4ecdc4' },
   ],
+  4: [
+    { label: '400-', x: 5, y: 20, w: 5, h: 2, color: '#ffbe3d' },
+    { label: '410-', x: 3, y: 16, w: 3, h: 4, color: '#5b8def' },
+    { label: '420-', x: 6, y: 17, w: 4, h: 3, color: '#4ecdc4' },
+    { label: '430-', x: 10, y: 16, w: 2, h: 5, color: '#86cd4c' },
+    { label: '440-', x: 7, y: 14, w: 5, h: 2, color: '#a04bcd' },
+    { label: '450-', x: 3, y: 13, w: 4, h: 3, color: '#cd4c4c' },
+    { label: '460-', x: 3, y: 10, w: 4, h: 3, color: '#a04ccd' },
+    { label: '470-', x: 7, y: 10, w: 3, h: 4, color: '#ffbf3d' },
+    { label: '480-', x: 10, y: 8, w: 2, h: 5, color: '#5b8def' },
+    { label: '490-', x: 5, y: 8, w: 5, h: 2, color: '#4ecdc4' },
+  ],
 }
 
 export function hasHundredLayout(hundred: number): boolean {
