@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { NumberDoc } from '../lib/numberApi'
 import {
+  applyDraftEdit,
   applyFailure,
   applySaved,
   nextFreeSlot,
@@ -209,6 +210,17 @@ describe('並べ替え・追加・削除 (REQ-NDV-002 / 010 / 011)', () => {
 
     // 保存済みスロットだけを走査すると wh3 が落ちる
     expect(merged.map((row) => row.slot)).toEqual(['wh1', 'wh2', 'wh3', 'wm1'])
+  })
+
+  it('下書きの無い保存済みの行を編集しても slot・kana が残る (語が入力できない原因)', () => {
+    const saved = slotRows(doc)
+    const first = applyDraftEdit({}, saved[0], { word: 'あ' })
+    const second = applyDraftEdit(first, mergeDraftRows(saved, first)[0], {
+      word: 'あい',
+    })
+
+    expect(second[saved[0].slot]).toEqual({ ...saved[0], word: 'あい' })
+    expect(Object.keys(second)).toEqual([saved[0].slot])
   })
 
   it('既存スロットの draft は保存済みの行を置き換える', () => {

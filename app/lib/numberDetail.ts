@@ -73,8 +73,8 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
       imageUrl: value.imageUrl,
       imageStale: Boolean(
         value.imageUrl &&
-          value.confirmedFor &&
-          nameOf(value.confirmedFor) !== nameOf(value.word)
+        value.confirmedFor &&
+        nameOf(value.confirmedFor) !== nameOf(value.word)
       ),
       rankey: doc.derived?.rankeyBySlot?.[slot],
       pt: doc.derived?.ptBySlot?.[slot],
@@ -178,6 +178,19 @@ export function mergeDraftRows(
   return SLOT_ORDER.filter((slot) => bySlot.has(slot)).map(
     (slot) => bySlot.get(slot) as SlotRow
   )
+}
+
+/**
+ * 1 行ぶんの編集を下書きに重ねる。まだ下書きの無い保存済みの行は、その行を土台にする。
+ * 差分だけを入れると slot や kana が抜けた行になり、key が変わって入力欄が作り直される
+ * (1 文字目でフォーカスが外れ、以降の入力が別キーに落ちて反映されない)。
+ */
+export function applyDraftEdit(
+  drafts: Record<string, SlotRow>,
+  row: SlotRow,
+  patch: Partial<SlotRow>
+): Record<string, SlotRow> {
+  return { ...drafts, [row.slot]: { ...(drafts[row.slot] ?? row), ...patch } }
 }
 
 /** 配列内の 1 件を別の位置へ移す (ドラッグの結果そのもの) */
