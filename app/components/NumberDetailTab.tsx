@@ -55,6 +55,9 @@ export default function NumberDetailTab({
   const [loading, setLoading] = useState(false)
   // 未保存の編集内容。保存に成功したら doc 側に取り込むので、ここは空に戻る
   const [drafts, setDrafts] = useState<Record<string, SlotRow>>({})
+  // 下書きを捨てた回数。入力欄は打った文字を画面側に持たせる (非制御) ので、
+  // 下書きを捨てたときはカードを作り直して保存済みの値を入れ直す
+  const [resetSeq, setResetSeq] = useState(0)
   const [dragFrom, setDragFrom] = useState<number | null>(null)
 
   const load = useCallback(
@@ -62,6 +65,7 @@ export default function NumberDetailTab({
       if (!token) return
       setLoading(true)
       setDrafts({})
+      setResetSeq((n) => n + 1)
       fetchNumber(target, token)
         .then((doc) => setState({ doc, status: '', saving: false }))
         .catch((error) =>
@@ -90,7 +94,10 @@ export default function NumberDetailTab({
         })
         // 代表・評価の保存で未保存の編集 (追加したばかりの候補など) を捨てない。
         // 下書きは slots を保存したときだけ保存済みの内容に置き換わる
-        if (op.op === 'slots') setDrafts({})
+        if (op.op === 'slots') {
+          setDrafts({})
+          setResetSeq((n) => n + 1)
+        }
         setState((prev) => applySaved(prev, saved, message))
       } catch (error) {
         setState((prev) => applyFailure(prev, error))
@@ -191,7 +198,7 @@ export default function NumberDetailTab({
           <ul class="nd-cards">
             {rows.map((row, index) => (
               <SlotCard
-                key={row.slot}
+                key={`${row.slot}:${resetSeq}`}
                 row={row}
                 index={index}
                 focused={row.slot === focusSlot}
@@ -347,17 +354,19 @@ function SlotCard({
         ) : (
           <span class="nd-img empty" />
         )}
+        {/* value で縛ると、入力のたびの再描画がスマホの日本語入力 (変換中の文字) と
+            ぶつかって打てなくなることがある。文字は入力欄に任せ、onInput で下書きにだけ写す */}
         <div class="nd-fields">
           <input
             class="nd-input"
-            value={row.word}
+            defaultValue={row.word}
             placeholder="語"
             autoFocus={focused}
             onInput={(event) => onEdit({ word: event.currentTarget.value })}
           />
           <input
             class="nd-input kana"
-            value={row.kana}
+            defaultValue={row.kana}
             placeholder="よみ"
             onInput={(event) => onEdit({ kana: event.currentTarget.value })}
           />
