@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'preact/hooks'
 import { fetchNumber, patchNumber, type PatchOp } from '../lib/numberApi'
 import {
+  applyDraftEdit,
   applyFailure,
   applySaved,
   nextFreeSlot,
@@ -112,11 +113,8 @@ export default function NumberDetailTab({
     [doc, send]
   )
 
-  const editRow = useCallback((slot: string, patch: Partial<SlotRow>) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [slot]: { ...(prev[slot] as SlotRow), ...patch },
-    }))
+  const editRow = useCallback((row: SlotRow, patch: Partial<SlotRow>) => {
+    setDrafts((prev) => applyDraftEdit(prev, row, patch))
   }, [])
 
   const handleJump = useCallback((value: string) => {
@@ -207,7 +205,7 @@ export default function NumberDetailTab({
                   saveSlots(moveItem(rows, dragFrom, index), '並べ替えました')
                   setDragFrom(null)
                 }}
-                onEdit={(patch) => editRow(row.slot, patch)}
+                onEdit={(patch) => editRow(row, patch)}
                 onDelete={() =>
                   saveSlots(
                     rows.filter((other) => other.slot !== row.slot),
