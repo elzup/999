@@ -4,6 +4,7 @@ import type { CardEntry, NumberEntry } from '../data/schema'
 import { D3_LIST, PI_1000_DIGITS, YEAR_DATA } from '../data/constants'
 import { cardValues, formatCardId } from '../data/cards'
 import { candidateAt } from '../lib/choice'
+import { ETYMOLOGY_DATA } from '../data/etymology'
 import { getFfRows, isValidFfRow } from '../lib/ffQuiz'
 import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
 import type { SlideDeck } from '../lib/slideDeck'
@@ -187,6 +188,18 @@ export function kukuDeck(): SlideDeck {
       id: item.expr,
       prompt: codeFace(exprLeft(item.expr)),
       answer: textFace(item.prob, item.yomi),
+    })),
+  }
+}
+
+export function gogenDeck(): SlideDeck {
+  return {
+    id: 'gogen',
+    title: '語 → 語源 スライド',
+    items: ETYMOLOGY_DATA.map((item) => ({
+      id: item.word,
+      prompt: textFace(item.word, item.kana),
+      answer: <div class="slide-text slide-gogen">{item.origin}</div>,
     })),
   }
 }

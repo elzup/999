@@ -243,6 +243,7 @@ export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
   year: true,
   weekday: false,
   kuku: false,
+  gogen: true,
   slide: false,
   bm: true,
   hex: false,

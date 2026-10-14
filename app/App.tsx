@@ -27,7 +27,14 @@ import MiscTab from './components/MiscTab'
 import KukuTab from './components/KukuTab'
 import SlideshowTab from './components/SlideshowTab'
 import SlideTestGroup from './components/SlideTestGroup'
-import { cardDeck, kukuDeck, piDeck, yearDeck } from './components/slideDecks'
+import GogenTab from './components/GogenTab'
+import {
+  cardDeck,
+  gogenDeck,
+  kukuDeck,
+  piDeck,
+  yearDeck,
+} from './components/slideDecks'
 import BookmarkTab from './components/BookmarkTab'
 import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
@@ -52,6 +59,7 @@ import {
   IconYear,
   IconWeekday,
   IconKuku,
+  IconBook,
   IconStats,
   IconStar,
   IconSlide,
@@ -67,6 +75,7 @@ const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
   year: <IconYear />,
   weekday: <IconWeekday />,
   kuku: <IconKuku />,
+  gogen: <IconBook />,
   slide: <IconSlide />,
   bm: <IconStar />,
   hex: <IconHex />,
@@ -234,6 +243,7 @@ export function App() {
             pi: piDeck(data.numbers),
             year: yearDeck(),
             kuku: kukuDeck(),
+            gogen: gogenDeck(),
           }
         : null,
     [data]
@@ -319,6 +329,11 @@ export function App() {
       {tab === 'kuku' && (
         <SlideTestGroup group="kuku" mainLabel="九九" deck={slideDecks.kuku}>
           <KukuTab />
+        </SlideTestGroup>
+      )}
+      {tab === 'gogen' && (
+        <SlideTestGroup group="gogen" mainLabel="語源" deck={slideDecks.gogen}>
+          <GogenTab />
         </SlideTestGroup>
       )}
       {tab === 'slide' && (

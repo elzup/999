@@ -1729,6 +1729,55 @@ body {
   padding: 1px 3px;
   background: var(--surface2);
 }
+.gogen-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gogen-row {
+  padding: 5px 8px;
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.gogen-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.gogen-word {
+  font-size: 15px;
+  font-weight: bold;
+}
+.gogen-kana {
+  font-size: 11px;
+  color: var(--text2);
+}
+.gogen-origin {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.gogen-origin.hidden {
+  color: var(--text2);
+}
+.gogen-hide-btn {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.gogen-hide-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.slide-gogen {
+  font-size: 18px;
+  line-height: 1.5;
+}
 .year-row .yr-event {
   font-size: 12px;
   color: var(--text);
