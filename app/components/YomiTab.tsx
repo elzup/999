@@ -151,7 +151,7 @@ function YomiTab({ numbers, rules, yomiUse }: Props) {
   const totalAssign = scoped.reduce((sum, i) => sum + i.nums.length, 0)
 
   return (
-    <div class="content">
+    <div class="content content-bottom">
       {showRecords && (
         <RecordPanel
           title={QUIZ_TITLE[showRecords]}

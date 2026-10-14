@@ -794,6 +794,13 @@ body {
 .test-nav-btn:disabled {
   opacity: 0.4;
 }
+/* テスト入口の帯。Header の直下に置き、どのグループでも同じ位置・余白にする */
+.test-feature-bar {
+  padding: 6px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
 .test-feature-list {
   display: flex;
   flex-wrap: wrap;
@@ -1001,7 +1008,8 @@ body {
   background: var(--surface);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-  order: 1;
+  /* 下へ送った操作部 (order: 1) よりさらに下、Tab Bar の直上に固定する */
+  order: 2;
   margin-top: auto;
 }
 .sub-tab-group {
@@ -4046,22 +4054,25 @@ body {
   gap: 8px;
   padding: 8px 12px;
 }
+/* 百の位の切り替え。親指が届くよう下 (サブタブの直上) に置く。DOM 上は先頭なので
+   order で末尾へ送る。5 列 × 2 段で押しやすい大きさを保つ */
 .num-map-sel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  order: 1;
 }
 .num-map-sel-btn {
-  padding: 4px 8px;
+  padding: 10px 4px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface, #1a1d27);
   color: var(--text2);
-  font-size: 12px;
+  font-size: 14px;
   font-family: ui-monospace, monospace;
   cursor: pointer;
 }
@@ -5750,4 +5761,47 @@ body {
   color: var(--text2);
   font-size: 11px;
   pointer-events: none;
+}
+
+/* 操作部 (Header / テスト入口 / 設定) は親指が届く下側に置く。DOM 順は変えず、order で
+   Detail Panel とコンテンツの後ろへ送る (サブタブ切り替えはさらにその下)。 */
+.pi-header,
+.year-header,
+.kuku-header,
+.test-feature-bar,
+.card-train-settings {
+  order: 1;
+  border-bottom: none;
+  border-top: 1px solid var(--border);
+}
+/* テスト画面中の Header は進捗と終了ボタンなので、入力パッドと離して上に残す */
+.test-screen .pi-header,
+.test-screen .year-header {
+  order: 0;
+  border-top: none;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ボタンが並ぶだけのページ (テスト一覧など) は下から積む。justify-content: flex-end だと
+   はみ出した上側へスクロールできなくなるので、auto マージンの詰め物を先頭に入れて寄せる */
+.content-bottom {
+  display: flex;
+  flex-direction: column;
+}
+.content-bottom > * {
+  flex-shrink: 0;
+}
+/* 先頭の子は条件付きで差し替わる (記録パネル等) ので、擬似要素を詰め物にする */
+.content-bottom::before {
+  content: '';
+  margin-top: auto;
+}
+/* スライドの設定も下へ。再生・送りのボタンは一番下に残す */
+.slide-settings {
+  order: 1;
+  border-bottom: none;
+  border-top: 1px solid var(--border);
+}
+.slide-actions {
+  order: 2;
 }

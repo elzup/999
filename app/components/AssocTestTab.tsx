@@ -127,7 +127,7 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
   const canStart = count > 0
 
   return (
-    <div class="content assoc-test-home">
+    <div class="content content-bottom assoc-test-home">
       <div class="assoc-pool-switch">
         <button
           class={'sub-tab-btn' + (pool === 'all' ? ' active' : '')}

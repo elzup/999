@@ -469,14 +469,7 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
         </div>
       </div>
       {mode === 'view' ? (
-        <div
-          style={{
-            padding: '6px 8px',
-            background: 'var(--surface)',
-            borderBottom: '1px solid var(--border)',
-            flexShrink: 0,
-          }}
-        >
+        <div class="test-feature-bar">
           <TestFeatureList
             compact
             features={[

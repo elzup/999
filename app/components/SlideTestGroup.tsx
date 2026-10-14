@@ -33,7 +33,7 @@ function SlideTestGroup({
           id: 'test',
           label: 'テスト',
           render: () => (
-            <div class="content slide-test-home">
+            <div class="content content-bottom slide-test-home">
               <SlideLauncher
                 deck={deck}
                 bookmarks={bookmarks}

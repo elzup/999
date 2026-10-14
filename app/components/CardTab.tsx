@@ -681,47 +681,33 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
               ) : null}
             </div>
           ) : null}
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '6px',
-              alignItems: 'center',
-            }}
-          >
-            {records.length > 0 ? (
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '11px',
-                  minWidth: '40px',
-                  padding: '4px 8px',
-                }}
-                onClick={() => setShowRecords(true)}
-              >
-                記録
-              </button>
-            ) : null}
-            <TestFeatureList
-              compact
-              features={[
-                {
-                  id: 'card-train',
-                  title: '連想テスト',
-                  inputMethod: 'advance',
-                  onStart: startTrain,
-                },
-                {
-                  id: 'card-choice',
-                  title: '選択テスト',
-                  inputMethod: 'choice',
-                  onStart: startCheck,
-                },
-              ]}
-            />
-          </div>
         </div>
+      </div>
+
+      {/* テスト入口は年号 / 年コードと同じ帯に置く。記録は 2 つのテストで 1 本の
+          履歴を共有しているので、どちらの «記録» からも同じパネルを開く */}
+      <div class="test-feature-bar">
+        <TestFeatureList
+          compact
+          features={[
+            {
+              id: 'card-train',
+              title: '連想テスト',
+              inputMethod: 'advance',
+              onStart: startTrain,
+              hasRecords: records.some((r) => r.mode === 'train'),
+              onShowRecords: () => setShowRecords(true),
+            },
+            {
+              id: 'card-choice',
+              title: '選択テスト',
+              inputMethod: 'choice',
+              onStart: startCheck,
+              hasRecords: records.some((r) => r.mode !== 'train'),
+              onShowRecords: () => setShowRecords(true),
+            },
+          ]}
+        />
       </div>
 
       <div class="card-train-settings">

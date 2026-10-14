@@ -365,7 +365,10 @@ function FFTab() {
       )}
 
       {sub === 'test' && (
-        <div class="content" style={{ padding: 12, overflow: 'auto' }}>
+        <div
+          class="content content-bottom"
+          style={{ padding: 12, overflow: 'auto' }}
+        >
           <div
             style={{ fontSize: 12, color: 'var(--text2)', margin: '2px 0 6px' }}
           >

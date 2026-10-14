@@ -48,7 +48,7 @@ function WeekdayTab({ numbers, bookmarks, onToggleBm }: Props) {
           id: 'test',
           label: 'テスト',
           render: () => (
-            <div class="content slide-test-home">
+            <div class="content content-bottom slide-test-home">
               <SlideLauncher deck={YEAR_CODE_DECK} />
             </div>
           ),
