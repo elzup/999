@@ -40,6 +40,7 @@ import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
+import { refreshSessionToken } from './lib/passkeyApi'
 import {
   fetchAppData,
   UnauthorizedError,
@@ -168,6 +169,8 @@ export function App() {
       .then(({ text, json }) => {
         if (cancelled) return
         setRevalidating(false)
+        // 開くたびに通行証の期限を延ばす。使い続けている限りパスキーを求めない
+        void refreshSessionToken(token)
         // キャッシュと完全一致なら再描画も再保存も要らない
         if (text === cachedText) return
         saveAppDataCache(text)

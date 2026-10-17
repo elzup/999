@@ -75,6 +75,7 @@
     "zod": "^4.3.6"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
     "preact": "^10.29.0"
   }
 }

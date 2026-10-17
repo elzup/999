@@ -4314,9 +4314,10 @@ body {
 }
 
 /* --- アクティベート (認証ゲート) --- */
+/* ログインの操作は親指側。カードごと画面の下端に寄せる */
 .locked-screen {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
@@ -4387,9 +4388,77 @@ body {
   color: var(--text);
   cursor: pointer;
 }
-.locked-btn:disabled {
+.locked-btn:disabled,
+.locked-passkey:disabled {
   opacity: 0.5;
   cursor: default;
+}
+.locked-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+.locked-passkey {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  cursor: pointer;
+}
+.locked-manual-row > .locked-passkey {
+  padding: 8px 14px;
+}
+.locked-error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--warn);
+}
+.passkey-list,
+.passkey-register {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.passkey-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+}
+.passkey-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+.passkey-name {
+  font-size: 14px;
+  color: var(--text);
+}
+.passkey-current {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--accent);
+}
+.passkey-meta,
+.passkey-empty {
+  font-size: 12px;
+  color: var(--text2);
+}
+.passkey-delete {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--warn);
+  cursor: pointer;
 }
 .activate-panel {
   padding: 16px;

@@ -44,5 +44,10 @@ service cloud.firestore {
     match /owners/{uid} {
       allow read, write: if false;
     }
+
+    // パスキーの公開鍵。ログイン判定は Function だけが行う
+    match /passkeys/{credentialId} {
+      allow read, write: if false;
+    }
   }
 }

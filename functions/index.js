@@ -1,8 +1,13 @@
-import { createSign, timingSafeEqual } from 'node:crypto'
+import { createSign } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { onRequest } from 'firebase-functions/v2/https'
 import { defineSecret } from 'firebase-functions/params'
 import { handleNumbersRequest } from './numbers-route.js'
+import {
+  deriveSessionKey,
+  handlePasskeyRequest,
+  resolveAuth,
+} from './passkey-route.js'
 
 const EDIT_TOKEN = defineSecret('EDIT_TOKEN')
 const GOOGLE_SERVICE_ACCOUNT_JSON = defineSecret('GOOGLE_SERVICE_ACCOUNT_JSON')
@@ -67,8 +72,42 @@ export const api = onRequest(
     }
 
     try {
-      requireEditorToken(req)
       const path = normalizeApiPath(req.path)
+      const editToken = EDIT_TOKEN.value()
+      // 通行証の署名鍵は合言葉から作る。未設定のまま固定値で署名すると
+      // 誰でも通行証を作れてしまうので、設定漏れは全経路を止める
+      if (!editToken) {
+        const error = new Error('edit_token_unset')
+        error.statusCode = 500
+        throw error
+      }
+      const passkeyCtx = {
+        key: deriveSessionKey(editToken),
+        store: passkeyStore,
+        now: Date.now(),
+      }
+      const auth = await resolveAuth({
+        ...passkeyCtx,
+        bearer: getBearerToken(req),
+        editToken,
+      })
+
+      // ログイン (パスキー認証) は未認証で叩く経路なので、認証必須の判定より前
+      const passkeyResult = await handlePasskeyRequest({
+        ...passkeyCtx,
+        method: req.method,
+        path,
+        body: req.body || {},
+        auth,
+        rp: passkeyRp(),
+        webauthn: path.startsWith('/auth/') ? await loadWebAuthn() : null,
+      })
+      if (passkeyResult) {
+        res.status(passkeyResult.status).json(passkeyResult.payload)
+        return
+      }
+
+      requireAuth(auth)
 
       if (req.method === 'GET' && path === '/editor/session') {
         res.json({ ok: true })
@@ -147,6 +186,49 @@ async function loadFirestoreLib() {
   return firestoreLib
 }
 
+// パスキーはドメインに結び付く。firebaseapp.com 側や独自ドメインから開くと
+// 認証器が別サイトとして扱うので、ここに並べた origin でしか登録・ログインできない
+const DEFAULT_RP_ID = 'anoz-memosupo.web.app'
+
+function passkeyRp() {
+  const id = process.env.PASSKEY_RP_ID || DEFAULT_RP_ID
+  const origins = (process.env.PASSKEY_ORIGINS || `https://${id}`)
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+  return { id, origins }
+}
+
+let webauthnLib = null
+async function loadWebAuthn() {
+  webauthnLib ??= await import('@simplewebauthn/server')
+  return webauthnLib
+}
+
+const PASSKEYS = 'passkeys'
+
+// 登録済みパスキーの公開鍵。Admin SDK でしか触らない (rules で全面拒否)。
+// 合言葉だけで来るリクエストに Firestore の初期化を負わせないよう、触るまで繋がない
+async function passkeyCollection() {
+  const { db } = await loadFirestoreLib()
+  return db.raw.collection(PASSKEYS)
+}
+
+const passkeyStore = {
+  async get(id) {
+    const snap = await (await passkeyCollection()).doc(id).get()
+    return snap.exists ? snap.data() : undefined
+  },
+  set: async (id, doc) => (await passkeyCollection()).doc(id).set(doc),
+  update: async (id, patch) =>
+    (await passkeyCollection()).doc(id).update(patch),
+  delete: async (id) => (await passkeyCollection()).doc(id).delete(),
+  async list() {
+    const snap = await (await passkeyCollection()).get()
+    return snap.docs.map((d) => ({ id: d.id, doc: d.data() }))
+  },
+}
+
 function setNoStore(res) {
   res.set('cache-control', 'no-store')
   res.set('vary', 'authorization')
@@ -176,11 +258,8 @@ function normalizeApiPath(path) {
   return String(path || '').replace(/^\/api(?=\/)/, '') || '/'
 }
 
-function requireEditorToken(req) {
-  const expected = EDIT_TOKEN.value()
-  const actual = getBearerToken(req)
-
-  if (!expected || !actual || !constantTimeEqual(actual, expected)) {
+function requireAuth(auth) {
+  if (!auth) {
     const error = new Error('unauthorized')
     error.statusCode = 401
     throw error
@@ -191,13 +270,6 @@ function getBearerToken(req) {
   const header = String(req.get('authorization') || '')
   const match = header.match(/^Bearer\s+(.+)$/i)
   return match?.[1]?.trim() || ''
-}
-
-function constantTimeEqual(actual, expected) {
-  const actualBuffer = Buffer.from(actual)
-  const expectedBuffer = Buffer.from(expected)
-  if (actualBuffer.length !== expectedBuffer.length) return false
-  return timingSafeEqual(actualBuffer, expectedBuffer)
 }
 
 async function updateWordRow(num, patch) {
