@@ -1,3 +1,12 @@
+/* Android の monospace (AOSP data/fonts/DroidSansMono.ttf, Apache-2.0)。
+   SF Mono は配布できないので、Mac 以外はこれに揃える。Android 端末に入っていれば
+   local() で済みダウンロードしない */
+@font-face {
+  font-family: 'Droid Sans Mono';
+  src: local('Droid Sans Mono'), local('DroidSansMono'),
+    url('./fonts/DroidSansMono.ttf') format('truetype');
+  font-display: swap;
+}
 * {
   box-sizing: border-box;
   margin: 0;
@@ -16,12 +25,19 @@
   --img-bg: #eceff1; /* 透過画像をダークテーマ上でも見やすくする白グレー地 */
   --bar-h: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* 等幅 (数字の表示)。Mac は SF Mono、それ以外は Android の既定と同じ
+     Droid Sans Mono (同梱)。総称の monospace に任せると日本語版 Windows では
+     ＭＳ ゴシックになり、半角数字が幅の狭い縦長になる */
+  --font-mono: ui-monospace, 'SF Mono', Menlo, 'Droid Sans Mono', monospace;
 }
 html,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  /* Windows では -apple-system / Helvetica Neue が無く、既定の日本語フォントに
+     落ちて英数字の字形が崩れる。英数字は Segoe UI、かなは Yu Gothic UI / Meiryo */
+  font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
+    'Yu Gothic UI', Meiryo, sans-serif;
   font-size: 14px;
   height: 100%;
   overflow: hidden;
@@ -136,7 +152,7 @@ body {
   font-size: 13px;
   font-weight: bold;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .num-score-dot {
   position: absolute;
@@ -207,13 +223,13 @@ body {
 }
 .detail-tag-tags {
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .detail-id {
   font-size: 28px;
   font-weight: bold;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
   line-height: 1;
   flex-shrink: 0;
 }
@@ -515,7 +531,7 @@ body {
   justify-content: space-between;
   font-size: 9px;
   line-height: 1;
-  font-family: monospace;
+  font-family: var(--font-mono);
   pointer-events: none;
 }
 .card-stat-wrong {
@@ -658,7 +674,7 @@ body {
   font-size: 28px;
   font-weight: bold;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
   letter-spacing: 4px;
   min-width: 60px;
 }
@@ -695,7 +711,7 @@ body {
   color: var(--text2);
   min-width: 16px;
   text-align: center;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .df-key {
   flex: 1;
@@ -710,7 +726,7 @@ body {
   cursor: pointer;
   color: var(--text);
   border: 1px solid var(--border);
-  font-family: monospace;
+  font-family: var(--font-mono);
   user-select: none;
 }
 .df-key.active {
@@ -738,7 +754,7 @@ body {
   color: var(--text2);
   text-align: center;
   margin-bottom: 2px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .df-pad-grid {
   display: grid;
@@ -757,7 +773,7 @@ body {
   cursor: pointer;
   color: var(--text);
   border: 1px solid var(--border);
-  font-family: monospace;
+  font-family: var(--font-mono);
   user-select: none;
 }
 .df-pad-key.zero {
@@ -984,7 +1000,7 @@ body {
   cursor: pointer;
   color: var(--text);
   border: 1px solid var(--border);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .d2-cell:active {
   background: var(--accent2);
@@ -1054,7 +1070,7 @@ body {
   font-size: 26px;
   font-weight: 800;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .tag-summary-label {
   font-size: 12px;
@@ -1098,7 +1114,7 @@ body {
   color: var(--accent);
 }
 .tag-count {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
 }
 .tag-meta {
@@ -1139,7 +1155,7 @@ body {
   border-radius: 999px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text);
 }
@@ -1161,7 +1177,7 @@ body {
   padding-top: 0;
 }
 .tag-occ-num {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--accent);
 }
@@ -1208,7 +1224,7 @@ body {
   padding: 4px 2px;
   cursor: pointer;
   border: 1px solid var(--border);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: bold;
   min-height: 32px;
 }
@@ -1241,7 +1257,7 @@ body {
 .d3-z-label {
   font-size: 14px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   padding: 4px 0;
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
@@ -1275,7 +1291,7 @@ body {
   display: flex;
   gap: 12px;
   font-size: 11px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--text2);
   margin-bottom: 6px;
 }
@@ -1300,7 +1316,7 @@ body {
   justify-content: center;
   gap: 1px;
   min-height: 32px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: bold;
 }
 .d3-check-cell.current {
@@ -1510,7 +1526,7 @@ body {
 .pi-view-d {
   font-size: 11px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   line-height: 1.2;
   text-align: center;
 }
@@ -1537,7 +1553,7 @@ body {
   font-weight: bold;
   padding: 3px 8px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .pi-check-grid {
   display: flex;
@@ -1549,7 +1565,7 @@ body {
   font-size: 11px;
   font-weight: bold;
   color: var(--text2);
-  font-family: monospace;
+  font-family: var(--font-mono);
   padding: 4px 0 2px;
   position: sticky;
   top: 0;
@@ -1573,7 +1589,7 @@ body {
 .pi-check-cell .pi-digit {
   font-size: 15px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .pi-check-cell.current {
   border-color: var(--warn);
@@ -1617,7 +1633,7 @@ body {
   border-radius: 10px;
   font-size: 28px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   letter-spacing: 3px;
   color: var(--text);
   cursor: pointer;
@@ -1694,12 +1710,12 @@ body {
   color: var(--text2);
   min-width: 18px;
   text-align: right;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .year-row .yr-year {
   font-size: 15px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   min-width: 48px;
   display: flex;
   align-items: baseline;
@@ -1707,13 +1723,13 @@ body {
 .year-row .yr-c {
   font-size: 13px;
   color: var(--text2);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: bold;
 }
 .year-row .yr-xyz {
   font-size: 16px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
 }
 .year-row .yr-xyz.hidden {
@@ -1722,7 +1738,7 @@ body {
 .year-row .yr-mod {
   font-size: 12px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   min-width: 14px;
   text-align: center;
   border-radius: 4px;
@@ -1813,7 +1829,7 @@ body {
   justify-content: center;
   font-size: 15px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   background: var(--surface2);
   border-radius: 3px;
 }
@@ -1871,7 +1887,7 @@ body {
   font-size: 12px;
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .rec-row:last-child {
   border-bottom: none;
@@ -1947,7 +1963,7 @@ body {
   font-size: 20px;
   font-weight: bold;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .review-time {
   font-size: 13px;
@@ -1993,7 +2009,7 @@ body {
 .review-item .review-user {
   color: #f87171;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .review-item .review-arrow {
   color: var(--text2);
@@ -2001,7 +2017,7 @@ body {
 }
 .review-item .review-right {
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .review-item.wrong .review-label {
   color: #f87171;
@@ -2106,7 +2122,7 @@ body {
 .rl-count {
   font-size: 13px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .rl-count.o {
   color: var(--accent);
@@ -2131,7 +2147,7 @@ body {
   border-color: #f87171;
 }
 .rl-num {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -2247,7 +2263,7 @@ body {
   cursor: default;
 }
 .assoc-block-label {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 16px;
   font-weight: 700;
 }
@@ -2320,7 +2336,7 @@ body {
 .cm-card-order {
   font-size: 12px;
   color: var(--text2);
-  font-family: monospace;
+  font-family: var(--font-mono);
   margin-bottom: 10px;
 }
 .cm-card-face {
@@ -2358,7 +2374,7 @@ body {
   width: 28px;
   flex: 0 0 28px;
   color: var(--text2);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .cm-choice-value {
   flex: 1;
@@ -2470,7 +2486,7 @@ body {
   font-size: 12px;
   font-weight: 700;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .kuku-group-n {
   font-size: 11px;
@@ -2485,7 +2501,7 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .kuku-expr {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   color: var(--text2);
   flex-shrink: 0;
@@ -2542,7 +2558,7 @@ body {
   background: color-mix(in srgb, #f87171 14%, var(--surface));
 }
 .kuku-ab-num {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 22px;
   font-weight: bold;
 }
@@ -2553,7 +2569,7 @@ body {
 
 /* 九九 読みテスト (choice) - cm-* を流用しつつ正誤フィードバックを追加 */
 .kuku-quiz-face {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: clamp(40px, 12vw, 68px);
 }
 .cm-choice-btn.is-correct {
@@ -2661,7 +2677,7 @@ body {
 .quiz-result-score {
   font-size: 44px;
   font-weight: 900;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
 }
 .quiz-result-actions {
@@ -2710,7 +2726,7 @@ body {
 .cm-train-order {
   font-size: 13px;
   color: var(--text2);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .cm-train-note {
   font-size: 12px;
@@ -2895,7 +2911,7 @@ body {
 .storage-summary-value {
   font-size: 16px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
 }
 .storage-note {
@@ -2923,12 +2939,12 @@ body {
   padding: 10px;
 }
 .storage-key {
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--text);
 }
 .storage-size {
   margin-left: auto;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
 }
 
@@ -2986,7 +3002,7 @@ body {
 .weekday-date {
   font-size: 16px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--text);
 }
 .weekday-answer {
@@ -3000,7 +3016,7 @@ body {
 .weekday-answer-en {
   font-size: 12px;
   color: var(--text2);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: normal;
 }
 .weekday-badges {
@@ -3022,7 +3038,7 @@ body {
   border-color: #fbbf2433;
 }
 .weekday-formula {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   color: var(--text2);
   background: var(--surface2);
@@ -3048,7 +3064,7 @@ body {
 .weekday-step-value {
   font-size: 22px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
   margin-bottom: 4px;
 }
@@ -3084,7 +3100,7 @@ body {
   border-radius: 999px;
   padding: 4px 8px;
   font-size: 11px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .weekday-test-summary {
   display: flex;
@@ -3106,7 +3122,7 @@ body {
 .weekday-timer {
   font-size: 13px;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .weekday-current-card {
   background: var(--surface);
@@ -3122,12 +3138,12 @@ body {
   font-size: 12px;
   color: var(--text2);
   margin-bottom: 6px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .weekday-current-date {
   font-size: 28px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--accent);
 }
 .weekday-current-help {
@@ -3252,7 +3268,7 @@ body {
 .rules-matrix-table {
   border-collapse: collapse;
   font-size: 12px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   width: 100%;
   table-layout: fixed;
 }
@@ -3344,7 +3360,7 @@ body {
   border-left: 3px solid #f87171;
 }
 .rules-weight-key {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   color: var(--text);
 }
 .rules-weight-row.pos .rules-weight-val {
@@ -3360,14 +3376,14 @@ body {
 .rules-mx-digit {
   background: var(--surface2);
   color: #60a5fa;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: 13px;
 }
 .rules-mx-label {
   background: var(--surface2);
   color: var(--text);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -3438,7 +3454,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .rules-summary-table th {
   background: var(--surface2);
@@ -3541,7 +3557,7 @@ body {
 .recall-input {
   width: 96px;
   font-size: 20px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   letter-spacing: 4px;
   text-align: center;
   padding: 6px 8px;
@@ -3570,7 +3586,7 @@ body {
 .recall-num {
   font-size: 22px;
   font-weight: 700;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   color: var(--text);
   letter-spacing: 2px;
 }
@@ -3582,7 +3598,7 @@ body {
 .recall-assigned-k {
   margin-left: 6px;
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .recall-section-title {
   font-size: 13px;
@@ -3604,7 +3620,7 @@ body {
   font-size: 12px;
 }
 .recall-dist-kana {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   color: var(--text);
 }
 .recall-dist-count {
@@ -3649,7 +3665,7 @@ body {
 .recall-combo-kana {
   display: flex;
   gap: 2px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .recall-chip {
   display: inline-block;
@@ -3693,7 +3709,7 @@ body {
   margin-left: 3px;
   font-size: 10px;
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .recall-ex-none {
   color: var(--border);
@@ -3737,7 +3753,7 @@ body {
   background: var(--surface, #1a1d27);
   color: var(--text2);
   border-radius: 6px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 .alloc-mode-btn.active {
@@ -3778,7 +3794,7 @@ body {
 }
 .alloc-vv {
   width: 26px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--text2);
   font-size: 12px;
@@ -3803,7 +3819,7 @@ body {
   min-width: max-content;
   padding: 0 4px;
   border-right: 1px solid rgba(15, 17, 23, 0.25);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: #0f1117;
   white-space: nowrap;
@@ -3816,7 +3832,7 @@ body {
   width: 22px;
   text-align: right;
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 .alloc-kind-double {
@@ -3868,7 +3884,7 @@ body {
   color: var(--text2);
   border-radius: 5px;
   font-size: 11px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .alloc-mini-btn.active {
   border-color: var(--accent);
@@ -3949,15 +3965,15 @@ body {
   background: var(--bg);
 }
 .cellwords-mode {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .cellwords-vv {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--text);
 }
 .cellwords-key {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   padding: 1px 6px;
   border-radius: 4px;
   color: #0f1117;
@@ -3986,7 +4002,7 @@ body {
   text-align: left;
 }
 .cellwords-num {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--accent);
 }
@@ -4053,7 +4069,7 @@ body {
   font-weight: bold;
   color: #0f1117;
   background: var(--ymap-c);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   padding: 0 4px;
   border-radius: 0 0 5px 0;
   pointer-events: none;
@@ -4091,7 +4107,7 @@ body {
   bottom: 0;
   font-size: 9px;
   line-height: 1;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   color: #fff;
   background: rgba(0, 0, 0, 0.62);
   padding: 1px 2px;
@@ -4122,7 +4138,7 @@ body {
   background: var(--surface, #1a1d27);
   color: var(--text2);
   font-size: 14px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   cursor: pointer;
 }
 .num-map-sel-btn.active {
@@ -4211,7 +4227,7 @@ body {
 }
 .editor-num-select {
   flex: 1;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .editor-save-btn,
 .tagged-editor-head button,
@@ -4254,7 +4270,7 @@ body {
 .editor-pane-head span,
 .editor-kicker {
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 .editor-jump-input input {
@@ -4265,7 +4281,7 @@ body {
   background: #101923;
   color: var(--text);
   padding: 6px 10px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 18px;
   font-weight: bold;
 }
@@ -4295,7 +4311,7 @@ body {
   border-radius: 6px;
   background: var(--surface);
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   cursor: pointer;
 }
 .editor-decade-tab {
@@ -4385,7 +4401,7 @@ body {
 }
 .editor-num-main {
   display: block;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: bold;
 }
 .editor-num-word {
@@ -4409,7 +4425,7 @@ body {
   gap: 3px;
   align-items: center;
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
 }
 .editor-fill-line i {
@@ -4441,7 +4457,7 @@ body {
 }
 .editor-form-head h2 {
   margin-top: 3px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 28px;
 }
 .editor-form-head p {
@@ -4489,7 +4505,7 @@ body {
   min-width: 0;
 }
 .editor-entry-num {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--accent);
 }
@@ -4514,7 +4530,7 @@ body {
   background: var(--surface2);
   color: var(--text2);
   font-size: 10px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .editor-entry-body {
   display: grid;
@@ -4534,7 +4550,7 @@ body {
 .editor-tag-field span {
   color: var(--text2);
   font-size: 12px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .editor-tag-field input,
 .editor-tag-field textarea {
@@ -4582,7 +4598,7 @@ body {
   border-radius: 999px;
   padding: 0 8px;
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 .editor-candidate-row {
@@ -4709,7 +4725,7 @@ body {
   background: var(--surface2);
   color: var(--text2);
   font-size: 10px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .editor-pattern-chip {
   color: #93c5fd;
@@ -4731,7 +4747,7 @@ body {
   background: var(--surface2);
   color: var(--text2);
   font-size: 10px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .editor-rule-chip.ok {
   border-color: #4ade8055;
@@ -4745,7 +4761,7 @@ body {
   display: inline-block;
   margin-bottom: 4px;
   color: var(--accent);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: bold;
 }
@@ -4991,7 +5007,7 @@ body {
 .slide-range-val {
   flex: 0 0 3.5em;
   text-align: right;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--text);
 }
 .slide-seg {
@@ -5108,7 +5124,7 @@ body {
   font-size: 84px;
   font-weight: bold;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
   line-height: 1;
   letter-spacing: 4px;
 }
@@ -5302,7 +5318,7 @@ body {
   padding: 1px 6px;
   border: 1px solid rgba(128, 128, 128, 0.35);
   border-radius: 6px;
-  font-family: ui-monospace, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -5362,7 +5378,7 @@ body {
   width: 5em;
   padding: 6px 8px;
   font-size: 20px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   text-align: center;
   color: var(--text);
   background: var(--surface2);
@@ -5488,7 +5504,7 @@ body {
   user-select: none;
 }
 .nd-slot {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text2);
 }
@@ -5560,7 +5576,7 @@ body {
 }
 .nd-pt {
   color: var(--text2);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 .nd-rate {
@@ -5674,7 +5690,7 @@ body {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 12px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 24px;
   font-weight: 700;
   cursor: pointer;
@@ -5732,7 +5748,7 @@ body {
   border-radius: 10px;
   background: var(--surface2);
   color: var(--text);
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 700;
 }

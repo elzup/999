@@ -82,7 +82,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        // ttf は同梱の等幅フォント (オフラインでも数字の字形を揃える)
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,ttf}'],
         // 辞書は静的配信しない (認証付き /api/app/data)。
         // /api/** は SW でキャッシュせず、常にネットワーク (no-store) に委ねる。
         navigateFallbackDenylist: [/^\/api\//],
