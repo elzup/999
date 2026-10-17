@@ -1,14 +1,41 @@
-import { useState, useMemo } from 'preact/hooks'
+import { useMemo } from 'preact/hooks'
 import type { RulesData } from '../data/schema'
 import { buildRuleSummaryRows } from '../lib/rulesSummary'
 
 type Props = {
   rules: RulesData
+  hideLong: boolean
 }
 
-export function RulesSummaryTable({ rules }: Props) {
-  const [hideLong, setHideLong] = useState(false)
+/** 長音あり / なし の切り替え。親指が届くよう dock に置くので、表とは分けて描く */
+export function RulesLongToggle({
+  hideLong,
+  onChange,
+}: {
+  hideLong: boolean
+  onChange: (hideLong: boolean) => void
+}) {
+  return (
+    <div class="rules-summary-controls">
+      <button
+        type="button"
+        class={'rules-switch-btn' + (!hideLong ? ' active' : '')}
+        onClick={() => onChange(false)}
+      >
+        長音あり
+      </button>
+      <button
+        type="button"
+        class={'rules-switch-btn' + (hideLong ? ' active' : '')}
+        onClick={() => onChange(true)}
+      >
+        長音なし
+      </button>
+    </div>
+  )
+}
 
+export function RulesSummaryTable({ rules, hideLong }: Props) {
   const rows = useMemo(
     () => buildRuleSummaryRows(rules, { hideLong }),
     [rules, hideLong]
@@ -16,29 +43,9 @@ export function RulesSummaryTable({ rules }: Props) {
 
   return (
     <div class="rules-section">
-      <div class="rules-section-header">
-        <div>
-          <div class="rules-section-title">1桁・2桁 整理対応表</div>
-          <div class="rules-section-desc">
-            各数字の1桁かなと、その数字から始まる2桁かなの対応一覧（単一ルールソースから自動生成）。
-          </div>
-        </div>
-        <div class="rules-summary-controls">
-          <button
-            type="button"
-            class={'rules-switch-btn' + (!hideLong ? ' active' : '')}
-            onClick={() => setHideLong(false)}
-          >
-            長音あり
-          </button>
-          <button
-            type="button"
-            class={'rules-switch-btn' + (hideLong ? ' active' : '')}
-            onClick={() => setHideLong(true)}
-          >
-            長音なし
-          </button>
-        </div>
+      <div class="rules-section-title">1桁・2桁 整理対応表</div>
+      <div class="rules-section-desc">
+        各数字の1桁かなと、その数字から始まる2桁かなの対応一覧（単一ルールソースから自動生成）。
       </div>
 
       <div class="rules-summary-table-wrap">

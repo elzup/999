@@ -14,6 +14,7 @@ import ReviewPanel from './ReviewPanel'
 import type { ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import MarkButton from './MarkButton'
+import Screen, { DockBar, PanelCards, QuitButton } from './Screen'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 
 type Props = {
@@ -54,17 +55,24 @@ function PiCheckGrid({
     blocks.push({ start: s, digits: decimalDigits.slice(s, s + blockSize) })
   }
 
+  // 1 桁目のブロックを下端 (親指側) に置き上へ積む。見出しは各ブロックの下
   return (
-    <div class={`pi-check-grid${compact ? ' compact' : ''}`}>
+    <div
+      class={`pi-check-grid stack-up${compact ? ' compact' : ''}`}
+      style={{ '--stack-gap': '8px' }}
+    >
       {blocks.map((block) => (
-        <div key={block.start}>
+        <div key={block.start} class="stack-up">
           {blocks.length > 1 && (
             <div class="pi-block-label">
               {String(block.start + 1).padStart(3, '0')}–
               {String(block.start + block.digits.length).padStart(3, '0')}
             </div>
           )}
-          <div class="pi-block-grid">
+          <div
+            class="pi-block-grid grid-up"
+            style={{ '--cols': 25, '--gap': '1px' }}
+          >
             {block.digits.map((d, j) => {
               const idx = block.start + j + 1
               const answered = answers.find((a) => a.idx === idx)
@@ -127,14 +135,20 @@ function PiChoiceGrid({
   }
 
   return (
-    <div class="pi-check-grid compact">
+    <div
+      class="pi-check-grid stack-up compact"
+      style={{ '--stack-gap': '8px' }}
+    >
       {blocks.map((block) => (
-        <div key={block.start}>
+        <div key={block.start} class="stack-up">
           <div class="pi-block-label">
             {String(block.start + 1).padStart(3, '0')}–
             {String(block.start + block.digits.length).padStart(3, '0')}
           </div>
-          <div class="pi-block-grid">
+          <div
+            class="pi-block-grid grid-up"
+            style={{ '--cols': 25, '--gap': '1px' }}
+          >
             {block.digits.map((d, j) => {
               const idx = block.start + j + 1
               const chunk = Math.floor((idx - 1) / 3)
@@ -190,14 +204,7 @@ function PiChoiceOptions({
   backDisabled: boolean
 }) {
   return (
-    <div
-      style={{
-        flexShrink: 0,
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        padding: '12px',
-      }}
-    >
+    <div>
       <div class="pi-choice-options">
         {options.map((opt) => (
           <button
@@ -298,12 +305,15 @@ function PiViewGroups({
     })
   }
 
+  // 1 行目 (3.14…) を下端に置き上へ積む。「3.」はその下
   return (
-    <div>
+    <div class="stack-up">
       <div class="pi-dot-cell">3.</div>
-      <div class="pi-view-grid">
+      <div class="pi-view-grid stack-up">
         {rows.map((row, ri) => (
           <div key={ri}>
+            {/* 逆順に積むので、100 桁の区切りは区切り行の «上» (次の行との間) に置く */}
+            {row.isSectionEnd && <div class="pi-section-divider" />}
             <div class="pi-view-row">
               {row.segs.map((seg, si) => {
                 const n = seg.digits.length
@@ -339,7 +349,6 @@ function PiViewGroups({
                 )
               })}
             </div>
-            {row.isSectionEnd && <div class="pi-section-divider" />}
           </div>
         ))}
       </div>
@@ -347,7 +356,8 @@ function PiViewGroups({
   )
 }
 
-function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
+// bookmarks / onToggleBm は NumDetailPanel が NumberContext から取るので使わない
+function PiTab({ numbers }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
   const [checkPos, setCheckPos] = useState(1)
@@ -628,23 +638,61 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
 
   const recordTitle = { check: 'π', choice: 'π 4択', masked: 'π 虫食い' }
 
-  return (
-    <div class={'pi-layout' + (mode !== 'view' ? ' test-screen' : '')}>
-      <PiHeader
+  const isTest = mode !== 'view'
+
+  const main =
+    mode === 'check' ? (
+      <PiCheckGrid
+        answers={answers}
+        checkPos={checkPos}
+        digits={digits}
+        totalDigits={totalDigits}
+        compact
+      />
+    ) : mode === 'choice' ? (
+      <PiChoiceGrid
+        answers={choiceAnswers}
+        choicePos={choicePos}
+        digits={digits}
+        chunkCount={chunkCount}
+      />
+    ) : (
+      <PiViewGroups
+        selected={selected}
+        onSelect={setSelected}
+        digits={digits}
+      />
+    )
+
+  const panel =
+    mode === 'view' && selectedPair ? (
+      <>
+        <PanelCards>
+          {selectedPair.map((d) => (
+            <NumDetailPanel key={d.num} d={d} />
+          ))}
+        </PanelCards>
+        {/* 複数枚まとめて 1 つの閉じる。詳細カード側は閉じるを持たない */}
+        <div class="panel-foot">
+          <button class="btn-wide" onClick={() => setSelected(null)}>
+            閉じる
+          </button>
+        </div>
+      </>
+    ) : null
+
+  const dock = (
+    <>
+      <PiDockBar
         mode={mode}
         lastRecord={lastRecord}
         bestRecord={bestRecord}
         finished={finished}
-        hasRecords={records.length > 0}
-        hasChoiceRecords={choiceRecords.length > 0}
-        hasMaskedRecords={maskedRecords.length > 0}
         checkPos={checkPos}
         answers={answers}
         choicePos={choicePos}
         choiceAnswers={choiceAnswers}
         chunkCount={chunkCount}
-        onStartCheck={startCheck}
-        onStartChoice={startChoice}
         onEndCheck={() => endCheck()}
         onEndChoice={() => endChoice()}
         markLabel={
@@ -656,34 +704,57 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
         }
         marks={marks.marks}
         onToggleMark={marks.toggle}
-        onShowRecords={() => openRecords('check')}
-        onShowChoiceRecords={() => openRecords('choice')}
-        onShowMaskedRecords={() => openRecords('masked')}
       />
-      {mode === 'view' ? (
-        <div class="sticky-wrap">
-          {selectedPair ? (
-            <>
-              {selectedPair.map((d) => (
-                <NumDetailPanel
-                  key={d.num}
-                  d={d}
-                  bookmarks={bookmarks}
-                  onToggleBm={onToggleBm}
-                />
-              ))}
-              {/* 複数枚まとめて 1 つの閉じる。詳細カード側は閉じるを持たない */}
-              <div class="panel-foot">
-                <button class="btn-wide" onClick={() => setSelected(null)}>
-                  閉じる
-                </button>
-              </div>
-            </>
-          ) : (
-            <div class="sticky-empty">グループをタップして詳細表示</div>
-          )}
-        </div>
-      ) : null}
+      {mode === 'check' ? (
+        <Numpad
+          onTapDigit={tapDigit}
+          colored
+          onBackspace={tapBackspace}
+          backspaceDisabled={answers.length === 0}
+        />
+      ) : mode === 'choice' ? (
+        <PiChoiceOptions
+          options={choiceOptions}
+          onPick={pickChoice}
+          onBack={choiceBack}
+          backDisabled={choiceAnswers.length === 0}
+        />
+      ) : (
+        <TestFeatureList
+          features={[
+            {
+              id: 'pi-check',
+              title: 'テスト',
+              inputMethod: 'number',
+              onStart: startCheck,
+              hasRecords: records.length > 0,
+              onShowRecords: () => openRecords('check'),
+            },
+            {
+              id: 'pi-choice',
+              title: '4択',
+              inputMethod: 'choice',
+              onStart: () => startChoice('full'),
+              hasRecords: choiceRecords.length > 0,
+              onShowRecords: () => openRecords('choice'),
+            },
+            {
+              id: 'pi-masked',
+              title: '虫食い',
+              inputMethod: 'choice',
+              onStart: () => startChoice('masked'),
+              hasRecords: maskedRecords.length > 0,
+              onShowRecords: () => openRecords('masked'),
+            },
+          ]}
+        />
+      )}
+    </>
+  )
+
+  return (
+    <>
+      <Screen isTest={isTest} main={main} panel={panel} dock={dock} />
       {showRecords ? (
         <RecordPanel
           title={recordTitle[recordsKind]}
@@ -703,245 +774,111 @@ function PiTab({ numbers, bookmarks, onToggleBm }: Props) {
           onClose={() => setReviewItems(null)}
         />
       ) : null}
-      <div
-        class="content"
-        style={{
-          flex: 1,
-          paddingBottom: '4px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: mode === 'view' ? 'flex-start' : 'flex-end',
-        }}
-      >
-        {mode === 'check' ? (
-          <PiCheckGrid
-            answers={answers}
-            checkPos={checkPos}
-            digits={digits}
-            totalDigits={totalDigits}
-            compact
-          />
-        ) : mode === 'choice' ? (
-          <PiChoiceGrid
-            answers={choiceAnswers}
-            choicePos={choicePos}
-            digits={digits}
-            chunkCount={chunkCount}
-          />
-        ) : (
-          <PiViewGroups
-            selected={selected}
-            onSelect={setSelected}
-            digits={digits}
-          />
-        )}
-      </div>
-      {mode === 'check' ? (
-        <Numpad
-          onTapDigit={tapDigit}
-          colored
-          onBackspace={tapBackspace}
-          backspaceDisabled={answers.length === 0}
-        />
-      ) : mode === 'choice' ? (
-        <PiChoiceOptions
-          options={choiceOptions}
-          onPick={pickChoice}
-          onBack={choiceBack}
-          backDisabled={choiceAnswers.length === 0}
-        />
-      ) : null}
-    </div>
+    </>
   )
 }
 
-type PiHeaderProps = {
+type PiDockBarProps = {
   mode: Mode
   lastRecord: Record | null
   bestRecord: Record | null
   finished: boolean
-  hasRecords: boolean
-  hasChoiceRecords: boolean
-  hasMaskedRecords: boolean
   checkPos: number
   answers: Answer[]
   choicePos: number
   choiceAnswers: ChoiceAnswer[]
   chunkCount: number
-  onStartCheck: () => void
-  onStartChoice: (variant: ChoiceVariant) => void
   onEndCheck: () => void
   onEndChoice: () => void
   /** 今の問題の印キー (振り返り行の label)。テスト中でなければ null */
   markLabel: string | null
   marks: Set<string>
   onToggleMark: (label: string) => void
-  onShowRecords: () => void
-  onShowChoiceRecords: () => void
-  onShowMaskedRecords: () => void
 }
 
-function PiHeader({
+// dock の 1 行目 (旧 PiHeader)。テスト中は進捗・印・終了を右端に寄せる
+function PiDockBar({
   mode,
   lastRecord,
   bestRecord,
   finished,
-  hasRecords,
-  hasChoiceRecords,
-  hasMaskedRecords,
   checkPos,
   answers,
   choicePos,
   choiceAnswers,
   chunkCount,
-  onStartCheck,
-  onStartChoice,
   onEndCheck,
   onEndChoice,
   markLabel,
   marks,
   onToggleMark,
-  onShowRecords,
-  onShowChoiceRecords,
-  onShowMaskedRecords,
-}: PiHeaderProps) {
+}: PiDockBarProps) {
+  if (mode === 'view') {
+    return (
+      <DockBar
+        title="π 円周率"
+        sub={
+          <>
+            1000桁
+            {lastRecord || finished ? (
+              <RecordSummary last={lastRecord} best={bestRecord} />
+            ) : null}
+          </>
+        }
+      />
+    )
+  }
+
+  const progress =
+    mode === 'check'
+      ? `${checkPos - 1}桁目 ${answers.filter((a) => a.correct).length}/${
+          answers.length
+        }`
+      : `${choicePos + 1}/${chunkCount} ${
+          choiceAnswers.filter((a) => a.correct).length
+        }/${choiceAnswers.length}`
+
   return (
-    <div class="pi-header">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          flexWrap: 'wrap',
-          rowGap: '6px',
-        }}
-      >
-        <div class="pi-header-title">π 円周率</div>
-        <div class="pi-header-sub">1000桁</div>
-        {mode === 'view' && (lastRecord || finished) ? (
-          <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
-            {lastRecord ? (
-              <>
-                前回:
-                <span style={{ color: 'var(--accent)' }}>
-                  {lastRecord.score}/{lastRecord.total}
-                </span>
-              </>
-            ) : null}
-            {bestRecord ? (
-              <>
-                {' '}
-                最高:
-                <span style={{ color: 'var(--warn)' }}>
-                  {bestRecord.score}/{bestRecord.total}
-                </span>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-        <div
-          style={{
-            marginLeft: 'auto',
-            display: 'flex',
-            gap: '6px',
-            alignItems: 'center',
-          }}
-        >
-          {mode === 'view' ? (
-            <TestFeatureList
-              compact
-              features={[
-                {
-                  id: 'pi-check',
-                  title: 'テスト',
-                  inputMethod: 'number',
-                  onStart: onStartCheck,
-                  hasRecords,
-                  onShowRecords,
-                },
-                {
-                  id: 'pi-choice',
-                  title: '4択',
-                  inputMethod: 'choice',
-                  onStart: () => onStartChoice('full'),
-                  hasRecords: hasChoiceRecords,
-                  onShowRecords: onShowChoiceRecords,
-                },
-                {
-                  id: 'pi-masked',
-                  title: '虫食い',
-                  inputMethod: 'choice',
-                  onStart: () => onStartChoice('masked'),
-                  hasRecords: hasMaskedRecords,
-                  onShowRecords: onShowMaskedRecords,
-                },
-              ]}
-            />
-          ) : mode === 'check' ? (
-            <>
-              <span
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--accent)',
-                  fontFamily: 'monospace',
-                }}
-              >
-                {checkPos - 1}桁目 {answers.filter((a) => a.correct).length}/
-                {answers.length}
-              </span>
-              {!finished && markLabel ? (
-                <MarkButton
-                  on={marks.has(markLabel)}
-                  onToggle={() => onToggleMark(markLabel)}
-                />
-              ) : null}
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '12px',
-                  minWidth: '50px',
-                  padding: '4px 10px',
-                }}
-                onClick={onEndCheck}
-              >
-                終了
-              </button>
-            </>
-          ) : (
-            <>
-              <span
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--accent)',
-                  fontFamily: 'monospace',
-                }}
-              >
-                {choicePos + 1}/{chunkCount}{' '}
-                {choiceAnswers.filter((a) => a.correct).length}/
-                {choiceAnswers.length}
-              </span>
-              {!finished && markLabel ? (
-                <MarkButton
-                  on={marks.has(markLabel)}
-                  onToggle={() => onToggleMark(markLabel)}
-                />
-              ) : null}
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '12px',
-                  minWidth: '50px',
-                  padding: '4px 10px',
-                }}
-                onClick={onEndChoice}
-              >
-                終了
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    <DockBar title="π 円周率" sub="1000桁">
+      <span class="dock-progress">{progress}</span>
+      {!finished && markLabel ? (
+        <MarkButton
+          on={marks.has(markLabel)}
+          onToggle={() => onToggleMark(markLabel)}
+        />
+      ) : null}
+      <QuitButton onClick={mode === 'check' ? onEndCheck : onEndChoice} />
+    </DockBar>
+  )
+}
+
+function RecordSummary({
+  last,
+  best,
+}: {
+  last: Record | null
+  best: Record | null
+}) {
+  return (
+    <span class="dock-rec">
+      {last ? (
+        <>
+          前回:
+          <b>
+            {last.score}/{last.total}
+          </b>
+        </>
+      ) : null}
+      {best ? (
+        <>
+          {' '}
+          最高:
+          <b class="is-best">
+            {best.score}/{best.total}
+          </b>
+        </>
+      ) : null}
+    </span>
   )
 }
 

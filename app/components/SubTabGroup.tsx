@@ -13,16 +13,23 @@ type Props<Id extends string> = {
   // 選択中のサブタブを覚えておく localStorage キー ('subtab.card' など)。
   storageKey: string
   tabs: readonly SubTabDef<Id>[]
+  /** 未保存のときに開くタブ。省略時は先頭 */
+  defaultId?: Id
 }
 
-// グループ共通の下サブタブ (.sub-tab-switch)。選んだタブの中身だけを描画する。
+// グループ共通の下サブタブ (.sub-tab-switch)。選んだタブの中身だけを描画し、
+// 切り替えはその下 (Tab Bar の直上) に置く。
 // テスト中は各タブの .test-screen がこの切り替えごと覆うので、状態の引き回しは要らない。
-function SubTabGroup<Id extends string>({ storageKey, tabs }: Props<Id>) {
+function SubTabGroup<Id extends string>({
+  storageKey,
+  tabs,
+  defaultId,
+}: Props<Id>) {
   const [sub, setSub] = useState<Id>(() =>
     loadSubTab(
       storageKey,
       tabs.map((tab) => tab.id),
-      tabs[0].id
+      defaultId ?? tabs[0].id
     )
   )
 
@@ -38,6 +45,7 @@ function SubTabGroup<Id extends string>({ storageKey, tabs }: Props<Id>) {
 
   return (
     <div class="sub-tab-group">
+      {active.render()}
       <div class="sub-tab-switch">
         {tabs.map((tab) => (
           <button
@@ -49,7 +57,6 @@ function SubTabGroup<Id extends string>({ storageKey, tabs }: Props<Id>) {
           </button>
         ))}
       </div>
-      {active.render()}
     </div>
   )
 }

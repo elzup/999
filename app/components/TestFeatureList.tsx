@@ -9,12 +9,12 @@ export type TestFeatureAction = TestFeature & {
 
 type Props = {
   features: TestFeatureAction[]
-  compact?: boolean
 }
 
-function TestFeatureList({ features, compact }: Props) {
+// テスト開始ボタンはこの部品だけで描く (見た目は 1 種類。dock でも一覧ページでも同じ)
+function TestFeatureList({ features }: Props) {
   return (
-    <div class={'test-feature-list' + (compact ? ' compact' : '')}>
+    <div class="test-feature-list">
       {features.map((feature) => (
         <div
           key={feature.id}
@@ -41,6 +41,22 @@ function TestFeatureList({ features, compact }: Props) {
           ) : null}
         </div>
       ))}
+    </div>
+  )
+}
+
+/** 見出し付きのまとまり (FF テストの 1 桁 / 2 桁 など) */
+export function TestFeatureSection({
+  label,
+  children,
+}: {
+  label: string
+  children: h.JSX.Element | h.JSX.Element[] | null
+}) {
+  return (
+    <div class="test-feature-section">
+      <div class="test-feature-section-label">{label}</div>
+      {children}
     </div>
   )
 }

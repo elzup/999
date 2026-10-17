@@ -34,7 +34,7 @@ function CellWords({ numbers, selected, onPickNum }: Props) {
   }
 
   return (
-    <div class="cellwords">
+    <div class="cellwords stack-up" style={{ '--stack-gap': '8px' }}>
       <div class="cellwords-head">
         <span class="cellwords-mode">{selected.mode}</span>
         <span class="cellwords-vv">{selected.vv}</span>
@@ -46,7 +46,7 @@ function CellWords({ numbers, selected, onPickNum }: Props) {
       {words.length === 0 ? (
         <div class="cellwords-none">該当語なし</div>
       ) : (
-        <div class="cellwords-list">
+        <div class="cellwords-list stack-up" style={{ '--stack-gap': '3px' }}>
           {words.map((w, i) => (
             <button
               key={i}

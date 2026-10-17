@@ -28,6 +28,7 @@ import {
 } from '../lib/numberDetail'
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 
 const REP_RANKS = [1, 2] as const
 const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
@@ -136,8 +137,8 @@ export default function NumberDetailTab({
   const notice = loading
     ? '読み込み中…'
     : state.saving
-      ? '保存中…'
-      : state.status
+    ? '保存中…'
+    : state.status
   const changed = doc ? changedSlots(doc, drafts) : []
   const dirty = changed.length > 0
 
@@ -205,9 +206,77 @@ export default function NumberDetailTab({
     [rows]
   )
 
-  return (
-    <main class="content nd-panel">
-      <div class="nd-bar">
+  // 候補は優先順に下から積む (先頭が親指側)
+  const main = doc ? (
+    <ul class="nd-cards stack-up" style={{ '--stack-gap': '8px' }}>
+      {rows.map((row, index) => (
+        <SlotCard
+          key={row.slot}
+          row={row}
+          index={index}
+          focused={row.slot === focusSlot}
+          saving={state.saving}
+          isSaved={Boolean(doc.slots?.[row.slot])}
+          changed={changed.includes(row.slot)}
+          dragging={dragFrom === index}
+          onDragStart={() => setDragFrom(index)}
+          onDragEnd={() => setDragFrom(null)}
+          onDropAt={() => {
+            if (dragFrom === null || dragFrom === index) return
+            saveSlots(
+              moveItem(rows, dragFrom, index),
+              dirty ? '並べ替え、未保存の変更も保存しました' : '並べ替えました'
+            )
+            setDragFrom(null)
+          }}
+          onEdit={(patch) => editRow(row, patch)}
+          onDelete={() => {
+            // 足しただけの枠は手元で消すだけ (サーバに送るものが無い)
+            if (!doc.slots?.[row.slot]) {
+              setDrafts(({ [row.slot]: _, ...rest }) => rest)
+              return
+            }
+            // slots は最終形を送るので、他の枠の未保存の編集も一緒に保存される
+            saveSlots(
+              rows.filter((other) => other.slot !== row.slot),
+              dirty ? '削除し、未保存の変更も保存しました' : '削除しました'
+            )
+          }}
+          onPickRep={(rank) => {
+            const op = repPickOp(doc, row.slot, rank)
+            send(op, op.confirmed ? '代表を確定しました' : '代表を外しました')
+          }}
+          onRate={(value) =>
+            send(
+              {
+                op: 'rating',
+                k: row.kana,
+                w: row.word,
+                v: nextRatingValue(row.rating, value),
+              },
+              '評価を保存しました'
+            )
+          }
+        />
+      ))}
+    </ul>
+  ) : null
+
+  const dock = (
+    <div class="nd-dock">
+      {/* 編集欄の間に差し込むと出るたびに行がずれるので、dock の真上に重ねて出す */}
+      <p
+        class={
+          'nd-status' +
+          (notice ? ' show' : '') +
+          (state.failed && !state.saving && !loading ? ' error' : '')
+        }
+        role="status"
+        aria-live="polite"
+      >
+        {notice}
+      </p>
+      <DockBar>
         <button class="nd-step" onClick={() => step(-1)} aria-label="前の番号">
           −
         </button>
@@ -221,8 +290,7 @@ export default function NumberDetailTab({
         <button class="nd-step" onClick={() => step(1)} aria-label="次の番号">
           ＋
         </button>
-        {/* 番号送り (− ＋) と同じ箱にすると見分けがつかないので、
-            右端に枠なしで置き、記号と文字を併記する */}
+        {/* 番号送り (− ＋) と同じ箱にすると見分けがつかないので、枠なしで置く */}
         <button
           class="nd-ghost nd-reload"
           onClick={() => leave(() => load(num))}
@@ -232,26 +300,9 @@ export default function NumberDetailTab({
           ↻
         </button>
         {onClose ? (
-          <button class="nd-ghost nd-close" onClick={() => leave(onClose)}>
-            <span aria-hidden="true">✕</span> 閉じる
-          </button>
+          <QuitButton label="閉じる" onClick={() => leave(onClose)} />
         ) : null}
-      </div>
-
-      {/* 編集欄の上に差し込むと出るたびに行がずれるので、重ねて出す */}
-      <p
-        class={
-          'nd-status' +
-          (notice ? ' show' : '') +
-          (dirty ? ' raised' : '') +
-          (state.failed && !state.saving && !loading ? ' error' : '')
-        }
-        role="status"
-        aria-live="polite"
-      >
-        {notice}
-      </p>
-
+      </DockBar>
       {doc ? (
         <>
           {/* 代表の状態はここ 1 か所にまとめる。候補の保存とは別の操作 */}
@@ -273,8 +324,8 @@ export default function NumberDetailTab({
                 confirmed
                   ? '押すと代表の確定を外す'
                   : liveCount === 0
-                    ? '候補の ①② で代表を選ぶと確定します'
-                    : undefined
+                  ? '候補の ①② で代表を選ぶと確定します'
+                  : undefined
               }
               onClick={() =>
                 send(
@@ -286,68 +337,7 @@ export default function NumberDetailTab({
               {confirmed ? '✓ 代表確定済み' : '代表を確定'}
             </button>
           </section>
-
-          <ul class="nd-cards">
-            {rows.map((row, index) => (
-              <SlotCard
-                key={row.slot}
-                row={row}
-                index={index}
-                focused={row.slot === focusSlot}
-                saving={state.saving}
-                isSaved={Boolean(doc.slots?.[row.slot])}
-                changed={changed.includes(row.slot)}
-                dragging={dragFrom === index}
-                onDragStart={() => setDragFrom(index)}
-                onDragEnd={() => setDragFrom(null)}
-                onDropAt={() => {
-                  if (dragFrom === null || dragFrom === index) return
-                  saveSlots(
-                    moveItem(rows, dragFrom, index),
-                    dirty
-                      ? '並べ替え、未保存の変更も保存しました'
-                      : '並べ替えました'
-                  )
-                  setDragFrom(null)
-                }}
-                onEdit={(patch) => editRow(row, patch)}
-                onDelete={() => {
-                  // 足しただけの枠は手元で消すだけ (サーバに送るものが無い)
-                  if (!doc.slots?.[row.slot]) {
-                    setDrafts(({ [row.slot]: _, ...rest }) => rest)
-                    return
-                  }
-                  // slots は最終形を送るので、他の枠の未保存の編集も一緒に保存される
-                  saveSlots(
-                    rows.filter((other) => other.slot !== row.slot),
-                    dirty
-                      ? '削除し、未保存の変更も保存しました'
-                      : '削除しました'
-                  )
-                }}
-                onPickRep={(rank) => {
-                  const op = repPickOp(doc, row.slot, rank)
-                  send(
-                    op,
-                    op.confirmed ? '代表を確定しました' : '代表を外しました'
-                  )
-                }}
-                onRate={(value) =>
-                  send(
-                    {
-                      op: 'rating',
-                      k: row.kana,
-                      w: row.word,
-                      v: nextRatingValue(row.rating, value),
-                    },
-                    '評価を保存しました'
-                  )
-                }
-              />
-            ))}
-          </ul>
-
-          <div class="nd-actions">
+          <DockRow>
             <button
               class="nd-add"
               onClick={() => addRow('wh')}
@@ -362,9 +352,8 @@ export default function NumberDetailTab({
             >
               ＋ 物
             </button>
-          </div>
-
-          {/* 未保存があるあいだは下端に出し続ける。スクロールしても見える */}
+          </DockRow>
+          {/* 未保存があるあいだは dock に出し続ける。dock は常に見えている */}
           {dirty ? (
             <div class="nd-savebar" role="region" aria-label="未保存の変更">
               <span class="nd-savebar-text">
@@ -388,8 +377,10 @@ export default function NumberDetailTab({
           ) : null}
         </>
       ) : null}
-    </main>
+    </div>
   )
+
+  return <Screen main={main} dock={dock} />
 }
 
 function SlotCard({

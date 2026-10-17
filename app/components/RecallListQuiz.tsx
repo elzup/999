@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { candidatesOf } from '../lib/choice'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 
 type Props = {
   title: string
@@ -91,108 +92,107 @@ function RecallListQuiz({
 
   const visibleRows = onlyUngraded ? rows.filter((r) => !grades[r.num]) : rows
 
-  return (
-    <div class="test-screen recall-list-screen">
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div class="pi-header-title">{title}</div>
-          <span class="rl-count o">○{counts.o}</span>
-          <span class="rl-count x">×{counts.x}</span>
-          <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-            {counts.done}/{rows.length}
-          </span>
-          <button
-            class="filter-btn"
-            style={{
-              fontSize: '12px',
-              minWidth: '50px',
-              padding: '4px 10px',
-              marginLeft: 'auto',
-            }}
-            onClick={onQuit}
+  // 一覧は下から上へ積む: 先頭の番号が下端 (親指側)
+  const main = (
+    <div class="stack-up" style={{ '--stack-gap': '4px' }}>
+      {visibleRows.map((row) => {
+        const isRevealed = revealed.has(row.num)
+        const g = grades[row.num]
+        const isBm = bookmarks.has(row.bmKey)
+        return (
+          <div
+            key={row.num}
+            class={'rl-row' + (g ? ' rl-' + g : '')}
+            onClick={() => !isRevealed && reveal(row.num)}
           >
-            終了
-          </button>
-        </div>
-        <div class="rl-toolbar">
-          <button
-            class={'filter-btn' + (onlyUngraded ? ' active' : '')}
-            onClick={() => setOnlyUngraded((v) => !v)}
-          >
-            未回答のみ
-          </button>
-          <button class="filter-btn" onClick={revealAll}>
-            全部めくる
-          </button>
-          <button class="filter-btn" onClick={reset}>
-            リセット
-          </button>
-        </div>
-      </div>
-
-      <div class="content recall-list-content">
-        {visibleRows.map((row) => {
-          const isRevealed = revealed.has(row.num)
-          const g = grades[row.num]
-          const isBm = bookmarks.has(row.bmKey)
-          return (
-            <div
-              key={row.num}
-              class={'rl-row' + (g ? ' rl-' + g : '')}
-              onClick={() => !isRevealed && reveal(row.num)}
-            >
-              <span class="rl-num">{row.num}</span>
-              <span class="rl-word">
-                {isRevealed ? (
-                  <>
-                    {row.word}
-                    {row.kana ? <span class="rl-kana">{row.kana}</span> : null}
-                  </>
-                ) : (
-                  <span class="rl-hidden">タップで答え</span>
-                )}
-              </span>
-              <span class="rl-actions">
-                {isRevealed ? (
-                  <>
-                    <button
-                      class={'rl-mark-btn o' + (g === 'o' ? ' active' : '')}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        grade(row, 'o')
-                      }}
-                    >
-                      ○
-                    </button>
-                    <button
-                      class={'rl-mark-btn x' + (g === 'x' ? ' active' : '')}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        grade(row, 'x')
-                      }}
-                    >
-                      ×
-                    </button>
-                    <span
-                      class={'bm-star ' + (isBm ? 'on' : '')}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onToggleBm(row.bmKey)
-                      }}
-                    >
-                      {isBm ? '★' : '☆'}
-                    </span>
-                  </>
-                ) : null}
-              </span>
-            </div>
-          )
-        })}
-        {visibleRows.length === 0 ? (
-          <div class="rl-empty">全部つけ終わりました</div>
-        ) : null}
-      </div>
+            <span class="rl-num">{row.num}</span>
+            <span class="rl-word">
+              {isRevealed ? (
+                <>
+                  {row.word}
+                  {row.kana ? <span class="rl-kana">{row.kana}</span> : null}
+                </>
+              ) : (
+                <span class="rl-hidden">タップで答え</span>
+              )}
+            </span>
+            <span class="rl-actions">
+              {isRevealed ? (
+                <>
+                  <button
+                    class={'rl-mark-btn o' + (g === 'o' ? ' active' : '')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      grade(row, 'o')
+                    }}
+                  >
+                    ○
+                  </button>
+                  <button
+                    class={'rl-mark-btn x' + (g === 'x' ? ' active' : '')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      grade(row, 'x')
+                    }}
+                  >
+                    ×
+                  </button>
+                  <span
+                    class={'bm-star ' + (isBm ? 'on' : '')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleBm(row.bmKey)
+                    }}
+                  >
+                    {isBm ? '★' : '☆'}
+                  </span>
+                </>
+              ) : null}
+            </span>
+          </div>
+        )
+      })}
+      {visibleRows.length === 0 ? (
+        <div class="rl-empty">全部つけ終わりました</div>
+      ) : null}
     </div>
+  )
+
+  return (
+    <Screen
+      isTest
+      main={main}
+      dock={
+        <>
+          <DockBar
+            title={title}
+            sub={
+              <>
+                <span class="rl-count o">○{counts.o}</span>{' '}
+                <span class="rl-count x">×{counts.x}</span> {counts.done}/
+                {rows.length}
+              </>
+            }
+          >
+            <QuitButton onClick={onQuit} />
+          </DockBar>
+          <DockRow>
+            <button
+              class={'filter-btn' + (onlyUngraded ? ' active' : '')}
+              onClick={() => setOnlyUngraded((v) => !v)}
+            >
+              未回答のみ
+            </button>
+            <button class="filter-btn" onClick={revealAll}>
+              全部めくる
+            </button>
+            <button class="filter-btn" onClick={reset}>
+              リセット
+            </button>
+          </DockRow>
+        </>
+      }
+    />
   )
 }
 

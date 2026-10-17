@@ -93,32 +93,6 @@ function ReviewPanel({
       }}
     >
       <div class="review-panel">
-        <div class="rec-panel-header">
-          <h3>{title} 結果</h3>
-          <button class="rec-btn" onClick={onClose}>
-            閉じる
-          </button>
-        </div>
-        <div class="review-summary">
-          <span class="review-score">
-            {score}/{total}
-          </span>
-          <span class="review-time">{time}秒</span>
-          {wrongTotal > 0 ? (
-            <span class="review-wrong-count">{wrongTotal}問ミス</span>
-          ) : (
-            <span class="review-perfect">全問正解</span>
-          )}
-          {markedCount > 0 ? (
-            <button
-              class={'review-mark-filter' + (onlyMarked ? ' on' : '')}
-              aria-pressed={onlyMarked}
-              onClick={() => setOnlyMarked((prev) => !prev)}
-            >
-              ⚑ 印のみ {markedCount}
-            </button>
-          ) : null}
-        </div>
         <div class="review-list">
           {wrongItems.length > 0 ? (
             <>
@@ -145,6 +119,33 @@ function ReviewPanel({
             </div>
           ))}
         </div>
+        <div class="review-summary">
+          <span class="review-score">
+            {score}/{total}
+          </span>
+          <span class="review-time">{time}秒</span>
+          {wrongTotal > 0 ? (
+            <span class="review-wrong-count">{wrongTotal}問ミス</span>
+          ) : (
+            <span class="review-perfect">全問正解</span>
+          )}
+          {markedCount > 0 ? (
+            <button
+              class={'review-mark-filter' + (onlyMarked ? ' on' : '')}
+              aria-pressed={onlyMarked}
+              onClick={() => setOnlyMarked((prev) => !prev)}
+            >
+              ⚑ 印のみ {markedCount}
+            </button>
+          ) : null}
+        </div>
+        {/* 閉じるはシートの最下段 (親指側) */}
+        <div class="rec-panel-header">
+          <h3>{title} 結果</h3>
+          <button class="rec-btn" onClick={onClose}>
+            閉じる
+          </button>
+        </div>
       </div>
 
       {detail && ctx ? (
@@ -159,7 +160,6 @@ function ReviewPanel({
               d={detail}
               bookmarks={ctx.bookmarks}
               onToggleBm={ctx.onToggleBm}
-              onEdit={() => ctx.openEditor(detail.num)}
             />
             <div class="panel-foot">
               <button class="btn-wide" onClick={() => setDetailNum(null)}>

@@ -1,5 +1,10 @@
 import { useState, useCallback, useMemo } from 'preact/hooks'
-import TestFeatureList, { type TestFeatureAction } from './TestFeatureList'
+import TestFeatureList, {
+  TestFeatureSection,
+  type TestFeatureAction,
+} from './TestFeatureList'
+import Screen, { DockRow } from './Screen'
+import SubTabGroup from './SubTabGroup'
 import SlideLauncher from './SlideLauncher'
 import { ffDeck } from './slideDecks'
 import ChoiceQuiz, { type ChoiceQuestion, type QuizSummary } from './ChoiceQuiz'
@@ -13,7 +18,6 @@ import {
   genBinaryRows,
 } from '../lib/binaryTest'
 import { useQuizRecords } from '../lib/useQuizRecords'
-import { loadSubTab, saveSubTab } from '../data/storage'
 import {
   getFfRows,
   FF_DIRS,
@@ -65,7 +69,7 @@ function TypeBadge({ type }: { type: string }) {
 }
 
 const mono = {
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+  fontFamily: 'var(--font-mono)',
 } as const
 
 // テストID = FfDir | NibbleKind。各IDごとに記録(履歴/統計)を保存する。
@@ -84,13 +88,6 @@ export function completeFfRun(
 }
 
 function FFTab() {
-  const [sub, setSub] = useState<Sub>(() =>
-    loadSubTab(FF_SUB_KEY, FF_SUB_TABS, 'ref')
-  )
-  const handleSub = useCallback((next: Sub) => {
-    saveSubTab(FF_SUB_KEY, next)
-    setSub(next)
-  }, [])
   const [run, setRun] = useState<FfRun | null>(null)
   // 語データは描画前に注入済み (App の applyData)。マウント中は変わらない
   const slideDeck = useMemo(ffDeck, [])
@@ -271,141 +268,71 @@ function FFTab() {
     onShowRecords: () => setShowRecords(dir),
   }))
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div class="sub-tab-switch">
-        <button
-          class={'sub-tab-btn' + (sub === 'ref' ? ' active' : '')}
-          onClick={() => handleSub('ref')}
-        >
-          確認
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'bin' ? ' active' : '')}
-          onClick={() => handleSub('bin')}
-        >
-          binary
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'test' ? ' active' : '')}
-          onClick={() => handleSub('test')}
-        >
-          テスト
-        </button>
-      </div>
-
-      {sub === 'ref' && (
-        <div class="content" style={{ padding: '8px 12px', overflow: 'auto' }}>
-          {getFfRows().map((r) => (
-            <div
-              key={r.hex}
-              style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: 10,
-                padding: '5px 2px',
-                borderBottom: '1px solid var(--line, rgba(255,255,255,.08))',
-              }}
-            >
-              <span style={{ ...mono, fontWeight: 700, width: 28 }}>
-                {r.hex}
-              </span>
-              <TypeBadge type={r.type} />
-              <span style={{ ...mono, color: 'var(--text2)', width: 44 }}>
-                {r.exp}
-              </span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                {r.word || '—'}
-                {r.kana && r.kana !== r.word ? (
-                  <span style={{ color: 'var(--text2)', fontSize: 12 }}>
-                    （{r.kana}）
-                  </span>
-                ) : null}
-              </span>
-              <span style={{ fontWeight: 700 }}>{r.read}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {sub === 'bin' && (
-        <div class="content" style={{ padding: '8px 12px', overflow: 'auto' }}>
-          {getFfRows().map((r) => (
-            <div
-              key={r.hex}
-              style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: 12,
-                padding: '5px 2px',
-                borderBottom: '1px solid var(--line, rgba(255,255,255,.08))',
-              }}
-            >
-              <span style={{ ...mono, fontWeight: 700, width: 28 }}>
-                {r.hex}
-              </span>
-              <span style={{ ...mono, letterSpacing: 1 }}>
-                {r.bin.slice(0, 4)}
-                <span style={{ opacity: 0.4 }}> </span>
-                {r.bin.slice(4)}
-              </span>
-              <span style={{ flex: 1 }} />
-              <span style={{ color: 'var(--text2)' }}>{r.read}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {sub === 'test' && (
+  const refMain = (
+    <div class="stack-up" style={{ '--stack-gap': '0px' }}>
+      {getFfRows().map((r) => (
         <div
-          class="content content-bottom"
-          style={{ padding: 12, overflow: 'auto' }}
+          key={r.hex}
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 10,
+            padding: '5px 2px',
+            borderBottom: '1px solid var(--line, rgba(255,255,255,.08))',
+          }}
         >
-          <div
-            style={{ fontSize: 12, color: 'var(--text2)', margin: '2px 0 6px' }}
-          >
-            4bit ↔ hex 練習（キーパッド入力）
-          </div>
-          <TestFeatureList features={nibbleFeatures} />
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--text2)',
-              margin: '16px 0 6px',
-            }}
-          >
-            語データを使った 10問・4択テスト
-          </div>
-          <TestFeatureList features={choiceFeatures} />
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--text2)',
-              margin: '16px 0 6px',
-            }}
-          >
-            hex を見て語を思い出す（送るだけ）
-          </div>
-          <SlideLauncher deck={slideDeck} />
+          <span style={{ ...mono, fontWeight: 700, width: 28 }}>{r.hex}</span>
+          <TypeBadge type={r.type} />
+          <span style={{ ...mono, color: 'var(--text2)', width: 44 }}>
+            {r.exp}
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            {r.word || '—'}
+            {r.kana && r.kana !== r.word ? (
+              <span style={{ color: 'var(--text2)', fontSize: 12 }}>
+                （{r.kana}）
+              </span>
+            ) : null}
+          </span>
+          <span style={{ fontWeight: 700 }}>{r.read}</span>
+        </div>
+      ))}
+    </div>
+  )
 
-          <div
-            style={{
-              fontSize: 12,
-              color: 'var(--text2)',
-              margin: '16px 0 6px',
-            }}
-          >
-            バイナリー記憶（0/1を記憶→1行30桁で再現・行単位採点）
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+  const binMain = (
+    <div class="stack-up" style={{ '--stack-gap': '0px' }}>
+      {getFfRows().map((r) => (
+        <div
+          key={r.hex}
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 12,
+            padding: '5px 2px',
+            borderBottom: '1px solid var(--line, rgba(255,255,255,.08))',
+          }}
+        >
+          <span style={{ ...mono, fontWeight: 700, width: 28 }}>{r.hex}</span>
+          <span style={{ ...mono, letterSpacing: 1 }}>
+            {r.bin.slice(0, 4)}
+            <span style={{ opacity: 0.4 }}> </span>
+            {r.bin.slice(4)}
+          </span>
+          <span style={{ flex: 1 }} />
+          <span style={{ color: 'var(--text2)' }}>{r.read}</span>
+        </div>
+      ))}
+    </div>
+  )
+
+  // バイナリー記憶は設定が 3 段あり、テストの一覧に並べると dock が画面の上半分まで
+  // 伸びる。0/1 の表を見る «binary» の dock に置く (記憶の素材と同じ場所)
+  const binDock = (
+    <>
+      <TestFeatureSection label="バイナリー記憶（0/1を記憶→1行30桁で再現・行単位採点）">
+        <>
+          <DockRow>
             {BINARY_MEMO_OPTIONS.map((o) => (
               <button
                 key={o.sec}
@@ -415,10 +342,8 @@ function FFTab() {
                 {o.label}
               </button>
             ))}
-          </div>
-          <div
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}
-          >
+          </DockRow>
+          <DockRow>
             {BINARY_ROW_OPTIONS.map((n) => (
               <button
                 key={n}
@@ -428,18 +353,9 @@ function FFTab() {
                 {n}行
               </button>
             ))}
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              marginTop: 8,
-            }}
-          >
-            <span style={{ fontSize: 12, color: 'var(--text2)' }}>
-              記憶ハイライト(8bit)
-            </span>
+          </DockRow>
+          <DockRow>
+            <span class="dock-row-label">記憶ハイライト(8bit)</span>
             <button
               class={'filter-btn' + (binHighlight ? ' active' : '')}
               onClick={() => setBinHighlight(true)}
@@ -452,29 +368,21 @@ function FFTab() {
             >
               なし
             </button>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-            <button
-              class="filter-btn"
-              style={{ fontWeight: 700, padding: '10px 20px' }}
-              onClick={startBinary}
-            >
-              ▶ 開始（{binRows * 30}桁）
-            </button>
-            <button
-              class="filter-btn"
-              style={{
-                padding: '10px 16px',
-                opacity: recBinary.records.length > 0 ? undefined : 0.5,
-              }}
-              onClick={() => setShowBinRecords(true)}
-            >
-              記録（{recBinary.records.length}）
-            </button>
-          </div>
-        </div>
-      )}
-
+          </DockRow>
+          <TestFeatureList
+            features={[
+              {
+                id: 'binary',
+                title: `バイナリー記憶（${binRows * 30}桁）`,
+                inputMethod: 'number',
+                hasRecords: recBinary.records.length > 0,
+                onStart: startBinary,
+                onShowRecords: () => setShowBinRecords(true),
+              },
+            ]}
+          />
+        </>
+      </TestFeatureSection>
       {showBinRecords && (
         <RecordPanel
           title="バイナリー記憶"
@@ -484,6 +392,20 @@ function FFTab() {
           onClose={() => setShowBinRecords(false)}
         />
       )}
+    </>
+  )
+
+  const testDock = (
+    <>
+      <TestFeatureSection label="4bit ↔ hex 練習（キーパッド入力）">
+        <TestFeatureList features={nibbleFeatures} />
+      </TestFeatureSection>
+      <TestFeatureSection label="語データを使った 10問・4択テスト">
+        <TestFeatureList features={choiceFeatures} />
+      </TestFeatureSection>
+      <TestFeatureSection label="hex を見て語を思い出す（送るだけ）">
+        <SlideLauncher deck={slideDeck} />
+      </TestFeatureSection>
 
       {showRecords && (
         <RecordPanel
@@ -494,7 +416,26 @@ function FFTab() {
           onClose={() => setShowRecords(null)}
         />
       )}
-    </div>
+    </>
+  )
+
+  return (
+    <SubTabGroup<Sub>
+      storageKey={FF_SUB_KEY}
+      tabs={[
+        { id: 'ref', label: '確認', render: () => <Screen main={refMain} /> },
+        {
+          id: 'bin',
+          label: 'binary',
+          render: () => <Screen main={binMain} dock={binDock} />,
+        },
+        {
+          id: 'test',
+          label: 'テスト',
+          render: () => <Screen main={null} dock={testDock} />,
+        },
+      ]}
+    />
   )
 }
 

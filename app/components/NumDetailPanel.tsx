@@ -10,12 +10,17 @@ import { IconEdit, IconStar, IconStarOutline } from './Icons'
 import { parseTaggedItems } from '../lib/tags'
 import { nameOf } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
+import { useNumberContext } from '../lib/numberContext'
 
 type Props = {
   d: NumberEntry
+  /** 省略時は NumberContext の値を使う */
   bookmarks?: Set<string>
   onToggleBm?: (key: string) => void
-  /** この番号の編集を開く (REQ-NDV-012)。渡されたときだけ鉛筆が出る */
+  /**
+   * この番号の編集を開く (REQ-NDV-012)。省略時は NumberContext の
+   * openEditor (今のタブに重ねて開く) を使うので、どのタブでも鉛筆が出る
+   */
   onEdit?: () => void
 }
 
@@ -70,7 +75,12 @@ function wordRows(d: NumberEntry): WordRow[] {
   return rows
 }
 
-function NumDetailPanel({ d, bookmarks, onToggleBm, onEdit }: Props) {
+function NumDetailPanel(props: Props) {
+  const { d } = props
+  const ctx = useNumberContext()
+  const bookmarks = props.bookmarks ?? ctx?.bookmarks
+  const onToggleBm = props.onToggleBm ?? ctx?.onToggleBm
+  const onEdit = props.onEdit ?? (ctx ? () => ctx.openEditor(d.num) : undefined)
   const bmKey = 'n:' + d.num
   const isBm = bookmarks ? bookmarks.has(bmKey) : false
   const rows = wordRows(d)
@@ -86,32 +96,8 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onEdit }: Props) {
   return (
     <div class="detail-panel">
       <div class="detail-row1">
-        {/* 番号の下は 28px の見出しに対して行が余るので、そこに操作を置く。
-            どちらも «この番号に対する» 操作なので同じ列にまとめる */}
         <div class="detail-idcol">
           <span class="detail-id">{d.num}</span>
-          <div class="detail-idcol-actions">
-            {onToggleBm && (
-              <button
-                class={'ico sm' + (isBm ? ' on' : '')}
-                onClick={() => onToggleBm(bmKey)}
-                aria-pressed={isBm}
-                aria-label={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
-              >
-                {isBm ? <IconStar /> : <IconStarOutline />}
-              </button>
-            )}
-            {onEdit && (
-              <button
-                class="ico sm edit"
-                onClick={onEdit}
-                aria-label={`${d.num} を編集`}
-                title={`${d.num} を編集`}
-              >
-                <IconEdit />
-              </button>
-            )}
-          </div>
         </div>
 
         <div class="word-list">
@@ -215,6 +201,34 @@ function NumDetailPanel({ d, bookmarks, onToggleBm, onEdit }: Props) {
                   </span>
                 </div>
               ))
+          )}
+        </div>
+      ) : null}
+
+      {/* 操作はカードの最下段。Detail Panel は dock の直上にあるので、ここが
+          親指に一番近い (番号の下に置くと画面の中ほどまで指を伸ばすことになる) */}
+      {onToggleBm || onEdit ? (
+        <div class="detail-foot-actions">
+          {onToggleBm && (
+            <button
+              class={'detail-act' + (isBm ? ' on' : '')}
+              onClick={() => onToggleBm(bmKey)}
+              aria-pressed={isBm}
+              aria-label={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
+            >
+              {isBm ? <IconStar /> : <IconStarOutline />}
+              <span>{isBm ? '登録済み' : 'ブックマーク'}</span>
+            </button>
+          )}
+          {onEdit && (
+            <button
+              class="detail-act"
+              onClick={onEdit}
+              aria-label={`${d.num} を編集`}
+            >
+              <IconEdit />
+              <span>編集</span>
+            </button>
           )}
         </div>
       ) : null}

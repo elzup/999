@@ -4,6 +4,7 @@ import type { NumberEntry, CardEntry } from '../data/schema'
 import { formatCardId } from '../data/cards'
 import NumDetailPanel from './NumDetailPanel'
 import CardDetailPanel from './CardDetailPanel'
+import Screen from './Screen'
 
 type Props = {
   numbers: NumberEntry[]
@@ -97,105 +98,71 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
     return cards.find((c) => c.suit + c.rank === selected.slice(2)) || null
   }, [cards, selected])
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div class="sticky-wrap">
-        {selectedNum ? (
-          <>
-            <NumDetailPanel
-              d={selectedNum}
-              bookmarks={bookmarks}
-              onToggleBm={onToggleBm}
-            />
-            <div class="panel-foot">
-              <button class="btn-wide" onClick={() => setSelected(null)}>
-                閉じる
-              </button>
-            </div>
-          </>
-        ) : selectedCard ? (
-          <CardDetailPanel
-            c={selectedCard}
-            bookmarks={bookmarks}
-            onToggleBm={onToggleBm}
-            onClose={() => setSelected(null)}
-          />
-        ) : (
-          <div class="sticky-empty">タップして詳細表示</div>
-        )}
+  const panel = selectedNum ? (
+    <>
+      <NumDetailPanel d={selectedNum} />
+      <div class="panel-foot">
+        <button class="btn-wide" onClick={() => setSelected(null)}>
+          閉じる
+        </button>
       </div>
-      <div class="content" style={{ flex: 1 }}>
-        {bmNums.length > 0 ? (
-          <>
-            <div
-              style={{
-                marginBottom: '12px',
-                color: 'var(--text2)',
-                fontSize: '12px',
-              }}
-            >
-              数字 ({bmNums.length})
-            </div>
-            <div class="num-grid" style={{ marginBottom: '16px' }}>
-              {bmNums.map((d) => (
-                <NumCell
-                  key={d.num}
-                  d={d}
-                  selected={selected === 'n:' + d.num}
-                  onSelect={() => openDetail('n:' + d.num)}
-                />
-              ))}
-            </div>
-          </>
-        ) : null}
-        {bmCards.length > 0 ? (
-          <>
-            <div
-              style={{
-                marginBottom: '12px',
-                color: 'var(--text2)',
-                fontSize: '12px',
-              }}
-            >
-              カード ({bmCards.length})
-            </div>
-            <div class="card-grid">
-              {bmCards.map((c) => {
-                const key = c.suit + c.rank
-                return (
-                  <CardCell
-                    key={key}
-                    c={c}
-                    selected={selected === 'c:' + key}
-                    onSelect={() => openDetail('c:' + key)}
-                  />
-                )
-              })}
-            </div>
-          </>
-        ) : null}
-        {bmNums.length === 0 && bmCards.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              color: 'var(--text2)',
-              padding: '40px 0',
-            }}
-          >
-            ★をタップしてブックマーク追加
+    </>
+  ) : selectedCard ? (
+    <CardDetailPanel
+      c={selectedCard}
+      bookmarks={bookmarks}
+      onToggleBm={onToggleBm}
+      onClose={() => setSelected(null)}
+    />
+  ) : null
+
+  const isEmpty = bmNums.length === 0 && bmCards.length === 0
+
+  // 一覧は下から上へ積む: 数字の節が一番下 (親指側)、その上にカード
+  const main = isEmpty ? (
+    <div class="screen-empty">★をタップしてブックマーク追加</div>
+  ) : (
+    <div class="stack-up" style={{ '--stack-gap': '16px' }}>
+      {bmNums.length > 0 ? (
+        <section class="stack-up" style={{ '--stack-gap': '8px' }}>
+          <div class="section-label">数字 ({bmNums.length})</div>
+          <div class="num-grid grid-up">
+            {bmNums.map((d) => (
+              <NumCell
+                key={d.num}
+                d={d}
+                selected={selected === 'n:' + d.num}
+                onSelect={() => openDetail('n:' + d.num)}
+              />
+            ))}
           </div>
-        ) : null}
-      </div>
+        </section>
+      ) : null}
+      {bmCards.length > 0 ? (
+        <section class="stack-up" style={{ '--stack-gap': '8px' }}>
+          <div class="section-label">カード ({bmCards.length})</div>
+          <div
+            class="card-grid grid-up"
+            style={{ '--cols': 4, '--gap': '6px' }}
+          >
+            {bmCards.map((c) => {
+              const key = c.suit + c.rank
+              return (
+                <CardCell
+                  key={key}
+                  c={c}
+                  selected={selected === 'c:' + key}
+                  onSelect={() => openDetail('c:' + key)}
+                />
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
+
+  return <Screen main={main} panel={panel} />
 }
 
 export default BookmarkTab

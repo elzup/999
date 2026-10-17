@@ -3,6 +3,7 @@ import { vibrate } from '../lib/haptics'
 import Numpad from './Numpad'
 import TestPad from './TestPad'
 import MarkButton from './MarkButton'
+import Screen, { DockBar, QuitButton } from './Screen'
 import { applyMarks, useReviewMarks } from '../lib/reviewMarks'
 import type { QuizSummary } from './ChoiceQuiz'
 import type { ReviewItem } from './ReviewPanel'
@@ -128,153 +129,122 @@ function KeypadQuiz({ title, pad, questions, onQuit, onComplete }: Props) {
   // 入力スロット表示(答え桁数ぶん)。bin は4桁ごとに空ける。
   const slots = Array.from({ length: q.answer.length }, (_, i) => i)
 
-  return (
-    <div
-      class="test-screen quiz-screen"
-      style={{ display: 'flex', flexDirection: 'column' }}
-    >
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div class="pi-header-title">{title}</div>
+  const quit = () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    onQuit()
+  }
+
+  const main = (
+    <div class="cm-quiz-wrap">
+      <div class="cm-card-prompt">
+        <div class="cm-card-order">
+          {idx + 1} / {questions.length}
+        </div>
+        <div
+          class={'cm-card-face' + (q.promptClass ? ' ' + q.promptClass : '')}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            letterSpacing: 4,
+          }}
+        >
+          {q.prompt}
+        </div>
+      </div>
+
+      {/* 入力フォーム: 答えの桁数ぶんのマス。今どこを打っているかを出す */}
+      <div
+        class={'kq-slots' + (revealed ? (correct ? ' is-ok' : ' is-ng') : '')}
+      >
+        {slots.map((i) => (
           <span
-            style={{
-              fontSize: '13px',
-              color: 'var(--accent)',
-              fontFamily: 'monospace',
-            }}
+            key={i}
+            class={
+              'kq-slot' +
+              (typed[i] ? ' is-filled' : '') +
+              (!revealed && i === typed.length ? ' is-active' : '') +
+              (pad === 'bin' && (i + 1) % 4 === 0 ? ' is-nibble-end' : '')
+            }
           >
-            {scoreRef.current}正解
+            {typed[i] ?? ''}
           </span>
-          <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-            {idx + 1}/{questions.length}
-          </span>
-          <span style={{ marginLeft: 'auto' }}>
+        ))}
+      </div>
+      <div class="kq-hint">
+        {revealed
+          ? correct
+            ? '正解'
+            : '不正解'
+          : q.answer.length +
+            '桁 (' +
+            typed.length +
+            '/' +
+            q.answer.length +
+            ')'}
+      </div>
+      {revealed && !correct && (
+        <div
+          style={{
+            textAlign: 'center',
+            color: 'var(--green, #34d399)',
+            fontFamily: 'var(--font-mono)',
+            marginTop: -8,
+            marginBottom: 12,
+          }}
+        >
+          正解: {q.answer}
+        </div>
+      )}
+      {revealed && q.note && (
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: 12,
+            color: 'var(--text2)',
+            marginBottom: 12,
+          }}
+        >
+          {q.note}
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <Screen
+      isTest
+      class="quiz-screen"
+      main={main}
+      dock={
+        <>
+          <DockBar
+            title={title}
+            sub={`${scoreRef.current}正解 · ${idx + 1}/${questions.length}`}
+          >
             <MarkButton
               on={marks.has(q.prompt)}
               onToggle={() => toggleMark(q.prompt)}
             />
-          </span>
-          <button
-            class="filter-btn"
-            style={{
-              fontSize: '12px',
-              minWidth: '50px',
-              padding: '4px 10px',
-            }}
-            onClick={() => {
-              if (timerRef.current) clearTimeout(timerRef.current)
-              onQuit()
-            }}
-          >
-            終了
-          </button>
-        </div>
-      </div>
-
-      <div
-        class="content"
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}
-      >
-        <div class="cm-quiz-wrap">
-          <div class="cm-card-prompt">
-            <div class="cm-card-order">
-              {idx + 1} / {questions.length}
-            </div>
-            <div
-              class={
-                'cm-card-face' + (q.promptClass ? ' ' + q.promptClass : '')
-              }
-              style={{
-                fontFamily: 'ui-monospace, monospace',
-                letterSpacing: 4,
-              }}
-            >
-              {q.prompt}
-            </div>
-          </div>
-
-          {/* 入力フォーム: 答えの桁数ぶんのマス。今どこを打っているかを出す */}
-          <div
-            class={
-              'kq-slots' + (revealed ? (correct ? ' is-ok' : ' is-ng') : '')
-            }
-          >
-            {slots.map((i) => (
-              <span
-                key={i}
-                class={
-                  'kq-slot' +
-                  (typed[i] ? ' is-filled' : '') +
-                  (!revealed && i === typed.length ? ' is-active' : '') +
-                  (pad === 'bin' && (i + 1) % 4 === 0 ? ' is-nibble-end' : '')
-                }
-              >
-                {typed[i] ?? ''}
-              </span>
-            ))}
-          </div>
-          <div class="kq-hint">
-            {revealed
-              ? correct
-                ? '正解'
-                : '不正解'
-              : q.answer.length +
-                '桁 (' +
-                typed.length +
-                '/' +
-                q.answer.length +
-                ')'}
-          </div>
-          {revealed && !correct && (
-            <div
-              style={{
-                textAlign: 'center',
-                color: 'var(--green, #34d399)',
-                fontFamily: 'ui-monospace, monospace',
-                marginTop: -8,
-                marginBottom: 12,
-              }}
-            >
-              正解: {q.answer}
-            </div>
+            <QuitButton onClick={quit} />
+          </DockBar>
+          {/* 入力パッドは dock の最下段 (親指で届く位置)。形は全テスト共通 */}
+          {pad === 'dec' ? (
+            <Numpad
+              onTapDigit={(d) => press(String(d))}
+              onBackspace={backspace}
+              backspaceDisabled={revealed || typed.length === 0}
+            />
+          ) : (
+            <TestPad
+              cols={pad === 'hex' ? 4 : 2}
+              keys={keys.map((k) => ({ value: k, disabled: revealed }))}
+              onPress={press}
+              onBackspace={backspace}
+              backspaceDisabled={revealed || typed.length === 0}
+            />
           )}
-          {revealed && q.note && (
-            <div
-              style={{
-                textAlign: 'center',
-                fontSize: 12,
-                color: 'var(--text2)',
-                marginBottom: 12,
-              }}
-            >
-              {q.note}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 入力パッド(画面下部に固定・親指で届く位置)。形は全テスト共通 */}
-      {pad === 'dec' ? (
-        <Numpad
-          onTapDigit={(d) => press(String(d))}
-          onBackspace={backspace}
-          backspaceDisabled={revealed || typed.length === 0}
-        />
-      ) : (
-        <TestPad
-          cols={pad === 'hex' ? 4 : 2}
-          keys={keys.map((k) => ({ value: k, disabled: revealed }))}
-          onPress={press}
-          onBackspace={backspace}
-          backspaceDisabled={revealed || typed.length === 0}
-        />
-      )}
-    </div>
+        </>
+      }
+    />
   )
 }
 

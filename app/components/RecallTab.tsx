@@ -1,10 +1,14 @@
 import { h } from 'preact'
 import { useState } from 'preact/hooks'
 import type { NumberEntry, RulesData } from '../data/schema'
-import type { SelectedCell } from '../lib/allocation'
-import RecallTreePanel from './RecallTreePanel'
-import AllocationGraph from './AllocationGraph'
+import type { AllocMode, SelectedCell } from '../lib/allocation'
+import RecallTreePanel, { RecallTreeInput } from './RecallTreePanel'
+import AllocationGraph, {
+  AllocationControls,
+  type AllocSort,
+} from './AllocationGraph'
 import CellWords from './CellWords'
+import Screen, { DockBar, QuitButton } from './Screen'
 
 type Props = {
   numbers: NumberEntry[]
@@ -14,34 +18,65 @@ type Props = {
 function RecallTab({ numbers, rules }: Props) {
   const [cell, setCell] = useState<SelectedCell | null>(null)
   const [treeNum, setTreeNum] = useState<string | null>(null)
+  // 入力欄は dock、ツリーは panel に分かれるので、入力値はここで持つ
+  const [treeInput, setTreeInput] = useState('')
+  const [mode, setMode] = useState<AllocMode>('_YZ')
+  const [sortBy, setSortBy] = useState<AllocSort>('count')
+  const [extras, setExtras] = useState(false)
 
   const selectCell = (c: SelectedCell) => {
     setCell(c)
     setTreeNum(null)
   }
 
+  const openTree = (num: string) => {
+    setTreeInput(num)
+    setTreeNum(num)
+  }
+
+  const panel = treeNum ? (
+    <RecallTreePanel numbers={numbers} rules={rules} input={treeInput} />
+  ) : (
+    // 語の一覧は下から積むので、スクロールの初期位置も下端にする
+    <div class="recall-detail">
+      <CellWords numbers={numbers} selected={cell} onPickNum={openTree} />
+    </div>
+  )
+
+  const dock = (
+    <>
+      {treeNum ? (
+        <DockBar>
+          <RecallTreeInput value={treeInput} onChange={setTreeInput} />
+          <QuitButton label="一覧" onClick={() => setTreeNum(null)} />
+        </DockBar>
+      ) : null}
+      <AllocationControls
+        mode={mode}
+        sortBy={sortBy}
+        extras={extras}
+        onMode={setMode}
+        onSort={setSortBy}
+        onExtras={setExtras}
+      />
+    </>
+  )
+
   return (
-    <div class="recall-split">
-      <div class="recall-split-graph">
+    <Screen
+      main={
         <AllocationGraph
           numbers={numbers}
+          mode={mode}
+          sortBy={sortBy}
+          extras={extras}
           onSelectCell={selectCell}
           selected={cell}
         />
-      </div>
-      <div class="recall-split-detail">
-        {treeNum ? (
-          <RecallTreePanel
-            numbers={numbers}
-            rules={rules}
-            initialNum={treeNum}
-            onBack={() => setTreeNum(null)}
-          />
-        ) : (
-          <CellWords numbers={numbers} selected={cell} onPickNum={setTreeNum} />
-        )}
-      </div>
-    </div>
+      }
+      panel={panel}
+      dock={dock}
+    />
   )
 }
 

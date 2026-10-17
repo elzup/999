@@ -1,11 +1,14 @@
 import { h } from 'preact'
-import { useState, useMemo } from 'preact/hooks'
+import { useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import type { AllocItem, AllocMode, SelectedCell } from '../lib/allocation'
 import { buildAllocation, ALLOC_MODES } from '../lib/allocation'
 
 type Props = {
   numbers: NumberEntry[]
+  mode: AllocMode
+  sortBy: AllocSort
+  extras: boolean
   onSelectCell: (cell: SelectedCell) => void
   selected?: SelectedCell | null
 }
@@ -31,10 +34,82 @@ function shareBg(ratio: number) {
   }
 }
 
-function AllocationGraph({ numbers, onSelectCell, selected }: Props) {
-  const [mode, setMode] = useState<AllocMode>('_YZ')
-  const [sortBy, setSortBy] = useState<'count' | 'kana'>('count')
-  const [extras, setExtras] = useState(false)
+export type AllocSort = 'count' | 'kana'
+
+type ControlsProps = {
+  mode: AllocMode
+  sortBy: AllocSort
+  extras: boolean
+  onMode: (mode: AllocMode) => void
+  onSort: (sortBy: AllocSort) => void
+  onExtras: (extras: boolean) => void
+}
+
+// グラフの表示切り替え。親指が届くよう dock に置くので、グラフ本体とは分けて描く
+export function AllocationControls({
+  mode,
+  sortBy,
+  extras,
+  onMode,
+  onSort,
+  onExtras,
+}: ControlsProps) {
+  return (
+    <div class="alloc-ctrls">
+      <div class="alloc-modes">
+        {ALLOC_MODES.map((m) => (
+          <button
+            key={m}
+            class={'alloc-mode-btn' + (m === mode ? ' active' : '')}
+            onClick={() => onMode(m)}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+      <div class="alloc-toggle">
+        <span class="alloc-tlabel">並び</span>
+        {(['count', 'kana'] as const).map((s) => (
+          <button
+            key={s}
+            class={'alloc-mini-btn' + (s === sortBy ? ' active' : '')}
+            onClick={() => onSort(s)}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+      <div class="alloc-toggle">
+        <span class="alloc-tlabel">枠</span>
+        {(
+          [
+            ['base', '標準'],
+            ['ext', '+予備'],
+          ] as const
+        ).map(([v, label]) => (
+          <button
+            key={v}
+            class={
+              'alloc-mini-btn' + ((v === 'ext') === extras ? ' active' : '')
+            }
+            onClick={() => onExtras(v === 'ext')}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function AllocationGraph({
+  numbers,
+  mode,
+  sortBy,
+  extras,
+  onSelectCell,
+  selected,
+}: Props) {
   const alloc = useMemo(
     () => buildAllocation(numbers, extras),
     [numbers, extras]
@@ -48,52 +123,9 @@ function AllocationGraph({ numbers, onSelectCell, selected }: Props) {
     return a
   }
 
+  // 凡例を下端 (操作の直上)、00 をその上に置き、99 へ向けて上へ積む
   return (
-    <div class="content alloc-panel">
-      <div class="alloc-ctrls">
-        <div class="alloc-modes">
-          {ALLOC_MODES.map((m) => (
-            <button
-              key={m}
-              class={'alloc-mode-btn' + (m === mode ? ' active' : '')}
-              onClick={() => setMode(m)}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-        <div class="alloc-toggle">
-          <span class="alloc-tlabel">並び</span>
-          {(['count', 'kana'] as const).map((s) => (
-            <button
-              key={s}
-              class={'alloc-mini-btn' + (s === sortBy ? ' active' : '')}
-              onClick={() => setSortBy(s)}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <div class="alloc-toggle">
-          <span class="alloc-tlabel">枠</span>
-          {(
-            [
-              ['base', '標準'],
-              ['ext', '+予備'],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={v}
-              class={
-                'alloc-mini-btn' + ((v === 'ext') === extras ? ' active' : '')
-              }
-              onClick={() => setExtras(v === 'ext')}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div class="stack-up" style={{ '--stack-gap': '10px' }}>
       <div class="alloc-legend">
         <span>
           背景=シェア 低<i class="alloc-grad" />高
@@ -120,7 +152,7 @@ function AllocationGraph({ numbers, onSelectCell, selected }: Props) {
           未登録
         </span>
       </div>
-      <div class="alloc-grid">
+      <div class="alloc-grid stack-up" style={{ '--stack-gap': '0px' }}>
         {VALUES.map((vv) => {
           const items = sortItems(data[vv] ?? [])
           const total = items.reduce((s, i) => s + i.count, 0) || 1

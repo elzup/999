@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { vibrate } from '../lib/haptics'
 import type { QuizSummary } from './ChoiceQuiz'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
+import TestPad from './TestPad'
 import type { ReviewItem } from './ReviewPanel'
 import {
   BINARY_DIGITS_PER_ROW as COLS,
@@ -21,7 +22,7 @@ type Props = {
   onComplete: (summary: QuizSummary) => void
 }
 
-const mono = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }
+const mono = { fontFamily: 'var(--font-mono)' }
 const CURSOR_BITS = 8 // ハイライトカーソルの刻み(8bit=1バイト)
 const NIBBLE = 4 // 色分けの単位(4bit)
 const CELL_W = 11 // 1桁セルの固定幅(記憶・回答で列を縦に揃える)
@@ -109,153 +110,134 @@ function MemoView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlight, byteCount, rowStep])
 
-  return (
+  // グリッドは読む順 (1 行目が上) のまま。下から積むと行番号と読み順が逆になる
+  const main = rows.map((bits, i) => (
     <div
-      class="test-screen quiz-screen"
-      style={{ display: 'flex', flexDirection: 'column' }}
+      key={i}
+      ref={i === curRow ? rowRef : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 0',
+        borderBottom: '1px solid var(--line, rgba(255,255,255,.06))',
+      }}
     >
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            class="filter-btn"
-            style={{ fontSize: 12, padding: '4px 8px' }}
-            onClick={onQuit}
-          >
-            やめる
-          </button>
-          <span
-            style={{
-              ...mono,
-              fontSize: 16,
-              fontWeight: 700,
-              color: remain <= 30 ? 'var(--red, #f87171)' : 'var(--accent)',
-            }}
-          >
-            {mmss(remain)}
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text2)' }}>
-            {rows.length}行 記憶
-          </span>
-        </div>
-      </div>
-
-      <div class="content" style={{ overflow: 'auto', padding: '8px 10px' }}>
-        {rows.map((bits, i) => (
-          <div
-            key={i}
-            ref={i === curRow ? rowRef : undefined}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '4px 0',
-              borderBottom: '1px solid var(--line, rgba(255,255,255,.06))',
-            }}
-          >
-            <span
-              style={{
-                ...mono,
-                width: 20,
-                color: 'var(--text2)',
-                fontSize: 11,
-              }}
-            >
-              {i + 1}
-            </span>
-            <span style={{ display: 'flex' }}>
-              {Array.from({ length: COLS }, (_, col) => {
-                const a = i * COLS + col // 連続ビット位置
-                const hl = highlight && a >= byteStart && a < byteEnd
-                return (
-                  <span
-                    key={col}
-                    onClick={() =>
-                      highlight && setCursor(Math.floor(a / CURSOR_BITS))
-                    }
-                    style={{
-                      ...mono,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      width: CELL_W,
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      color: NIBBLE_COLOR[Math.floor(a / NIBBLE) % 2],
-                      background: hl
-                        ? 'color-mix(in srgb, var(--accent) 24%, transparent)'
-                        : 'transparent',
-                      borderTop: hl
-                        ? '2px solid var(--accent)'
-                        : '2px solid transparent',
-                      borderBottom: hl
-                        ? '2px solid var(--accent)'
-                        : '2px solid transparent',
-                    }}
-                  >
-                    {bits[col]}
-                  </span>
-                )
-              })}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* カーソル送り(8bit=1バイトずつ) + 記憶終了 */}
-      <div
+      <span
         style={{
-          flexShrink: 0,
-          background: 'var(--surface)',
-          borderTop: '1px solid var(--border)',
-          padding: '10px 12px 14px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
+          ...mono,
+          width: 20,
+          color: 'var(--text2)',
+          fontSize: 11,
         }}
       >
-        {highlight && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button
-              class="filter-btn"
-              style={{ flex: 1, padding: '16px 0', fontSize: 20 }}
-              disabled={cursor <= 0}
-              onClick={() => move(-1)}
-            >
-              ◀
-            </button>
+        {i + 1}
+      </span>
+      <span style={{ display: 'flex' }}>
+        {Array.from({ length: COLS }, (_, col) => {
+          const a = i * COLS + col // 連続ビット位置
+          const hl = highlight && a >= byteStart && a < byteEnd
+          return (
             <span
+              key={col}
+              onClick={() =>
+                highlight && setCursor(Math.floor(a / CURSOR_BITS))
+              }
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                minWidth: 86,
+                ...mono,
+                fontSize: 16,
+                fontWeight: 600,
+                width: CELL_W,
+                textAlign: 'center',
+                cursor: 'pointer',
+                color: NIBBLE_COLOR[Math.floor(a / NIBBLE) % 2],
+                background: hl
+                  ? 'color-mix(in srgb, var(--accent) 24%, transparent)'
+                  : 'transparent',
+                borderTop: hl
+                  ? '2px solid var(--accent)'
+                  : '2px solid transparent',
+                borderBottom: hl
+                  ? '2px solid var(--accent)'
+                  : '2px solid transparent',
               }}
             >
-              <span style={{ ...mono, fontSize: 20, fontWeight: 700 }}>
-                {curHex || '端数'}
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--text2)' }}>
-                {cursor + 1}/{byteCount} バイト
-              </span>
+              {bits[col]}
             </span>
-            <button
-              class="filter-btn"
-              style={{ flex: 1, padding: '16px 0', fontSize: 20 }}
-              disabled={cursor >= byteCount - 1}
-              onClick={() => move(1)}
-            >
-              ▶
-            </button>
-          </div>
-        )}
-        <button
-          class="filter-btn"
-          style={{ padding: '10px 0', fontWeight: 700 }}
-          onClick={onEnd}
-        >
-          記憶終了→回答
-        </button>
-      </div>
+          )
+        })}
+      </span>
     </div>
+  ))
+
+  return (
+    <Screen
+      isTest
+      class="quiz-screen"
+      main={main}
+      dock={
+        <>
+          <DockBar
+            title={
+              <span
+                style={{
+                  ...mono,
+                  color: remain <= 30 ? 'var(--red, #f87171)' : 'var(--accent)',
+                }}
+              >
+                {mmss(remain)}
+              </span>
+            }
+            sub={`${rows.length}行 記憶`}
+          >
+            <QuitButton label="やめる" onClick={onQuit} />
+          </DockBar>
+          {/* カーソル送り(8bit=1バイトずつ) + 記憶終了 */}
+          {highlight && (
+            <DockRow>
+              <button
+                class="filter-btn"
+                style={{ padding: '16px 0', fontSize: 20 }}
+                disabled={cursor <= 0}
+                onClick={() => move(-1)}
+              >
+                ◀
+              </button>
+              <span
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  minWidth: 86,
+                }}
+              >
+                <span style={{ ...mono, fontSize: 20, fontWeight: 700 }}>
+                  {curHex || '端数'}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text2)' }}>
+                  {cursor + 1}/{byteCount} バイト
+                </span>
+              </span>
+              <button
+                class="filter-btn"
+                style={{ padding: '16px 0', fontSize: 20 }}
+                disabled={cursor >= byteCount - 1}
+                onClick={() => move(1)}
+              >
+                ▶
+              </button>
+            </DockRow>
+          )}
+          <button
+            class="filter-btn"
+            style={{ padding: '10px 0', fontWeight: 700 }}
+            onClick={onEnd}
+          >
+            記憶終了→回答
+          </button>
+        </>
+      }
+    />
   )
 }
 
@@ -296,129 +278,119 @@ function BinaryResult({
   } = scoreBinary(chunkRows(entered), rows)
   const cellW = mode === 'hex' ? 30 : 74
 
-  return (
-    <div
-      class="test-screen quiz-screen"
-      style={{ display: 'flex', flexDirection: 'column' }}
-    >
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div class="pi-header-title">結果</div>
-          <span style={{ ...mono, fontSize: 15, fontWeight: 700 }}>
-            {points}/{maxPoints}pt
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text2)' }}>
-            {matched}/{cells.length}バイト一致 · 記憶{time}s
-          </span>
-          <button
-            class="filter-btn"
-            style={{ fontSize: 12, padding: '4px 10px', marginLeft: 'auto' }}
-            onClick={onClose}
-          >
-            閉じる
-          </button>
-        </div>
-      </div>
-
-      <div
-        class="content"
-        style={{ flex: 1, overflow: 'auto', padding: '10px 12px' }}
-      >
-        {/* 2進 / HEX 切替 */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          {(['bin', 'hex'] as const).map((m) => (
-            <button
-              key={m}
-              class={'filter-btn' + (mode === m ? ' active' : '')}
-              onClick={() => setMode(m)}
-            >
-              {m === 'bin' ? '2進' : 'HEX'}
-            </button>
-          ))}
+  const main = (
+    <>
+      {/* byte diff */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {cells.map((c) => (
           <span
+            key={c.index}
+            title={`${c.index + 1}バイト目`}
             style={{
-              fontSize: 11,
-              color: 'var(--text2)',
-              alignSelf: 'center',
-              marginLeft: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              width: cellW,
+              padding: '2px 0',
+              borderRadius: 5,
+              background: DIFF_BG[c.state],
+              border:
+                c.state === 'miss'
+                  ? '1px solid var(--red, #f87171)'
+                  : '1px solid transparent',
             }}
           >
-            正解 / <span style={{ color: 'var(--red, #f87171)' }}>回答</span>
-          </span>
-        </div>
-
-        {/* byte diff */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {cells.map((c) => (
-            <span
-              key={c.index}
-              title={`${c.index + 1}バイト目`}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                width: cellW,
-                padding: '2px 0',
-                borderRadius: 5,
-                background: DIFF_BG[c.state],
-                border:
-                  c.state === 'miss'
-                    ? '1px solid var(--red, #f87171)'
-                    : '1px solid transparent',
-              }}
-            >
-              <span style={{ ...mono, fontSize: 13, fontWeight: 600 }}>
-                {dispByte(c.correct, mode)}
+            <span style={{ ...mono, fontSize: 13, fontWeight: 600 }}>
+              {dispByte(c.correct, mode)}
+            </span>
+            {c.state === 'miss' && (
+              <span
+                style={{
+                  ...mono,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--red, #f87171)',
+                }}
+              >
+                {dispByte(c.user, mode)}
               </span>
-              {c.state === 'miss' && (
-                <span
-                  style={{
-                    ...mono,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--red, #f87171)',
-                  }}
-                >
-                  {dispByte(c.user, mode)}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
-
-        {/* おまけ: 行ごとの公式点数 */}
-        <div
-          style={{ fontSize: 11, color: 'var(--text2)', margin: '16px 0 6px' }}
-        >
-          行ごとの点数（おまけ）
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 6,
-            ...mono,
-            fontSize: 12,
-          }}
-        >
-          {rowScores.map((r) => (
-            <span
-              key={r.index}
-              style={{
-                color:
-                  r.points === COLS
-                    ? 'var(--green, #34d399)'
-                    : r.points > 0
-                    ? 'var(--amber, #fbbf24)'
-                    : 'var(--text2)',
-              }}
-            >
-              {r.index + 1}:{r.points}
-            </span>
-          ))}
-        </div>
+            )}
+          </span>
+        ))}
       </div>
-    </div>
+
+      {/* おまけ: 行ごとの公式点数 */}
+      <div
+        style={{ fontSize: 11, color: 'var(--text2)', margin: '16px 0 6px' }}
+      >
+        行ごとの点数（おまけ）
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 6,
+          ...mono,
+          fontSize: 12,
+        }}
+      >
+        {rowScores.map((r) => (
+          <span
+            key={r.index}
+            style={{
+              color:
+                r.points === COLS
+                  ? 'var(--green, #34d399)'
+                  : r.points > 0
+                  ? 'var(--amber, #fbbf24)'
+                  : 'var(--text2)',
+            }}
+          >
+            {r.index + 1}:{r.points}
+          </span>
+        ))}
+      </div>
+    </>
+  )
+
+  return (
+    <Screen
+      isTest
+      class="quiz-screen"
+      main={main}
+      dock={
+        <>
+          <DockBar
+            title={
+              <>
+                結果{' '}
+                <span style={mono}>
+                  {points}/{maxPoints}pt
+                </span>
+              </>
+            }
+            sub={`${matched}/${cells.length}バイト一致 · 記憶${time}s`}
+          >
+            <QuitButton label="閉じる" onClick={onClose} />
+          </DockBar>
+          {/* 2進 / HEX 切替 */}
+          <DockRow>
+            {(['bin', 'hex'] as const).map((m) => (
+              <button
+                key={m}
+                class={'filter-btn' + (mode === m ? ' active' : '')}
+                onClick={() => setMode(m)}
+              >
+                {m === 'bin' ? '2進' : 'HEX'}
+              </button>
+            ))}
+            <span class="dock-row-label">
+              正解 / <span style={{ color: 'var(--red, #f87171)' }}>回答</span>
+            </span>
+          </DockRow>
+        </>
+      }
+    />
   )
 }
 
@@ -501,7 +473,7 @@ function BinaryTest({
   const press = (k: string) => {
     if (entered.length >= total) return
     const next = entered + k
-    vibrate()
+    // 振動は TestPad が押下時に鳴らす (ここでも鳴らすと 2 回になる)
     setEnteredBoth(next)
     if (next.length >= total) finish(next)
   }
@@ -536,161 +508,105 @@ function BinaryTest({
   const curRow = Math.min(Math.floor(entered.length / COLS), rows.length - 1)
   const curCol = entered.length - curRow * COLS
 
-  return (
-    <div
-      class="test-screen quiz-screen"
-      style={{ display: 'flex', flexDirection: 'column' }}
-    >
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div class="pi-header-title">{title} 回答</div>
-          <span
-            style={{
-              ...mono,
-              fontSize: 15,
-              fontWeight: 700,
-              color: remainR <= 30 ? 'var(--red, #f87171)' : 'var(--accent)',
-            }}
-          >
-            {mmss(remainR)}
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text2)' }}>
-            {curRow + 1}/{rows.length}行 {curCol}/{COLS}
-          </span>
-          <button
-            class="filter-btn"
-            style={{ fontSize: 12, padding: '4px 10px', marginLeft: 'auto' }}
-            onClick={() => finish(entered)}
-          >
-            終了して採点
-          </button>
-        </div>
-      </div>
-
+  const main = rows.map((_, i) => {
+    const bits = enteredRows[i] ?? ''
+    const isCurRow = i === curRow
+    return (
       <div
-        class="content"
-        style={{ flex: 1, overflow: 'auto', padding: '8px 10px' }}
-      >
-        {rows.map((_, i) => {
-          const bits = enteredRows[i] ?? ''
-          const isCurRow = i === curRow
-          return (
-            <div
-              key={i}
-              ref={isCurRow ? recallRowRef : undefined}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '3px 0',
-                borderBottom: '1px solid var(--line, rgba(255,255,255,.06))',
-                background: isCurRow
-                  ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
-                  : 'transparent',
-              }}
-            >
-              <span
-                style={{
-                  ...mono,
-                  width: 20,
-                  color: 'var(--text2)',
-                  fontSize: 11,
-                }}
-              >
-                {i + 1}
-              </span>
-              <span style={{ display: 'flex' }}>
-                {Array.from({ length: COLS }, (_, col) => {
-                  const ch = bits[col]
-                  const isCaret = isCurRow && col === curCol
-                  return (
-                    <span
-                      key={col}
-                      style={{
-                        ...mono,
-                        fontSize: 16,
-                        fontWeight: 600,
-                        width: CELL_W,
-                        textAlign: 'center',
-                        color: ch
-                          ? 'var(--text)'
-                          : isCaret
-                          ? 'var(--accent)'
-                          : 'var(--muted, #6b7280)',
-                        borderBottom: isCaret
-                          ? '2px solid var(--accent)'
-                          : '2px solid transparent',
-                      }}
-                    >
-                      {ch ?? '·'}
-                    </span>
-                  )
-                })}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* 0/1 キーパッド(画面下部固定) */}
-      <div
+        key={i}
+        ref={isCurRow ? recallRowRef : undefined}
         style={{
-          flexShrink: 0,
-          background: 'var(--surface)',
-          borderTop: '1px solid var(--border)',
-          padding: '10px 12px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '3px 0',
+          borderBottom: '1px solid var(--line, rgba(255,255,255,.06))',
+          background: isCurRow
+            ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
+            : 'transparent',
         }}
       >
-        <div
+        <span
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 8,
-            width: '100%',
-            maxWidth: 320,
-            margin: '0 auto',
+            ...mono,
+            width: 20,
+            color: 'var(--text2)',
+            fontSize: 11,
           }}
         >
-          {['0', '1'].map((k) => (
-            <button
-              key={k}
-              disabled={entered.length >= total}
-              onClick={() => press(k)}
-              style={{
-                padding: '24px 0',
-                fontSize: 26,
-                fontWeight: 700,
-                ...mono,
-                borderRadius: 12,
-                border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-                background: 'var(--surface2, #1e212a)',
-                color: 'var(--text)',
-                cursor: 'pointer',
-              }}
-            >
-              {k}
-            </button>
-          ))}
-          <button
-            disabled={entered.length === 0}
-            onClick={backspace}
-            style={{
-              gridColumn: 'span 2',
-              padding: '12px 0',
-              fontSize: 16,
-              fontWeight: 600,
-              borderRadius: 12,
-              border: '1.5px solid var(--line, rgba(255,255,255,.12))',
-              background: 'transparent',
-              color: 'var(--text2)',
-              cursor: 'pointer',
-            }}
-          >
-            ⌫ 消す
-          </button>
-        </div>
+          {i + 1}
+        </span>
+        <span style={{ display: 'flex' }}>
+          {Array.from({ length: COLS }, (_, col) => {
+            const ch = bits[col]
+            const isCaret = isCurRow && col === curCol
+            return (
+              <span
+                key={col}
+                style={{
+                  ...mono,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  width: CELL_W,
+                  textAlign: 'center',
+                  color: ch
+                    ? 'var(--text)'
+                    : isCaret
+                    ? 'var(--accent)'
+                    : 'var(--muted, #6b7280)',
+                  borderBottom: isCaret
+                    ? '2px solid var(--accent)'
+                    : '2px solid transparent',
+                }}
+              >
+                {ch ?? '·'}
+              </span>
+            )
+          })}
+        </span>
       </div>
-    </div>
+    )
+  })
+
+  const isFull = entered.length >= total
+
+  return (
+    <Screen
+      isTest
+      class="quiz-screen"
+      main={main}
+      dock={
+        <>
+          <DockBar
+            title={
+              <>
+                {title} 回答{' '}
+                <span
+                  style={{
+                    ...mono,
+                    color:
+                      remainR <= 30 ? 'var(--red, #f87171)' : 'var(--accent)',
+                  }}
+                >
+                  {mmss(remainR)}
+                </span>
+              </>
+            }
+            sub={`${curRow + 1}/${rows.length}行 ${curCol}/${COLS}`}
+          >
+            <QuitButton label="終了して採点" onClick={() => finish(entered)} />
+          </DockBar>
+          {/* 0/1 キーパッド(dock の最下段) */}
+          <TestPad
+            cols={2}
+            keys={['0', '1'].map((k) => ({ value: k, disabled: isFull }))}
+            onPress={press}
+            onBackspace={backspace}
+            backspaceDisabled={entered.length === 0}
+          />
+        </>
+      }
+    />
   )
 }
 

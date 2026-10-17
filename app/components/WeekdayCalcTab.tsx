@@ -14,6 +14,7 @@ import RecordPanel from './RecordPanel'
 import ReviewPanel, { type ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import MarkButton from './MarkButton'
+import Screen, { DockBar, DockRow } from './Screen'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 
 type Answer = {
@@ -260,188 +261,188 @@ function WeekdayCalcTab() {
     saveWeekdayRecords([])
   }, [])
 
-  return (
-    <div class="weekday-layout">
-      <div class="year-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>曜日計算</div>
-          <div style={{ fontSize: '12px', color: 'var(--text2)' }}>
-            解説と10問テスト
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-            {viewMode === 'test' && currentQuestion && !finished ? (
-              <MarkButton
-                on={marks.marks.has(currentQuestion.date)}
-                onToggle={() => marks.toggle(currentQuestion.date)}
-              />
-            ) : null}
-            <button
-              class={'d2-mode-btn' + (viewMode === 'explain' ? ' active' : '')}
-              onClick={() => setViewMode('explain')}
-            >
-              解説
-            </button>
-            <button
-              class={'d2-mode-btn' + (viewMode === 'test' ? ' active' : '')}
-              onClick={() => setViewMode('test')}
-            >
-              テスト
-            </button>
-            <button class="rec-btn" onClick={() => setShowRecords(true)}>
-              記録{records.length > 0 ? `(${records.length})` : ''}
-            </button>
-          </div>
-        </div>
-      </div>
+  const isRunning = viewMode === 'test' && quiz.length > 0 && !finished
 
-      <div class="content" style={{ flex: 1, paddingBottom: '8px' }}>
-        {viewMode === 'explain' ? (
-          <div class="weekday-explain-stack">
-            <div class="weekday-toolbar">
-              <input
-                class="search-input weekday-date-input"
-                value={dateInput}
-                onInput={(e) =>
-                  setDateInput((e.target as HTMLInputElement).value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleExplain()
-                }}
-                placeholder="YYYY/MM/DD"
-              />
-              <button class="filter-btn" onClick={handleExplain}>
-                計算
-              </button>
-              <button class="filter-btn" onClick={handleRandomExplain}>
-                ランダム
-              </button>
-            </div>
-            {error ? <div class="weekday-error">{error}</div> : null}
-            {result ? <WeekdayExplanation result={result} /> : null}
+  const explainMain = (
+    <div class="weekday-explain-stack">
+      {error ? <div class="weekday-error">{error}</div> : null}
+      {result ? <WeekdayExplanation result={result} /> : null}
+    </div>
+  )
+
+  // 回答中の問題カードを dock (曜日ボタン) の直上に置き、一覧はその上へ積む
+  const testMain = (
+    <div class="stack-up" style={{ '--stack-gap': '8px' }}>
+      {quiz.length > 0 ? (
+        currentQuestion && !finished ? (
+          <div class="weekday-current-card">
+            <div class="weekday-current-no">Q{currentIndex + 1}</div>
+            <div class="weekday-current-date">{currentQuestion.date}</div>
+            <div class="weekday-current-help">日曜から縦1列で選択</div>
           </div>
         ) : (
-          <div class="weekday-test-stack">
-            <div class="weekday-test-summary">
-              <div>
-                <div class="weekday-test-title">曜日テスト</div>
-                <div class="weekday-test-sub">
-                  1500年から2500年のランダム10問
+          <div class="weekday-current-card done">
+            <div class="weekday-current-date">完了</div>
+            <div class="weekday-current-help">
+              {lastScore}/10 正解 ・ 合計 {formatMs(elapsedMs)}
+            </div>
+          </div>
+        )
+      ) : null}
+
+      {quiz.length > 0 ? (
+        <div
+          class="weekday-quiz-list stack-up"
+          style={{ '--stack-gap': '8px' }}
+        >
+          {quiz.map((question, index) => {
+            const answer = answerMap.get(question.id)
+            const isOpen = !!openExplanations[question.id]
+            return (
+              <div key={question.id} class="weekday-quiz-card">
+                <div class="weekday-quiz-row">
+                  <span class="weekday-quiz-no">Q{index + 1}</span>
+                  <span class="weekday-quiz-date">{question.date}</span>
+                  {answer ? (
+                    <>
+                      <span
+                        class={
+                          'weekday-quiz-status ' +
+                          (answer.correct ? 'ok' : 'ng')
+                        }
+                      >
+                        {answer.correct ? '正解' : '不正解'}
+                      </span>
+                      <span class="weekday-quiz-picked">
+                        {WEEKDAY_NAMES_JA[answer.selected]} →{' '}
+                        {question.result.weekdayJa}
+                      </span>
+                      <span class="weekday-quiz-time">
+                        {formatMs(answer.elapsedMs)}
+                      </span>
+                      <button
+                        class="rec-btn"
+                        onClick={() => toggleExplanation(question.id)}
+                      >
+                        {isOpen ? '解説を閉じる' : '解説'}
+                      </button>
+                    </>
+                  ) : (
+                    <span class="weekday-quiz-pending">未回答</span>
+                  )}
                 </div>
-              </div>
-              <div
-                style={{
-                  marginLeft: 'auto',
-                  display: 'flex',
-                  gap: '8px',
-                  alignItems: 'center',
-                }}
-              >
-                {quiz.length > 0 ? (
-                  <span class="weekday-timer">
-                    {lastScore}/{answers.length} ・ {formatMs(elapsedMs)}
-                  </span>
+                {answer && isOpen ? (
+                  <WeekdayExplanation result={question.result} />
                 ) : null}
               </div>
-            </div>
+            )
+          })}
+        </div>
+      ) : null}
 
-            {quiz.length === 0 ? (
-              <TestFeatureList
-                compact
-                features={[
-                  {
-                    id: 'weekday-check',
-                    title: '曜日テスト (10問)',
-                    inputMethod: 'choice',
-                    onStart: startQuiz,
-                    hasRecords: records.length > 0,
-                    onShowRecords: () => setShowRecords(true),
-                  },
-                ]}
-              />
-            ) : (
-              <>
-                {currentQuestion && !finished ? (
-                  <div class="weekday-current-card">
-                    <div class="weekday-current-no">Q{currentIndex + 1}</div>
-                    <div class="weekday-current-date">
-                      {currentQuestion.date}
-                    </div>
-                    <div class="weekday-current-help">日曜から縦1列で選択</div>
-                  </div>
-                ) : (
-                  <div class="weekday-current-card done">
-                    <div class="weekday-current-date">完了</div>
-                    <div class="weekday-current-help">
-                      {lastScore}/10 正解 ・ 合計 {formatMs(elapsedMs)}
-                    </div>
-                  </div>
-                )}
-
-                <div class="weekday-answer-row">
-                  {WEEKDAY_NAMES_JA.map((name, index) => {
-                    const disabled = !currentQuestion || finished
-                    return (
-                      <button
-                        key={name}
-                        class="weekday-answer-btn"
-                        disabled={disabled}
-                        onClick={() => handleAnswer(index)}
-                      >
-                        {name}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <div class="weekday-quiz-list">
-                  {quiz.map((question, index) => {
-                    const answer = answerMap.get(question.id)
-                    const isOpen = !!openExplanations[question.id]
-                    return (
-                      <div key={question.id} class="weekday-quiz-card">
-                        <div class="weekday-quiz-row">
-                          <span class="weekday-quiz-no">Q{index + 1}</span>
-                          <span class="weekday-quiz-date">{question.date}</span>
-                          {answer ? (
-                            <>
-                              <span
-                                class={
-                                  'weekday-quiz-status ' +
-                                  (answer.correct ? 'ok' : 'ng')
-                                }
-                              >
-                                {answer.correct ? '正解' : '不正解'}
-                              </span>
-                              <span class="weekday-quiz-picked">
-                                {WEEKDAY_NAMES_JA[answer.selected]} →{' '}
-                                {question.result.weekdayJa}
-                              </span>
-                              <span class="weekday-quiz-time">
-                                {formatMs(answer.elapsedMs)}
-                              </span>
-                              <button
-                                class="rec-btn"
-                                onClick={() => toggleExplanation(question.id)}
-                              >
-                                {isOpen ? '解説を閉じる' : '解説'}
-                              </button>
-                            </>
-                          ) : (
-                            <span class="weekday-quiz-pending">未回答</span>
-                          )}
-                        </div>
-                        {answer && isOpen ? (
-                          <WeekdayExplanation result={question.result} />
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+      <div class="weekday-test-summary">
+        <div>
+          <div class="weekday-test-title">曜日テスト</div>
+          <div class="weekday-test-sub">1500年から2500年のランダム10問</div>
+        </div>
+        <div
+          style={{
+            marginLeft: 'auto',
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
+          }}
+        >
+          {quiz.length > 0 ? (
+            <span class="weekday-timer">
+              {lastScore}/{answers.length} ・ {formatMs(elapsedMs)}
+            </span>
+          ) : null}
+        </div>
       </div>
+    </div>
+  )
+
+  const explainDock = (
+    <div class="weekday-toolbar">
+      <input
+        class="search-input weekday-date-input"
+        value={dateInput}
+        onInput={(e) => setDateInput((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleExplain()
+        }}
+        placeholder="YYYY/MM/DD"
+      />
+      <button class="filter-btn" onClick={handleExplain}>
+        計算
+      </button>
+      <button class="filter-btn" onClick={handleRandomExplain}>
+        ランダム
+      </button>
+    </div>
+  )
+
+  const testDock =
+    quiz.length === 0 ? (
+      <TestFeatureList
+        features={[
+          {
+            id: 'weekday-check',
+            title: '曜日テスト (10問)',
+            inputMethod: 'choice',
+            onStart: startQuiz,
+            hasRecords: records.length > 0,
+            onShowRecords: () => setShowRecords(true),
+          },
+        ]}
+      />
+    ) : (
+      <div class="weekday-answer-row">
+        {WEEKDAY_NAMES_JA.map((name, index) => {
+          const disabled = !currentQuestion || finished
+          return (
+            <button
+              key={name}
+              class="weekday-answer-btn"
+              disabled={disabled}
+              onClick={() => handleAnswer(index)}
+            >
+              {name}
+            </button>
+          )
+        })}
+      </div>
+    )
+
+  const dock = (
+    <>
+      <DockBar title="曜日計算" sub="解説と10問テスト">
+        {isRunning && currentQuestion ? (
+          <MarkButton
+            on={marks.marks.has(currentQuestion.date)}
+            onToggle={() => marks.toggle(currentQuestion.date)}
+          />
+        ) : null}
+        <button class="rec-btn" onClick={() => setShowRecords(true)}>
+          記録{records.length > 0 ? `(${records.length})` : ''}
+        </button>
+      </DockBar>
+      <DockRow>
+        <button
+          class={'d2-mode-btn' + (viewMode === 'explain' ? ' active' : '')}
+          onClick={() => setViewMode('explain')}
+        >
+          解説
+        </button>
+        <button
+          class={'d2-mode-btn' + (viewMode === 'test' ? ' active' : '')}
+          onClick={() => setViewMode('test')}
+        >
+          テスト
+        </button>
+      </DockRow>
+      {viewMode === 'explain' ? explainDock : testDock}
 
       {finished ? (
         <ReviewPanel
@@ -466,7 +467,16 @@ function WeekdayCalcTab() {
           onClose={() => setShowRecords(false)}
         />
       ) : null}
-    </div>
+    </>
+  )
+
+  // 回答中だけ Tab Bar ごと覆う (他テストと同じ)。解説 に切り替えると覆いが外れる
+  return (
+    <Screen
+      isTest={isRunning}
+      main={viewMode === 'explain' ? explainMain : testMain}
+      dock={dock}
+    />
   )
 }
 

@@ -8,7 +8,7 @@ type Props = {
 }
 
 // テスト中の「← 1問戻る」「スキップ →」操作バー。各テスト共通。
-// .test-footer 内に置き、テンキー等の入力UIの直上に並べる。
+// Screen の dock に置き、テンキー等の入力UIの直上に並べる。
 // スキップが無いテスト (選択肢式・即確定式) では onSkip を省略する。
 function TestNavBar({ onPrev, prevDisabled, onSkip, skipDisabled }: Props) {
   return (

@@ -3,6 +3,7 @@ import { vibrate } from '../lib/haptics'
 import type { ReviewItem } from './ReviewPanel'
 import TestNavBar from './TestNavBar'
 import MarkButton from './MarkButton'
+import Screen, { DockBar, QuitButton } from './Screen'
 import { applyMarks, useReviewMarks } from '../lib/reviewMarks'
 
 /** 4択クイズ1問。prompt(問題表示) / answer(正解) / choices(選択肢, answer含む) */
@@ -79,7 +80,7 @@ function reducer(state: State, action: Action): State {
 }
 
 /**
- * 既存の choice テスト UI(.cm-* / .test-screen / .pi-header)を流用した共有クイズ画面。
+ * 既存の choice テスト UI(.cm-*)を Screen の枠に載せた共有クイズ画面。
  * 回答すると即フィードバック → 自動で次へ進む(サクサク)。
  * ループ/採点/振り返り集計はここが持ち、記録の永続化は onComplete 経由で呼び出し側に委ねる。
  */
@@ -155,51 +156,19 @@ function ChoiceQuiz({
 
   const revealed = picked !== null
 
-  return (
-    <div
-      class="test-screen quiz-screen is-choice"
-      onClick={revealed ? advance : undefined}
-    >
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div class="pi-header-title">{title}</div>
-          <span
-            style={{
-              fontSize: '13px',
-              color: 'var(--accent)',
-              fontFamily: 'monospace',
-            }}
-          >
-            {score}正解
-          </span>
-          <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-            {idx + 1}/{questions.length}
-          </span>
-          <span style={{ marginLeft: 'auto' }}>
-            <MarkButton
-              on={marks.has(q.prompt)}
-              onToggle={() => toggleMark(q.prompt)}
-            />
-          </span>
-          <button
-            class="filter-btn"
-            style={{
-              fontSize: '12px',
-              minWidth: '50px',
-              padding: '4px 10px',
-            }}
-            onClick={(e) => {
-              e.stopPropagation()
-              onQuit()
-            }}
-          >
-            終了
-          </button>
-        </div>
-      </div>
+  // 回答表示中は画面のどこをタップしても次へ進む。終了は送らずに閉じる
+  // (QuitButton は押下イベントをそのまま渡してくる)
+  const quit = (e?: Event) => {
+    e?.stopPropagation()
+    onQuit()
+  }
 
-      {/* 回答後はどこをタップしても即次へ(待ち time をスキップ) */}
-      <div class="content">
+  return (
+    <Screen
+      onClick={revealed ? advance : undefined}
+      isTest
+      class="quiz-screen is-choice"
+      main={
         <div class="cm-quiz-wrap">
           <div class="cm-card-prompt">
             <div class="cm-card-order">
@@ -212,36 +181,47 @@ function ChoiceQuiz({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* 入力は画面下端の .test-footer に固定。数字テストのテンキーと同じ位置 */}
-      <div class="test-footer">
-        <TestNavBar onPrev={back} prevDisabled={idx === 0 || revealed} />
-        <div class="cm-choice-list">
-          {q.choices.map((choice, i) => {
-            const isAnswer = choice === q.answer
-            const isPicked = choice === picked
-            const cls =
-              'cm-choice-btn' +
-              (revealed && isAnswer ? ' is-correct' : '') +
-              (revealed && isPicked && !isAnswer ? ' is-wrong' : '')
-            return (
-              <button
-                key={choice}
-                class={cls}
-                disabled={revealed}
-                onClick={() => pick(choice)}
-              >
-                <span class="cm-choice-index">
-                  {String.fromCharCode(65 + i)}
-                </span>
-                <span class="cm-choice-value">{choice}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
+      }
+      dock={
+        <>
+          <DockBar
+            title={title}
+            sub={`${score}正解 · ${idx + 1}/${questions.length}`}
+          >
+            <MarkButton
+              on={marks.has(q.prompt)}
+              onToggle={() => toggleMark(q.prompt)}
+            />
+            <QuitButton onClick={quit} />
+          </DockBar>
+          <TestNavBar onPrev={back} prevDisabled={idx === 0 || revealed} />
+          {/* 選択肢は数字テストのテンキーと同じ dock の最下段に置いて位置を揃える */}
+          <div class="cm-choice-list">
+            {q.choices.map((choice, i) => {
+              const isAnswer = choice === q.answer
+              const isPicked = choice === picked
+              const cls =
+                'cm-choice-btn' +
+                (revealed && isAnswer ? ' is-correct' : '') +
+                (revealed && isPicked && !isAnswer ? ' is-wrong' : '')
+              return (
+                <button
+                  key={choice}
+                  class={cls}
+                  disabled={revealed}
+                  onClick={() => pick(choice)}
+                >
+                  <span class="cm-choice-index">
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span class="cm-choice-value">{choice}</span>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      }
+    />
   )
 }
 

@@ -1,5 +1,6 @@
 import type { CardEntry } from '../data/schema'
 import { cardValues, formatCardId } from '../data/cards'
+import { IconStar, IconStarOutline } from './Icons'
 
 type Props = {
   c: CardEntry
@@ -30,24 +31,6 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
         <span class="detail-id" style={{ color: suitColor(c.suit) }}>
           {formatCardId(c)}
         </span>
-        <div class="detail-actions">
-          <span
-            class={'bm-star ' + (isBm ? 'on' : '')}
-            style={{ fontSize: '22px' }}
-            onClick={() => onToggleBm(bmKey)}
-          >
-            {isBm ? '★' : '☆'}
-          </span>
-          {onClose && (
-            <button
-              class="d2-mode-btn"
-              style={{ padding: '4px 10px', flex: 'none' }}
-              onClick={onClose}
-            >
-              ×
-            </button>
-          )}
-        </div>
       </div>
       <div class="card-detail-body">
         {items.map(([label, val, score]) => {
@@ -75,6 +58,22 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
             </div>
           )
         })}
+      </div>
+      {/* 操作はカードの最下段 (NumDetailPanel と同じ並び・見た目) */}
+      <div class="detail-foot-actions">
+        <button
+          class={'detail-act' + (isBm ? ' on' : '')}
+          onClick={() => onToggleBm(bmKey)}
+          aria-pressed={isBm}
+        >
+          {isBm ? <IconStar /> : <IconStarOutline />}
+          <span>{isBm ? '登録済み' : 'ブックマーク'}</span>
+        </button>
+        {onClose && (
+          <button class="detail-act" onClick={onClose}>
+            閉じる
+          </button>
+        )}
       </div>
     </div>
   )

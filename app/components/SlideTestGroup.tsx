@@ -3,6 +3,7 @@ import type { ComponentChildren } from 'preact'
 import type { SlideDeck } from '../lib/slideDeck'
 import SlideLauncher from './SlideLauncher'
 import SubTabGroup from './SubTabGroup'
+import Screen from './Screen'
 
 type Props = {
   // 'subtab.<group>' の <group>。サブタブの選択状態の保存先になる。
@@ -33,13 +34,16 @@ function SlideTestGroup({
           id: 'test',
           label: 'テスト',
           render: () => (
-            <div class="content content-bottom slide-test-home">
-              <SlideLauncher
-                deck={deck}
-                bookmarks={bookmarks}
-                onToggleBm={onToggleBm}
-              />
-            </div>
+            <Screen
+              main={null}
+              dock={
+                <SlideLauncher
+                  deck={deck}
+                  bookmarks={bookmarks}
+                  onToggleBm={onToggleBm}
+                />
+              }
+            />
           ),
         },
       ]}

@@ -21,6 +21,7 @@ import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import type { ReviewItem } from './ReviewPanel'
 import { vibrate } from '../lib/haptics'
 import TestFeatureList from './TestFeatureList'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 
 type Props = {
   cards: CardEntry[]
@@ -403,269 +404,235 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
       : null
 
   if (mode === 'train') {
-    return (
-      <div
-        class="test-screen"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <div class="pi-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div class="pi-header-title">カード連想テスト</div>
-            <span
-              style={{
-                fontSize: '13px',
-                color: trainStopped ? 'var(--text2)' : 'var(--accent)',
-                fontFamily: 'monospace',
-              }}
-            >
-              {elapsed}秒{trainStopped ? ' (停止)' : ''}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
+    const main = (
+      <div class="cm-train-wrap">
+        <div class="cm-train-head">
+          <div class="cm-train-order">
+            グループ {trainGroupIdx + 1} / {trainGroups.length}
+          </div>
+          <div class="cm-train-note">
+            連想できたら矢印で進む。あいまいなら答えを見て確認（見ると自動で要復習に）。最後まで行ったら停止。
+          </div>
+        </div>
+
+        <div
+          class="cm-train-grid"
+          style={{
+            gridTemplateColumns: `repeat(${
+              currentTrainGroup?.length ?? trainSettings.groupSize
+            }, minmax(0, 1fr))`,
+          }}
+        >
+          {currentTrainGroup?.map((card) => {
+            const key = card.suit + card.rank
+            const bmKey = 'c:' + key
+            const isBm = bookmarks.has(bmKey)
+            const revealed = revealedKeys.has(key)
+            const prompt = pickCardValue(card)
+            return (
+              <div key={key} class="cm-train-cardwrap">
+                <div
+                  class={'cm-train-card ' + card.suit}
+                  style={{ color: suitColor(card.suit) }}
+                >
+                  {formatCardId(card)}
+                </div>
+                <div
+                  class={'cm-train-answer' + (revealed ? ' shown' : '')}
+                  onClick={() =>
+                    !revealed && toggleReveal(key, bmKey, revealed, isBm)
+                  }
+                >
+                  {revealed ? prompt?.value ?? '—' : '答えを見る'}
+                </div>
+                <div class="cm-train-cardtools">
+                  <button
+                    class={'cm-train-mark' + (isBm ? ' on' : '')}
+                    onClick={() => onToggleBm(bmKey)}
+                    aria-pressed={isBm}
+                  >
+                    {isBm ? '★' : '☆'} 要復習
+                  </button>
+                  {revealed ? (
+                    <button
+                      class="cm-train-hide"
+                      onClick={() => toggleReveal(key, bmKey, revealed, isBm)}
+                    >
+                      答えを隠す
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+
+    const dock = (
+      <>
+        <DockBar
+          title="カード連想テスト"
+          sub={
+            <>
+              <span
+                style={{
+                  color: trainStopped ? 'var(--text2)' : 'var(--accent)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {elapsed}秒{trainStopped ? ' (停止)' : ''}
+              </span>{' '}
               {Math.min(trainGroupIdx + 1, trainGroups.length)}/
-              {trainGroups.length}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-              {trainSettings.groupSize}枚 /{' '}
+              {trainGroups.length} {trainSettings.groupSize}枚 /{' '}
               {trainSettings.direction === 'right'
                 ? '右から開始'
                 : '左から開始'}
-            </span>
-            <button
-              class="filter-btn"
-              style={{
-                fontSize: '12px',
-                minWidth: '60px',
-                padding: '4px 10px',
-                marginLeft: 'auto',
-              }}
-              onClick={() => stopTrain()}
-            >
-              終了
-            </button>
-          </div>
+            </>
+          }
+        >
+          <QuitButton onClick={() => stopTrain()} />
+        </DockBar>
+        <div class="cm-train-nav">
+          <button
+            class="cm-train-arrow"
+            disabled={trainAtLast}
+            onClick={flipLeft}
+            aria-label="左にめくる"
+          >
+            ←
+          </button>
+          <button
+            class="cm-train-stop"
+            disabled={trainStopped}
+            onClick={stopTrainTimer}
+          >
+            {trainStopped ? '停止済' : '⏱ 停止'}
+          </button>
+          <button
+            class="cm-train-arrow"
+            disabled={trainAtFirst}
+            onClick={flipRight}
+            aria-label="右にめくる"
+          >
+            →
+          </button>
         </div>
-
-        <div class="content" style={{ flex: 1 }}>
-          <div class="cm-train-wrap">
-            <div class="cm-train-head">
-              <div class="cm-train-order">
-                グループ {trainGroupIdx + 1} / {trainGroups.length}
-              </div>
-              <div class="cm-train-note">
-                連想できたら矢印で進む。あいまいなら答えを見て確認（見ると自動で要復習に）。最後まで行ったら停止。
-              </div>
-            </div>
-
-            <div
-              class="cm-train-grid"
-              style={{
-                gridTemplateColumns: `repeat(${
-                  currentTrainGroup?.length ?? trainSettings.groupSize
-                }, minmax(0, 1fr))`,
-              }}
-            >
-              {currentTrainGroup?.map((card) => {
-                const key = card.suit + card.rank
-                const bmKey = 'c:' + key
-                const isBm = bookmarks.has(bmKey)
-                const revealed = revealedKeys.has(key)
-                const prompt = pickCardValue(card)
-                return (
-                  <div key={key} class="cm-train-cardwrap">
-                    <div
-                      class={'cm-train-card ' + card.suit}
-                      style={{ color: suitColor(card.suit) }}
-                    >
-                      {formatCardId(card)}
-                    </div>
-                    <div
-                      class={'cm-train-answer' + (revealed ? ' shown' : '')}
-                      onClick={() =>
-                        !revealed && toggleReveal(key, bmKey, revealed, isBm)
-                      }
-                    >
-                      {revealed ? prompt?.value ?? '—' : '答えを見る'}
-                    </div>
-                    <div class="cm-train-cardtools">
-                      <button
-                        class={'cm-train-mark' + (isBm ? ' on' : '')}
-                        onClick={() => onToggleBm(bmKey)}
-                        aria-pressed={isBm}
-                      >
-                        {isBm ? '★' : '☆'} 要復習
-                      </button>
-                      {revealed ? (
-                        <button
-                          class="cm-train-hide"
-                          onClick={() =>
-                            toggleReveal(key, bmKey, revealed, isBm)
-                          }
-                        >
-                          答えを隠す
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div class="cm-train-nav">
-              <button
-                class="cm-train-arrow"
-                disabled={trainAtLast}
-                onClick={flipLeft}
-                aria-label="左にめくる"
-              >
-                ←
-              </button>
-              <button
-                class="cm-train-stop"
-                disabled={trainStopped}
-                onClick={stopTrainTimer}
-              >
-                {trainStopped ? '停止済' : '⏱ 停止'}
-              </button>
-              <button
-                class="cm-train-arrow"
-                disabled={trainAtFirst}
-                onClick={flipRight}
-                aria-label="右にめくる"
-              >
-                →
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      </>
     )
+
+    return <Screen isTest main={main} dock={dock} />
   }
 
   if (mode === 'check') {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {/* Header */}
-        <div class="pi-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div class="pi-header-title">カード</div>
-            <span
-              style={{
-                fontSize: '13px',
-                color: 'var(--accent)',
-                fontFamily: 'monospace',
-              }}
-            >
-              {elapsed}秒 {correctCount}/{results.length}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-              {Math.min(checkIdx + 1, allItems.length)}/{allItems.length}
-            </span>
-            <span
-              style={{
-                marginLeft: 'auto',
-                display: 'flex',
-                gap: '6px',
-                alignItems: 'center',
-              }}
-            >
-              {!finished && currentItem ? (
-                <MarkButton
-                  on={marks.marks.has(formatCardId(currentItem.card))}
-                  onToggle={() => marks.toggle(formatCardId(currentItem.card))}
-                />
-              ) : null}
-              <button
-                class="filter-btn"
-                style={{
-                  fontSize: '12px',
-                  minWidth: '50px',
-                  padding: '4px 10px',
-                }}
-                onClick={() => endCheck()}
-              >
-                終了
-              </button>
-            </span>
-          </div>
+    const main = currentItem ? (
+      <div class="cm-card-prompt">
+        <div class="cm-card-order">
+          {checkIdx + 1} / {allItems.length}
         </div>
-
-        {/* Matching area */}
-        <div class="content" style={{ flex: 1 }}>
-          <div class="cm-quiz-wrap cm-quiz-split">
-            {currentItem ? (
-              <>
-                <div class="cm-card-prompt cm-card-prompt-side">
-                  <div class="cm-card-order">
-                    {checkIdx + 1} / {allItems.length}
-                  </div>
-                  <div
-                    class={'cm-card-face ' + currentItem.card.suit}
-                    style={{ color: suitColor(currentItem.card.suit) }}
-                  >
-                    {formatCardId(currentItem.card)}
-                  </div>
-                </div>
-
-                <div class="cm-choice-list cm-choice-list-side">
-                  {currentOptions.map((item, idx) => (
-                    <button
-                      key={'v-' + item.key}
-                      class="cm-choice-btn"
-                      onClick={() => tapChoice(item.key)}
-                    >
-                      <span class="cm-choice-index">
-                        {String.fromCharCode(65 + idx)}
-                      </span>
-                      <span class="cm-choice-value">{item.value}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Footer: 1問戻る */}
-        <div class="test-footer">
-          <TestNavBar
-            onPrev={prevQuestion}
-            prevDisabled={results.length === 0}
-          />
+        <div
+          class={'cm-card-face ' + currentItem.card.suit}
+          style={{ color: suitColor(currentItem.card.suit) }}
+        >
+          {formatCardId(currentItem.card)}
         </div>
       </div>
+    ) : null
+
+    // 選択肢は答える操作なので dock (親指側)。問題のカードだけ main に残す
+    const dock = (
+      <>
+        <DockBar
+          title="カード"
+          sub={
+            <>
+              <span
+                style={{
+                  color: 'var(--accent)',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                {elapsed}秒 {correctCount}/{results.length}
+              </span>{' '}
+              {Math.min(checkIdx + 1, allItems.length)}/{allItems.length}
+            </>
+          }
+        >
+          {!finished && currentItem ? (
+            <MarkButton
+              on={marks.marks.has(formatCardId(currentItem.card))}
+              onToggle={() => marks.toggle(formatCardId(currentItem.card))}
+            />
+          ) : null}
+          <QuitButton onClick={() => endCheck()} />
+        </DockBar>
+        {/* 1問戻る */}
+        <TestNavBar onPrev={prevQuestion} prevDisabled={results.length === 0} />
+        {currentItem ? (
+          <div class="cm-choice-list">
+            {currentOptions.map((item, idx) => (
+              <button
+                key={'v-' + item.key}
+                class="cm-choice-btn"
+                onClick={() => tapChoice(item.key)}
+              >
+                <span class="cm-choice-index">
+                  {String.fromCharCode(65 + idx)}
+                </span>
+                <span class="cm-choice-value">{item.value}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </>
     )
+
+    return <Screen isTest main={main} dock={dock} />
   }
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Header */}
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div class="pi-header-title">カード</div>
-          {lastRecord ? (
-            <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
+  const panel = selectedCard ? (
+    <CardDetailPanel
+      c={selectedCard}
+      bookmarks={bookmarks}
+      onToggleBm={onToggleBm}
+      onClose={() => setSelected(null)}
+    />
+  ) : null
+
+  // スートの見出しは grid-up が行ごと占有させる。先頭のスペードが下端 (親指側)
+  const main = (
+    <div class="card-grid grid-up" style={{ '--cols': 4, '--gap': '6px' }}>
+      {SUITS.map((s) => (
+        <>
+          <div class="card-suit-header" key={'h' + s}>
+            {SUIT_LABEL[s]} {SUIT_NAME[s]}
+          </div>
+          {cards
+            .filter((c) => c.suit === s)
+            .map((c) => {
+              const key = s + c.rank
+              return (
+                <CardCell
+                  key={key}
+                  c={c}
+                  selected={selected === key}
+                  stat={stats[key]}
+                  onSelect={() => setSelected(selected === key ? null : key)}
+                />
+              )
+            })}
+        </>
+      ))}
+    </div>
+  )
+
+  const dock = (
+    <>
+      <DockBar
+        title="カード"
+        sub={
+          lastRecord ? (
+            <>
               前回:
               <span style={{ color: 'var(--accent)' }}>
                 {lastRecord.score}/{lastRecord.total}
@@ -679,99 +646,73 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
                   </span>
                 </>
               ) : null}
-            </div>
-          ) : null}
-        </div>
-      </div>
+            </>
+          ) : null
+        }
+      />
+      <DockRow>
+        <span class="dock-row-label">枚数</span>
+        {[2, 3, 4].map((size) => (
+          <button
+            key={size}
+            class={
+              'd2-mode-btn' +
+              (trainSettings.groupSize === size ? ' active' : '')
+            }
+            onClick={() =>
+              updateTrainSettings({
+                groupSize: size as CardTrainSettings['groupSize'],
+              })
+            }
+          >
+            {size}枚
+          </button>
+        ))}
+      </DockRow>
+      <DockRow>
+        <span class="dock-row-label">送り</span>
+        <button
+          class={
+            'd2-mode-btn' +
+            (trainSettings.direction === 'right' ? ' active' : '')
+          }
+          onClick={() => updateTrainSettings({ direction: 'right' })}
+        >
+          右から
+        </button>
+        <button
+          class={
+            'd2-mode-btn' +
+            (trainSettings.direction === 'left' ? ' active' : '')
+          }
+          onClick={() => updateTrainSettings({ direction: 'left' })}
+        >
+          左から
+        </button>
+      </DockRow>
+      {/* 記録は 2 つのテストで 1 本の履歴を共有しているので、どちらの «記録» からも
+          同じパネルを開く */}
+      <TestFeatureList
+        features={[
+          {
+            id: 'card-train',
+            title: '連想テスト',
+            inputMethod: 'advance',
+            onStart: startTrain,
+            hasRecords: records.some((r) => r.mode === 'train'),
+            onShowRecords: () => setShowRecords(true),
+          },
+          {
+            id: 'card-choice',
+            title: '選択テスト',
+            inputMethod: 'choice',
+            onStart: startCheck,
+            hasRecords: records.some((r) => r.mode !== 'train'),
+            onShowRecords: () => setShowRecords(true),
+          },
+        ]}
+      />
 
-      {/* テスト入口は年号 / 年コードと同じ帯に置く。記録は 2 つのテストで 1 本の
-          履歴を共有しているので、どちらの «記録» からも同じパネルを開く */}
-      <div class="test-feature-bar">
-        <TestFeatureList
-          compact
-          features={[
-            {
-              id: 'card-train',
-              title: '連想テスト',
-              inputMethod: 'advance',
-              onStart: startTrain,
-              hasRecords: records.some((r) => r.mode === 'train'),
-              onShowRecords: () => setShowRecords(true),
-            },
-            {
-              id: 'card-choice',
-              title: '選択テスト',
-              inputMethod: 'choice',
-              onStart: startCheck,
-              hasRecords: records.some((r) => r.mode !== 'train'),
-              onShowRecords: () => setShowRecords(true),
-            },
-          ]}
-        />
-      </div>
-
-      <div class="card-train-settings">
-        <div class="card-train-settings-row">
-          <span class="card-train-settings-label">枚数</span>
-          <div class="card-train-settings-btns">
-            {[2, 3, 4].map((size) => (
-              <button
-                key={size}
-                class={
-                  'd2-mode-btn' +
-                  (trainSettings.groupSize === size ? ' active' : '')
-                }
-                onClick={() =>
-                  updateTrainSettings({
-                    groupSize: size as CardTrainSettings['groupSize'],
-                  })
-                }
-              >
-                {size}枚
-              </button>
-            ))}
-          </div>
-        </div>
-        <div class="card-train-settings-row">
-          <span class="card-train-settings-label">送り</span>
-          <div class="card-train-settings-btns">
-            <button
-              class={
-                'd2-mode-btn' +
-                (trainSettings.direction === 'right' ? ' active' : '')
-              }
-              onClick={() => updateTrainSettings({ direction: 'right' })}
-            >
-              右から
-            </button>
-            <button
-              class={
-                'd2-mode-btn' +
-                (trainSettings.direction === 'left' ? ' active' : '')
-              }
-              onClick={() => updateTrainSettings({ direction: 'left' })}
-            >
-              左から
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Detail panel */}
-      <div class="sticky-wrap">
-        {selectedCard ? (
-          <CardDetailPanel
-            c={selectedCard}
-            bookmarks={bookmarks}
-            onToggleBm={onToggleBm}
-            onClose={() => setSelected(null)}
-          />
-        ) : (
-          <div class="sticky-empty">カードを選択</div>
-        )}
-      </div>
-
-      {/* Records overlay */}
       {showRecords ? (
         <RecordPanel
           title="カード"
@@ -782,7 +723,6 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
         />
       ) : null}
 
-      {/* Review overlay */}
       {reviewItems ? (
         <ReviewPanel
           title="カード"
@@ -793,37 +733,10 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
           onClose={() => setReviewItems(null)}
         />
       ) : null}
-
-      {/* Card grid */}
-      <div class="content" style={{ flex: 1 }}>
-        <div class="card-grid">
-          {SUITS.map((s) => (
-            <>
-              <div class="card-suit-header" key={'h' + s}>
-                {SUIT_LABEL[s]} {SUIT_NAME[s]}
-              </div>
-              {cards
-                .filter((c) => c.suit === s)
-                .map((c) => {
-                  const key = s + c.rank
-                  return (
-                    <CardCell
-                      key={key}
-                      c={c}
-                      selected={selected === key}
-                      stat={stats[key]}
-                      onSelect={() =>
-                        setSelected(selected === key ? null : key)
-                      }
-                    />
-                  )
-                })}
-            </>
-          ))}
-        </div>
-      </div>
-    </div>
+    </>
   )
+
+  return <Screen main={main} panel={panel} dock={dock} />
 }
 
 export default CardTab

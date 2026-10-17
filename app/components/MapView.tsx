@@ -16,6 +16,7 @@ import {
   type Slot,
 } from '../lib/choice'
 import NumDetailPanel from './NumDetailPanel'
+import Screen, { DockRow } from './Screen'
 
 export type MapBounds = {
   minX: number
@@ -32,7 +33,7 @@ type Props = {
   /** choices を受けて cells/bounds を組み立てる (choices 変更で再構築) */
   build: (choices: Record<string, Slot>) => BuildResult
   hint?: string
-  /** 上部に差し込む追加コントロール (マップ切替など) */
+  /** dock の最下段 (サブタブの直上) に差し込む追加コントロール (マップ切替など) */
   controls?: ComponentChildren
 }
 
@@ -141,105 +142,98 @@ function MapView({
 
   const pickCount = Object.keys(choices).length
 
-  return (
+  // 採用の切り替えは触るものなので、カードの下 (閉じるの直上) に置く
+  const panel = selEntry ? (
+    <>
+      <NumDetailPanel
+        d={selEntry}
+        bookmarks={bookmarks}
+        onToggleBm={onToggleBm}
+      />
+      <CandidatePicker
+        entry={selEntry}
+        current={selSlot}
+        onPick={(slot) => pick(selEntry.num, slot)}
+      />
+      <div class="panel-foot">
+        <button class="btn-wide" onClick={() => setSel(null)}>
+          閉じる
+        </button>
+      </div>
+    </>
+  ) : null
+
+  const dock = (
+    <>
+      {selEntry ? null : (
+        <DockRow>
+          <span class="dock-row-label ymap-hint">
+            {hint ?? '数字をタップで詳細・候補切替'}
+          </span>
+          <button
+            class="filter-btn"
+            onClick={exportChoices}
+            disabled={pickCount === 0}
+          >
+            {copied ? 'コピー済' : `選択をエクスポート (${pickCount})`}
+          </button>
+        </DockRow>
+      )}
+      {controls}
+    </>
+  )
+
+  // 2 次元のマップなので下から上へは並べ替えない (位置そのものが意味を持つ)
+  const main = (
     <div
+      class="ymap-grid"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
+        gridTemplateColumns: `repeat(${bounds.cols}, 1fr)`,
+        gridTemplateRows: `repeat(${bounds.rows}, 1fr)`,
+        aspectRatio: `${bounds.cols} / ${bounds.rows}`,
       }}
     >
-      {controls}
-      <div class="sticky-wrap">
-        {selEntry ? (
-          <>
-            <CandidatePicker
-              entry={selEntry}
-              current={selSlot}
-              onPick={(slot) => pick(selEntry.num, slot)}
-            />
-            <NumDetailPanel
-              d={selEntry}
-              bookmarks={bookmarks}
-              onToggleBm={onToggleBm}
-            />
-            <div style={{ padding: '0 12px 8px' }}>
-              <button
-                class="d2-mode-btn"
-                style={{ padding: '4px 10px', width: '100%' }}
-                onClick={() => setSel(null)}
-              >
-                閉じる
-              </button>
-            </div>
-          </>
-        ) : (
-          <div class="ymap-toolbar">
-            <span class="sticky-empty" style={{ flex: 1 }}>
-              {hint ?? '数字をタップで詳細・候補切替'}
-            </span>
-            <button
-              class="filter-btn"
-              style={{ fontSize: '11px', padding: '4px 8px' }}
-              onClick={exportChoices}
-              disabled={pickCount === 0}
-            >
-              {copied ? 'コピー済' : `選択をエクスポート (${pickCount})`}
-            </button>
-          </div>
-        )}
-      </div>
-      <div class="content ymap-scroll">
+      {units.map((unit: MapUnit) => (
         <div
-          class="ymap-grid"
+          key={unit.key}
+          class={'ymap-unit' + (unit.tile ? '' : ' empty')}
           style={{
-            gridTemplateColumns: `repeat(${bounds.cols}, 1fr)`,
-            gridTemplateRows: `repeat(${bounds.rows}, 1fr)`,
-            aspectRatio: `${bounds.cols} / ${bounds.rows}`,
+            gridColumn: `${unit.gx - bounds.minX + 1} / span 1`,
+            gridRow: `${unit.gy - bounds.minY + 1} / span 1`,
+            '--ymap-c': unit.color,
+            borderTopWidth: unit.borders.top ? '2.5px' : '0',
+            borderRightWidth: unit.borders.right ? '2.5px' : '0',
+            borderBottomWidth: unit.borders.bottom ? '2.5px' : '0',
+            borderLeftWidth: unit.borders.left ? '2.5px' : '0',
           }}
         >
-          {units.map((unit: MapUnit) => (
-            <div
-              key={unit.key}
-              class={'ymap-unit' + (unit.tile ? '' : ' empty')}
-              style={{
-                gridColumn: `${unit.gx - bounds.minX + 1} / span 1`,
-                gridRow: `${unit.gy - bounds.minY + 1} / span 1`,
-                '--ymap-c': unit.color,
-                borderTopWidth: unit.borders.top ? '2.5px' : '0',
-                borderRightWidth: unit.borders.right ? '2.5px' : '0',
-                borderBottomWidth: unit.borders.bottom ? '2.5px' : '0',
-                borderLeftWidth: unit.borders.left ? '2.5px' : '0',
-              }}
-            >
-              {unit.tile ? (
-                <MapTileView
-                  tile={unit.tile}
-                  selected={sel === unit.tile.num}
-                  onSelect={() => setSel(unit.tile?.num ?? null)}
-                />
-              ) : null}
-            </div>
-          ))}
-          {cells.map((cell, i) => (
-            <div
-              key={`label-${i}`}
-              class="ymap-cell-label-wrap"
-              style={{
-                gridColumn: `${cell.x - bounds.minX + 1} / span ${cell.w}`,
-                gridRow: `${cell.y - bounds.minY + 1} / span ${cell.h}`,
-              }}
-            >
-              <span class="ymap-cell-label">
-                {GROUP_LABEL[cell.group] ?? cell.group}
-              </span>
-            </div>
-          ))}
+          {unit.tile ? (
+            <MapTileView
+              tile={unit.tile}
+              selected={sel === unit.tile.num}
+              onSelect={() => setSel(unit.tile?.num ?? null)}
+            />
+          ) : null}
         </div>
-      </div>
+      ))}
+      {cells.map((cell, i) => (
+        <div
+          key={`label-${i}`}
+          class="ymap-cell-label-wrap"
+          style={{
+            gridColumn: `${cell.x - bounds.minX + 1} / span ${cell.w}`,
+            gridRow: `${cell.y - bounds.minY + 1} / span ${cell.h}`,
+          }}
+        >
+          <span class="ymap-cell-label">
+            {GROUP_LABEL[cell.group] ?? cell.group}
+          </span>
+        </div>
+      ))}
     </div>
   )
+
+  return <Screen main={main} panel={panel} dock={dock} />
 }
 
 export default MapView

@@ -266,9 +266,7 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition:
-    background 0.12s,
-    color 0.12s;
+  transition: background 0.12s, color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -318,8 +316,7 @@ body {
   border-color: var(--text2);
 }
 
-/* 番号と、それに付く操作 (ブックマーク) の列。28px の見出しの下に余る
-   空間へ星を落とすので、カードの高さは増えない */
+/* 番号の列 */
 .detail-idcol {
   display: flex;
   flex-direction: column;
@@ -364,10 +361,34 @@ body {
   gap: 6px;
   flex-shrink: 0;
 }
-/* 番号に対する操作 (ブックマーク / 編集) を番号の下にまとめる */
-.detail-idcol-actions {
+/* 詳細カードの操作 (ブックマーク / 編集 / 閉じる) はカードの最下段に横並び。
+   Detail Panel は dock の直上なので、ここが親指に一番近い */
+.detail-foot-actions {
   display: flex;
-  gap: 2px;
+  gap: 6px;
+  margin-top: 10px;
+}
+.detail-act {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.detail-act svg {
+  width: 16px;
+  height: 16px;
+}
+.detail-act.on {
+  color: var(--warn);
+  border-color: var(--warn);
 }
 /* 語は折り返す。nowrap + flex-shrink:0 のままだと縮む余地がゼロになり、
    カードごと横スクロールする (実際に踏んだ) */
@@ -384,29 +405,6 @@ body {
 }
 .detail-main-word.dim {
   color: var(--text2);
-}
-
-.detail-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding-left: 10px;
-  border-left: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.detail-actions .bm-star {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  font-size: 22px !important;
-  line-height: 1;
-}
-.detail-actions .d2-mode-btn {
-  min-width: 36px;
-  height: 36px;
 }
 .detail-body {
   display: flex;
@@ -600,9 +598,6 @@ body {
   flex-direction: column;
   justify-content: flex-end;
 }
-.d2-fav-section {
-  margin-bottom: 8px;
-}
 .d2-fav-label {
   font-size: 11px;
   color: var(--text2);
@@ -616,15 +611,6 @@ body {
   flex-wrap: wrap;
   gap: 4px;
 }
-.d2-detail-header {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 .d2-detail-list {
   flex: 1;
   overflow-y: auto;
@@ -634,14 +620,6 @@ body {
 }
 .d2-detail-list .detail-panel:last-child {
   border-bottom: none;
-}
-.sticky-wrap {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  min-height: 80px;
-  max-height: 56vh;
-  overflow-y: auto;
 }
 .sticky-empty {
   min-height: 100px;
@@ -656,19 +634,6 @@ body {
 }
 .bm-star.on {
   color: var(--warn);
-}
-/* Numpad filter (数字タブ) */
-.np-filter-bar {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  padding: 6px 8px 8px;
-}
-.np-filter-display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
 }
 .np-filter-digits {
   font-size: 28px;
@@ -788,16 +753,6 @@ body {
   background: var(--accent2);
   border-color: var(--accent);
 }
-/* Shared test footer (1問戻る / スキップ + 入力UI) */
-.test-footer {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 .test-nav {
   display: flex;
   justify-content: space-between;
@@ -810,46 +765,49 @@ body {
 .test-nav-btn:disabled {
   opacity: 0.4;
 }
-/* テスト入口の帯。Header の直下に置き、どのグループでも同じ位置・余白にする */
-.test-feature-bar {
-  padding: 6px 8px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
+/* テスト開始ボタン (TestFeatureList)。全画面でこの 1 種類だけを使う。
+   2 列のタイル。dock に置いても一覧ページに置いても同じ大きさ・同じ見た目 */
 .test-feature-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  align-items: stretch;
 }
 .test-feature-item {
-  display: inline-flex;
+  display: flex;
   align-items: stretch;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
 }
 .test-feature-start {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;
   border: none;
   background: var(--accent2);
   color: var(--accent);
-  padding: 5px 10px;
+  padding: 10px 10px;
   cursor: pointer;
+  text-align: left;
 }
+/* 省略記号で切ると «bin(4bit) …» のように区別が付かなくなるので折り返す */
 .test-feature-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: bold;
-  white-space: nowrap;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 .test-feature-method {
+  margin-left: auto;
+  flex-shrink: 0;
   border: 1px solid currentColor;
   border-radius: 999px;
   padding: 1px 5px;
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.2;
   color: var(--text2);
   background: var(--surface);
@@ -865,47 +823,18 @@ body {
   color: #fbbf24;
 }
 .test-feature-records {
+  flex-shrink: 0;
   border: none;
   border-left: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text2);
-  padding: 5px 7px;
+  padding: 0 8px;
   font-size: 10px;
   cursor: pointer;
 }
 .test-feature-start:active,
 .test-feature-records:active {
   filter: brightness(1.2);
-}
-.test-feature-list.compact .test-feature-start {
-  padding: 4px 8px;
-}
-.test-feature-list.compact .test-feature-title {
-  font-size: 12px;
-}
-.test-feature-list.compact .test-feature-method {
-  font-size: 9px;
-}
-/* 非compact(FF テスト選択の主リスト): タップしやすい大きめの縦並び */
-.test-feature-list:not(.compact) {
-  flex-direction: column;
-}
-.test-feature-list:not(.compact) .test-feature-item {
-  width: 100%;
-}
-.test-feature-list:not(.compact) .test-feature-start {
-  flex: 1;
-  padding: 12px 16px;
-}
-.test-feature-list:not(.compact) .test-feature-title {
-  font-size: 15px;
-}
-.test-feature-list:not(.compact) .test-feature-method {
-  margin-left: auto;
-}
-.test-feature-list:not(.compact) .test-feature-records {
-  padding: 0 16px;
-  font-size: 12px;
 }
 /* 前回実施したテストの強調マーカー */
 .test-feature-item.is-last {
@@ -921,50 +850,15 @@ body {
   padding: 1px 7px;
   white-space: nowrap;
 }
-@media (max-width: 640px) {
-  .test-feature-list {
-    width: 100%;
-    gap: 4px;
-  }
-  .test-feature-item {
-    flex: 1 1 calc(50% - 4px);
-    min-width: 0;
-  }
-  .test-feature-start {
-    flex: 1;
-    justify-content: center;
-    padding: 4px 7px;
-  }
-  .test-feature-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .test-feature-method {
-    display: none;
-  }
-  /* 非compact は縦フル幅・method 表示を維持 */
-  .test-feature-list:not(.compact) {
-    gap: 8px;
-  }
-  .test-feature-list:not(.compact) .test-feature-item {
-    flex: none;
-    width: 100%;
-  }
-  .test-feature-list:not(.compact) .test-feature-start {
-    justify-content: flex-start;
-    padding: 12px 16px;
-  }
-  .test-feature-list:not(.compact) .test-feature-method {
-    display: inline-flex;
-  }
-}
-
-/* 2桁タブ mode switch */
-.d2-mode-switch {
+/* 見出し付きのまとまり (FF テストの 1 桁 / 2 桁 など) */
+.test-feature-section {
   display: flex;
+  flex-direction: column;
   gap: 4px;
-  margin-bottom: 8px;
-  padding: 8px 8px 0;
+}
+.test-feature-section-label {
+  font-size: 11px;
+  color: var(--text2);
 }
 .d2-mode-btn {
   flex: 1;
@@ -1015,18 +909,13 @@ body {
 }
 
 /* Sub-tab switch */
-/* サブタブ切替は Tab Bar のすぐ上 (2 段目) に置く。上端だと片手で指が届かない。
-   JSX の並びは変えず、order で最後に回し margin-top: auto で下端へ寄せる
-   (中身が短い画面でも途中に浮かない) */
+/* サブタブ切替は Tab Bar のすぐ上 (2 段目)。SubTabGroup が中身の後ろに描く */
 .sub-tab-switch {
   display: flex;
   gap: 0;
   background: var(--surface);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
-  /* 下へ送った操作部 (order: 1) よりさらに下、Tab Bar の直上に固定する */
-  order: 2;
-  margin-top: auto;
 }
 .sub-tab-group {
   display: flex;
@@ -1049,38 +938,6 @@ body {
 .sub-tab-btn.active {
   color: var(--accent);
   border-top-color: var(--accent);
-}
-
-.tag-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.tag-summary-bar {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-.tag-summary-main {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.tag-summary-num {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--accent);
-  font-family: var(--font-mono);
-}
-.tag-summary-label {
-  font-size: 12px;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.tag-summary-sub {
-  font-size: 12px;
-  color: var(--text2);
 }
 .tag-empty {
   padding: 16px 8px;
@@ -1245,12 +1102,6 @@ body {
 }
 .d3-suffix.hidden {
   color: var(--border);
-}
-/* D3 grouped view */
-.d3-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 .d3-z-section {
 }
@@ -1424,69 +1275,6 @@ body {
   padding: 1px 5px;
   border-radius: 8px;
 }
-
-/* Pi tab */
-.pi-layout {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.pi-header {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 12px;
-}
-.pi-header-title {
-  font-size: 16px;
-  font-weight: bold;
-}
-.pi-header-sub {
-  font-size: 12px;
-  color: var(--text2);
-}
-/* モードごとに「開始 + 記録」を1ユニットにまとめて見分けやすくする */
-.pi-mode-group {
-  display: inline-flex;
-  align-items: stretch;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-.pi-mode-start {
-  font-size: 12px;
-  font-weight: bold;
-  padding: 5px 12px;
-  background: var(--accent2);
-  color: var(--accent);
-  border: none;
-  cursor: pointer;
-}
-.pi-mode-start:active {
-  filter: brightness(1.2);
-}
-.pi-mode-rec {
-  font-size: 10px;
-  padding: 5px 7px;
-  background: var(--surface2);
-  color: var(--text2);
-  border: none;
-  border-left: 1px solid var(--border);
-  cursor: pointer;
-}
-.pi-mode-rec:active {
-  color: var(--accent);
-}
-@media (max-width: 640px) {
-  .pi-mode-start {
-    padding: 4px 9px;
-  }
-  .pi-mode-rec {
-    padding: 4px 6px;
-  }
-}
 .pi-view-grid {
   display: flex;
   flex-direction: column;
@@ -1544,16 +1332,6 @@ body {
   display: flex;
   align-items: center;
   height: 30px;
-}
-.pi-row-label {
-  width: 100%;
-  background: var(--surface2);
-  color: var(--text2);
-  font-size: 11px;
-  font-weight: bold;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-family: var(--font-mono);
 }
 .pi-check-grid {
   display: flex;
@@ -1671,21 +1449,6 @@ body {
   opacity: 0.4;
   cursor: default;
 }
-
-/* Year tab */
-.year-layout {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.year-header {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 12px;
-}
 .year-list {
   display: flex;
   flex-direction: column;
@@ -1777,19 +1540,6 @@ body {
 .gogen-origin.hidden {
   color: var(--text2);
 }
-.gogen-hide-btn {
-  margin-left: auto;
-  padding: 3px 10px;
-  font-size: 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-}
-.gogen-hide-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
 .slide-gogen {
   font-size: 18px;
   line-height: 1.5;
@@ -1864,12 +1614,16 @@ body {
   display: flex;
   flex-direction: column;
 }
+/* シートの見出し兼操作行。シートの最下段に置く (閉じるを親指側へ) */
 .rec-panel-header {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+.rec-panel-header .rec-btn {
+  padding: 8px 14px;
 }
 .rec-panel-header h3 {
   font-size: 14px;
@@ -1957,7 +1711,7 @@ body {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 .review-score {
   font-size: 20px;
@@ -2097,28 +1851,6 @@ body {
   border-color: var(--warn);
   background: rgba(251, 191, 36, 0.15);
 }
-
-/* 連想テスト: 自己採点の縦長リスト */
-.recall-list-screen {
-  display: flex;
-  flex-direction: column;
-}
-.recall-list-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-bottom: 20px;
-}
-.rl-toolbar {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
-.rl-toolbar .filter-btn {
-  font-size: 11px;
-  padding: 3px 8px;
-  min-width: 0;
-}
 .rl-count {
   font-size: 13px;
   font-weight: bold;
@@ -2208,33 +1940,6 @@ body {
   color: var(--text2);
   padding: 40px 0;
 }
-
-/* 連想テストのホーム(モード選択) */
-.assoc-test-home {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.assoc-pool-switch {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.assoc-pool-switch .sub-tab-btn {
-  flex: 0 0 auto;
-  padding: 6px 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-.assoc-pool-switch .sub-tab-btn.active {
-  border-color: var(--accent);
-  background: var(--accent2);
-}
-.assoc-pool-count {
-  font-size: 12px;
-  color: var(--text2);
-  margin-left: 4px;
-}
 /* 自己採点の範囲 (百の位)。5 列 × 2 段で親指が届く大きさを保つ */
 .assoc-block-grid {
   display: grid;
@@ -2276,36 +1981,6 @@ body {
   color: var(--text2);
   line-height: 1.6;
   margin: 0;
-}
-.assoc-mode-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.assoc-mode-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-}
-.assoc-mode-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-.assoc-mode-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: var(--text);
-}
-.assoc-mode-sub {
-  font-size: 12px;
-  color: var(--text2);
 }
 .assoc-record-line {
   font-size: 13px;
@@ -2379,95 +2054,6 @@ body {
 .cm-choice-value {
   flex: 1;
   word-break: break-word;
-}
-.cm-quiz-split {
-  max-width: 760px;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 16px;
-}
-.cm-card-prompt-side {
-  flex: 0 0 40%;
-  position: sticky;
-  top: 8px;
-}
-.cm-choice-list-side {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 九九タブ browse view */
-.kuku-header {
-  flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.kuku-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-}
-.kuku-count {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text2);
-  margin-left: 4px;
-}
-.kuku-tiers {
-  display: flex;
-  gap: 6px;
-}
-.kuku-tier-btn {
-  flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 6px 0;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.kuku-tier-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent2);
-}
-.kuku-sub {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.kuku-desc {
-  font-size: 12px;
-  color: var(--text2);
-  min-width: 0;
-}
-.kuku-views {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-.kuku-view-btn {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.kuku-view-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.kuku-content {
-  padding: 10px 12px;
 }
 .kuku-group {
   margin-bottom: 14px;
@@ -2656,17 +2242,6 @@ body {
     font-size: 16px;
   }
 }
-.kuku-test {
-  margin-top: 6px;
-}
-.kuku-record-line {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--text2);
-}
-.kuku-record-line b {
-  color: var(--accent);
-}
 /* 共有クイズ(ChoiceQuiz)の結果画面 */
 .quiz-result {
   align-items: center;
@@ -2683,31 +2258,6 @@ body {
 .quiz-result-actions {
   display: flex;
   gap: 12px;
-}
-
-.card-train-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.card-train-settings-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.card-train-settings-label {
-  width: 36px;
-  flex: 0 0 36px;
-  color: var(--text2);
-  font-size: 12px;
-}
-.card-train-settings-btns {
-  display: flex;
-  gap: 6px;
-  flex: 1;
 }
 .cm-train-wrap {
   max-width: 760px;
@@ -2851,15 +2401,6 @@ body {
   border-color: var(--border);
 }
 @media (max-width: 640px) {
-  .card-train-settings-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .card-train-settings-label {
-    width: auto;
-    flex: none;
-  }
   .cm-train-card {
     min-height: 120px;
   }
@@ -2953,17 +2494,7 @@ body {
     grid-template-columns: 1fr;
   }
 }
-
-/* Weekday */
-.weekday-layout {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.weekday-explain-stack,
-.weekday-test-stack {
+.weekday-explain-stack {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -3199,13 +2730,13 @@ body {
 .weekday-quiz-no {
   font-size: 11px;
   color: var(--text2);
-  font-family: monospace;
+  font-family: var(--font-mono);
   min-width: 24px;
 }
 .weekday-quiz-date {
   font-size: 15px;
   font-weight: bold;
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--text);
 }
 .weekday-quiz-status {
@@ -3228,7 +2759,7 @@ body {
 .weekday-quiz-time {
   font-size: 12px;
   color: var(--accent);
-  font-family: monospace;
+  font-family: var(--font-mono);
   margin-left: auto;
 }
 .weekday-quiz-pending {
@@ -3409,15 +2940,6 @@ body {
 .rules-toggle-btn:hover {
   color: var(--text);
   border-color: var(--accent);
-}
-
-/* ─── Rules Summary Table (整理可視化) ─── */
-.rules-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 .rules-summary-controls {
   display: flex;
@@ -3734,15 +3256,6 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
-
-/* --- Allocation graph (Digit Kana Allocation) --- */
-.alloc-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  overflow-y: auto;
-}
 .alloc-modes {
   display: flex;
   gap: 6px;
@@ -3913,32 +3426,6 @@ body {
   pointer-events: none;
 }
 
-/* split: graph on top, detail (cell words / tree) at bottom */
-.recall-split {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.recall-split-graph {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  overflow: hidden;
-}
-.recall-split-detail {
-  flex-shrink: 0;
-  height: 42%;
-  border-top: 2px solid var(--border);
-  display: flex;
-  overflow: hidden;
-  background: var(--bg);
-}
-.recall-split-detail > .content {
-  flex: 1;
-}
-
 /* cell words list */
 .cellwords {
   flex: 1;
@@ -4015,22 +3502,6 @@ body {
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 0 4px;
-}
-.recall-back {
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  background: var(--surface, #1a1d27);
-  color: var(--text2);
-  border-radius: 5px;
-  font-size: 12px;
-}
-
-/* 年コード 2次元マップ */
-.ymap-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 12px;
 }
 .ymap-grid {
   display: grid;
@@ -4113,14 +3584,7 @@ body {
   padding: 1px 2px;
   border-top-left-radius: 4px;
 }
-.ymap-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-}
-/* 百の位の切り替え。親指が届くよう下 (サブタブの直上) に置く。DOM 上は先頭なので
-   order で末尾へ送る。5 列 × 2 段で押しやすい大きさを保つ */
+/* 百の位の切り替え。5 列 × 2 段で押しやすい大きさを保つ */
 .num-map-sel {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -4129,7 +3593,6 @@ body {
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
-  order: 1;
 }
 .num-map-sel-btn {
   padding: 10px 4px;
@@ -4954,40 +4417,6 @@ body {
 .settings-top > .storage-panel {
   padding: 0;
 }
-
-/* Slideshow tab */
-.slide-tab {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.slide-settings {
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  padding: 10px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.slide-header {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.slide-title {
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--text);
-}
 .slide-range {
   flex: 1 1 100%;
   display: flex;
@@ -5117,9 +4546,6 @@ body {
   font-weight: bold;
   color: var(--text);
 }
-.slide-test-home {
-  padding: 12px;
-}
 .slide-num {
   font-size: 84px;
   font-weight: bold;
@@ -5174,15 +4600,6 @@ body {
   flex-wrap: wrap;
   gap: 6px;
   justify-content: center;
-}
-
-.slide-actions {
-  flex-shrink: 0;
-  display: flex;
-  gap: 6px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
 }
 .slide-btn {
   flex: 1;
@@ -5362,18 +4779,6 @@ body {
   color: #d97706;
   opacity: 0.8;
 }
-
-/* 番号単位の統合ビュー (spec:number-detail-view)。UI 案 A-2 + B-1 */
-.nd-panel {
-  /* 下端の未保存バーに最後のカードが隠れない分だけ空ける */
-  padding: 12px 10px 140px;
-}
-.nd-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
 .nd-jump {
   width: 5em;
   padding: 6px 8px;
@@ -5414,9 +4819,17 @@ body {
 }
 /* 流れの外に重ねる。出るたびに編集欄が上下に動かないように。
    下端に出すのは、下のカードで評価を押したときも目に入る位置だから */
+/* 番号詳細の dock。通知をその真上に重ねるための基準 */
+.nd-dock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .nd-status {
-  position: fixed;
-  bottom: calc(var(--bar-h) + var(--safe-bottom) + 12px);
+  position: absolute;
+  /* dock の上端 (padding 8px の外) から少し浮かせる */
+  bottom: calc(100% + 16px);
   left: 50%;
   z-index: 60;
   max-width: calc(100% - 32px);
@@ -5435,10 +4848,6 @@ body {
 }
 .nd-status.show {
   opacity: 1;
-}
-/* 未保存バーが出ているあいだは、その上に出す */
-.nd-status.raised {
-  bottom: calc(var(--bar-h) + var(--safe-bottom) + 68px);
 }
 .nd-status.error {
   color: #dc2626;
@@ -5599,11 +5008,6 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-.nd-actions {
-  display: flex;
-  gap: 8px;
-  margin: 10px 0;
-}
 .nd-save {
   background: var(--accent);
   color: var(--bg);
@@ -5615,7 +5019,6 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
   padding: 8px 10px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -5636,11 +5039,6 @@ body {
   font-size: 13px;
 }
 .nd-savebar {
-  position: fixed;
-  right: 10px;
-  bottom: calc(var(--bar-h) + var(--safe-bottom) + 8px);
-  left: 10px;
-  z-index: 55;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -5648,7 +5046,6 @@ body {
   background: var(--surface);
   border: 1px solid var(--warn);
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.3);
 }
 .nd-savebar-text {
   flex: 1;
@@ -5828,45 +5225,317 @@ body {
   pointer-events: none;
 }
 
-/* 操作部 (Header / テスト入口 / 設定) は親指が届く下側に置く。DOM 順は変えず、order で
-   Detail Panel とコンテンツの後ろへ送る (サブタブ切り替えはさらにその下)。 */
-.pi-header,
-.year-header,
-.kuku-header,
-.test-feature-bar,
-.card-train-settings {
-  order: 1;
-  border-bottom: none;
+/* ===== Screen: 全画面共通の枠 (components/Screen.tsx) =====
+   上から main (読む) → panel (Detail Panel) → dock (操作)。触るものは全部下半分に置き、
+   親指が画面上部へ伸びないようにする。位置は DOM 順だけで決める (order は使わない)。 */
+.screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* .test-screen (fixed 全画面) と併用したときも縦積みにする */
+.screen.test-screen {
+  display: flex;
+}
+/* column-reverse のスクロール領域は初期スクロールが下端になり、短い中身は下に寄る */
+.screen-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.screen-main-inner {
+  padding: 8px;
+}
+.screen-panel {
+  flex-shrink: 0;
+  max-height: 56vh;
+  overflow-y: auto;
+  background: var(--surface);
   border-top: 1px solid var(--border);
 }
-/* テスト画面中の Header は進捗と終了ボタンなので、入力パッドと離して上に残す */
-.test-screen .pi-header,
-.test-screen .year-header {
-  order: 0;
-  border-top: none;
+.screen-dock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.screen-dock:empty {
+  display: none;
+}
+
+/* dock の 1 行目 (旧 .pi-header / .year-header)。操作は右端、左上には何も置かない */
+.dock-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+}
+.dock-bar-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.dock-bar-title {
+  font-size: 16px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.dock-bar-sub {
+  font-size: 12px;
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dock-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+/* 設定・絞り込み・表示切り替えの 1 段。押しやすい幅で横に並べ、溢れたら折り返す */
+.dock-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dock-row > .filter-btn,
+.dock-row > .d2-mode-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 9px 6px;
+}
+.dock-row-label {
+  font-size: 11px;
+  color: var(--text2);
+  flex: 0 0 auto;
+}
+.quit-btn {
+  min-width: 64px;
+  padding: 8px 12px;
+}
+
+/* ===== 下から上へ並べる =====
+   一覧・グリッドは先頭を下端 (親指側) に置き、上へ積む。
+   .stack-up: 縦の一覧 / 節の並び。 .grid-up: 列数固定のグリッド (--cols で列数) */
+.stack-up {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--stack-gap, 2px);
+}
+.grid-up {
+  --gap: 2px;
+  display: flex;
+  flex-wrap: wrap-reverse;
+  align-content: flex-start;
+  gap: var(--gap);
+}
+.grid-up > * {
+  flex: 0 0 calc((100% - (var(--cols, 10) - 1) * var(--gap)) / var(--cols, 10));
+  min-width: 0;
+}
+/* 行を占有する見出し (百の位の帯、スートの見出し) */
+.grid-up > .num-band,
+.grid-up > .card-suit-header,
+.grid-up > .grid-full {
+  flex-basis: 100%;
+}
+/* 節の見出し (数字 (12) / カード (3) など) */
+.section-label {
+  color: var(--text2);
+  font-size: 12px;
+}
+/* 中身が無いときの案内。main の下端 (親指側) に出る */
+.screen-empty {
+  text-align: center;
+  color: var(--text2);
+  padding: 40px 0;
+}
+
+/* ===== pi-year グループ (PiTab / YearTab / GogenTab / KukuTab) の追加分 ===== */
+
+/* テスト中の進捗 (DockBar の右端、印・終了の左)。旧 Header のインライン指定を移したもの */
+.dock-progress {
+  font-size: 13px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* DockBar の sub に添える前回 / 最高 (π / 年号 / 九九で共通) */
+.dock-rec {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--text2);
+}
+.dock-rec b {
+  color: var(--accent);
+  font-weight: normal;
+}
+.dock-rec b.is-best {
+  color: var(--warn);
+}
+
+/* 年号の時代絞り込み。5 個ずつ 2 段の DockRow に入るので文字を詰める */
+.dock-row > .era-btn {
+  font-size: 11px;
+}
+.era-count {
+  margin-left: 4px;
+  color: var(--text2);
+  font-size: 10px;
+}
+
+/* π テストのブロック見出しは下から積む並びでブロックの下端に来る。
+   sticky top のままだと効かないうえ、スクロール中に上へ飛ぶので外す */
+.pi-check-grid .pi-block-label {
+  position: static;
+}
+
+/* 九九の段見出しも節の下端に来るので sticky top を外す */
+.kuku-group-head {
+  position: static;
+  margin-bottom: 0;
+  margin-top: 6px;
+}
+
+/* ===== card-d3 グループ (CardTab / D3Tab / DigitTab) の追加分 ===== */
+
+/* panel の先頭に置く読むだけの見出し (旧 .d2-detail-header から ★ / × を抜いたもの)。
+   2桁グループ「12_ 10件」や年コード「12 → 3」を、積んだ詳細カードの上に出す */
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
 }
 
-/* ボタンが並ぶだけのページ (テスト一覧など) は下から積む。justify-content: flex-end だと
-   はみ出した上側へスクロールできなくなるので、auto マージンの詰め物を先頭に入れて寄せる */
-.content-bottom {
+/* 見出しは stack-up で中身の下 (親指側) に来るので、区切り線も下ではなく上に引く */
+.d3-z-section > .d3-z-label {
+  border-bottom: none;
+  border-top: 1px solid var(--border);
+  margin-bottom: 0;
+}
+
+/* 幅が揃わないチップ / ペアの折り返しも先頭行を下端にする */
+.d2-fav-list,
+.d3-pairs {
+  flex-wrap: wrap-reverse;
+}
+.d2-fav-label {
+  margin-bottom: 0;
+}
+
+/* 選択肢 6 個を dock に積むと高さを取りすぎて問題カードが潰れるので詰める */
+.screen-dock .cm-choice-list {
+  gap: 6px;
+}
+.screen-dock .cm-choice-btn {
+  padding: 10px 14px;
+  font-size: 16px;
+}
+
+/* ===== group "tests" (ChoiceQuiz / KeypadQuiz / RecallListQuiz / BinaryTest / SlidePlayer) ===== */
+
+/* TestPad / Numpad を dock に入れたとき。面・上罫線・safe-area は .screen-dock と
+   .test-screen が持つので、.test-pad 側で二重にしない */
+.screen-dock .test-pad {
+  padding: 0;
+  background: none;
+  border-top: 0;
+}
+
+/* スライド: ステージを main の高さいっぱいに広げ、余白のどこをタップしても送れるようにする
+   (旧 .slide-stage は flex:1 で画面中央を占めていた)。カードは下端 (親指側) に寄せる */
+.slide-screen .screen-main-inner {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
 }
-.content-bottom > * {
-  flex-shrink: 0;
+.slide-screen .slide-stage {
+  flex: 1 0 auto;
+  justify-content: flex-end;
+  overflow-y: visible;
 }
-/* 先頭の子は条件付きで差し替わる (記録パネル等) ので、擬似要素を詰め物にする */
-.content-bottom::before {
-  content: '';
-  margin-top: auto;
+
+/* ===== group: number-misc (NumberTab / MapView / NumMapTab / TagPanel / RecallTab / CellWords) ===== */
+
+/* NumberTab: 絞り込み中の桁パターン (旧 .sticky-empty 内のインライン style) */
+.nt-filter-label {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--accent);
 }
-/* スライドの設定も下へ。再生・送りのボタンは一番下に残す */
-.slide-settings {
-  order: 1;
-  border-bottom: none;
+
+/* MapView: dock の案内文。dock-row-label は幅固定 (0 0 auto) なので、長い案内で
+   エクスポートボタンが押し出されないよう伸縮させる */
+.ymap-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* NumMapTab: 百の位セレクタは .screen-dock の中に入るので、枠・背景・余白は dock 側に任せる */
+.screen-dock .num-map-sel {
+  padding: 0;
+  border-top: 0;
+  background: none;
+}
+
+/* TagPanel: panel に入れた詳細カードの外側余白 (panel 自体は余白を持たない) */
+.tag-panel-detail {
+  padding: 8px;
+}
+
+/* RecallTab: 旧 .recall-split-detail の代わり。語の一覧は下から積むので
+   column-reverse でスクロールの初期位置を下端にする。語の 1 行 1 行が押せるので、
+   dock (2 段) と合わせて一覧の上端が画面の中央より下に収まる高さに抑える */
+.recall-detail {
+  max-height: 26vh;
+  display: flex;
+  flex-direction: column-reverse;
+  overflow-y: auto;
+}
+
+/* CellWords: 見出し (件数) を一覧の下端に置いたので、sticky も下端側に張り付ける */
+.cellwords.stack-up .cellwords-head {
+  top: auto;
+  bottom: 0;
+  margin-bottom: 0;
+  background: var(--surface);
+}
+
+/* 詳細カードを複数枚積む枠 (PanelCards)。高さは先頭カード 1 枚分を JS で与え、
+   カード単位でスナップさせる。column-reverse で初期スクロールを下端 (先頭カード) に */
+.panel-cards {
+  display: flex;
+  flex-direction: column-reverse;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+}
+.panel-cards > .stack-up {
+  --stack-gap: 0px;
+}
+.panel-cards > .stack-up > * {
+  scroll-snap-align: end;
   border-top: 1px solid var(--border);
 }
-.slide-actions {
-  order: 2;
+
+/* テスト開始ボタンが 1 個だけ / 奇数個の最後は 1 行を占有する (半端な空きを作らない) */
+.test-feature-item:only-child,
+.test-feature-item:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }

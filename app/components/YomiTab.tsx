@@ -5,6 +5,7 @@ import ChoiceQuiz, { type QuizSummary } from './ChoiceQuiz'
 import ReviewPanel from './ReviewPanel'
 import RecordPanel from './RecordPanel'
 import TestFeatureList from './TestFeatureList'
+import Screen, { DockRow } from './Screen'
 import { useQuizRecords } from '../lib/useQuizRecords'
 import { makeRng } from '../lib/kukuQuiz'
 import {
@@ -140,18 +141,44 @@ function YomiTab({ numbers, rules, yomiUse }: Props) {
 
   if (items.length === 0) {
     return (
-      <div class="content" style={{ padding: 24, color: 'var(--text2)' }}>
-        読みの表 (rules) が配信データに入っていません。`nr build:data`
-        で再生成してください。
-      </div>
+      <Screen
+        main={
+          <div class="screen-empty">
+            読みの表 (rules) が配信データに入っていません。`nr build:data`
+            で再生成してください。
+          </div>
+        }
+      />
     )
   }
 
   const assigned = scoped.filter((i) => i.nums.length > 0).length
   const totalAssign = scoped.reduce((sum, i) => sum + i.nums.length, 0)
 
-  return (
-    <div class="content content-bottom">
+  // 読みの一覧は参照用なので main (下から上へ)。範囲・出題数と開始は dock
+  const main = (
+    <div class="stack-up" style={{ '--stack-gap': '8px' }}>
+      <div class="section-label">
+        {scoped.length} 個中 {assigned} 個が使用中 (割当 {totalAssign} 番号)。
+        タップで割当先の番号を表示。
+      </div>
+      <div class="grid-up" style={{ '--cols': 4, '--gap': '8px' }}>
+        {scoped.map((item) => (
+          <YomiCell
+            key={item.kana}
+            item={item}
+            open={opened === item.kana}
+            onToggle={() =>
+              setOpened((prev) => (prev === item.kana ? null : item.kana))
+            }
+          />
+        ))}
+      </div>
+    </div>
+  )
+
+  const dock = (
+    <>
       {showRecords && (
         <RecordPanel
           title={QUIZ_TITLE[showRecords]}
@@ -203,39 +230,10 @@ function YomiTab({ numbers, rules, yomiUse }: Props) {
           },
         ]}
       />
-
-      <div
-        style={{
-          fontSize: 12,
-          color: 'var(--text2)',
-          margin: '14px 2px 6px',
-        }}
-      >
-        {scoped.length} 個中 {assigned} 個が使用中 (割当 {totalAssign} 番号)。
-        タップで割当先の番号を表示。
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))',
-          gap: 8,
-          paddingBottom: 24,
-        }}
-      >
-        {scoped.map((item) => (
-          <YomiCell
-            key={item.kana}
-            item={item}
-            open={opened === item.kana}
-            onToggle={() =>
-              setOpened((prev) => (prev === item.kana ? null : item.kana))
-            }
-          />
-        ))}
-      </div>
-    </div>
+    </>
   )
+
+  return <Screen main={main} dock={dock} />
 }
 
 type ChipOption = {
@@ -247,29 +245,18 @@ type ChipOption = {
 
 function ChipRow({ label, options }: { label: string; options: ChipOption[] }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        margin: '8px 0',
-        flexWrap: 'wrap',
-      }}
-    >
-      <span style={{ fontSize: 11, color: 'var(--text2)', minWidth: 28 }}>
-        {label}
-      </span>
+    <DockRow>
+      <span class="dock-row-label">{label}</span>
       {options.map((o) => (
         <button
           key={o.key}
           class={'filter-btn' + (o.active ? ' active' : '')}
-          style={{ fontSize: 12, padding: '4px 10px' }}
           onClick={o.onSelect}
         >
           {o.label}
         </button>
       ))}
-    </div>
+    </DockRow>
   )
 }
 
@@ -285,6 +272,7 @@ function YomiCell({
   const used = item.nums.length > 0
   return (
     <div
+      class={open ? 'grid-full' : undefined}
       onClick={onToggle}
       style={{
         border: `1px solid ${
@@ -294,14 +282,13 @@ function YomiCell({
         padding: '8px 6px',
         textAlign: 'center',
         cursor: 'pointer',
-        gridColumn: open ? '1 / -1' : undefined,
         background: 'var(--surface2, transparent)',
       }}
     >
       <div style={{ fontSize: 20, fontWeight: 700 }}>{item.kana}</div>
       <div
         style={{
-          fontFamily: 'ui-monospace, monospace',
+          fontFamily: 'var(--font-mono)',
           fontSize: 14,
           color: 'var(--accent)',
         }}
@@ -322,7 +309,7 @@ function YomiCell({
             fontSize: 12,
             color: 'var(--text2)',
             marginTop: 6,
-            fontFamily: 'ui-monospace, monospace',
+            fontFamily: 'var(--font-mono)',
             wordBreak: 'break-all',
           }}
         >

@@ -25,12 +25,13 @@ import {
 } from '../lib/slideshow'
 import { deckHasBookmarks, type SlideDeck } from '../lib/slideDeck'
 import { vibrate } from '../lib/haptics'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 
 type Props = {
   deck: SlideDeck
   bookmarks?: Set<string>
   onToggleBm?: (key: string) => void
-  // 渡すとテスト画面 (.test-screen) として全画面で開き、ヘッダーに終了ボタンを出す。
+  // 渡すとテスト画面 (Screen isTest) として全画面で開き、DockBar に終了ボタンを出す。
   onQuit?: () => void
 }
 
@@ -157,17 +158,38 @@ function SlidePlayer({ deck, bookmarks, onToggleBm, onQuit }: Props) {
   const isOk = curId ? okSet.has(curId) : false
   const isRevealed = phase === 'answer'
 
-  return (
-    <div class={'slide-tab' + (onQuit ? ' test-screen' : '')}>
-      {onQuit ? (
-        <div class="slide-header">
-          <span class="slide-title">{deck.title}</span>
-          <button class="filter-btn" onClick={onQuit}>
-            終了
-          </button>
+  const main = (
+    <div class="slide-stage" onClick={cur ? step : undefined}>
+      {cur ? (
+        <div class="slide-card">
+          <div class="slide-prompt">{cur.prompt}</div>
+          {/* 隠している間も場所を確保し、答えが出た瞬間に問題面が動かないようにする */}
+          <div class={'slide-answer' + (isRevealed ? '' : ' is-hidden')}>
+            {cur.answer}
+          </div>
         </div>
+      ) : (
+        <div class="slide-empty">
+          {bmOnly ? '★ブックマークがありません' : '表示できる項目がありません'}
+        </div>
+      )}
+      <div class="slide-count">
+        {pool.length > 0
+          ? `${pool.length}件${okSet.size ? ` / OK ${okSet.size}` : ''}`
+          : ''}
+      </div>
+    </div>
+  )
+
+  // 設定 → 操作の順に積み、毎回押す 戻る / 次へ を最下段 (親指側) に置く
+  const dock = (
+    <>
+      {onQuit ? (
+        <DockBar title={deck.title}>
+          <QuitButton onClick={onQuit} />
+        </DockBar>
       ) : null}
-      <div class="slide-settings">
+      <DockRow>
         <div class="slide-seg">
           <button
             class={
@@ -212,32 +234,8 @@ function SlidePlayer({ deck, bookmarks, onToggleBm, onQuit }: Props) {
           min={ANSWER_DELAY_MIN}
           onChange={(answerMs) => persist({ ...settings, answerMs })}
         />
-      </div>
-
-      <div class="slide-stage" onClick={cur ? step : undefined}>
-        {cur ? (
-          <div class="slide-card">
-            <div class="slide-prompt">{cur.prompt}</div>
-            {/* 隠している間も場所を確保し、答えが出た瞬間に問題面が動かないようにする */}
-            <div class={'slide-answer' + (isRevealed ? '' : ' is-hidden')}>
-              {cur.answer}
-            </div>
-          </div>
-        ) : (
-          <div class="slide-empty">
-            {bmOnly
-              ? '★ブックマークがありません'
-              : '表示できる項目がありません'}
-          </div>
-        )}
-        <div class="slide-count">
-          {pool.length > 0
-            ? `${pool.length}件${okSet.size ? ` / OK ${okSet.size}` : ''}`
-            : ''}
-        </div>
-      </div>
-
-      <div class="slide-actions">
+      </DockRow>
+      <DockRow>
         <button
           class="slide-btn"
           disabled={!canGoBack(state)}
@@ -282,8 +280,17 @@ function SlidePlayer({ deck, bookmarks, onToggleBm, onQuit }: Props) {
         >
           {isRevealed ? '次へ →' : '答え'}
         </button>
-      </div>
-    </div>
+      </DockRow>
+    </>
+  )
+
+  return (
+    <Screen
+      isTest={Boolean(onQuit)}
+      class="slide-screen"
+      main={main}
+      dock={dock}
+    />
   )
 }
 

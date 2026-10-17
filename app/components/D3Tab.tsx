@@ -13,6 +13,7 @@ import TestNavBar from './TestNavBar'
 import MarkButton from './MarkButton'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
@@ -82,7 +83,7 @@ function D3CheckGrid({
   }, [answers])
 
   return (
-    <div class="d3-check-grid">
+    <div class="d3-check-grid grid-up" style={{ '--cols': 10, '--gap': '2px' }}>
       {order.map((xyz, i) => {
         const xy = xyz.slice(0, 2)
         const z = xyz[2]
@@ -339,149 +340,8 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     )
   }
 
-  return (
-    <div
-      class={mode !== 'view' ? 'test-screen' : undefined}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Header */}
-      <div class="pi-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div class="pi-header-title">年コード</div>
-          <div class="pi-header-sub">2桁→1桁 (100問)</div>
-          {mode === 'view' && (lastRecord || finished) ? (
-            <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
-              {lastRecord ? (
-                <>
-                  前回:
-                  <span style={{ color: 'var(--accent)' }}>
-                    {lastRecord.score}/{lastRecord.total}
-                  </span>
-                </>
-              ) : null}
-              {bestRecord ? (
-                <>
-                  {' '}
-                  最高:
-                  <span style={{ color: 'var(--warn)' }}>
-                    {bestRecord.score}/{bestRecord.total}
-                  </span>
-                </>
-              ) : null}
-            </div>
-          ) : null}
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              gap: '6px',
-              alignItems: 'center',
-            }}
-          >
-            {mode === 'view' ? (
-              <></>
-            ) : (
-              <>
-                <span
-                  style={{
-                    fontSize: '13px',
-                    color: 'var(--accent)',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  {elapsed}秒 {answers.filter((a) => a.correct).length}/
-                  {answers.length}
-                </span>
-                {!finished && order[checkIdx] ? (
-                  <MarkButton
-                    on={marks.marks.has(order[checkIdx].slice(0, 2))}
-                    onToggle={() => marks.toggle(order[checkIdx].slice(0, 2))}
-                  />
-                ) : null}
-                <button
-                  class="filter-btn"
-                  style={{
-                    fontSize: '12px',
-                    minWidth: '50px',
-                    padding: '4px 10px',
-                  }}
-                  onClick={() => endCheck()}
-                >
-                  終了
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {mode === 'view' ? (
-        <div class="test-feature-bar">
-          <TestFeatureList
-            compact
-            features={[
-              {
-                id: 'd3-check',
-                title: '3桁テスト',
-                inputMethod: 'number',
-                onStart: startCheck,
-                hasRecords: records.length > 0,
-                onShowRecords: () => setShowRecords(true),
-              },
-            ]}
-          />
-        </div>
-      ) : null}
-
-      {/* Detail panel (view mode only) */}
-      {mode === 'view' ? (
-        <div class="sticky-wrap" style={{ maxHeight: '50vh' }}>
-          {selected !== null && selectedPrefixEntry ? (
-            <div>
-              <div class="d2-detail-header">
-                <span class="detail-id">{selected.slice(0, 2)}</span>
-                <span
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  → {selected[2]}
-                </span>
-                <button
-                  class="d2-mode-btn"
-                  style={{
-                    padding: '4px 10px',
-                    flex: 'none',
-                    marginLeft: 'auto',
-                  }}
-                  onClick={() => setSelected(null)}
-                >
-                  ×
-                </button>
-              </div>
-              <div class="d2-detail-list">
-                <NumDetailPanel
-                  d={selectedPrefixEntry}
-                  bookmarks={bookmarks}
-                  onToggleBm={onToggleBm}
-                />
-              </div>
-            </div>
-          ) : (
-            <div class="sticky-empty">XY → Z を選択</div>
-          )}
-        </div>
-      ) : null}
-
-      {/* Records overlay */}
+  const overlays = (
+    <>
       {showRecords ? (
         <RecordPanel
           title="年コード"
@@ -491,8 +351,6 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
           onClose={() => setShowRecords(false)}
         />
       ) : null}
-
-      {/* Review overlay */}
       {reviewItems ? (
         <ReviewPanel
           title="年コード"
@@ -503,107 +361,32 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
           onClose={() => setReviewItems(null)}
         />
       ) : null}
+    </>
+  )
 
-      {/* Content area */}
-      <div
-        class="content"
-        style={{
-          flex: 1,
-          paddingBottom: '4px',
-          ...(mode === 'check'
-            ? {
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-end',
-              }
-            : {}),
-        }}
-      >
-        {mode === 'check' ? (
-          <D3CheckGrid order={order} answers={answers} checkIdx={checkIdx} />
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-              <button
-                class={'d2-mode-btn' + (viewMode === 'group' ? ' active' : '')}
-                onClick={() => setViewMode('group')}
-              >
-                末尾グループ
-              </button>
-              <button
-                class={'d2-mode-btn' + (viewMode === 'seq' ? ' active' : '')}
-                onClick={() => setViewMode('seq')}
-              >
-                数字順
-              </button>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-                <button class="d2-mode-btn" onClick={revealAll}>
-                  全表示
-                </button>
-                <button class="d2-mode-btn" onClick={hideAll}>
-                  全隠す
-                </button>
-              </div>
-            </div>
-            <div class="d3-mark-legend">
-              <span>
-                <span class="d3-digit mark-eq">桁</span>=Z
-              </span>
-            </div>
-            {viewMode === 'seq' ? (
-              <div class="d3-grid">{D3_LIST.map((xyz) => renderCell(xyz))}</div>
-            ) : (
-              <div class="d3-groups">
-                {Z_GROUPS.map(([z, items]) => {
-                  const pairs: string[][] = []
-                  for (let i = 0; i < items.length; i += 2) {
-                    pairs.push(items.slice(i, i + 2))
-                  }
-                  return (
-                    <div key={z} class="d3-z-section">
-                      <div class="d3-z-label">
-                        <span style={{ color: DIGIT_COLORS[Number(z)] }}>
-                          {z}
-                        </span>
-                        <span
-                          style={{ color: 'var(--text2)', marginLeft: '4px' }}
-                        >
-                          {Z_KANA[z]}
-                        </span>
-                        <span
-                          style={{
-                            color: 'var(--text2)',
-                            marginLeft: '4px',
-                            fontSize: '11px',
-                          }}
-                        >
-                          ({items.length})
-                        </span>
-                      </div>
-                      <div class="d3-pairs">
-                        {pairs.map((pair, pi) => (
-                          <div key={pi} class="d3-pair">
-                            {renderCell(pair[0])}
-                            {pair[1] ? (
-                              <>
-                                <div class="d3-pair-sep" />
-                                {renderCell(pair[1])}
-                              </>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Footer (check mode only): 1問戻る + テンキー 0-6 */}
-      {mode === 'check' ? (
+  if (mode === 'check') {
+    const dock = (
+      <>
+        <DockBar title="年コード" sub="2桁→1桁 (100問)">
+          <span
+            style={{
+              fontSize: '13px',
+              color: 'var(--accent)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            {elapsed}秒 {answers.filter((a) => a.correct).length}/
+            {answers.length}
+          </span>
+          {!finished && order[checkIdx] ? (
+            <MarkButton
+              on={marks.marks.has(order[checkIdx].slice(0, 2))}
+              onToggle={() => marks.toggle(order[checkIdx].slice(0, 2))}
+            />
+          ) : null}
+          <QuitButton onClick={() => endCheck()} />
+        </DockBar>
+        {/* 1問戻る + テンキー 0-6 */}
         <Numpad
           colored
           maxDigit={6}
@@ -615,9 +398,171 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
             />
           }
         />
-      ) : null}
+        {overlays}
+      </>
+    )
+    return (
+      <Screen
+        isTest
+        main={
+          <D3CheckGrid order={order} answers={answers} checkIdx={checkIdx} />
+        }
+        dock={dock}
+      />
+    )
+  }
+
+  const recordSummary =
+    lastRecord || finished ? (
+      <>
+        {lastRecord ? (
+          <>
+            {' '}
+            前回:
+            <span style={{ color: 'var(--accent)' }}>
+              {lastRecord.score}/{lastRecord.total}
+            </span>
+          </>
+        ) : null}
+        {bestRecord ? (
+          <>
+            {' '}
+            最高:
+            <span style={{ color: 'var(--warn)' }}>
+              {bestRecord.score}/{bestRecord.total}
+            </span>
+          </>
+        ) : null}
+      </>
+    ) : null
+
+  const panel =
+    selected !== null && selectedPrefixEntry ? (
+      <>
+        <div class="panel-head">
+          <span class="detail-id">{selected.slice(0, 2)}</span>
+          <span
+            style={{
+              fontSize: '20px',
+              fontWeight: 'bold',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            → {selected[2]}
+          </span>
+        </div>
+        <div class="d2-detail-list">
+          <NumDetailPanel
+            d={selectedPrefixEntry}
+            bookmarks={bookmarks}
+            onToggleBm={onToggleBm}
+          />
+        </div>
+        <div class="panel-foot">
+          <button class="btn-wide" onClick={() => setSelected(null)}>
+            閉じる
+          </button>
+        </div>
+      </>
+    ) : null
+
+  // グリッドは下端 (親指側) から、凡例はその上
+  const main = (
+    <div class="stack-up" style={{ '--stack-gap': '6px' }}>
+      {viewMode === 'seq' ? (
+        <div class="d3-grid grid-up" style={{ '--cols': 10, '--gap': '3px' }}>
+          {D3_LIST.map((xyz) => renderCell(xyz))}
+        </div>
+      ) : (
+        <div class="stack-up" style={{ '--stack-gap': '12px' }}>
+          {Z_GROUPS.map(([z, items]) => {
+            const pairs: string[][] = []
+            for (let i = 0; i < items.length; i += 2) {
+              pairs.push(items.slice(i, i + 2))
+            }
+            return (
+              <section key={z} class="d3-z-section stack-up">
+                <div class="d3-z-label">
+                  <span style={{ color: DIGIT_COLORS[Number(z)] }}>{z}</span>
+                  <span style={{ color: 'var(--text2)', marginLeft: '4px' }}>
+                    {Z_KANA[z]}
+                  </span>
+                  <span
+                    style={{
+                      color: 'var(--text2)',
+                      marginLeft: '4px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    ({items.length})
+                  </span>
+                </div>
+                <div class="d3-pairs">
+                  {pairs.map((pair, pi) => (
+                    <div key={pi} class="d3-pair">
+                      {renderCell(pair[0])}
+                      {pair[1] ? (
+                        <>
+                          <div class="d3-pair-sep" />
+                          {renderCell(pair[1])}
+                        </>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      )}
+      <div class="d3-mark-legend">
+        <span>
+          <span class="d3-digit mark-eq">桁</span>=Z
+        </span>
+      </div>
     </div>
   )
+
+  const dock = (
+    <>
+      <DockBar title="年コード" sub={<>2桁→1桁 (100問){recordSummary}</>} />
+      <DockRow>
+        <button
+          class={'d2-mode-btn' + (viewMode === 'group' ? ' active' : '')}
+          onClick={() => setViewMode('group')}
+        >
+          末尾グループ
+        </button>
+        <button
+          class={'d2-mode-btn' + (viewMode === 'seq' ? ' active' : '')}
+          onClick={() => setViewMode('seq')}
+        >
+          数字順
+        </button>
+        <button class="d2-mode-btn" onClick={revealAll}>
+          全表示
+        </button>
+        <button class="d2-mode-btn" onClick={hideAll}>
+          全隠す
+        </button>
+      </DockRow>
+      <TestFeatureList
+        features={[
+          {
+            id: 'd3-check',
+            title: '3桁テスト',
+            inputMethod: 'number',
+            onStart: startCheck,
+            hasRecords: records.length > 0,
+            onShowRecords: () => setShowRecords(true),
+          },
+        ]}
+      />
+      {overlays}
+    </>
+  )
+
+  return <Screen main={main} panel={panel} dock={dock} />
 }
 
 export default D3Tab

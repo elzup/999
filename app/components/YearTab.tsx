@@ -48,6 +48,7 @@ import TestNavBar from './TestNavBar'
 import MarkButton from './MarkButton'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
@@ -198,7 +199,8 @@ function YearViewRow({
 /** 振り返り行の label と同じ文字列。印はこれで問題を識別する */
 const yearLabel = (item: YearItem) => `${item.year} ${item.event}`
 
-function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
+// bookmarks / onToggleBm は NumDetailPanel が NumberContext から取るので使わない
+function YearTab({ numbers }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [mode, setMode] = useState<Mode>('view')
   const [eraFilter, setEraFilter] = useState<EraId>('all')
@@ -395,123 +397,148 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
         )
       : null
 
-  return (
-    <div class={'year-layout' + (mode !== 'view' ? ' test-screen' : '')}>
-      <div class="year-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 'bold' }}>年号記憶</div>
-          <div style={{ fontSize: '12px', color: 'var(--text2)' }}>
-            {mode === 'check'
-              ? `${checkItems.length}問`
-              : `${YEAR_DATA.length}問 (XYZ 3桁)`}
-          </div>
-          {mode === 'view' && lastRecord ? (
-            <div style={{ fontSize: '11px', color: 'var(--text2)' }}>
-              前回:
-              <span style={{ color: 'var(--accent)' }}>
-                {lastRecord.score}/{lastRecord.total}
-              </span>
-              {bestRecord ? (
-                <>
-                  {' '}
-                  最高:
-                  <span style={{ color: 'var(--warn)' }}>
-                    {bestRecord.score}/{bestRecord.total}
-                  </span>
-                </>
-              ) : null}
-            </div>
-          ) : null}
-          <div
-            style={{
-              marginLeft: 'auto',
-              display: 'flex',
-              gap: '6px',
-              alignItems: 'center',
-            }}
-          >
-            {mode === 'view' ? (
-              <></>
-            ) : (
-              <>
-                <span
-                  style={{
-                    fontSize: '13px',
-                    color: 'var(--accent)',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  {elapsed}秒 {checkIdx + 1}/{checkItems.length}{' '}
-                  {results.filter((r) => r.correct).length}正解
-                </span>
-                {checkItems[checkIdx] ? (
-                  <MarkButton
-                    on={marks.marks.has(yearLabel(checkItems[checkIdx]))}
-                    onToggle={() =>
-                      marks.toggle(yearLabel(checkItems[checkIdx]))
-                    }
-                  />
-                ) : null}
-                <button
-                  class="filter-btn"
-                  style={{
-                    fontSize: '12px',
-                    minWidth: '50px',
-                    padding: '4px 10px',
-                  }}
-                  onClick={() => endCheck()}
-                >
-                  終了
-                </button>
-              </>
-            )}
-          </div>
+  const isTest = mode !== 'view'
+  const currentItem = checkItems[checkIdx]
+
+  // 一覧は 1 件目を下端 (親指側) に置き上へ積む
+  const main = (
+    <div class="year-list stack-up">
+      {mode === 'check'
+        ? checkItems.map((item, idx) => {
+            const result = results.find((r) => r.no === item.no)
+            const isCurrent = idx === checkIdx
+            return (
+              <YearCheckRow
+                key={idx}
+                item={item}
+                result={result}
+                isCurrent={isCurrent}
+                inputDigits={inputDigits}
+                onSelect={() => selectCheckItem(idx)}
+              />
+            )
+          })
+        : filterByEra(eraFilter).map((item) => {
+            const idx = YEAR_DATA.indexOf(item)
+            return (
+              <YearViewRow
+                key={item.no}
+                item={item}
+                idx={idx}
+                selected={selected === idx}
+                onSelect={() => setSelected(selected === idx ? null : idx)}
+              />
+            )
+          })}
+    </div>
+  )
+
+  const panel =
+    mode === 'view' && selectedNums ? (
+      <>
+        {selectedNums.map((d) => (
+          <NumDetailPanel key={d.num} d={d} />
+        ))}
+        <div class="panel-foot">
+          <button class="btn-wide" onClick={() => setSelected(null)}>
+            閉じる
+          </button>
         </div>
-      </div>
-      {mode === 'view' ? (
-        <div class="test-feature-bar">
-          <TestFeatureList
-            compact
-            features={[
-              {
-                id: 'year-check',
-                title: 'XYZ 3桁テスト',
-                inputMethod: 'number',
-                onStart: () => startCheck(eraFilter),
-                hasRecords: records.length > 0,
-                onShowRecords: () => setShowRecords(true),
-              },
-            ]}
+      </>
+    ) : null
+
+  const eraButton = (era: typeof ERAS[number]) => {
+    const count =
+      era.id === 'all' ? YEAR_DATA.length : filterByEra(era.id).length
+    return (
+      <button
+        key={era.id}
+        class={'filter-btn era-btn' + (eraFilter === era.id ? ' active' : '')}
+        onClick={() => setEraFilter(era.id)}
+      >
+        {era.label}
+        <span class="era-count">{count}</span>
+      </button>
+    )
+  }
+
+  const dock = isTest ? (
+    <>
+      <DockBar title="年号記憶" sub={`${checkItems.length}問`}>
+        <span class="dock-progress">
+          {elapsed}秒 {checkIdx + 1}/{checkItems.length}{' '}
+          {results.filter((r) => r.correct).length}正解
+        </span>
+        {currentItem ? (
+          <MarkButton
+            on={marks.marks.has(yearLabel(currentItem))}
+            onToggle={() => marks.toggle(yearLabel(currentItem))}
           />
-        </div>
-      ) : null}
-      {mode === 'view' ? (
-        <div class="sticky-wrap">
-          {selectedNums ? (
-            <>
-              {selectedNums.map((d) => (
-                <NumDetailPanel
-                  key={d.num}
-                  d={d}
-                  bookmarks={bookmarks}
-                  onToggleBm={onToggleBm}
-                />
-              ))}
-              <div style={{ padding: '0 12px 8px' }}>
-                <button
-                  class="d2-mode-btn"
-                  style={{ padding: '4px 10px', width: '100%' }}
-                  onClick={() => setSelected(null)}
-                >
-                  閉じる
-                </button>
-              </div>
-            </>
-          ) : (
-            <div class="sticky-empty">年号をタップしてXYZの詳細表示</div>
-          )}
-        </div>
-      ) : null}
+        ) : null}
+        <QuitButton onClick={() => endCheck()} />
+      </DockBar>
+      <Numpad
+        colored
+        onTapDigit={tapDigit}
+        onBackspace={tapBackspace}
+        backspaceDisabled={inputDigits.length === 0}
+        header={
+          <TestNavBar
+            onPrev={prevQuestion}
+            prevDisabled={results.length === 0}
+            onSkip={skipQuestion}
+          />
+        }
+      />
+    </>
+  ) : (
+    <>
+      <DockBar
+        title="年号記憶"
+        sub={
+          <>
+            {YEAR_DATA.length}問 (XYZ 3桁)
+            {lastRecord ? (
+              <span class="dock-rec">
+                前回:
+                <b>
+                  {lastRecord.score}/{lastRecord.total}
+                </b>
+                {bestRecord ? (
+                  <>
+                    {' '}
+                    最高:
+                    <b class="is-best">
+                      {bestRecord.score}/{bestRecord.total}
+                    </b>
+                  </>
+                ) : null}
+              </span>
+            ) : null}
+          </>
+        }
+      />
+      {/* 10 区分を 1 段に詰めると押せない幅になるので 5 個ずつ 2 段 */}
+      <DockRow>{ERAS.slice(0, 5).map(eraButton)}</DockRow>
+      <DockRow>{ERAS.slice(5).map(eraButton)}</DockRow>
+      <TestFeatureList
+        features={[
+          {
+            id: 'year-check',
+            title: 'XYZ 3桁テスト',
+            inputMethod: 'number',
+            onStart: () => startCheck(eraFilter),
+            hasRecords: records.length > 0,
+            onShowRecords: () => setShowRecords(true),
+          },
+        ]}
+      />
+    </>
+  )
+
+  return (
+    <>
+      <Screen isTest={isTest} main={main} panel={panel} dock={dock} />
       {showRecords ? (
         <RecordPanel
           title="年号"
@@ -531,95 +558,7 @@ function YearTab({ numbers, bookmarks, onToggleBm }: Props) {
           onClose={() => setReviewItems(null)}
         />
       ) : null}
-      {mode === 'view' ? (
-        <div
-          class="year-era-row"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '4px',
-            padding: '6px 8px',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--surface)',
-            flexShrink: 0,
-          }}
-        >
-          {ERAS.map((era) => {
-            const count =
-              era.id === 'all' ? YEAR_DATA.length : filterByEra(era.id).length
-            return (
-              <button
-                key={era.id}
-                class={'filter-btn' + (eraFilter === era.id ? ' active' : '')}
-                style={{
-                  fontSize: '11px',
-                  minWidth: 'auto',
-                  padding: '3px 8px',
-                }}
-                onClick={() => setEraFilter(era.id)}
-              >
-                {era.label}
-                <span
-                  style={{
-                    marginLeft: '4px',
-                    color: 'var(--text2)',
-                    fontSize: '10px',
-                  }}
-                >
-                  {count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      ) : null}
-      <div class="content" style={{ flex: 1, paddingBottom: '4px' }}>
-        <div class="year-list">
-          {mode === 'check'
-            ? checkItems.map((item, idx) => {
-                const result = results.find((r) => r.no === item.no)
-                const isCurrent = idx === checkIdx
-                return (
-                  <YearCheckRow
-                    key={idx}
-                    item={item}
-                    result={result}
-                    isCurrent={isCurrent}
-                    inputDigits={inputDigits}
-                    onSelect={() => selectCheckItem(idx)}
-                  />
-                )
-              })
-            : filterByEra(eraFilter).map((item) => {
-                const idx = YEAR_DATA.indexOf(item)
-                return (
-                  <YearViewRow
-                    key={item.no}
-                    item={item}
-                    idx={idx}
-                    selected={selected === idx}
-                    onSelect={() => setSelected(selected === idx ? null : idx)}
-                  />
-                )
-              })}
-        </div>
-      </div>
-      {mode === 'check' ? (
-        <Numpad
-          colored
-          onTapDigit={tapDigit}
-          onBackspace={tapBackspace}
-          backspaceDisabled={inputDigits.length === 0}
-          header={
-            <TestNavBar
-              onPrev={prevQuestion}
-              prevDisabled={results.length === 0}
-              onSkip={skipQuestion}
-            />
-          }
-        />
-      ) : null}
-    </div>
+    </>
   )
 }
 

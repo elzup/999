@@ -1,5 +1,5 @@
 import { h } from 'preact'
-import { useState, useMemo } from 'preact/hooks'
+import { useMemo } from 'preact/hooks'
 import type { NumberEntry, RulesData } from '../data/schema'
 import type { Combo, ReadingPart } from '../lib/recallTree'
 import { buildRecallTree } from '../lib/recallTree'
@@ -7,8 +7,8 @@ import { buildRecallTree } from '../lib/recallTree'
 type Props = {
   numbers: NumberEntry[]
   rules: RulesData
-  initialNum?: string
-  onBack?: () => void
+  /** 入力欄 (RecallTreeInput) の値 */
+  input: string
 }
 
 function KanaChip({ part }: { part: ReadingPart }) {
@@ -45,35 +45,40 @@ function ComboRow({ combo }: { combo: Combo }) {
   )
 }
 
-function RecallTreePanel({ numbers, rules, initialNum, onBack }: Props) {
-  const [input, setInput] = useState(initialNum ?? '200')
+/** 番号の入力欄。親指が届くよう dock に置くので、ツリー本体とは分けて描く */
+export function RecallTreeInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div class="recall-input-row">
+      <label class="recall-input-label">番号</label>
+      <input
+        class="recall-input"
+        type="text"
+        inputMode="numeric"
+        maxLength={3}
+        value={value}
+        onInput={(e) =>
+          onChange((e.target as HTMLInputElement).value.replace(/\D/g, ''))
+        }
+        placeholder="000-999"
+      />
+    </div>
+  )
+}
+
+function RecallTreePanel({ numbers, rules, input }: Props) {
   const tree = useMemo(
     () => buildRecallTree(input, rules, numbers),
     [input, rules, numbers]
   )
 
   return (
-    <div class="content recall-panel">
-      <div class="recall-input-row">
-        {onBack && (
-          <button class="recall-back" onClick={onBack}>
-            ← 一覧
-          </button>
-        )}
-        <label class="recall-input-label">番号</label>
-        <input
-          class="recall-input"
-          type="text"
-          inputMode="numeric"
-          maxLength={3}
-          value={input}
-          onInput={(e) =>
-            setInput((e.target as HTMLInputElement).value.replace(/\D/g, ''))
-          }
-          placeholder="000-999"
-        />
-      </div>
-
+    <div class="recall-panel">
       {!tree ? (
         <div class="recall-empty">3桁の番号を入力してください</div>
       ) : (

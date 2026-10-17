@@ -19,11 +19,11 @@ function TabVisibilityPanel({ visibility, onChange, onSelectTab }: Props) {
   )
 
   return (
-    <>
-      <p class="tab-visibility-desc">
-        アプリ下部のタブバーに表示するページを選べます。タップでそのページに移動します。
-      </p>
-      <div class="tab-visibility-list">
+    <div class="stack-up" style={{ '--stack-gap': '0px' }}>
+      <div
+        class="tab-visibility-list stack-up"
+        style={{ '--stack-gap': '8px' }}
+      >
         {VALID_TABS.map((id) => {
           const disabled = id === 'misc'
           const on = visibility[id]
@@ -64,7 +64,10 @@ function TabVisibilityPanel({ visibility, onChange, onSelectTab }: Props) {
           )
         })}
       </div>
-    </>
+      <p class="tab-visibility-desc">
+        アプリ下部のタブバーに表示するページを選べます。タップでそのページに移動します。
+      </p>
+    </div>
   )
 }
 

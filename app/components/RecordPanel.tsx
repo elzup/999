@@ -17,6 +17,8 @@ function RecordPanel({ title, records, onDelete, onClear, onClose }: Props) {
       }}
     >
       <div class="rec-panel">
+        <RecordList records={records} onDelete={onDelete} />
+        {/* 閉じる・全削除はシートの最下段 (親指側) */}
         <div class="rec-panel-header">
           <h3>
             {title} 記録 ({records.length}件)
@@ -30,7 +32,6 @@ function RecordPanel({ title, records, onDelete, onClear, onClose }: Props) {
             閉じる
           </button>
         </div>
-        <RecordList records={records} onDelete={onDelete} />
       </div>
     </div>
   )
@@ -46,7 +47,11 @@ function RecordList({ records, onDelete }: RecordListProps) {
     return (
       <div class="rec-panel-list">
         <div
-          style={{ textAlign: 'center', color: 'var(--text2)', padding: '20px 0' }}
+          style={{
+            textAlign: 'center',
+            color: 'var(--text2)',
+            padding: '20px 0',
+          }}
         >
           記録なし
         </div>
@@ -58,12 +63,8 @@ function RecordList({ records, onDelete }: RecordListProps) {
     <div class="rec-panel-list">
       {records.map((r, i) => (
         <div key={i} class="rec-row">
-          <span class="rec-date">
-            {r.date.slice(5, 16).replace('T', ' ')}
-          </span>
-          <span class="rec-mode">
-            {r.mode === 'train' ? '連想' : '選択'}
-          </span>
+          <span class="rec-date">{r.date.slice(5, 16).replace('T', ' ')}</span>
+          <span class="rec-mode">{r.mode === 'train' ? '連想' : '選択'}</span>
           <span
             class="rec-score"
             style={{ color: i === 0 ? 'var(--accent)' : 'var(--text)' }}

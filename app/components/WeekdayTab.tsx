@@ -5,6 +5,7 @@ import WeekdayCalcTab from './WeekdayCalcTab'
 import YearMapTab from './YearMapTab'
 import SlideLauncher from './SlideLauncher'
 import SubTabGroup from './SubTabGroup'
+import Screen from './Screen'
 import { yearCodeDeck } from './slideDecks'
 
 type Props = {
@@ -48,9 +49,10 @@ function WeekdayTab({ numbers, bookmarks, onToggleBm }: Props) {
           id: 'test',
           label: 'テスト',
           render: () => (
-            <div class="content content-bottom slide-test-home">
-              <SlideLauncher deck={YEAR_CODE_DECK} />
-            </div>
+            <Screen
+              main={null}
+              dock={<SlideLauncher deck={YEAR_CODE_DECK} />}
+            />
           ),
         },
       ]}

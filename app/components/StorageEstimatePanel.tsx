@@ -79,22 +79,27 @@ function StorageEstimatePanel() {
     quota: null,
     keys: [],
   })
-  const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [message, setMessage] = useState<{
+    type: 'ok' | 'err'
+    text: string
+  } | null>(null)
   const [tick, setTick] = useState(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     let mounted = true
 
-    const keys = TRACKED_KEYS
-      .map((key) => estimateLocalStorageKey(key))
+    const keys = TRACKED_KEYS.map((key) => estimateLocalStorageKey(key))
       .filter((item) => item.valueBytes > 0)
       .sort((a, b) => b.bytes - a.bytes)
 
     const update = async () => {
       let usage: number | null = null
       let quota: number | null = null
-      if ('storage' in navigator && typeof navigator.storage?.estimate === 'function') {
+      if (
+        'storage' in navigator &&
+        typeof navigator.storage?.estimate === 'function'
+      ) {
         try {
           const result = await navigator.storage.estimate()
           usage = result.usage ?? null
@@ -142,7 +147,9 @@ function StorageEstimatePanel() {
       try {
         const payload = parseImportPayload(String(reader.result ?? ''))
         const allowed = new Set<string>(TRACKED_KEYS)
-        const entries = Object.entries(payload.data).filter(([k]) => allowed.has(k))
+        const entries = Object.entries(payload.data).filter(([k]) =>
+          allowed.has(k)
+        )
         const ok = window.confirm(
           `${entries.length} 個のキーを現在のデータに上書きします。よろしいですか？`
         )
@@ -150,7 +157,10 @@ function StorageEstimatePanel() {
         for (const [key, value] of entries) {
           localStorage.setItem(key, value)
         }
-        setMessage({ type: 'ok', text: `インポート完了 (${entries.length} キー) — リロードで反映` })
+        setMessage({
+          type: 'ok',
+          text: `インポート完了 (${entries.length} キー) — リロードで反映`,
+        })
         setTick((t) => t + 1)
       } catch (err) {
         setMessage({ type: 'err', text: `インポート失敗: ${String(err)}` })
@@ -159,19 +169,24 @@ function StorageEstimatePanel() {
     reader.readAsText(file)
   }, [])
 
-  const onPickFile = useCallback((e: Event) => {
-    const input = e.currentTarget as HTMLInputElement
-    const file = input.files?.[0]
-    if (file) handleImportFile(file)
-    input.value = ''
-  }, [handleImportFile])
+  const onPickFile = useCallback(
+    (e: Event) => {
+      const input = e.currentTarget as HTMLInputElement
+      const file = input.files?.[0]
+      if (file) handleImportFile(file)
+      input.value = ''
+    },
+    [handleImportFile]
+  )
 
   const localTotal = estimate.keys.reduce((sum, item) => sum + item.bytes, 0)
 
   return (
-    <div class="storage-panel">
+    <div class="storage-panel stack-up" style={{ '--stack-gap': '8px' }}>
       <div class="storage-card">
-        <div class="storage-card-title">バックアップ (エクスポート / インポート)</div>
+        <div class="storage-card-title">
+          バックアップ (エクスポート / インポート)
+        </div>
         <div class="storage-actions">
           <button class="filter-btn" onClick={handleExport}>
             エクスポート (JSON)
@@ -193,13 +208,16 @@ function StorageEstimatePanel() {
         {message ? (
           <div
             class="storage-note"
-            style={{ color: message.type === 'ok' ? 'var(--accent)' : '#f87171' }}
+            style={{
+              color: message.type === 'ok' ? 'var(--accent)' : '#f87171',
+            }}
           >
             {message.text}
           </div>
         ) : (
           <div class="storage-note">
-            記録・ブックマーク等を JSON で書き出し / 読み込みできます。別端末への移行に使えます。
+            記録・ブックマーク等を JSON で書き出し /
+            読み込みできます。別端末への移行に使えます。
           </div>
         )}
       </div>
@@ -209,11 +227,15 @@ function StorageEstimatePanel() {
         <div class="storage-summary">
           <div class="storage-summary-item">
             <div class="storage-summary-label">全体 usage</div>
-            <div class="storage-summary-value">{formatBytes(estimate.usage)}</div>
+            <div class="storage-summary-value">
+              {formatBytes(estimate.usage)}
+            </div>
           </div>
           <div class="storage-summary-item">
             <div class="storage-summary-label">全体 quota</div>
-            <div class="storage-summary-value">{formatBytes(estimate.quota)}</div>
+            <div class="storage-summary-value">
+              {formatBytes(estimate.quota)}
+            </div>
           </div>
           <div class="storage-summary-item">
             <div class="storage-summary-label">localStorage 合計</div>
@@ -221,7 +243,8 @@ function StorageEstimatePanel() {
           </div>
         </div>
         <div class="storage-note">
-          `navigator.storage.estimate()` と localStorage 文字列長からの概算です。
+          `navigator.storage.estimate()` と localStorage
+          文字列長からの概算です。
         </div>
       </div>
 

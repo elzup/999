@@ -10,6 +10,7 @@ import {
 } from '../lib/numMap'
 import type { Slot } from '../lib/choice'
 import MapView from './MapView'
+import Screen from './Screen'
 
 type Props = {
   numbers: NumberEntry[]
@@ -53,19 +54,14 @@ function NumMapTab({ numbers, bookmarks, onToggleBm }: Props) {
 
   if (!hasHundredLayout(hundred)) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        {selector}
-        <div class="content" style={{ padding: 24, color: 'var(--text2)' }}>
-          {hundred}00〜{hundred}99 のマップは未作成です。
-        </div>
-      </div>
+      <Screen
+        main={
+          <div class="screen-empty">
+            {hundred}00〜{hundred}99 のマップは未作成です。
+          </div>
+        }
+        dock={selector}
+      />
     )
   }
 

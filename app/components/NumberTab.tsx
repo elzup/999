@@ -4,6 +4,7 @@ import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
 import { candidatesOf } from '../lib/choice'
 import { useBackGuard } from '../lib/useBackGuard'
+import Screen, { DockRow } from './Screen'
 
 type Props = {
   numbers: NumberEntry[]
@@ -180,151 +181,104 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
   const hasFilter = df[0] !== null || df[1] !== null || df[2] !== null
   const filterLabel = df.map((d) => (d === null ? '*' : d)).join('')
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div class="sticky-wrap">
-        {selectedData ? (
-          <>
-            <NumDetailPanel
-              d={selectedData}
-              bookmarks={bookmarks}
-              onToggleBm={onToggleBm}
-              onEdit={
-                onEditWord && selectedData
-                  ? () => onEditWord(selectedData.num)
-                  : undefined
-              }
-            />
-            {/* 閉じるはカードの外に 1 つ。カード内に置くと、複数枚並ぶ面
-                (π / 年号 / 2桁) で «閉じる» が枚数ぶん並んでしまう */}
-            <div class="panel-foot">
-              <button class="btn-wide" onClick={() => setSelected(null)}>
-                閉じる
-              </button>
+  const panel = selectedData ? (
+    <>
+      <NumDetailPanel
+        d={selectedData}
+        bookmarks={bookmarks}
+        onToggleBm={onToggleBm}
+        onEdit={
+          onEditWord && selectedData
+            ? () => onEditWord(selectedData.num)
+            : undefined
+        }
+      />
+      {/* 閉じるはカードの外に 1 つ。カード内に置くと、複数枚並ぶ面
+          (π / 年号 / 2桁) で «閉じる» が枚数ぶん並んでしまう */}
+      <div class="panel-foot">
+        <button class="btn-wide" onClick={() => setSelected(null)}>
+          閉じる
+        </button>
+      </div>
+    </>
+  ) : null
+
+  // 百の位の帯は各組の先頭 (= grid-up で組の下端) に入る
+  const main = (
+    <div class="num-grid grid-up">
+      {filtered.map((d, i) => {
+        const hundred = Math.floor(Number(d.num) / 100)
+        const prevHundred =
+          i > 0 ? Math.floor(Number(filtered[i - 1].num) / 100) : -1
+        const band =
+          hundred !== prevHundred ? (
+            <div class="num-band" key={'b' + hundred}>
+              {hundred}00–{hundred}99
             </div>
+          ) : null
+        return (
+          <>
+            {band}
+            <NumCell
+              key={d.num}
+              d={d}
+              selected={selected === d.num}
+              onSelect={() => setSelected(selected === d.num ? null : d.num)}
+            />
           </>
-        ) : (
-          <div class="sticky-empty">
-            <span>番号を選択</span>
-            {hasFilter ? (
-              <>
-                <span
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent)',
-                    marginLeft: '8px',
-                  }}
-                >
-                  {filterLabel}
-                </span>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: 'var(--text2)',
-                    marginLeft: '4px',
-                  }}
-                >
-                  {filtered.length}件
-                </span>
-                <button
-                  class="np-filter-clear"
-                  style={{ marginLeft: '4px' }}
-                  onClick={clearFilter}
-                >
-                  C
-                </button>
-              </>
-            ) : null}
-          </div>
-        )}
-      </div>
-      <div class="content" style={{ flex: 1, paddingBottom: '4px' }}>
-        <div class="num-grid">
-          {filtered.map((d, i) => {
-            const hundred = Math.floor(Number(d.num) / 100)
-            const prevHundred =
-              i > 0 ? Math.floor(Number(filtered[i - 1].num) / 100) : -1
-            const band =
-              hundred !== prevHundred ? (
-                <div class="num-band" key={'b' + hundred}>
-                  {hundred}00–{hundred}99
-                </div>
-              ) : null
-            return (
-              <>
-                {band}
-                <NumCell
-                  key={d.num}
-                  d={d}
-                  selected={selected === d.num}
-                  onSelect={() =>
-                    setSelected(selected === d.num ? null : d.num)
-                  }
-                />
-              </>
-            )
-          })}
-        </div>
-      </div>
-      {/* フィルターは常時表示。開閉トグルを挟むと、絞り込み中かどうかが
-          画面から消えて «なぜ件数が減っているのか» が分からなくなる */}
-      <div class="np-filter-bar">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '4px',
-          }}
+        )
+      })}
+    </div>
+  )
+
+  // フィルターは常時表示。開閉トグルを挟むと、絞り込み中かどうかが
+  // 画面から消えて «なぜ件数が減っているのか» が分からなくなる
+  const dock = (
+    <>
+      <DockRow>
+        <button
+          class={'filter-btn' + (filterMode === 'rows' ? ' active' : '')}
+          onClick={() => setFilterMode('rows')}
         >
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button
-              class={'filter-btn' + (filterMode === 'rows' ? ' active' : '')}
-              style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
-              onClick={() => setFilterMode('rows')}
-            >
-              3段
-            </button>
-            <button
-              class={'filter-btn' + (filterMode === 'pads' ? ' active' : '')}
-              style={{ fontSize: '11px', padding: '3px 8px', minWidth: 0 }}
-              onClick={() => setFilterMode('pads')}
-            >
-              テンキー
-            </button>
-          </div>
-          {hasFilter ? (
+          3段
+        </button>
+        <button
+          class={'filter-btn' + (filterMode === 'pads' ? ' active' : '')}
+          onClick={() => setFilterMode('pads')}
+        >
+          テンキー
+        </button>
+        {hasFilter ? (
+          <>
+            <span class="dock-row-label">
+              <span class="nt-filter-label">{filterLabel}</span>{' '}
+              {filtered.length}件
+            </span>
             <button class="np-filter-clear" onClick={clearFilter}>
               C
             </button>
-          ) : null}
-        </div>
-        {filterMode === 'rows' ? (
-          <DigitFilterRows
-            df={df}
-            onTapDigit={tapDigitAt}
-            onClearPos={clearPosAt}
-          />
+          </>
         ) : (
-          <DigitFilterPads
-            df={df}
-            onTapDigit={tapDigitAt}
-            onClearPos={clearPosAt}
-          />
+          <span class="dock-row-label">番号を選択</span>
         )}
-      </div>
-    </div>
+      </DockRow>
+      {filterMode === 'rows' ? (
+        <DigitFilterRows
+          df={df}
+          onTapDigit={tapDigitAt}
+          onClearPos={clearPosAt}
+        />
+      ) : (
+        <DigitFilterPads
+          df={df}
+          onTapDigit={tapDigitAt}
+          onClearPos={clearPosAt}
+        />
+      )}
+    </>
   )
+
+  return <Screen main={main} panel={panel} dock={dock} />
 }
 
 export default NumberTab

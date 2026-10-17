@@ -1,11 +1,11 @@
 import { h } from 'preact'
-import { useState, useCallback } from 'preact/hooks'
 import type { NumberEntry, RulesData, YomiUse } from '../data/schema'
 import NumberTab from './NumberTab'
 import DigitTab from './DigitTab'
 import NumMapTab from './NumMapTab'
 import AssocTestTab from './AssocTestTab'
 import YomiTab from './YomiTab'
+import SubTabGroup from './SubTabGroup'
 
 type Props = {
   numbers: NumberEntry[]
@@ -26,87 +26,64 @@ function NumGroupTab({
   yomiUse,
   onEditWord,
 }: Props) {
-  const [sub, setSub] = useState<SubTab>('all')
-
-  const handleSub = useCallback((s: SubTab) => {
-    setSub(s)
-  }, [])
-
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div class="sub-tab-switch">
-        <button
-          class={'sub-tab-btn' + (sub === 'all' ? ' active' : '')}
-          onClick={() => handleSub('all')}
-        >
-          全体
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'd2' ? ' active' : '')}
-          onClick={() => handleSub('d2')}
-        >
-          2桁
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'yomi' ? ' active' : '')}
-          onClick={() => handleSub('yomi')}
-        >
-          読み
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'map' ? ' active' : '')}
-          onClick={() => handleSub('map')}
-        >
-          マップ
-        </button>
-        <button
-          class={'sub-tab-btn' + (sub === 'test' ? ' active' : '')}
-          onClick={() => handleSub('test')}
-        >
-          テスト
-        </button>
-      </div>
-      {sub === 'all' && (
-        <NumberTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-          onEditWord={onEditWord}
-        />
-      )}
-      {sub === 'd2' && (
-        <DigitTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
-      {sub === 'yomi' && (
-        <YomiTab numbers={numbers} rules={rules} yomiUse={yomiUse} />
-      )}
-      {sub === 'map' && (
-        <NumMapTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
-      {sub === 'test' && (
-        <AssocTestTab
-          numbers={numbers}
-          bookmarks={bookmarks}
-          onToggleBm={onToggleBm}
-        />
-      )}
-    </div>
+    <SubTabGroup<SubTab>
+      storageKey="subtab.num"
+      tabs={[
+        {
+          id: 'all',
+          label: '全体',
+          render: () => (
+            <NumberTab
+              numbers={numbers}
+              bookmarks={bookmarks}
+              onToggleBm={onToggleBm}
+              onEditWord={onEditWord}
+            />
+          ),
+        },
+        {
+          id: 'd2',
+          label: '2桁',
+          render: () => (
+            <DigitTab
+              numbers={numbers}
+              bookmarks={bookmarks}
+              onToggleBm={onToggleBm}
+            />
+          ),
+        },
+        {
+          id: 'yomi',
+          label: '読み',
+          render: () => (
+            <YomiTab numbers={numbers} rules={rules} yomiUse={yomiUse} />
+          ),
+        },
+        {
+          id: 'map',
+          label: 'マップ',
+          render: () => (
+            <NumMapTab
+              numbers={numbers}
+              bookmarks={bookmarks}
+              onToggleBm={onToggleBm}
+            />
+          ),
+        },
+        {
+          id: 'test',
+          label: 'テスト',
+          render: () => (
+            <AssocTestTab
+              numbers={numbers}
+              bookmarks={bookmarks}
+              onToggleBm={onToggleBm}
+            />
+          ),
+        },
+      ]}
+    />
   )
 }
 

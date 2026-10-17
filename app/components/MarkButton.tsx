@@ -3,7 +3,7 @@ type Props = {
   onToggle: () => void
 }
 
-/** テストヘッダーの «あとで見返す» 印。結果ビューで印の付いた問題が目立つ */
+/** テストの DockBar (QuitButton の左) に置く «あとで見返す» 印。結果ビューで印の付いた問題が目立つ */
 function MarkButton({ on, onToggle }: Props) {
   return (
     <button

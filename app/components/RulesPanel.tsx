@@ -1,5 +1,7 @@
 import type { RulesData } from '../data/schema'
-import RulesSummaryTable from './RulesSummaryTable'
+import { useState } from 'preact/hooks'
+import RulesSummaryTable, { RulesLongToggle } from './RulesSummaryTable'
+import Screen, { DockRow } from './Screen'
 
 type Props = {
   rules: RulesData
@@ -191,10 +193,13 @@ function WeightTable({ rules }: Props) {
 }
 
 function RulesPanel({ rules }: Props) {
-  return (
-    <div class="content rules-panel">
+  const [hideLong, setHideLong] = useState(false)
+
+  // 読み物だが main は下端から見えるので、先頭の 1桁マッピングを下端に置いて上へ積む
+  const main = (
+    <div class="rules-panel stack-up" style={{ '--stack-gap': '18px' }}>
       <SingleDigitTable rules={rules} />
-      <RulesSummaryTable rules={rules} />
+      <RulesSummaryTable rules={rules} hideLong={hideLong} />
       <MatrixTable
         title="2桁マッピング"
         desc="行=第1桁(子音グループ)、列=第2桁(母音/拗音末尾)。pattern行/列が代表ラベル。"
@@ -212,6 +217,15 @@ function RulesPanel({ rules }: Props) {
       <WeightTable rules={rules} />
     </div>
   )
+
+  const dock = (
+    <DockRow>
+      <span class="dock-row-label">整理対応表</span>
+      <RulesLongToggle hideLong={hideLong} onChange={setHideLong} />
+    </DockRow>
+  )
+
+  return <Screen main={main} dock={dock} />
 }
 
 export default RulesPanel

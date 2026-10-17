@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'preact/hooks'
 import TestFeatureList from './TestFeatureList'
+import Screen, { DockBar, DockRow } from './Screen'
 import ChoiceQuiz, { type ChoiceQuestion, type QuizSummary } from './ChoiceQuiz'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
@@ -166,128 +167,130 @@ function KukuTab() {
     )
   }
 
-  return (
-    <>
-      <div class="kuku-header">
-        <div class="kuku-title">
-          九九 <span class="kuku-count">{items.length}件</span>
-        </div>
-        <div class="kuku-tiers">
-          {TIERS.map((t) => (
-            <button
-              key={t.key}
-              class={'kuku-tier-btn' + (t.key === tier ? ' active' : '')}
-              onClick={() => setTier(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div class="kuku-sub">
-          <span class="kuku-desc">{active.desc}</span>
-          <div class="kuku-views">
-            <button
-              class={'kuku-view-btn' + (view === 'list' ? ' active' : '')}
-              onClick={() => setView('list')}
-            >
-              一覧
-            </button>
-            <button
-              class={'kuku-view-btn' + (view === 'lyrics' ? ' active' : '')}
-              onClick={() => setView('lyrics')}
-            >
-              歌詞
-            </button>
-            <button
-              class={'kuku-view-btn' + (view === 'ab' ? ' active' : '')}
-              onClick={() => setView('ab')}
-            >
-              AB別
-            </button>
-          </div>
-        </div>
-        <div class="kuku-test">
-          <TestFeatureList
-            compact
-            features={[
-              {
-                id: 'kuku-choice',
-                title: `読みテスト（${active.label}）`,
-                inputMethod: 'choice',
-                onStart: startQuiz,
-                hasRecords: rec.records.length > 0,
-                onShowRecords: () => setShowRecords(true),
-              },
-            ]}
-          />
-          {rec.last ? (
-            <div class="kuku-record-line">
-              前回 <b>{rec.last.score}</b>/{rec.last.total}
-              {rec.best ? (
-                <>
-                  {' '}
-                  最高 <b style={{ color: 'var(--warn)' }}>{rec.best.score}</b>/
-                  {rec.best.total}
-                </>
-              ) : null}
+  // 一覧・歌詞・AB グリッドとも先頭を下端 (親指側) に置き上へ積む
+  const main =
+    view === 'list' ? (
+      <div class="stack-up">
+        {groupByLabel(items).map((g) => (
+          // 見出しは節の下端。行は見出しの上へ積む
+          <div key={g.label} class="kuku-group stack-up">
+            <div class="kuku-group-head">
+              <code>{g.label}</code>
+              <span class="kuku-group-n">{g.rows.length}</span>
             </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div class="content kuku-content">
-        {view === 'list' ? (
-          groupByLabel(items).map((g) => (
-            <div key={g.label} class="kuku-group">
-              <div class="kuku-group-head">
-                <code>{g.label}</code>
-                <span class="kuku-group-n">{g.rows.length}</span>
-              </div>
-              {g.rows.map((r) => (
-                <div key={r.expr} class="kuku-row">
-                  <span class="kuku-expr">{r.expr}</span>
-                  <span class="kuku-yomi">{r.yomi}</span>
-                </div>
-              ))}
-            </div>
-          ))
-        ) : view === 'lyrics' ? (
-          <div class="kuku-lyrics">
-            {chunk(
-              items.map((it) => it.yomi),
-              4
-            ).map((line, i) => (
-              <div key={i} class="kuku-lyric-line">
-                {line.join('　')}
+            {g.rows.map((r) => (
+              <div key={r.expr} class="kuku-row">
+                <span class="kuku-expr">{r.expr}</span>
+                <span class="kuku-yomi">{r.yomi}</span>
               </div>
             ))}
           </div>
-        ) : (
-          <div class="kuku-ab-grid">
-            {AB_LIST.map((ab) => {
-              const sc = abScores[ab]
-              const ratio = sc ? sc.best / sc.total : -1
-              const cls =
-                'kuku-ab-cell' +
-                (ratio < 0
-                  ? ''
-                  : ratio >= 0.9
-                  ? ' ok'
-                  : ratio >= 0.6
-                  ? ' mid'
-                  : ' low')
-              return (
-                <button key={ab} class={cls} onClick={() => startAbQuiz(ab)}>
-                  <span class="kuku-ab-num">{ab}</span>
-                  <span class="kuku-ab-score">
-                    {sc ? `${sc.best}/${sc.total}` : `${AB_COUNTS[ab]}問`}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        )}
+        ))}
       </div>
+    ) : view === 'lyrics' ? (
+      <div class="kuku-lyrics stack-up" style={{ '--stack-gap': '6px' }}>
+        {chunk(
+          items.map((it) => it.yomi),
+          4
+        ).map((line, i) => (
+          <div key={i} class="kuku-lyric-line">
+            {line.join('　')}
+          </div>
+        ))}
+      </div>
+    ) : (
+      // セル自体が AB 別練習の開始ボタン (一覧の要素なので main に置く)
+      <div class="kuku-ab-grid grid-up" style={{ '--cols': 4, '--gap': '8px' }}>
+        {AB_LIST.map((ab) => {
+          const sc = abScores[ab]
+          const ratio = sc ? sc.best / sc.total : -1
+          const cls =
+            'kuku-ab-cell' +
+            (ratio < 0
+              ? ''
+              : ratio >= 0.9
+              ? ' ok'
+              : ratio >= 0.6
+              ? ' mid'
+              : ' low')
+          return (
+            <button key={ab} class={cls} onClick={() => startAbQuiz(ab)}>
+              <span class="kuku-ab-num">{ab}</span>
+              <span class="kuku-ab-score">
+                {sc ? `${sc.best}/${sc.total}` : `${AB_COUNTS[ab]}問`}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    )
+
+  const viewButton = (id: typeof view, label: string) => (
+    <button
+      class={'filter-btn' + (view === id ? ' active' : '')}
+      onClick={() => setView(id)}
+    >
+      {label}
+    </button>
+  )
+
+  const dock = (
+    <>
+      <DockBar
+        title="九九"
+        sub={
+          <>
+            {items.length}件
+            {rec.last ? (
+              <span class="dock-rec">
+                前回 <b>{rec.last.score}</b>/{rec.last.total}
+                {rec.best ? (
+                  <>
+                    {' '}
+                    最高 <b class="is-best">{rec.best.score}</b>/
+                    {rec.best.total}
+                  </>
+                ) : null}
+              </span>
+            ) : null}
+          </>
+        }
+      />
+      <DockRow>
+        <span class="dock-row-label">{active.desc}</span>
+        {TIERS.map((t) => (
+          <button
+            key={t.key}
+            class={'filter-btn' + (t.key === tier ? ' active' : '')}
+            onClick={() => setTier(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </DockRow>
+      <DockRow>
+        {viewButton('list', '一覧')}
+        {viewButton('lyrics', '歌詞')}
+        {viewButton('ab', 'AB別')}
+      </DockRow>
+      <TestFeatureList
+        features={[
+          {
+            id: 'kuku-choice',
+            title: `読みテスト（${active.label}）`,
+            inputMethod: 'choice',
+            onStart: startQuiz,
+            hasRecords: rec.records.length > 0,
+            onShowRecords: () => setShowRecords(true),
+          },
+        ]}
+      />
+    </>
+  )
+
+  return (
+    <>
+      <Screen main={main} dock={dock} />
       {showRecords ? (
         <RecordPanel
           title="九九 読みテスト"

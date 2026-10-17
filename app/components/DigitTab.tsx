@@ -2,6 +2,8 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
+import Screen, { DockRow, PanelCards } from './Screen'
+import { IconStar, IconStarOutline } from './Icons'
 import { candidatesOf } from '../lib/choice'
 
 type Props = {
@@ -53,7 +55,7 @@ function FavList({
   if (favD2.length === 0) return null
 
   return (
-    <div class="d2-fav-section">
+    <section class="stack-up" style={{ '--stack-gap': '4px' }}>
       <div class="d2-fav-label">
         <span style={{ color: 'var(--warn)' }}>★</span> よく使う
       </div>
@@ -75,7 +77,7 @@ function FavList({
               style={{
                 color: isActive ? 'var(--accent)' : 'var(--text)',
                 cursor: 'pointer',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: '13px',
               }}
               onClick={() => {
@@ -91,7 +93,7 @@ function FavList({
           )
         })}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -161,116 +163,106 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
     }
   }, [])
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div class="sticky-wrap" style={{ maxHeight: '60vh' }}>
-        {detail ? (
-          <>
-            <div class="d2-detail-header">
-              <span class="detail-id">{detailLabel}</span>
-              <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-                {detail.length}件
-              </span>
-              <span
-                class={'bm-star ' + (isBm ? 'on' : '')}
-                style={{ fontSize: '22px' }}
-                onClick={() => bmKey && onToggleBm(bmKey)}
-              >
-                {isBm ? '★' : '☆'}
-              </span>
-              <button
-                class="d2-mode-btn"
-                style={{
-                  padding: '4px 10px',
-                  flex: 'none',
-                  marginLeft: 'auto',
-                }}
-                onClick={clearSel}
-              >
-                ×
-              </button>
-            </div>
-            <div class="d2-detail-list">
-              {detail.map((d) => (
-                <NumDetailPanel
-                  key={d.num}
-                  d={d}
-                  bookmarks={bookmarks}
-                  onToggleBm={onToggleBm}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div class="sticky-empty">2桁を選択</div>
-        )}
+  // 2桁グループの ★ は番号単位の ★ (NumDetailPanel) とは別物なので、
+  // 積んだカードの下に «閉じる» と並べて 1 つだけ置く
+  const panel = detail ? (
+    <>
+      <div class="panel-head">
+        <span class="detail-id">{detailLabel}</span>
+        <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
+          {detail.length}件
+        </span>
       </div>
-      <div class="content" style={{ flex: 1, paddingBottom: '4px' }}>
-        <FavList
-          favD2={favD2}
-          selected={selected}
-          specialSel={specialSel}
-          mode={mode}
-          onClearSel={clearSel}
-          onSelectFav={handleSelectFav}
-        />
-        <div class="d2-grid">
-          {Array.from({ length: 100 }, (_, i) => {
-            const v = String(i).padStart(2, '0')
-            const hasFilled = filledSet.has(modeKey + v)
-            const label = mode === 'upper' ? v + '_' : '_' + v
-            return (
-              <div
-                key={v}
-                class={
-                  'd2-cell' +
-                  (selected === v && !specialSel ? ' selected' : '') +
-                  (hasFilled ? ' has-word' : '')
-                }
-                onClick={() => {
-                  setSpecialSel(null)
-                  setSelected(selected === v && !specialSel ? null : v)
-                }}
-              >
-                {label}
-              </div>
-            )
-          })}
-        </div>
+      <PanelCards>
+        {detail.map((d) => (
+          <NumDetailPanel
+            key={d.num}
+            d={d}
+            bookmarks={bookmarks}
+            onToggleBm={onToggleBm}
+          />
+        ))}
+      </PanelCards>
+      <div class="panel-foot detail-foot-actions">
+        <button
+          class={'detail-act' + (isBm ? ' on' : '')}
+          onClick={() => bmKey && onToggleBm(bmKey)}
+          aria-pressed={isBm}
+        >
+          {isBm ? <IconStar /> : <IconStarOutline />}
+          {/* 直上のカードにも «ブックマーク» があるので、対象のグループ名を出して区別する */}
+          <span>
+            {detailLabel} {isBm ? '登録済み' : 'をブックマーク'}
+          </span>
+        </button>
+        <button class="detail-act" onClick={clearSel}>
+          閉じる
+        </button>
       </div>
-      {/* 切り替えは下寄せ (スクロール領域の外に固定) */}
-      <div class="np-filter-bar">
-        <div class="d2-mode-switch" style={{ padding: '0', marginBottom: '0' }}>
-          <button
-            class={'d2-mode-btn' + (mode === 'upper' ? ' active' : '')}
-            onClick={() => {
-              setMode('upper')
-              clearSel()
-            }}
-          >
-            上2桁 (XY_)
-          </button>
-          <button
-            class={'d2-mode-btn' + (mode === 'lower' ? ' active' : '')}
-            onClick={() => {
-              setMode('lower')
-              clearSel()
-            }}
-          >
-            下2桁 (_YZ)
-          </button>
-        </div>
+    </>
+  ) : null
+
+  // よく使う は親指に一番近い main の下端、その上に 2 桁のグリッド
+  const main = (
+    <div class="stack-up" style={{ '--stack-gap': '8px' }}>
+      <FavList
+        favD2={favD2}
+        selected={selected}
+        specialSel={specialSel}
+        mode={mode}
+        onClearSel={clearSel}
+        onSelectFav={handleSelectFav}
+      />
+      <div class="d2-grid grid-up" style={{ '--cols': 10, '--gap': '3px' }}>
+        {Array.from({ length: 100 }, (_, i) => {
+          const v = String(i).padStart(2, '0')
+          const hasFilled = filledSet.has(modeKey + v)
+          const label = mode === 'upper' ? v + '_' : '_' + v
+          return (
+            <div
+              key={v}
+              class={
+                'd2-cell' +
+                (selected === v && !specialSel ? ' selected' : '') +
+                (hasFilled ? ' has-word' : '')
+              }
+              onClick={() => {
+                setSpecialSel(null)
+                setSelected(selected === v && !specialSel ? null : v)
+              }}
+            >
+              {label}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
+
+  const dock = (
+    <DockRow>
+      <button
+        class={'d2-mode-btn' + (mode === 'upper' ? ' active' : '')}
+        onClick={() => {
+          setMode('upper')
+          clearSel()
+        }}
+      >
+        上2桁 (XY_)
+      </button>
+      <button
+        class={'d2-mode-btn' + (mode === 'lower' ? ' active' : '')}
+        onClick={() => {
+          setMode('lower')
+          clearSel()
+        }}
+      >
+        下2桁 (_YZ)
+      </button>
+    </DockRow>
+  )
+
+  return <Screen main={main} panel={panel} dock={dock} />
 }
 
 export default DigitTab
