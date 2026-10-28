@@ -186,11 +186,6 @@ export default function NumberDetailTab({
   return (
     <main class="content nd-panel">
       <div class="nd-bar">
-        {onClose ? (
-          <button class="nd-step" onClick={onClose} aria-label="閉じる">
-            ‹
-          </button>
-        ) : null}
         <button class="nd-step" onClick={() => step(-1)} aria-label="前の番号">
           −
         </button>
@@ -204,9 +199,21 @@ export default function NumberDetailTab({
         <button class="nd-step" onClick={() => step(1)} aria-label="次の番号">
           ＋
         </button>
-        <button class="nd-reload" onClick={() => load(num)}>
-          読み直す
+        {/* 番号送り (− ＋) と同じ箱にすると見分けがつかないので、
+            右端に枠なしで置き、記号と文字を併記する */}
+        <button
+          class="nd-ghost nd-reload"
+          onClick={() => load(num)}
+          aria-label="読み直す"
+          title="読み直す"
+        >
+          ↻
         </button>
+        {onClose ? (
+          <button class="nd-ghost nd-close" onClick={onClose}>
+            <span aria-hidden="true">✕</span> 閉じる
+          </button>
+        ) : null}
       </div>
 
       {/* 編集欄の上に差し込むと出るたびに行がずれるので、重ねて出す */}
@@ -297,14 +304,13 @@ export default function NumberDetailTab({
           </div>
 
           <div class="nd-rep">
-            <span class="nd-rep-label">
-              代表 {liveCount}/2 {confirmed ? '· 確定済み' : ''}
-            </span>
+            <span class="nd-rep-label">代表 {liveCount}/2</span>
             {/* 代表は選んだ時点で確定する。ここは外す / 付け直すためのもの */}
             <button
               class={'nd-rep-btn' + (confirmed ? ' on' : '')}
               disabled={state.saving || (!confirmed && liveCount === 0)}
               aria-pressed={confirmed}
+              title={confirmed ? '押すと確定を外す' : undefined}
               onClick={() =>
                 send(
                   { op: 'rep', picks, confirmed: !confirmed },
@@ -312,7 +318,7 @@ export default function NumberDetailTab({
                 )
               }
             >
-              {confirmed ? '確定を外す' : '確定する'}
+              {confirmed ? '✓ 確定済み' : '確定する'}
             </button>
           </div>
         </>

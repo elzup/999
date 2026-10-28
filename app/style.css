@@ -5309,7 +5309,6 @@ body {
   border-radius: 8px;
 }
 .nd-step,
-.nd-reload,
 .nd-rep-btn,
 .nd-add,
 .nd-save {
@@ -5319,9 +5318,22 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* 閉じる・読み直すは枠も背景も持たない。編集の操作より目立たせない */
+.nd-ghost {
+  padding: 6px 8px;
+  font-size: 14px;
+  color: var(--text2);
+  background: none;
+  border: none;
+  border-radius: 8px;
+}
+.nd-ghost:active {
+  background: var(--surface2);
+}
 .nd-reload {
   margin-left: auto;
-  font-size: 13px;
+  font-size: 18px;
+  line-height: 1;
 }
 /* 流れの外に重ねる。出るたびに編集欄が上下に動かないように。
    下端に出すのは、下のカードで評価を押したときも目に入る位置だから */
@@ -5408,10 +5420,14 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* 選択中は塗りつぶさない。カードごとに並ぶので、塗ると画面が緑の点だらけになる */
+.nd-rank.on,
+.nd-rate-btn.on {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+}
 .nd-rank.on {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: transparent;
   font-weight: bold;
 }
 .nd-img {
@@ -5486,11 +5502,6 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-.nd-rate-btn.on {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: transparent;
-}
 .nd-actions {
   display: flex;
   gap: 8px;
@@ -5511,10 +5522,11 @@ body {
   font-size: 13px;
   color: var(--text2);
 }
+/* 確定済みは塗りつぶさず、文字と枠の色だけで示す */
 .nd-rep-btn.on {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: transparent;
+  color: var(--accent);
+  background: none;
+  border-color: var(--accent);
 }
 
 /* ---- テストの入力パッド (TestPad / 全テスト共通) ----
