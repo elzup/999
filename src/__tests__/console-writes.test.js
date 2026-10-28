@@ -57,6 +57,20 @@ describe('console partial writes', () => {
     expect(db.docs['051'].ratings).toEqual(stored.ratings)
   })
 
+  it('代表が空なら確定済みとして保存しない', async () => {
+    const db = fakeDb({ '051': stored })
+    const result = await saveRep(db, {
+      num: '051',
+      picks: [],
+      confirmed: true,
+      current: stored,
+      now,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(db.docs['051'].rep).toEqual({ picks: [], confirmed: false })
+  })
+
   it('REQ-CON-002: saving a rating leaves rep and confirmed untouched', async () => {
     const db = fakeDb({ '051': stored })
     const result = await saveRating(db, {

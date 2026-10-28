@@ -250,7 +250,9 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -5321,10 +5323,32 @@ body {
   margin-left: auto;
   font-size: 13px;
 }
+/* 流れの外に重ねる。出るたびに編集欄が上下に動かないように。
+   下端に出すのは、下のカードで評価を押したときも目に入る位置だから */
 .nd-status {
-  margin: 6px 0;
+  position: fixed;
+  bottom: calc(var(--bar-h) + var(--safe-bottom) + 12px);
+  left: 50%;
+  z-index: 60;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 6px 12px;
   font-size: 13px;
-  color: var(--text2);
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.nd-status.show {
+  opacity: 1;
+}
+.nd-status.error {
+  color: #dc2626;
 }
 
 /* 1 候補 = 1 カード。境界がひと目で分かるようにする (UI 案 A-2) */

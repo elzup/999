@@ -11,15 +11,16 @@ import {
   applyDraftEdit,
   applyFailure,
   applySaved,
+  livePicks,
   nextFreeSlot,
   type SlotFamily,
   mergeDraftRows,
   moveItem,
   nextRatingValue,
   RATING_VALUES,
+  repPickOp,
   slotRows,
   slotsFromRows,
-  setRepPick,
   type DetailState,
   type SlotRow,
 } from '../lib/numberDetail'
@@ -36,6 +37,9 @@ const RATING_LABEL: Record<number, string> = {
 }
 
 const EMPTY: DetailState = { doc: null, status: '', saving: false }
+
+// 成功の知らせを出しておく時間。失敗の理由は次の操作まで残す
+const NOTICE_MS = 2000
 
 export default function NumberDetailTab({
   token,
@@ -65,7 +69,12 @@ export default function NumberDetailTab({
       fetchNumber(target, token)
         .then((doc) => setState({ doc, status: '', saving: false }))
         .catch((error) =>
-          setState({ doc: null, status: String(error.message), saving: false })
+          setState({
+            doc: null,
+            status: String(error.message),
+            saving: false,
+            failed: true,
+          })
         )
         .finally(() => setLoading(false))
     },
@@ -73,6 +82,15 @@ export default function NumberDetailTab({
   )
 
   useEffect(() => load(num), [num, load])
+
+  useEffect(() => {
+    if (!state.status || state.failed) return
+    const timer = setTimeout(
+      () => setState((prev) => ({ ...prev, status: '' })),
+      NOTICE_MS
+    )
+    return () => clearTimeout(timer)
+  }, [state.status, state.failed])
 
   const send = useCallback(
     async (op: PatchOp, message?: string) => {
@@ -103,6 +121,14 @@ export default function NumberDetailTab({
   // 表示行 = 保存済みの内容に、未保存の編集を重ねたもの
   const rows: SlotRow[] = doc ? mergeDraftRows(slotRows(doc), drafts) : []
   const picks = doc?.rep?.picks ?? []
+  const confirmed = Boolean(doc?.rep?.confirmed)
+  // 語を書き換えて当たらなくなった代表は数えない
+  const liveCount = doc ? livePicks(doc).length : 0
+  const notice = loading
+    ? '読み込み中…'
+    : state.saving
+      ? '保存中…'
+      : state.status
   const dirty = Object.keys(drafts).length > 0
 
   const saveSlots = useCallback(
@@ -183,8 +209,18 @@ export default function NumberDetailTab({
         </button>
       </div>
 
-      {state.status ? <p class="nd-status">{state.status}</p> : null}
-      {loading ? <p class="nd-status">読み込み中…</p> : null}
+      {/* 編集欄の上に差し込むと出るたびに行がずれるので、重ねて出す */}
+      <p
+        class={
+          'nd-status' +
+          (notice ? ' show' : '') +
+          (state.failed && !state.saving && !loading ? ' error' : '')
+        }
+        role="status"
+        aria-live="polite"
+      >
+        {notice}
+      </p>
 
       {doc ? (
         <>
@@ -212,16 +248,13 @@ export default function NumberDetailTab({
                     '削除しました'
                   )
                 }
-                onPickRep={(rank) =>
+                onPickRep={(rank) => {
+                  const op = repPickOp(doc, row.slot, rank)
                   send(
-                    {
-                      op: 'rep',
-                      picks: setRepPick(doc, row.slot, rank),
-                      confirmed: Boolean(doc.rep?.confirmed),
-                    },
-                    '代表を変更しました'
+                    op,
+                    op.confirmed ? '代表を確定しました' : '代表を外しました'
                   )
-                }
+                }}
                 onRate={(value) =>
                   send(
                     {
@@ -265,19 +298,21 @@ export default function NumberDetailTab({
 
           <div class="nd-rep">
             <span class="nd-rep-label">
-              代表 {picks.length}/2 {doc.rep?.confirmed ? '· 確定済み' : ''}
+              代表 {liveCount}/2 {confirmed ? '· 確定済み' : ''}
             </span>
+            {/* 代表は選んだ時点で確定する。ここは外す / 付け直すためのもの */}
             <button
-              class={'nd-rep-btn' + (doc.rep?.confirmed ? ' on' : '')}
-              disabled={state.saving}
+              class={'nd-rep-btn' + (confirmed ? ' on' : '')}
+              disabled={state.saving || (!confirmed && liveCount === 0)}
+              aria-pressed={confirmed}
               onClick={() =>
                 send(
-                  { op: 'rep', picks, confirmed: !doc.rep?.confirmed },
-                  doc.rep?.confirmed ? '確定を外しました' : '確定しました'
+                  { op: 'rep', picks, confirmed: !confirmed },
+                  confirmed ? '確定を外しました' : '確定しました'
                 )
               }
             >
-              確定
+              {confirmed ? '確定を外す' : '確定する'}
             </button>
           </div>
         </>
