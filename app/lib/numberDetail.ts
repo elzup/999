@@ -6,6 +6,7 @@
 
 import type { NumberDoc, NumberSlot, RepPick, Rating } from './numberApi'
 import type { NumberEntry } from '../data/schema'
+import { candidatesOf } from './choice'
 
 /** 候補スロットの並び。rep-store の SLOT_ORDER と同じ */
 export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3'] as const
@@ -87,17 +88,6 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
   })
 }
 
-/** 配信データ上の語と画像の組。manifest 由来 (w1Img 系) を先に並べる */
-const IMAGE_PAIRS = [
-  ['w1', 'w1Img'],
-  ['w2', 'w2Img'],
-  ['w1_2', 'w1_2Img'],
-  ['w2_2', 'w2_2Img'],
-  ...['wh', 'wm'].flatMap((family) =>
-    [1, 2, 3].map((i) => [`${family}${i}`, `${family}${i}Img`])
-  ),
-] as const
-
 /**
  * 画像の正本は画像パイプラインの manifest で、numbers/{num} の imageUrl には
  * 入っていないことが多い (同期は imageUrl を書かない: spec:sheet-to-db-sync)。
@@ -111,12 +101,10 @@ export function withDeliveredImages(
   entry: NumberEntry | undefined
 ): SlotRow[] {
   if (!entry) return rows
-  const record = entry as Record<string, unknown>
   const images = new Map<string, string>()
-  for (const [wordKey, imgKey] of IMAGE_PAIRS) {
-    const name = nameOf(String(record[wordKey] ?? ''))
-    const img = String(record[imgKey] ?? '').trim()
-    if (name && img && !images.has(name)) images.set(name, img)
+  for (const cand of candidatesOf(entry)) {
+    const name = nameOf(cand.word)
+    if (name && cand.img && !images.has(name)) images.set(name, cand.img)
   }
   return rows.map((row) => {
     if (row.imageUrl) return row

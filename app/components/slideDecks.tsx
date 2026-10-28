@@ -3,6 +3,7 @@ import type { ComponentChildren } from 'preact'
 import type { CardEntry, NumberEntry } from '../data/schema'
 import { D3_LIST, PI_1000_DIGITS, YEAR_DATA } from '../data/constants'
 import { cardValues, formatCardId } from '../data/cards'
+import { candidateAt } from '../lib/choice'
 import { getFfRows, isValidFfRow } from '../lib/ffQuiz'
 import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
 import type { SlideDeck } from '../lib/slideDeck'
@@ -55,23 +56,19 @@ const TAG_LABELS: [key: 'hito' | 'mono' | 'gainen', label: string][] = [
 
 // 数字 1 件ぶんの答え面 (代表語 2 つ + 人/物/念)。数字デッキと π デッキで共有する。
 function NumberAnswer({ d }: { d: NumberEntry }) {
-  const word1 = d.wh1 || d.w1
-  const word2 = d.wm1 || d.w2
+  const first = candidateAt(d, 'wh1')
+  const second = candidateAt(d, 'wm1')
   return (
     <>
       <div class="slide-words">
-        {word1 ? (
-          <WordRow
-            word={word1}
-            kana={d.wh1k || d.w1k}
-            img={d.wh1Img || d.w1Img}
-          />
+        {first ? (
+          <WordRow word={first.word} kana={first.kana} img={first.img} />
         ) : null}
-        {word2 ? (
+        {second ? (
           <WordRow
-            word={word2}
-            kana={d.wm1k || d.w2k}
-            img={d.wm1Img || d.w2Img}
+            word={second.word}
+            kana={second.kana}
+            img={second.img}
             isSub
           />
         ) : null}
