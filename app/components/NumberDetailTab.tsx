@@ -24,7 +24,9 @@ import {
   slotsFromRows,
   type DetailState,
   type SlotRow,
+  withDeliveredImages,
 } from '../lib/numberDetail'
+import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
 
 const REP_RANKS = [1, 2] as const
@@ -46,9 +48,12 @@ export default function NumberDetailTab({
   token,
   initialNum = '000',
   focusSlot,
+  numbers,
   onClose,
 }: {
   token: string
+  /** 配信データ。numbers/{num} に無い画像をここから補う */
+  numbers?: NumberEntry[]
   initialNum?: string
   /** 999 タブで語をタップして入ったとき、その語にカーソルを置く (REQ-NDV-012) */
   focusSlot?: string
@@ -120,7 +125,10 @@ export default function NumberDetailTab({
 
   const doc = state.doc
   // 表示行 = 保存済みの内容に、未保存の編集を重ねたもの
-  const rows: SlotRow[] = doc ? mergeDraftRows(slotRows(doc), drafts) : []
+  const entry = numbers?.find((item) => item.num === doc?.num)
+  const rows: SlotRow[] = doc
+    ? withDeliveredImages(mergeDraftRows(slotRows(doc), drafts), entry)
+    : []
   const picks = doc?.rep?.picks ?? []
   const confirmed = Boolean(doc?.rep?.confirmed)
   // 語を書き換えて当たらなくなった代表は数えない

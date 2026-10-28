@@ -5,6 +5,7 @@
 // テストで確かめるため (console/rep-state.js を分けているのと同じ理由)。
 
 import type { NumberDoc, NumberSlot, RepPick, Rating } from './numberApi'
+import type { NumberEntry } from '../data/schema'
 
 /** 候補スロットの並び。rep-store の SLOT_ORDER と同じ */
 export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3'] as const
@@ -19,6 +20,8 @@ export type SlotRow = {
   imageUrl?: string
   /** 画像の確定時点の語と現在の語がずれている (REQ-CON-005) */
   imageStale: boolean
+  /** imageUrl は配信データから補った表示用。保存には載せない */
+  imageDelivered?: boolean
   rankey?: string
   pt?: number | null
   /** 未評価は null。0 (普通) と区別する */
@@ -81,6 +84,44 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
       rating: ratingOf(doc, slot),
       repRank: repRankOf(doc, slot),
     }
+  })
+}
+
+/** 配信データ上の語と画像の組。manifest 由来 (w1Img 系) を先に並べる */
+const IMAGE_PAIRS = [
+  ['w1', 'w1Img'],
+  ['w2', 'w2Img'],
+  ['w1_2', 'w1_2Img'],
+  ['w2_2', 'w2_2Img'],
+  ...['wh', 'wm'].flatMap((family) =>
+    [1, 2, 3].map((i) => [`${family}${i}`, `${family}${i}Img`])
+  ),
+] as const
+
+/**
+ * 画像の正本は画像パイプラインの manifest で、numbers/{num} の imageUrl には
+ * 入っていないことが多い (同期は imageUrl を書かない: spec:sheet-to-db-sync)。
+ * 配信データはビルド時に manifest を合流しているので、そこから補う。
+ *
+ * 枠の位置ではなく語で当てる。並べ替えや書き換えの後に、位置で当てると
+ * 別の語の画像が付いてしまう。
+ */
+export function withDeliveredImages(
+  rows: SlotRow[],
+  entry: NumberEntry | undefined
+): SlotRow[] {
+  if (!entry) return rows
+  const record = entry as Record<string, unknown>
+  const images = new Map<string, string>()
+  for (const [wordKey, imgKey] of IMAGE_PAIRS) {
+    const name = nameOf(String(record[wordKey] ?? ''))
+    const img = String(record[imgKey] ?? '').trim()
+    if (name && img && !images.has(name)) images.set(name, img)
+  }
+  return rows.map((row) => {
+    if (row.imageUrl) return row
+    const img = images.get(nameOf(row.word))
+    return img ? { ...row, imageUrl: img, imageDelivered: true } : row
   })
 }
 
@@ -179,7 +220,10 @@ export function slotsFromRows(
       ...before,
       word,
       kana,
-      imageUrl: row.imageUrl ?? before?.imageUrl ?? '',
+      imageUrl:
+        (row.imageDelivered ? undefined : row.imageUrl) ??
+        before?.imageUrl ??
+        '',
     }
   }
   return next

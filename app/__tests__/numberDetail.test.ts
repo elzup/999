@@ -5,6 +5,7 @@ import {
   applyFailure,
   applySaved,
   changedSlots,
+  withDeliveredImages,
   nextFreeSlot,
   mergeDraftRows,
   moveItem,
@@ -349,5 +350,39 @@ describe('未保存の変更', () => {
     expect(
       changedSlots(doc, { wh3: { ...blank, slot: 'wh3', word: '来い' } })
     ).toEqual(['wh3'])
+  })
+})
+
+describe('画像の補完', () => {
+  const entry = {
+    num: '051',
+    w1: '恋',
+    w1Img: 'koi.webp',
+    wm1: 'コイン',
+    wm1Img: 'coin.webp',
+  } as never
+
+  it('imageUrl の無い枠に、語が一致する配信データの画像を付ける', () => {
+    const rows = withDeliveredImages(slotRows(doc), entry)
+    const bySlot = Object.fromEntries(rows.map((row) => [row.slot, row]))
+    // wh1 (鯉) は自前の画像を持つので触らない
+    expect(bySlot.wh1.imageUrl).toBe('a.jpg')
+    // 配信データでは w1 枠の語だが、ここでは wh2 にいる。位置ではなく語で当てる
+    expect(bySlot.wh2.imageUrl).toBe('koi.webp')
+  })
+
+  it('補った画像は保存する slots に載せない', () => {
+    const rows = withDeliveredImages(slotRows(doc), entry)
+    expect(slotsFromRows(rows, doc).wh2.imageUrl).toBe('')
+    expect(slotsFromRows(rows, doc).wh1.imageUrl).toBe('a.jpg')
+  })
+
+  it('一致する語が無ければ付けない', () => {
+    const rows = withDeliveredImages(slotRows(doc), {
+      num: '051',
+      w1: '濃い',
+      w1Img: 'x.webp',
+    } as never)
+    expect(rows.find((row) => row.slot === 'wh2')?.imageUrl).toBeUndefined()
   })
 })

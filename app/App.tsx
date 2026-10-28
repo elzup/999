@@ -343,6 +343,7 @@ export function App() {
           token={token}
           initialNum={editTarget?.num}
           focusSlot={editTarget?.slot}
+          numbers={data.numbers}
           // 戻る (popstate) が実際の状態遷移を行う。ここで直接閉じると
           // 積んだ履歴が 1 つ残り、次の «戻る» が空振りする
           onClose={editTarget ? closeEditor : undefined}
@@ -375,6 +376,7 @@ export function App() {
           <NumberDetailTab
             token={token}
             initialNum={overlayEditNum}
+            numbers={data.numbers}
             onClose={closeOverlayEditor}
           />
         </div>
@@ -423,19 +425,19 @@ function LoadingScreen({ progress }: { progress: AppDataProgress }) {
     progress.phase === 'downloading' && progress.totalBytes
       ? progress.loadedBytes / progress.totalBytes
       : progress.phase === 'parsing'
-      ? 1
-      : null
+        ? 1
+        : null
 
   const label =
     progress.phase === 'connecting'
       ? 'サーバーに接続中…'
       : progress.phase === 'downloading'
-      ? progress.totalBytes
-        ? `辞書データを受信中… ${Math.round(
-            (progress.loadedBytes / progress.totalBytes) * 100
-          )}%`
-        : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
-      : '辞書データを展開中…'
+        ? progress.totalBytes
+          ? `辞書データを受信中… ${Math.round(
+              (progress.loadedBytes / progress.totalBytes) * 100
+            )}%`
+          : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
+        : '辞書データを展開中…'
 
   return (
     <div class="loading-screen">
