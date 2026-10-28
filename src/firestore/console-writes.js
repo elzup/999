@@ -32,12 +32,14 @@ function patch(current, field, value, { now, source = 'console' }) {
 
 /**
  * 代表語を保存する。ratings には触れない (REQ-CON-001)。
+ * 代表が 1 つも無いまま確定済みにはしない。どの面から書いても同じ規則にする。
  */
 export async function saveRep(
   db,
   { num, picks, confirmed, current, now, source }
 ) {
-  const built = patch(current, 'rep', { picks, confirmed }, { now, source })
+  const rep = { picks, confirmed: Boolean(confirmed) && picks?.length > 0 }
+  const built = patch(current, 'rep', rep, { now, source })
   if (built.error) return built
   return writeNumber(db, {
     num,

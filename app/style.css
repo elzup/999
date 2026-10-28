@@ -250,7 +250,9 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -5287,7 +5289,8 @@ body {
 
 /* 番号単位の統合ビュー (spec:number-detail-view)。UI 案 A-2 + B-1 */
 .nd-panel {
-  padding: 12px 10px 80px;
+  /* 下端の未保存バーに最後のカードが隠れない分だけ空ける */
+  padding: 12px 10px 140px;
 }
 .nd-bar {
   display: flex;
@@ -5307,7 +5310,6 @@ body {
   border-radius: 8px;
 }
 .nd-step,
-.nd-reload,
 .nd-rep-btn,
 .nd-add,
 .nd-save {
@@ -5317,14 +5319,53 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* 閉じる・読み直すは枠も背景も持たない。編集の操作より目立たせない */
+.nd-ghost {
+  padding: 6px 8px;
+  font-size: 14px;
+  color: var(--text2);
+  background: none;
+  border: none;
+  border-radius: 8px;
+}
+.nd-ghost:active {
+  background: var(--surface2);
+}
 .nd-reload {
   margin-left: auto;
-  font-size: 13px;
+  font-size: 18px;
+  line-height: 1;
 }
+/* 流れの外に重ねる。出るたびに編集欄が上下に動かないように。
+   下端に出すのは、下のカードで評価を押したときも目に入る位置だから */
 .nd-status {
-  margin: 6px 0;
+  position: fixed;
+  bottom: calc(var(--bar-h) + var(--safe-bottom) + 12px);
+  left: 50%;
+  z-index: 60;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 6px 12px;
   font-size: 13px;
-  color: var(--text2);
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.nd-status.show {
+  opacity: 1;
+}
+/* 未保存バーが出ているあいだは、その上に出す */
+.nd-status.raised {
+  bottom: calc(var(--bar-h) + var(--safe-bottom) + 68px);
+}
+.nd-status.error {
+  color: #dc2626;
 }
 
 /* 1 候補 = 1 カード。境界がひと目で分かるようにする (UI 案 A-2) */
@@ -5346,6 +5387,22 @@ body {
 .nd-card.rep {
   border-color: var(--accent2);
   box-shadow: inset 3px 0 0 var(--accent);
+}
+/* 未保存の枠。代表の緑と混ざらないよう、注意色の破線で囲う */
+.nd-card.draft {
+  border-style: dashed;
+  border-color: var(--warn);
+}
+.nd-draft-tag {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--warn);
+}
+.nd-pending-note {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text2);
 }
 .nd-card.dragging {
   opacity: 0.4;
@@ -5384,10 +5441,14 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* 選択中は塗りつぶさない。カードごとに並ぶので、塗ると画面が緑の点だらけになる */
+.nd-rank.on,
+.nd-rate-btn.on {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+}
 .nd-rank.on {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: transparent;
   font-weight: bold;
 }
 .nd-img {
@@ -5462,11 +5523,6 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-.nd-rate-btn.on {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: transparent;
-}
 .nd-actions {
   display: flex;
   gap: 8px;
@@ -5481,16 +5537,53 @@ body {
 .nd-rep {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
 .nd-rep-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text2);
 }
+.nd-rep-pick {
+  font-size: 14px;
+}
+.nd-rep-pick.none {
+  color: var(--text2);
+}
+.nd-rep .nd-rep-btn {
+  margin-left: auto;
+  font-size: 13px;
+}
+.nd-savebar {
+  position: fixed;
+  right: 10px;
+  bottom: calc(var(--bar-h) + var(--safe-bottom) + 8px);
+  left: 10px;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.3);
+}
+.nd-savebar-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--warn);
+}
+/* 確定済みは塗りつぶさず、文字と枠の色だけで示す */
 .nd-rep-btn.on {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: transparent;
+  color: var(--accent);
+  background: none;
+  border-color: var(--accent);
 }
 
 /* ---- テストの入力パッド (TestPad / 全テスト共通) ----

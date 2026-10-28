@@ -4,6 +4,7 @@ import {
   applyDraftEdit,
   applyFailure,
   applySaved,
+  changedSlots,
   nextFreeSlot,
   mergeDraftRows,
   moveItem,
@@ -15,6 +16,8 @@ import {
   slotsFromRows,
   swapRepPicks,
   setRepPick,
+  repPickOp,
+  livePicks,
 } from '../lib/numberDetail'
 
 const doc: NumberDoc = {
@@ -135,6 +138,32 @@ describe('rep picks', () => {
     expect(setRepPick(two, 'wh2', 1)).toEqual([{ k: 'こい', w: '恋' }])
     // ① を外すと ② が繰り上がる
     expect(setRepPick(two, 'wh1', 1)).toEqual([{ k: 'こい', w: '恋' }])
+  })
+
+  it('代表を選んだら即確定する。代表が残らなければ確定も外す', () => {
+    expect(repPickOp(doc, 'wh2', 2)).toEqual({
+      op: 'rep',
+      picks: [
+        { k: 'こい', w: '鯉' },
+        { k: 'こい', w: '恋' },
+      ],
+      confirmed: true,
+    })
+    expect(repPickOp(doc, 'wh1', 1)).toEqual({
+      op: 'rep',
+      picks: [],
+      confirmed: false,
+    })
+  })
+
+  it('今ある枠に当たらなくなった代表は数えない', () => {
+    const edited: NumberDoc = {
+      ...doc,
+      slots: { ...doc.slots, wh1: { word: '濃い', kana: 'こい' } },
+      rep: { picks: [{ k: 'こい', w: '鯉' }], confirmed: true },
+    }
+    expect(livePicks(doc)).toEqual([{ k: 'こい', w: '鯉' }])
+    expect(livePicks(edited)).toEqual([])
   })
 
   it('入替は 2 件揃っているときだけ効く', () => {
@@ -293,5 +322,32 @@ describe('保存の反映 (REQ-NDV-007)', () => {
     expect(next.doc).toBe(doc)
     expect(next.status).toBe('他の画面が先に保存しました')
     expect(next.saving).toBe(false)
+    expect(next.failed).toBe(true)
+  })
+})
+
+describe('未保存の変更', () => {
+  const blank = {
+    word: '',
+    kana: '',
+    imageStale: false,
+    rating: null,
+    repRank: 0,
+  }
+
+  it('保存済みと違う枠だけを数える。書き戻した枠は数えない', () => {
+    const [wh1, wh2] = slotRows(doc)
+    const drafts = {
+      wh1: { ...wh1, word: '濃い' },
+      wh2: { ...wh2 },
+    }
+    expect(changedSlots(doc, drafts)).toEqual(['wh1'])
+  })
+
+  it('足したばかりの空の枠は、語かかなが入るまで数えない', () => {
+    expect(changedSlots(doc, { wh3: { ...blank, slot: 'wh3' } })).toEqual([])
+    expect(
+      changedSlots(doc, { wh3: { ...blank, slot: 'wh3', word: '来い' } })
+    ).toEqual(['wh3'])
   })
 })

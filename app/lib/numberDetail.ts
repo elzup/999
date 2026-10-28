@@ -121,6 +121,30 @@ export function setRepPick(
   return next.filter(Boolean)
 }
 
+/**
+ * 代表を選ぶ操作を送る形にする。選んだ時点で確定する (代表語コンソールと同じ
+ * «選ぶ = 確定»)。代表が 1 つも残らなければ確定も外す。
+ */
+export function repPickOp(
+  doc: NumberDoc,
+  slot: string,
+  rank: 1 | 2
+): { op: 'rep'; picks: RepPick[]; confirmed: boolean } {
+  const picks = setRepPick(doc, slot, rank)
+  return { op: 'rep', picks, confirmed: picks.length > 0 }
+}
+
+/**
+ * 今ある枠に当たっている代表だけ。語を書き換えたり消したりした後の pick は
+ * 値として残る (捨てない) が、件数表示や確定可否には数えない。
+ */
+export function livePicks(doc: NumberDoc): RepPick[] {
+  const values = Object.values(doc.slots ?? {})
+  return (doc.rep?.picks ?? []).filter((pick) =>
+    values.some((value) => sameValue(pick, { k: value.kana, w: value.word }))
+  )
+}
+
 /** 代表 ①② の入替。2 件無いときは何もしない (REQ-NDV-002 の代表側) */
 export function swapRepPicks(picks: RepPick[]): RepPick[] {
   if (picks.length < 2) return picks
@@ -193,6 +217,23 @@ export function applyDraftEdit(
   return { ...drafts, [row.slot]: { ...(drafts[row.slot] ?? row), ...patch } }
 }
 
+/**
+ * 保存済みの内容から変わった下書きの枠。書き直して元に戻した枠は含めない。
+ * 新しく足した枠は、語かかなが入るまでは «保存するもの» が無いので含めない。
+ */
+export function changedSlots(
+  doc: NumberDoc,
+  drafts: Record<string, SlotRow>
+): string[] {
+  return SLOT_ORDER.filter((slot) => {
+    const draft = drafts[slot]
+    if (!draft) return false
+    const saved = doc.slots?.[slot]
+    if (!saved) return Boolean(draft.word.trim() || draft.kana.trim())
+    return draft.word !== saved.word || draft.kana !== saved.kana
+  })
+}
+
 /** 配列内の 1 件を別の位置へ移す (ドラッグの結果そのもの) */
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
   if (from === to || from < 0 || to < 0 || from >= list.length) return list
@@ -221,6 +262,8 @@ export type DetailState = {
   doc: NumberDoc | null
   status: string
   saving: boolean
+  /** status が失敗の理由か。成功の知らせは少しで消し、失敗は残す */
+  failed?: boolean
 }
 
 /**
@@ -233,12 +276,12 @@ export function applySaved(
   message = '保存しました'
 ): DetailState {
   if (!saved) return state
-  return { doc: saved, status: message, saving: false }
+  return { doc: saved, status: message, saving: false, failed: false }
 }
 
 export function applyFailure(state: DetailState, error: unknown): DetailState {
   const message = error instanceof Error ? error.message : '保存に失敗しました'
-  return { ...state, status: message, saving: false }
+  return { ...state, status: message, saving: false, failed: true }
 }
 
 /** 未評価を除いた評価済み件数。進捗表示用 */
