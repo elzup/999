@@ -11,6 +11,7 @@ import {
   applyDraftEdit,
   applyFailure,
   applySaved,
+  changedSlots,
   livePicks,
   nextFreeSlot,
   type SlotFamily,
@@ -129,7 +130,19 @@ export default function NumberDetailTab({
     : state.saving
       ? '保存中…'
       : state.status
-  const dirty = Object.keys(drafts).length > 0
+  const changed = doc ? changedSlots(doc, drafts) : []
+  const dirty = changed.length > 0
+
+  // 番号を移る・読み直す・閉じると下書きは消える。黙って捨てない
+  const leave = (go: () => void) => {
+    if (
+      dirty &&
+      !window.confirm('保存していない変更があります。破棄しますか？')
+    )
+      return false
+    go()
+    return true
+  }
 
   const saveSlots = useCallback(
     (nextRows: SlotRow[], message: string) => {
@@ -143,20 +156,21 @@ export default function NumberDetailTab({
     setDrafts((prev) => applyDraftEdit(prev, row, patch))
   }, [])
 
-  const handleJump = useCallback((value: string) => {
+  const handleJump = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 3)
     setJump(digits)
-    if (digits.length === 3) setNum(digits)
-  }, [])
+    if (digits.length === 3 && digits !== num) {
+      if (!leave(() => setNum(digits))) setJump(num)
+    }
+  }
 
-  const step = useCallback(
-    (delta: number) => {
-      const next = String((Number(num) + delta + 1000) % 1000).padStart(3, '0')
+  const step = (delta: number) => {
+    const next = String((Number(num) + delta + 1000) % 1000).padStart(3, '0')
+    leave(() => {
       setNum(next)
       setJump(next)
-    },
-    [num]
-  )
+    })
+  }
 
   const addRow = useCallback(
     (family: SlotFamily) => {
@@ -203,14 +217,14 @@ export default function NumberDetailTab({
             右端に枠なしで置き、記号と文字を併記する */}
         <button
           class="nd-ghost nd-reload"
-          onClick={() => load(num)}
+          onClick={() => leave(() => load(num))}
           aria-label="読み直す"
           title="読み直す"
         >
           ↻
         </button>
         {onClose ? (
-          <button class="nd-ghost nd-close" onClick={onClose}>
+          <button class="nd-ghost nd-close" onClick={() => leave(onClose)}>
             <span aria-hidden="true">✕</span> 閉じる
           </button>
         ) : null}
@@ -221,6 +235,7 @@ export default function NumberDetailTab({
         class={
           'nd-status' +
           (notice ? ' show' : '') +
+          (dirty ? ' raised' : '') +
           (state.failed && !state.saving && !loading ? ' error' : '')
         }
         role="status"
@@ -231,6 +246,39 @@ export default function NumberDetailTab({
 
       {doc ? (
         <>
+          {/* 代表の状態はここ 1 か所にまとめる。候補の保存とは別の操作 */}
+          <section class="nd-rep" aria-label="代表">
+            <span class="nd-rep-label">代表</span>
+            {REP_RANKS.map((rank) => {
+              const pick = picks[rank - 1]
+              return (
+                <span key={rank} class={'nd-rep-pick' + (pick ? '' : ' none')}>
+                  {REP_LABEL[rank]} {pick ? pick.w : '—'}
+                </span>
+              )
+            })}
+            <button
+              class={'nd-rep-btn' + (confirmed ? ' on' : '')}
+              disabled={state.saving || (!confirmed && liveCount === 0)}
+              aria-pressed={confirmed}
+              title={
+                confirmed
+                  ? '押すと代表の確定を外す'
+                  : liveCount === 0
+                    ? '候補の ①② で代表を選ぶと確定します'
+                    : undefined
+              }
+              onClick={() =>
+                send(
+                  { op: 'rep', picks, confirmed: !confirmed },
+                  confirmed ? '代表の確定を外しました' : '代表を確定しました'
+                )
+              }
+            >
+              {confirmed ? '✓ 代表確定済み' : '代表を確定'}
+            </button>
+          </section>
+
           <ul class="nd-cards">
             {rows.map((row, index) => (
               <SlotCard
@@ -240,21 +288,35 @@ export default function NumberDetailTab({
                 focused={row.slot === focusSlot}
                 saving={state.saving}
                 isSaved={Boolean(doc.slots?.[row.slot])}
+                changed={changed.includes(row.slot)}
                 dragging={dragFrom === index}
                 onDragStart={() => setDragFrom(index)}
                 onDragEnd={() => setDragFrom(null)}
                 onDropAt={() => {
                   if (dragFrom === null || dragFrom === index) return
-                  saveSlots(moveItem(rows, dragFrom, index), '並べ替えました')
+                  saveSlots(
+                    moveItem(rows, dragFrom, index),
+                    dirty
+                      ? '並べ替え、未保存の変更も保存しました'
+                      : '並べ替えました'
+                  )
                   setDragFrom(null)
                 }}
                 onEdit={(patch) => editRow(row, patch)}
-                onDelete={() =>
+                onDelete={() => {
+                  // 足しただけの枠は手元で消すだけ (サーバに送るものが無い)
+                  if (!doc.slots?.[row.slot]) {
+                    setDrafts(({ [row.slot]: _, ...rest }) => rest)
+                    return
+                  }
+                  // slots は最終形を送るので、他の枠の未保存の編集も一緒に保存される
                   saveSlots(
                     rows.filter((other) => other.slot !== row.slot),
-                    '削除しました'
+                    dirty
+                      ? '削除し、未保存の変更も保存しました'
+                      : '削除しました'
                   )
-                }
+                }}
                 onPickRep={(rank) => {
                   const op = repPickOp(doc, row.slot, rank)
                   send(
@@ -292,35 +354,30 @@ export default function NumberDetailTab({
             >
               ＋ 物
             </button>
-            {dirty ? (
+          </div>
+
+          {/* 未保存があるあいだは下端に出し続ける。スクロールしても見える */}
+          {dirty ? (
+            <div class="nd-savebar" role="region" aria-label="未保存の変更">
+              <span class="nd-savebar-text">
+                ● 未保存の変更 {changed.length} 件
+              </span>
+              <button
+                class="nd-ghost"
+                disabled={state.saving}
+                onClick={() => setDrafts({})}
+              >
+                元に戻す
+              </button>
               <button
                 class="nd-save"
                 disabled={state.saving}
                 onClick={() => saveSlots(rows, '保存しました')}
               >
-                変更を保存
+                保存
               </button>
-            ) : null}
-          </div>
-
-          <div class="nd-rep">
-            <span class="nd-rep-label">代表 {liveCount}/2</span>
-            {/* 代表は選んだ時点で確定する。ここは外す / 付け直すためのもの */}
-            <button
-              class={'nd-rep-btn' + (confirmed ? ' on' : '')}
-              disabled={state.saving || (!confirmed && liveCount === 0)}
-              aria-pressed={confirmed}
-              title={confirmed ? '押すと確定を外す' : undefined}
-              onClick={() =>
-                send(
-                  { op: 'rep', picks, confirmed: !confirmed },
-                  confirmed ? '確定を外しました' : '確定しました'
-                )
-              }
-            >
-              {confirmed ? '✓ 確定済み' : '確定する'}
-            </button>
-          </div>
+            </div>
+          ) : null}
         </>
       ) : null}
     </main>
@@ -333,6 +390,7 @@ function SlotCard({
   focused,
   saving,
   isSaved,
+  changed,
   dragging,
   onDragStart,
   onDragEnd,
@@ -348,6 +406,8 @@ function SlotCard({
   saving: boolean
   /** サーバに保存済みの枠か。追加しただけの候補は代表・評価の対象にできない */
   isSaved: boolean
+  /** 保存済みの内容から書き換えた (または新しく足した) 枠 */
+  changed: boolean
   dragging: boolean
   onDragStart: () => void
   onDragEnd: () => void
@@ -357,10 +417,16 @@ function SlotCard({
   onPickRep: (rank: 1 | 2) => void
   onRate: (value: number) => void
 }) {
+  // 書き換え中・足しただけの枠は、代表と評価を付ける相手 (保存された語) と
+  // 画面の語がずれている。押せない飾りを並べず、保存が先だと書く
+  const pending = !isSaved || changed
   return (
     <li
       class={
-        'nd-card' + (row.repRank ? ' rep' : '') + (dragging ? ' dragging' : '')
+        'nd-card' +
+        (row.repRank && !pending ? ' rep' : '') +
+        (pending ? ' draft' : '') +
+        (dragging ? ' dragging' : '')
       }
       onDragOver={(event) => event.preventDefault()}
       onDrop={onDropAt}
@@ -376,7 +442,12 @@ function SlotCard({
         >
           ⠿
         </span>
-        <span class="nd-slot">{row.slot}</span>
+        <span class="nd-slot">
+          {row.slot}
+          {pending ? (
+            <span class="nd-draft-tag">{isSaved ? '未保存' : '新規'}</span>
+          ) : null}
+        </span>
         {row.imageUrl ? (
           <img
             class={'nd-img' + (row.imageStale ? ' stale' : '')}
@@ -414,38 +485,44 @@ function SlotCard({
       </div>
 
       <div class="nd-card-foot">
-        {row.rankey ? <Rankey value={row.rankey} /> : null}
-        {row.pt != null ? <span class="nd-pt">{row.pt.toFixed(1)}</span> : null}
-        <div class="nd-rank-group" role="group" aria-label="代表">
-          {REP_RANKS.map((rank) => (
-            <button
-              key={rank}
-              class={'nd-rank' + (row.repRank === rank ? ' on' : '')}
-              disabled={saving || !isSaved || !row.word}
-              aria-pressed={row.repRank === rank}
-              onClick={() => onPickRep(rank)}
-              title={
-                isSaved
-                  ? `代表${REP_LABEL[rank]}にする / 外す`
-                  : '保存してから代表にできます'
-              }
-            >
-              {REP_LABEL[rank]}
-            </button>
-          ))}
-        </div>
-        <div class="nd-rate">
-          {RATING_VALUES.map((value) => (
-            <button
-              key={value}
-              class={'nd-rate-btn' + (row.rating === value ? ' on' : '')}
-              disabled={saving || !row.word || !isSaved}
-              onClick={() => onRate(value)}
-            >
-              {RATING_LABEL[value]}
-            </button>
-          ))}
-        </div>
+        {row.rankey && !pending ? <Rankey value={row.rankey} /> : null}
+        {row.pt != null && !pending ? (
+          <span class="nd-pt">{row.pt.toFixed(1)}</span>
+        ) : null}
+        {pending ? (
+          <span class="nd-pending-note">
+            保存すると代表・評価を付けられます
+          </span>
+        ) : (
+          <>
+            <div class="nd-rank-group" role="group" aria-label="代表">
+              {REP_RANKS.map((rank) => (
+                <button
+                  key={rank}
+                  class={'nd-rank' + (row.repRank === rank ? ' on' : '')}
+                  disabled={saving || !row.word}
+                  aria-pressed={row.repRank === rank}
+                  onClick={() => onPickRep(rank)}
+                  title={`代表${REP_LABEL[rank]}にする / 外す`}
+                >
+                  {REP_LABEL[rank]}
+                </button>
+              ))}
+            </div>
+            <div class="nd-rate">
+              {RATING_VALUES.map((value) => (
+                <button
+                  key={value}
+                  class={'nd-rate-btn' + (row.rating === value ? ' on' : '')}
+                  disabled={saving || !row.word}
+                  onClick={() => onRate(value)}
+                >
+                  {RATING_LABEL[value]}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </li>
   )

@@ -217,6 +217,23 @@ export function applyDraftEdit(
   return { ...drafts, [row.slot]: { ...(drafts[row.slot] ?? row), ...patch } }
 }
 
+/**
+ * 保存済みの内容から変わった下書きの枠。書き直して元に戻した枠は含めない。
+ * 新しく足した枠は、語かかなが入るまでは «保存するもの» が無いので含めない。
+ */
+export function changedSlots(
+  doc: NumberDoc,
+  drafts: Record<string, SlotRow>
+): string[] {
+  return SLOT_ORDER.filter((slot) => {
+    const draft = drafts[slot]
+    if (!draft) return false
+    const saved = doc.slots?.[slot]
+    if (!saved) return Boolean(draft.word.trim() || draft.kana.trim())
+    return draft.word !== saved.word || draft.kana !== saved.kana
+  })
+}
+
 /** 配列内の 1 件を別の位置へ移す (ドラッグの結果そのもの) */
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
   if (from === to || from < 0 || to < 0 || from >= list.length) return list

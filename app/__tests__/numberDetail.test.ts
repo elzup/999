@@ -4,6 +4,7 @@ import {
   applyDraftEdit,
   applyFailure,
   applySaved,
+  changedSlots,
   nextFreeSlot,
   mergeDraftRows,
   moveItem,
@@ -322,5 +323,31 @@ describe('保存の反映 (REQ-NDV-007)', () => {
     expect(next.status).toBe('他の画面が先に保存しました')
     expect(next.saving).toBe(false)
     expect(next.failed).toBe(true)
+  })
+})
+
+describe('未保存の変更', () => {
+  const blank = {
+    word: '',
+    kana: '',
+    imageStale: false,
+    rating: null,
+    repRank: 0,
+  }
+
+  it('保存済みと違う枠だけを数える。書き戻した枠は数えない', () => {
+    const [wh1, wh2] = slotRows(doc)
+    const drafts = {
+      wh1: { ...wh1, word: '濃い' },
+      wh2: { ...wh2 },
+    }
+    expect(changedSlots(doc, drafts)).toEqual(['wh1'])
+  })
+
+  it('足したばかりの空の枠は、語かかなが入るまで数えない', () => {
+    expect(changedSlots(doc, { wh3: { ...blank, slot: 'wh3' } })).toEqual([])
+    expect(
+      changedSlots(doc, { wh3: { ...blank, slot: 'wh3', word: '来い' } })
+    ).toEqual(['wh3'])
   })
 })
