@@ -9,6 +9,7 @@ import Rankey from './Rankey'
 import { IconEdit, IconStar, IconStarOutline } from './Icons'
 import { parseTaggedItems } from '../lib/tags'
 import { nameOf } from '../lib/numberDetail'
+import { candidateAt } from '../lib/choice'
 
 type Props = {
   d: NumberEntry
@@ -35,43 +36,36 @@ type WordRow = {
  */
 function wordRows(d: NumberEntry): WordRow[] {
   const rows: WordRow[] = []
-  const wh1 = d.wh1 || d.w1
-  const wm1 = d.wm1 || d.w2
+  // 新旧の列名 (wh1 / w1 など) の読み替えは candidateAt に任せる
+  const wh1 = candidateAt(d, 'wh1')
+  const wm1 = candidateAt(d, 'wm1')
+  const wh2 = candidateAt(d, 'wh2')
+  const wm2 = candidateAt(d, 'wm2')
 
   if (wh1) {
     rows.push({
       slot: 'wh1',
-      word: wh1,
-      kana: d.wh1k || d.w1k,
-      img: d.wh1Img || d.w1Img,
+      word: wh1.word,
+      kana: wh1.kana,
+      img: wh1.img,
       rk: d.w1Rk,
     })
   }
   if (wm1) {
     rows.push({
       slot: 'wm1',
-      word: wm1,
-      kana: d.wm1k || d.w2k,
-      img: d.wm1Img || d.w2Img,
+      word: wm1.word,
+      kana: wm1.kana,
+      img: wm1.img,
       rk: d.w2Rk,
       dim: true,
     })
   }
-  if (!wm1 && (d.wh2 || d.w1_2)) {
-    rows.push({
-      slot: 'wh2',
-      word: (d.wh2 || d.w1_2) as string,
-      img: d.wh2Img || d.w1_2Img,
-      dim: true,
-    })
+  if (!wm1 && wh2) {
+    rows.push({ slot: 'wh2', word: wh2.word, img: wh2.img, dim: true })
   }
-  if (!wh1 && (d.wm2 || d.w2_2)) {
-    rows.push({
-      slot: 'wm2',
-      word: (d.wm2 || d.w2_2) as string,
-      img: d.wm2Img || d.w2_2Img,
-      dim: true,
-    })
+  if (!wh1 && wm2) {
+    rows.push({ slot: 'wm2', word: wm2.word, img: wm2.img, dim: true })
   }
   return rows
 }
