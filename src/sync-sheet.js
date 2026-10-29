@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { splitConceptFields } from './words.js'
 import { isDateKey4 } from './date-keys.js'
+import { writeWordsMeta } from './words-cache-meta.js'
 import {
   getSheetTitleByGid,
   getSheetValuesByTitle,
@@ -198,6 +199,8 @@ async function main() {
   const outPath = join(dataDir, 'words.tsv')
   writeFileSync(outPath, toTsv(entries))
   console.log(`Saved ${entries.length} entries to ${outPath}`)
+  const meta = writeWordsMeta(entries)
+  console.log(`  content updated at: ${meta.contentUpdatedAt}`)
 
   const datesPath = join(dataDir, 'dates.tsv')
   writeFileSync(datesPath, toTsv(dates))

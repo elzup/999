@@ -1,6 +1,7 @@
 import { createSign } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { onRequest } from 'firebase-functions/v2/https'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { defineSecret } from 'firebase-functions/params'
 import { handleNumbersRequest } from './numbers-route.js'
 import {
@@ -58,9 +59,27 @@ const PATCH_ALIASES = {
   w2_2Img: 'wm2Img',
 }
 
+const REGION = process.env.FUNCTION_REGION || 'asia-northeast1'
+
+// シートで直した分を Firestore へ、アプリで直した分をシートへ流す (D-0022)。
+// 数分の遅れは個人用途で許容できる。アプリ保存は PATCH の直後に即時でも流す
+export const sheetSync = onSchedule(
+  {
+    schedule: 'every 5 minutes',
+    region: REGION,
+    secrets: [GOOGLE_SERVICE_ACCOUNT_JSON],
+    // 初回と 1 日 1 回の全件読みは 1000 件を読むので既定の 60 秒では心許ない
+    timeoutSeconds: 300,
+  },
+  async () => {
+    const result = await runSheetSync()
+    console.log('sheetSync', JSON.stringify(result.counts))
+  }
+)
+
 export const api = onRequest(
   {
-    region: process.env.FUNCTION_REGION || 'asia-northeast1',
+    region: REGION,
     secrets: [EDIT_TOKEN, GOOGLE_SERVICE_ACCOUNT_JSON],
   },
   async (req, res) => {
@@ -151,7 +170,31 @@ export const api = onRequest(
           writes,
           now: new Date().toISOString(),
         })
+        // 保存が通ったらその番号だけ即時にシートへ流す。失敗しても保存は
+        // 巻き戻さない (Firestore が正本の 1 つなので、定期の回が拾い直す)
+        if (req.method === 'PATCH' && status === 200) {
+          await runSheetSync({ only: [numberMatch[1]] }).catch((error) =>
+            console.error('sheetSync(only)', numberMatch[1], error)
+          )
+        }
         res.status(status).json(payload)
+        return
+      }
+
+      if (req.method === 'GET' && path === '/sync/status') {
+        const { store, syncHealth } = await loadSheetSync()
+        const state = (await store.readState()) ?? null
+        res.json({ ok: true, state, health: syncHealth(state, Date.now()) })
+        return
+      }
+
+      if (req.method === 'POST' && path === '/sync/sheet') {
+        const result = await runSheetSync()
+        res.json({
+          ok: true,
+          counts: result.counts,
+          conflicts: result.conflicts,
+        })
         return
       }
 
@@ -184,6 +227,70 @@ async function loadFirestoreLib() {
     firestoreLib = { db: connect({ projectId }), writes }
   }
   return firestoreLib
+}
+
+let sheetSyncLib = null
+async function loadSheetSync() {
+  if (!sheetSyncLib) {
+    const [
+      { db },
+      { createBisyncStore },
+      { createSheetIo, writeStatusTab },
+      { runBisync },
+      status,
+    ] = await Promise.all([
+      loadFirestoreLib(),
+      import('./lib/firestore/bisync-store.js'),
+      import('./lib/firestore/sheet-io.js'),
+      import('./lib/firestore/sheet-bisync-run.js'),
+      import('./lib/firestore/sync-status.js'),
+    ])
+    sheetSyncLib = {
+      store: createBisyncStore(db),
+      createSheetIo,
+      writeStatusTab,
+      runBisync,
+      ...status,
+    }
+  }
+  return sheetSyncLib
+}
+
+async function runSheetSync({ only } = {}) {
+  const lib = await loadSheetSync()
+  const { store } = lib
+  const { spreadsheetId, gid } = parseSpreadsheetUrl(
+    process.env.SHEET_URL || DEFAULT_SHEET_URL
+  )
+  const now = new Date().toISOString()
+  try {
+    const title = await getSheetTitleByGid(spreadsheetId, gid)
+    const sheet = lib.createSheetIo({ sheetsApi, spreadsheetId, title })
+    return await lib.runBisync({ sheet, store, now, only })
+  } catch (error) {
+    // 定期の失敗はログにしか出ず気づけないので、状態に残してアプリとシートに見せる
+    const state = await store.readState()
+    await store.writeState(lib.stateWithError(state, error, now))
+    throw error
+  } finally {
+    // 即時反映の回は保存の応答を待たせないよう書かない (5 分以内に定期が書く)
+    if (!only) await writeSheetStatus(lib, spreadsheetId)
+  }
+}
+
+async function writeSheetStatus(lib, spreadsheetId) {
+  try {
+    const state = await lib.store.readState()
+    await lib.writeStatusTab({
+      sheetsApi,
+      spreadsheetId,
+      tab: lib.STATUS_TAB,
+      rows: lib.statusRows(state),
+    })
+  } catch (error) {
+    // 状態タブは見るためだけの写し。書けなくても同期の結果は変わらない
+    console.error('sheetSync(status tab)', error)
+  }
 }
 
 // パスキーはドメインに結び付く。firebaseapp.com 側や独自ドメインから開くと

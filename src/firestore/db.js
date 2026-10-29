@@ -26,7 +26,10 @@ function credential() {
   // gcloud auth print-access-token で取ったトークンを使う。
   // ADC (application-default) と gcloud のログインは別物で、
   // ADC だけ別プロジェクトのアカウントを指していることがある
-  const token = process.env.GOOGLE_OAUTH_ACCESS_TOKEN
+  // FIRESTORE_ACCESS_TOKEN は Firestore だけに効かせる。GOOGLE_OAUTH_ACCESS_TOKEN は
+  // google-sheets.js も拾うので、シートと別アカウントのときに使えない
+  const token =
+    process.env.FIRESTORE_ACCESS_TOKEN || process.env.GOOGLE_OAUTH_ACCESS_TOKEN
   if (token) {
     return {
       credential: {

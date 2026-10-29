@@ -29,6 +29,8 @@
     "db:plan": "node src/db-sync.js",
     "db:offline": "node src/db-sync.js --offline",
     "db:push": "node src/db-sync.js --apply",
+    "sheet:bisync": "node src/sheet-bisync-cli.js",
+    "sheet:status": "node src/sheet-bisync-cli.js --status",
     "db:rules": "firebase deploy --only firestore:rules",
     "score": "node src/score-words.js",
     "stats:goro": "node src/analyze-goro-stats.js",
@@ -50,8 +52,8 @@
     "sync:private": "mkdir -p functions/private && cp private/data.json functions/private/data.json && cp src/visualize-words.data.json functions/private/visualize-words.data.json",
     "sync:functions": "bash scripts/sync-functions-lib.sh",
     "deploy:legacy": "npm run build:preview && firebase deploy --only hosting",
-    "deploy": "npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,hosting",
-    "deploy:api": "npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,hosting",
+    "deploy": "npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
+    "deploy:api": "npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {

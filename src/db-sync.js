@@ -4,6 +4,7 @@
 //   node src/db-sync.js              全部を dry-run (既定。書き込まない)
 //   node src/db-sync.js --apply      実際に書き込む
 //   node src/db-sync.js --only sync  sync | migrate | bundles を個別に
+//                                    (sync は --only sync のときだけ回る。design:sheet-bisync)
 //
 // 既定を dry-run にしているのは、この移行の目的が «失うと復元できないデータを
 // 守ること» だから。書き込む前に必ず件数を目視できるようにする。
@@ -25,6 +26,10 @@ const only = (() => {
   return i >= 0 ? process.argv[i + 1] : null
 })()
 const wants = (step) => !only || only === step
+// シート -> DB の片方向上書き。双方向同期 (nr sheet:bisync / Function sheetSync) に
+// 置き換えたので既定では回さない。回すとアプリで直した語・かなをシートの値で潰す
+const LEGACY_SYNC = only === 'sync'
+const LEGACY_OVERWRITE = process.argv.includes('--legacy-overwrite')
 
 /** .firebaserc の default を使う */
 function projectIdOf() {
@@ -73,7 +78,12 @@ async function main() {
   log(`既存の numbers: ${Object.keys(existing).length} 件`)
 
   let syncPlan = { writes: [] }
-  if (wants('sync') || OFFLINE) {
+  if (LEGACY_SYNC && APPLY && !LEGACY_OVERWRITE) {
+    throw new Error(
+      '[sync] はアプリの編集を潰すので止めている。nr sheet:bisync を使う (どうしても回すなら --legacy-overwrite)'
+    )
+  }
+  if (LEGACY_SYNC || OFFLINE) {
     const rows = loadWordsTsv().filter((w) => availableSlots(w).length > 0)
     const plan = planSheetSync({ rows, existing, now })
     syncPlan = plan

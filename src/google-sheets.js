@@ -174,7 +174,7 @@ export async function getAccessToken(scopes = DEFAULT_SCOPES) {
   )
 }
 
-async function sheetsApi(path, init = {}) {
+export async function sheetsApi(path, init = {}) {
   const accessToken = await getAccessToken()
   const credentials = process.env.GOOGLE_OAUTH_ACCESS_TOKEN
     ? null

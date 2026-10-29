@@ -26,12 +26,13 @@ describe('firestore-store coherence graph', () => {
     const result = runCeg('graph')
 
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
-    expect(result.stdout).toContain('# CEG (12 nodes / 21 edges)')
+    expect(result.stdout).toContain('# CEG (13 nodes / 24 edges)')
     for (const id of [
       'design:firestore-schema',
       'design:derived-on-write',
       'design:read-bundles',
       'design:sheet-projection',
+      'design:sheet-bisync',
       'spec:sheet-to-db-sync',
       'spec:rep-migration',
       'spec:app-data-source',

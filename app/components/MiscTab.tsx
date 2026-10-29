@@ -6,6 +6,7 @@ import TagPanel from './TagPanel'
 import RulesPanel from './RulesPanel'
 import RecallTab from './RecallTab'
 import ActivatePanel from './ActivatePanel'
+import SheetSyncPanel from './SheetSyncPanel'
 import TabVisibilityPanel from './TabVisibilityPanel'
 import SubTabGroup from './SubTabGroup'
 import Screen from './Screen'
@@ -48,6 +49,7 @@ function MiscTab({
         onSelectTab={onSelectTab}
       />
       <ActivatePanel />
+      <SheetSyncPanel />
       <div class="activate-panel">
         <div class="activate-status">外部リンク</div>
         <p class="activate-desc">

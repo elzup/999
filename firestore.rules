@@ -45,6 +45,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // シート双方向同期の base と状態。読み書きは Function と CLI (Admin SDK) だけ
+    match /sync/{id} {
+      allow read, write: if false;
+    }
+
     // パスキーの公開鍵。ログイン判定は Function だけが行う
     match /passkeys/{credentialId} {
       allow read, write: if false;

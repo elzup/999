@@ -124,6 +124,9 @@ export function connectRest({ projectId, token, fetchImpl = fetch }) {
       return docs
     },
 
+    /** 任意コレクションの 1 件。sheet:bisync の dry-run が sync/* を読む */
+    readDoc: (col, id) => readDoc(col, id),
+
     readChunk: (id) => readDoc(BUNDLES, id).then((doc) => doc ?? null),
 
     async writeChunks(bundles) {
