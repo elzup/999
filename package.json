@@ -61,7 +61,7 @@
     "*.{ts,tsx,js,jsx,json,css,md,html,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
-    "@google-cloud/storage": "^7.21.0",
+    "@google-cloud/storage": "^8.4.0",
     "@preact/preset-vite": "^2.10.3",
     "fast-check": "^4.9.0",
     "firebase-admin": "^14.3.0",
@@ -71,7 +71,7 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^3.0.0",
+    "vitest": "^5.0.5",
     "zod": "^4.3.6"
   },
   "dependencies": {
