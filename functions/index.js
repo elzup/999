@@ -191,6 +191,17 @@ export const api = onRequest(
           await runSheetSync({ only: [numberMatch[1]] }).catch((error) =>
             console.error('sheetSync(only)', numberMatch[1], error)
           )
+          // 語を消すと即時反映が枠を詰めて文書を書き直し、updatedAt が進む。
+          // 書き直す前の文書を返すと、画面が古い updatedAt で次の保存をして 409 になる
+          const latest = await handleNumbersRequest({
+            method: 'GET',
+            num: numberMatch[1],
+            db,
+          })
+          res
+            .status(status)
+            .json(latest.status === 200 ? latest.payload : payload)
+          return
         }
         res.status(status).json(payload)
         return
