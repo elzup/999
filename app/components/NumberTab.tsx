@@ -1,5 +1,5 @@
 import { h } from 'preact'
-import { useState, useCallback, useMemo } from 'preact/hooks'
+import { useState, useCallback, useEffect, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
 import { NumCell } from './Cells'
@@ -100,9 +100,19 @@ function DigitFilterPads({
   )
 }
 
+// 語の編集へ入るとタブが «編集» に切り替わり、この画面は一度消える。
+// 閉じて戻るたびに番号の絞り込みを打ち直さずに済むよう、アプリを開いている間だけ覚えておく
+let remembered: {
+  selected: string | null
+  df: DigitFilter
+  filterMode: FilterMode
+} = { selected: null, df: [null, null, null], filterMode: 'rows' }
+
 function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
-  const [df, setDf] = useState<DigitFilter>([null, null, null])
-  const [filterMode, setFilterMode] = useState<FilterMode>('rows')
+  const [df, setDf] = useState<DigitFilter>(remembered.df)
+  const [filterMode, setFilterMode] = useState<FilterMode>(
+    remembered.filterMode
+  )
 
   const filtered = useMemo(() => {
     if (df[0] === null && df[1] === null && df[2] === null) return numbers
@@ -116,7 +126,15 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
 
   // 前へ / 次へ は画面に出ている順 (絞り込み後) で送る
   const order = useMemo(() => filtered.map((d) => d.num), [filtered])
-  const { selected, toggle, clear, nav } = useSelection(order)
+  const { selected, toggle, clear, nav } = useSelection(
+    order,
+    String,
+    remembered.selected
+  )
+
+  useEffect(() => {
+    remembered = { selected, df, filterMode }
+  }, [selected, df, filterMode])
 
   const selectedData = useMemo(() => {
     if (selected === null) return null
