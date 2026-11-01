@@ -22,6 +22,7 @@ import { runBisync } from './firestore/sheet-bisync-run.js'
 import { fingerprintLines } from './firestore/fingerprint.js'
 import {
   STATUS_TAB,
+  hundredTable,
   sourceDiff,
   stateWithError,
   statusRows,
@@ -208,6 +209,44 @@ function showFingerprints(sources) {
   }
 }
 
+// 色はアプリの表 (--sync-sheet / --sync-db) に合わせる。パイプ先では付けない
+const paint = (code) => (text) =>
+  process.stdout.isTTY ? `\u001b[${code}m${text}\u001b[0m` : text
+const COLORS = {
+  sheet: paint('94'),
+  db: paint('95'),
+  both: (t) => t,
+  dim: paint('90'),
+  warn: paint('33'),
+  bad: paint('1;31'),
+}
+const TIME_WIDTH = 13
+
+/** 百の位ごとの版 (アプリの 設定 > シート同期 と同じ表、D-0032) */
+function showHundreds(state) {
+  // «シート» は全角 3 文字 = 表示幅 6。padEnd は文字数で数えるので幅の差を足す
+  const sheetHead = 'シート'.padEnd(TIME_WIDTH - 3)
+  log(
+    '\n 百   ' +
+      COLORS.sheet(sheetHead) +
+      COLORS.db('DB'.padEnd(TIME_WIDTH)) +
+      '揃えた版'
+  )
+  for (const r of hundredTable(state)) {
+    const cell = (side, text) =>
+      (r.later === side ? COLORS[side] : COLORS.dim)(text.padEnd(TIME_WIDTH))
+    const result =
+      r.result === '衝突'
+        ? COLORS.bad(r.result)
+        : r.result === '待ち'
+        ? COLORS.warn(r.result)
+        : r.from
+        ? COLORS[r.from](r.result)
+        : COLORS.dim(r.result)
+    log(` ${r.hundred}  ${cell('sheet', r.sheet)}${cell('db', r.db)}${result}`)
+  }
+}
+
 async function showStatus() {
   const store = storeOf()
   const state = await store.readState()
@@ -236,6 +275,8 @@ async function showStatus() {
   )
   if (state?.lastError)
     log(`  エラー: ${jst(state.lastError.at)} ${state.lastError.message}`)
+
+  showHundreds(state)
 
   log('\n内容の最終更新')
   for (const [name, src] of Object.entries(sources)) {

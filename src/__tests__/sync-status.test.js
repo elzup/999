@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { normalizeGrid, writeStatusTab } from '../firestore/sheet-io.js'
 import {
   STALE_MS,
+  hundredTable,
   stateWithError,
   statusRows,
   syncHealth,
@@ -130,5 +131,48 @@ describe('writeStatusTab', () => {
       rows: [['a']],
     })
     expect(r.calls.map((c) => c.method)).toEqual(['GET', 'GET', 'POST', 'PUT'])
+  })
+})
+
+describe('hundredTable (D-0032)', () => {
+  it('900 から 000 の順に、後から直された側と揃えた版を出す', () => {
+    const rows = hundredTable(
+      state({
+        hundreds: {
+          2: {
+            sheetAt: '2026-10-29T01:53:00.000Z',
+            dbAt: '2026-10-28T10:32:00.000Z',
+            synced: {
+              from: 'sheet',
+              at: '2026-10-29T01:53:00.000Z',
+              syncedAt: NOW,
+            },
+          },
+        },
+        conflicts: [{ num: '512', field: 'wh1k' }],
+        pending: ['731'],
+      })
+    )
+    expect(rows.map((r) => r.hundred)).toEqual([
+      '900',
+      '800',
+      '700',
+      '600',
+      '500',
+      '400',
+      '300',
+      '200',
+      '100',
+      '000',
+    ])
+    const at = (h) => rows.find((r) => r.hundred === h)
+    expect(at('200')).toMatchObject({
+      later: 'sheet',
+      sheet: '10/29 10:53',
+      result: 'シート 10/29 10:53',
+    })
+    expect(at('500').result).toBe('衝突')
+    expect(at('700').result).toBe('待ち')
+    expect(at('000')).toMatchObject({ later: null, sheet: '—', result: '—' })
   })
 })

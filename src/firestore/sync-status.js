@@ -50,6 +50,51 @@ export function stateWithError(state, error, now) {
 const jst = (iso) =>
   iso ? new Date(iso).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) : ''
 
+const shortJst = (iso) =>
+  iso
+    ? new Date(iso).toLocaleString('ja-JP', {
+        timeZone: 'Asia/Tokyo',
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '—'
+
+const SIDE_LABELS = { sheet: 'シート', db: 'DB', both: '両方' }
+// アプリの一覧と同じく 000 を下端に置く (D-0015)。アプリ・CLI・sync タブで並びを揃える
+const HUNDREDS_TOP_DOWN = ['9', '8', '7', '6', '5', '4', '3', '2', '1', '0']
+
+/**
+ * 百の位ごとの版の表 (D-0032 の A-1)。アプリ (SheetSyncPanel)・CLI・sync タブが同じ行を出す。
+ * later = 後から直された側。result = 衝突 / 待ち / «シート 10/29 10:53» / —
+ */
+export function hundredTable(state) {
+  const conflicts = state?.conflicts ?? []
+  const pending = state?.pending ?? []
+  return HUNDREDS_TOP_DOWN.map((h) => {
+    const row = state?.hundreds?.[h] ?? {}
+    const sheetAt = row.sheetAt ?? ''
+    const dbAt = row.dbAt ?? ''
+    const later = sheetAt === dbAt ? null : sheetAt > dbAt ? 'sheet' : 'db'
+    const result = conflicts.some((c) => c.num[0] === h)
+      ? '衝突'
+      : pending.some((num) => num[0] === h)
+      ? '待ち'
+      : row.synced
+      ? `${SIDE_LABELS[row.synced.from]} ${shortJst(row.synced.at)}`
+      : '—'
+    return {
+      hundred: `${h}00`,
+      sheet: shortJst(sheetAt),
+      db: shortJst(dbAt),
+      later,
+      result,
+      from: row.synced?.from ?? null,
+    }
+  })
+}
+
 /** 食い違うグループを «230-239, 500-509» の形で */
 export function sourceDiff(a, b) {
   if (!a || !b) return '比較できない (指紋が無い)'
@@ -80,6 +125,14 @@ export function statusRows(state) {
       state?.lastError?.message ?? '',
       jst(state?.lastError?.at ?? ''),
     ],
+    [],
+    ['百', 'シート', 'DB', '揃えた版', '● = 後から直された側'],
+    ...hundredTable(state).map((r) => [
+      r.hundred,
+      (r.later === 'sheet' ? '● ' : '') + r.sheet,
+      (r.later === 'db' ? '● ' : '') + r.db,
+      r.result,
+    ]),
     [],
     ['ソース', '内容の最終更新', '指紋 (1 行 = 100 番号、2 文字 = 10 番号)'],
     ['シート', jst(sheet?.contentUpdatedAt), lines(sheet?.fingerprint)],
