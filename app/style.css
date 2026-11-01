@@ -22,6 +22,10 @@
   --accent: #4ade80;
   --accent2: #166534;
   --warn: #fbbf24;
+  --bad: #f87171;
+  /* 同期でどちら側の版かを見分ける色 (設定 > シート同期) */
+  --sync-sheet: #60a5fa;
+  --sync-db: #c084fc;
   --img-bg: #eceff1; /* 透過画像をダークテーマ上でも見やすくする白グレー地 */
   --bar-h: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -4523,6 +4527,47 @@ button.activate-link {
   margin: 0;
   color: var(--text);
   word-break: break-all;
+}
+/* 百の位ごとの版 (D-0031)。シート / DB の色は後から直された側を示す */
+.sync-hundreds {
+  width: 100%;
+  margin: 0 0 12px;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.sync-hundreds th,
+.sync-hundreds td {
+  padding: 3px 4px;
+  text-align: left;
+  white-space: nowrap;
+}
+.sync-hundreds thead th {
+  font-weight: 400;
+  color: var(--text2);
+}
+.sync-hundreds tbody tr {
+  border-top: 1px solid var(--border);
+}
+.sync-hundreds .is-sheet {
+  color: var(--sync-sheet);
+}
+.sync-hundreds .is-db {
+  color: var(--sync-db);
+}
+.sync-hundreds .is-both {
+  color: var(--text);
+}
+.sync-hundreds .is-old {
+  color: var(--text2);
+}
+.sync-hundreds .is-pending {
+  color: var(--warn);
+}
+.sync-hundreds .is-conflict {
+  color: var(--bad);
+  font-weight: 700;
 }
 .sync-fp-grid {
   max-width: 240px;

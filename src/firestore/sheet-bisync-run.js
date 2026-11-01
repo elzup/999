@@ -207,8 +207,46 @@ function nextSources({ prev, forms, docs, base, now, result }) {
   }
 }
 
+/**
+ * 百の位ごとに «どちらの編集を、何時の版として相手へ流したか» を残す (REQ-BI-011)。
+ * dbDoc がある = シート側の編集を DB へ流した、sheetCells がある = DB 側の編集をシートへ流した。
+ * シートには編集の時刻が無いので、流した回の時刻で代える (最大で定期の間隔ぶん遅れる)。
+ * DB 側は文書の updatedAt (アプリが保存した時刻) をそのまま使う
+ */
+export function nextHundreds({ prev, plans, failed, now }) {
+  const failedSet = new Set(failed)
+  const out = { ...(prev ?? {}) }
+  for (const plan of plans) {
+    if (failedSet.has(plan.num)) continue
+    const fromSheet = Boolean(plan.dbDoc)
+    const fromDb = Object.keys(plan.sheetCells).length > 0
+    if (!fromSheet && !fromDb) continue
+    const hundred = plan.num[0]
+    const entry = out[hundred] ?? {}
+    const dbAt = plan.current?.updatedAt ?? now
+    const sheetAt = latest(entry.sheetAt, fromSheet ? now : null)
+    const dbAtNext = latest(entry.dbAt, fromDb ? dbAt : null)
+    const from = fromSheet && fromDb ? 'both' : fromSheet ? 'sheet' : 'db'
+    out[hundred] = {
+      sheetAt,
+      dbAt: dbAtNext,
+      synced: { from, at: fromSheet ? now : dbAt, syncedAt: now },
+    }
+  }
+  return out
+}
+
 /** 前回の状態に今回の結果を重ねる。番号指定の回は他の番号の記録を消さない */
-function nextState({ state, only, isFull, now, report, failed, sources }) {
+function nextState({
+  state,
+  only,
+  isFull,
+  now,
+  report,
+  failed,
+  sources,
+  hundreds,
+}) {
   const scope = only ? new Set(only) : null
   const keep = (list) =>
     scope ? list.filter((x) => !scope.has(x.num ?? x)) : []
@@ -219,6 +257,7 @@ function nextState({ state, only, isFull, now, report, failed, sources }) {
     // 全体を回し切れたら前回のエラーは解消済み。番号指定の回では消さない
     ...(only ? {} : { lastError: null, sources }),
     lastRunAt: now,
+    hundreds,
     pending: [...new Set([...keep(state?.pending ?? []), ...failed])].sort(),
     conflicts: [...keep(state?.conflicts ?? []), ...report.conflicts],
     lastReport: {
@@ -301,6 +340,12 @@ export async function runBisync({ sheet, store, now, apply = true, only }) {
       report,
       failed: result.failed,
       sources,
+      hundreds: nextHundreds({
+        prev: state?.hundreds,
+        plans: plansWithForm,
+        failed: result.failed,
+        now,
+      }),
     })
   )
   const { dbDocs: _dbDocs, written: _written, ...rest } = result

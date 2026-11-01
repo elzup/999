@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'preact/hooks'
 import { loadEditorToken } from '../lib/editorAuth'
-import { fetchSyncState, runSyncNow, type SyncStatus } from '../lib/syncApi'
+import {
+  fetchSyncState,
+  runSyncNow,
+  type SyncConflict,
+  type SyncHundred,
+  type SyncStatus,
+} from '../lib/syncApi'
 
 /** シートの列名を画面の言葉に直す。かなは «人1» のように枠で言う */
 const FIELD_LABELS: Record<string, string> = {
@@ -58,6 +64,72 @@ function FingerprintGrid({ sheet, db }: { sheet?: string; db?: string }) {
           : 'シートと DB の中身は一致しています'}
       </p>
     </div>
+  )
+}
+
+const SIDE_LABELS = { sheet: 'シート', db: 'DB', both: '両方' } as const
+const HUNDREDS = ['9', '8', '7', '6', '5', '4', '3', '2', '1', '0']
+
+/**
+ * 百の位ごとに、両側の編集を最後に流した版の時刻と、最後に揃えた版 (D-0031)。
+ * 後から直された側の時刻だけ色を付ける。指紋のマスと同じく 000 を下端に置く
+ */
+function HundredsTable({
+  hundreds,
+  conflicts,
+  pending,
+}: {
+  hundreds?: Record<string, SyncHundred>
+  conflicts: SyncConflict[]
+  pending: string[]
+}) {
+  if (!hundreds) return null
+  return (
+    <table class="sync-hundreds">
+      <thead>
+        <tr>
+          <th>百</th>
+          <th class="is-sheet">シート</th>
+          <th class="is-db">DB</th>
+          <th>揃えた版</th>
+        </tr>
+      </thead>
+      <tbody>
+        {HUNDREDS.map((h) => {
+          const row = hundreds[h] ?? {}
+          const sheetAt = row.sheetAt ?? ''
+          const dbAt = row.dbAt ?? ''
+          const later =
+            sheetAt === dbAt ? null : sheetAt > dbAt ? 'sheet' : 'db'
+          const isConflict = conflicts.some((c) => c.num[0] === h)
+          const isPending = pending.some((num) => num[0] === h)
+          return (
+            <tr key={h}>
+              <th>{h}00</th>
+              <td class={later === 'sheet' ? 'is-sheet' : 'is-old'}>
+                {sheetAt ? formatTime(sheetAt) : '—'}
+              </td>
+              <td class={later === 'db' ? 'is-db' : 'is-old'}>
+                {dbAt ? formatTime(dbAt) : '—'}
+              </td>
+              <td>
+                {isConflict ? (
+                  <span class="is-conflict">衝突</span>
+                ) : isPending ? (
+                  <span class="is-pending">待ち</span>
+                ) : row.synced ? (
+                  <span class={`is-${row.synced.from}`}>
+                    {SIDE_LABELS[row.synced.from]} {formatTime(row.synced.at)}
+                  </span>
+                ) : (
+                  <span class="is-old">—</span>
+                )}
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }
 
@@ -139,6 +211,11 @@ function SheetSyncPanel() {
           </>
         ) : null}
       </dl>
+      <HundredsTable
+        hundreds={state?.hundreds}
+        conflicts={conflicts}
+        pending={pending}
+      />
       <FingerprintGrid
         sheet={sources?.sheet?.fingerprint}
         db={sources?.db?.fingerprint}

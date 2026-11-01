@@ -139,3 +139,4 @@ sequenceDiagram
 - REQ-BI-008: IF 同一内容で再実行された THEN THE SYSTEM SHALL 書き込みを 0 件にする
 - REQ-BI-009: IF base が無い THEN THE SYSTEM SHALL DB の source が app なら DB を、それ以外はシートを採る
 - REQ-BI-010: WHEN 同期が終わる THE SYSTEM SHALL 反映数・衝突・未反映を状態として残し、アプリから見られるようにする
+- REQ-BI-011: WHEN 片側の編集を相手へ流す THE SYSTEM SHALL 百の位ごとに、どちら側の何時の版を流したか (シートは流した回の時刻、DB は保存時刻) を状態に残す

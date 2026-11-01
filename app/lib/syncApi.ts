@@ -26,8 +26,20 @@ export type SyncSource = {
   contentUpdatedAt?: string | null
 }
 
+/**
+ * 百の位ごとの «最後に流した版» (REQ-BI-011)。sheetAt / dbAt はその側の編集を
+ * 最後に相手へ流した版の時刻。シートは時刻を持たないので流した回の時刻
+ */
+export type SyncHundred = {
+  sheetAt?: string | null
+  dbAt?: string | null
+  synced?: { from: 'sheet' | 'db' | 'both'; at: string; syncedAt: string }
+}
+
 export type SyncState = {
   sources?: { sheet?: SyncSource; db?: SyncSource }
+  /** キーは百の位 '0'〜'9' */
+  hundreds?: Record<string, SyncHundred>
   lastRunAt?: string
   cursor?: string
   lastFullAt?: string

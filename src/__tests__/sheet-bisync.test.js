@@ -5,7 +5,7 @@ import {
   sheetFormOfDoc,
   sheetFormOfRow,
 } from '../firestore/sheet-bisync.js'
-import { runBisync } from '../firestore/sheet-bisync-run.js'
+import { nextHundreds, runBisync } from '../firestore/sheet-bisync-run.js'
 import { rowsOf } from '../firestore/sheet-io.js'
 
 const NOW = '2026-10-20T00:00:00.000Z'
@@ -347,6 +347,12 @@ describe('runBisync', () => {
     expect(w.sheet.cells['001'].mono).toBe('火,帯#g')
     expect(w.world.docs['002'].slots.wh1.kana).toBe('おに')
     expect(w.world.docs['001'].rep).toEqual(doc().rep)
+    // 001 はアプリの版 (保存時刻)、002 はシートの版 (流した回の時刻)。同じ百の位なので両方
+    expect(w.world.state.hundreds['0']).toEqual({
+      sheetAt: LATER,
+      dbAt: LATER,
+      synced: { from: 'sheet', at: LATER, syncedAt: LATER },
+    })
   })
 
   it('書く直前にシートが触られていたら書かず、次の回で拾う (REQ-BI-005, 007)', async () => {
@@ -470,5 +476,57 @@ describe('runBisync の指紋', () => {
     await runBisync({ sheet: w.sheetIo, store: w.store, now: NOW })
     await runBisync({ sheet: w.sheetIo, store: w.store, now: LATER })
     expect(w.world.state.sources.sheet.contentUpdatedAt).toBe(NOW)
+  })
+})
+
+describe('nextHundreds (REQ-BI-011)', () => {
+  const plan = (num, over = {}) => ({
+    num,
+    dbDoc: null,
+    sheetCells: {},
+    current: { updatedAt: NOW },
+    ...over,
+  })
+
+  it('DB の編集はアプリの保存時刻、シートの編集は流した回の時刻で残す', () => {
+    const out = nextHundreds({
+      prev: null,
+      plans: [
+        plan('123', { sheetCells: { wh1k: 'x' } }),
+        plan('501', { dbDoc: {} }),
+        plan('777'),
+      ],
+      failed: [],
+      now: LATER,
+    })
+    expect(out).toEqual({
+      1: {
+        sheetAt: null,
+        dbAt: NOW,
+        synced: { from: 'db', at: NOW, syncedAt: LATER },
+      },
+      5: {
+        sheetAt: LATER,
+        dbAt: null,
+        synced: { from: 'sheet', at: LATER, syncedAt: LATER },
+      },
+    })
+  })
+
+  it('書けなかった番号は数えず、前回の記録は残す', () => {
+    const prev = {
+      1: {
+        sheetAt: NOW,
+        dbAt: null,
+        synced: { from: 'sheet', at: NOW, syncedAt: NOW },
+      },
+    }
+    const out = nextHundreds({
+      prev,
+      plans: [plan('100', { sheetCells: { wh1k: 'x' } })],
+      failed: ['100'],
+      now: LATER,
+    })
+    expect(out).toEqual(prev)
   })
 })
