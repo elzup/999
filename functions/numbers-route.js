@@ -78,6 +78,28 @@ async function applyOperation({ body, current, num, now, writes, db }) {
   }
 }
 
+export const HUNDRED_PATTERN = /^\d$/
+
+/**
+ * 百の位 1 つぶん (100 番号) を読む。代表語ピッカーの一覧用で、読み取り専用 (REQ-NAPI-008)。
+ * 全 1000 件を一度に返さないのは、一覧は百の位ずつしか見ないうえ、応答と読み取り回数を
+ * 1/10 に抑えられるため
+ */
+export async function handleNumbersRangeRequest({ method, hundred, db }) {
+  if (method !== 'GET') {
+    return { status: 405, payload: { ok: false, error: 'method_not_allowed' } }
+  }
+  if (!HUNDRED_PATTERN.test(String(hundred ?? ''))) {
+    return { status: 400, payload: { ok: false, error: 'invalid_hundred' } }
+  }
+  const nums = Array.from(
+    { length: 100 },
+    (_, i) => hundred + String(i).padStart(2, '0')
+  )
+  const numbers = await db.readNumbers(nums)
+  return { status: 200, payload: { ok: true, numbers } }
+}
+
 /**
  * @param method  'GET' | 'PATCH'
  * @param num     パスから取った番号

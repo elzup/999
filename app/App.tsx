@@ -38,6 +38,7 @@ import {
 import BookmarkTab from './components/BookmarkTab'
 import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
+import RepPickerTab from './components/RepPickerTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { refreshSessionToken } from './lib/passkeyApi'
@@ -66,6 +67,7 @@ import {
   IconSlide,
   IconHex,
   IconEdit,
+  IconRep,
 } from './components/Icons'
 
 const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
@@ -81,6 +83,7 @@ const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
   bm: <IconStar />,
   hex: <IconHex />,
   edit: <IconEdit />,
+  rep: <IconRep />,
   misc: <IconStats />,
 }
 
@@ -367,6 +370,7 @@ export function App() {
           onClose={editTarget ? closeEditor : undefined}
         />
       )}
+      {tab === 'rep' && <RepPickerTab token={token} numbers={data.numbers} />}
       {tab === 'misc' && (
         <MiscTab
           numbers={data.numbers}

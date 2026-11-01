@@ -84,6 +84,14 @@ export function connect({ projectId = defaultProjectId() } = {}) {
       return snap.exists ? snap.data() : undefined
     },
 
+    /** 指定した番号をまとめて読む。無い番号は結果に含めない */
+    async readNumbers(nums) {
+      if (!nums.length) return []
+      const refs = nums.map((num) => store.collection(NUMBERS).doc(num))
+      const snaps = await store.getAll(...refs)
+      return snaps.filter((snap) => snap.exists).map((snap) => snap.data())
+    },
+
     /** 既存の numbers を全部読む (同期・移行のプラン作成用) */
     async readAllNumbers() {
       const snap = await store.collection(NUMBERS).get()

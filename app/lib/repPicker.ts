@@ -1,0 +1,91 @@
+// 代表語ピッカー (代表語コンソールのスマホ版) の判定と操作の組み立て。
+// 絞り込みの規則は console/rep.js の FILTERS と同じ。
+//
+// 画面から切り離してあるのは、選ぶ順番と ①② の付き方をテストで確かめるため
+// (numberDetail.ts を分けているのと同じ理由)。
+import type { NumberDoc, RepPick } from './numberApi'
+import { livePicks, sameValue, slotRows } from './numberDetail'
+
+export type RepFilter =
+  | 'all'
+  | 'open'
+  | 'multi'
+  | 'sameKind'
+  | 'mono1'
+  | 'stale'
+
+export const REP_FILTERS: Array<[RepFilter, string]> = [
+  ['all', 'すべて'],
+  ['open', '未確定'],
+  ['multi', '2択+'],
+  ['sameKind', '同種ペア'],
+  ['mono1', '物優先'],
+  ['stale', '⚠再確認'],
+]
+
+export const MAX_PICKS = 2
+const DECADES = 10
+
+const isMono = (slot: string) => slot.startsWith('wm')
+
+/** 代表に選ばれている枠を ①② の順に */
+export function pickedSlots(doc: NumberDoc): string[] {
+  return slotRows(doc)
+    .filter((row) => row.repRank > 0)
+    .sort((a, b) => a.repRank - b.repRank)
+    .map((row) => row.slot)
+}
+
+/**
+ * 語を書き換えた・消した後に、今の候補のどれにも当たらなくなった代表がある。
+ * 黙って別の語に付け替えず、選び直しを促す (rep-store の stale と同じ)
+ */
+export function isStale(doc: NumberDoc): boolean {
+  return (doc.rep?.picks?.length ?? 0) > livePicks(doc).length
+}
+
+/**
+ * 1 回のタップで代表がどう変わるか。
+ * 選ばれていない候補 → 空いている方 (① → ②) に入る。①② が埋まっていれば ② を置き換える。
+ * 選ばれている候補 → 外す。① を外すと ② が ① に繰り上がる
+ */
+export function togglePick(doc: NumberDoc, slot: string): RepPick[] {
+  const picks = livePicks(doc)
+  const value = doc.slots?.[slot]
+  if (!value) return picks
+  const target = { k: value.kana, w: value.word }
+  if (picks.some((pick) => sameValue(pick, target))) {
+    return picks.filter((pick) => !sameValue(pick, target))
+  }
+  return picks.length >= MAX_PICKS ? [picks[0], target] : [...picks, target]
+}
+
+export function matchesFilter(doc: NumberDoc, filter: RepFilter): boolean {
+  const order = pickedSlots(doc)
+  switch (filter) {
+    case 'open':
+      return !doc.rep?.confirmed
+    case 'multi':
+      return slotRows(doc).length >= 2
+    case 'sameKind':
+      return order.length === 2 && isMono(order[0]) === isMono(order[1])
+    case 'mono1':
+      return order.length > 0 && isMono(order[0])
+    case 'stale':
+      return isStale(doc)
+    default:
+      return true
+  }
+}
+
+/** 十の位ごとの確定率 (0〜1)。百の位の中の 10 区切りを、ジャンプ用のボタンの下線に出す */
+export function decadeProgress(docs: NumberDoc[]): number[] {
+  const done = Array.from({ length: DECADES }, () => 0)
+  const total = Array.from({ length: DECADES }, () => 0)
+  for (const doc of docs) {
+    const decade = Number(doc.num[1])
+    total[decade] += 1
+    if (doc.rep?.confirmed) done[decade] += 1
+  }
+  return done.map((count, i) => (total[i] ? count / total[i] : 0))
+}

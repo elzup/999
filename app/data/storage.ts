@@ -248,6 +248,7 @@ export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
   bm: true,
   hex: false,
   edit: false,
+  rep: false,
   misc: true,
 }
 

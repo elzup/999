@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs'
 import { onRequest } from 'firebase-functions/v2/https'
 import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { defineSecret } from 'firebase-functions/params'
-import { handleNumbersRequest } from './numbers-route.js'
+import {
+  handleNumbersRangeRequest,
+  handleNumbersRequest,
+} from './numbers-route.js'
 import {
   deriveSessionKey,
   handlePasskeyRequest,
@@ -155,6 +158,18 @@ export const api = onRequest(
       if (req.method === 'PATCH' && saveMatch) {
         const result = await updateWordRow(saveMatch[1], req.body || {})
         res.json({ ok: true, word: result.entry })
+        return
+      }
+
+      // 百の位 1 つぶんの読み取り (REQ-NAPI-008)。代表語ピッカーの一覧用
+      if (path === '/numbers') {
+        const { db } = await loadFirestoreLib()
+        const { status, payload } = await handleNumbersRangeRequest({
+          method: req.method,
+          hundred: String(req.query?.hundred ?? ''),
+          db,
+        })
+        res.status(status).json(payload)
         return
       }
 

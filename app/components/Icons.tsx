@@ -200,3 +200,13 @@ export function IconClose() {
     </svg>
   )
 }
+
+/** 代表 (①②) を選ぶタブ。丸付き数字の 1 */
+export function IconRep() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 9l2.5-2v10" />
+    </svg>
+  )
+}

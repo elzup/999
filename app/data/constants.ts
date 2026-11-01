@@ -446,6 +446,7 @@ export const VALID_TABS = [
   'bm',
   'hex',
   'edit',
+  'rep',
   'misc',
 ] as const
 export type TabId = typeof VALID_TABS[number]
@@ -463,5 +464,6 @@ export const BAR_TAB_LABELS: Record<TabId, string> = {
   bm: 'ブックマーク',
   hex: 'hex',
   edit: '編集',
+  rep: '代表',
   misc: '設定',
 }

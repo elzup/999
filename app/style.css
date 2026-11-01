@@ -5692,3 +5692,177 @@ button.activate-link {
 .test-feature-item:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
+
+/* ===== 代表語ピッカー (RepPickerTab) =====
+   行 = 番号 + 人 / 物 の 2 段のチップ。チップの左に 28px の画像 (D-0030) */
+.rp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.rp-row.is-done {
+  border-color: var(--accent2);
+}
+.rp-num {
+  flex: 0 0 auto;
+  min-width: 40px;
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.rp-row.is-done .rp-num {
+  color: var(--accent);
+}
+.rp-stale {
+  color: var(--warn);
+  font-size: 11px;
+  margin-left: 2px;
+}
+.rp-kinds {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.rp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rp-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 3px 8px 3px 3px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.rp-chip.is-hito {
+  border-left: 3px solid #93c5fd;
+}
+.rp-chip.is-mono {
+  border-left: 3px solid #fca5a5;
+}
+.rp-chip.is-rank1 {
+  background: var(--accent2);
+  border-color: var(--accent);
+}
+.rp-chip.is-rank2 {
+  border-color: var(--accent);
+  border-style: dashed;
+}
+.rp-chip:disabled {
+  opacity: 0.6;
+}
+.rp-thumb {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--img-bg);
+}
+.rp-thumb.is-empty {
+  background: none;
+  border: 1px dashed var(--border);
+}
+.rp-word {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+.rp-kana {
+  display: block;
+  font-size: 10px;
+  color: var(--text2);
+}
+.rp-mark {
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: bold;
+}
+.rp-status {
+  color: var(--warn);
+  font-size: 12px;
+}
+.rp-filters {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+.rp-seg {
+  flex: none;
+  padding: 5px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.rp-seg.active {
+  background: var(--accent2);
+  border-color: var(--accent);
+}
+.rp-digits {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+  flex: 1;
+}
+.rp-digit {
+  position: relative;
+  padding: 8px 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.rp-digit.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* 十の位の確定率。下線の長さで «どこが残っているか» を見せる */
+.rp-decade i {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  height: 3px;
+  max-width: calc(100% - 4px);
+  border-radius: 2px;
+  background: var(--accent);
+}

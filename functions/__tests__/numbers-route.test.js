@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { handleNumbersRequest } from '../numbers-route.js'
+import {
+  handleNumbersRangeRequest,
+  handleNumbersRequest,
+} from '../numbers-route.js'
 
 const NOW = '2026-08-28T00:00:00.000Z'
 
@@ -197,6 +200,52 @@ describe('handleNumbersRequest', () => {
       now: NOW,
     })
 
+    expect(res.status).toBe(405)
+  })
+})
+
+describe('handleNumbersRangeRequest', () => {
+  const rangeDb = (docs) => ({
+    readNumbers: vi.fn(async (nums) =>
+      docs.filter((d) => nums.includes(d.num))
+    ),
+  })
+
+  it('百の位 1 つぶんの 100 番号を一括で読む (REQ-NAPI-008)', async () => {
+    const db = rangeDb([doc({ num: '051' }), doc({ num: '151' })])
+    const res = await handleNumbersRangeRequest({
+      method: 'GET',
+      hundred: '0',
+      db,
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.payload.numbers.map((d) => d.num)).toEqual(['051'])
+    const nums = db.readNumbers.mock.calls[0][0]
+    expect(nums).toHaveLength(100)
+    expect(nums[0]).toBe('000')
+    expect(nums[99]).toBe('099')
+  })
+
+  it('百の位が 1 桁の数字でなければ読まずに 400', async () => {
+    for (const hundred of ['', '10', 'a', '../']) {
+      const db = rangeDb([])
+      const res = await handleNumbersRangeRequest({
+        method: 'GET',
+        hundred,
+        db,
+      })
+      expect(res.status).toBe(400)
+      expect(db.readNumbers).not.toHaveBeenCalled()
+    }
+  })
+
+  it('GET 以外は 405', async () => {
+    const res = await handleNumbersRangeRequest({
+      method: 'PATCH',
+      hundred: '0',
+      db: rangeDb([]),
+    })
     expect(res.status).toBe(405)
   })
 })

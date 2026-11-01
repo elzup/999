@@ -33,8 +33,10 @@ export type SlotRow = {
 
 const norm = (value: string | undefined) => String(value ?? '').normalize('NFC')
 
-const sameValue = (a: { k: string; w: string }, b: { k: string; w: string }) =>
-  norm(a.k) === norm(b.k) && norm(a.w) === norm(b.w)
+export const sameValue = (
+  a: { k: string; w: string },
+  b: { k: string; w: string }
+) => norm(a.k) === norm(b.k) && norm(a.w) === norm(b.w)
 
 /** 語からタグ・ラベルを落とした本体 (console-writes.js#nameOf と同じ規則) */
 export function nameOf(word: string | undefined): string {
@@ -77,8 +79,8 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
       imageUrl: value.imageUrl,
       imageStale: Boolean(
         value.imageUrl &&
-        value.confirmedFor &&
-        nameOf(value.confirmedFor) !== nameOf(value.word)
+          value.confirmedFor &&
+          nameOf(value.confirmedFor) !== nameOf(value.word)
       ),
       rankey: doc.derived?.rankeyBySlot?.[slot],
       pt: doc.derived?.ptBySlot?.[slot],

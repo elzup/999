@@ -103,3 +103,20 @@ export async function patchNumber({
   }
   return data.number
 }
+
+/** 百の位 1 つぶん (100 番号) をまとめて読む。代表語ピッカーの一覧用 (REQ-NAPI-008) */
+export async function fetchHundred(
+  hundred: number,
+  token: string
+): Promise<NumberDoc[]> {
+  const res = await fetch(`/api/numbers?hundred=${hundred}`, {
+    headers: { authorization: `Bearer ${token}` },
+  })
+
+  const data = await readJson(res)
+  if (!res.ok || !data?.ok) {
+    if (!data) throw transportError(res, '取得に失敗しました')
+    throw new Error(data.error || `取得に失敗しました (${res.status})`)
+  }
+  return data.numbers
+}
