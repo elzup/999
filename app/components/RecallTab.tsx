@@ -48,7 +48,11 @@ function RecallTab({ numbers, rules }: Props) {
       {treeNum ? (
         <DockBar>
           <RecallTreeInput value={treeInput} onChange={setTreeInput} />
-          <QuitButton label="一覧" onClick={() => setTreeNum(null)} />
+          <QuitButton
+            label="一覧"
+            icon={false}
+            onClick={() => setTreeNum(null)}
+          />
         </DockBar>
       ) : null}
       <AllocationControls

@@ -1,12 +1,14 @@
 // 1 番号の詳細カード。
 //
 // 複数枚を縦に積む面がある (π / 年号 / 2桁 は map で並べる) ので、1 枚あたりの
-// 情報量と縦幅を抑えることを優先する。閉じるボタンはこのカードには置かない
-// (積んだ枚数だけ «閉じる» が並んでしまう)。閉じるは並べた側が 1 つだけ持つ。
+// 情報量と縦幅を抑えることを優先する。閉じるは 1 枚だけ見せる面でだけ onClose で
+// 渡し、ブックマーク / 編集と同じ段に並べる。積む面では渡さない (枚数だけ «閉じる» が
+// 並んでしまう) ので、並べた側が PanelClose を 1 つだけ持つ。
 
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
 import { IconEdit, IconStar, IconStarOutline } from './Icons'
+import { CloseButton } from './Screen'
 import { parseTaggedItems } from '../lib/tags'
 import { nameOf } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
@@ -22,6 +24,8 @@ type Props = {
    * openEditor (今のタブに重ねて開く) を使うので、どのタブでも鉛筆が出る
    */
   onEdit?: () => void
+  /** 1 枚だけ見せる面の閉じる。操作の段の先頭に一回り広く出す */
+  onClose?: () => void
 }
 
 type WordRow = {
@@ -207,11 +211,12 @@ function NumDetailPanel(props: Props) {
 
       {/* 操作はカードの最下段。Detail Panel は dock の直上にあるので、ここが
           親指に一番近い (番号の下に置くと画面の中ほどまで指を伸ばすことになる) */}
-      {onToggleBm || onEdit ? (
+      {onToggleBm || onEdit || props.onClose ? (
         <div class="detail-foot-actions">
+          {props.onClose && <CloseButton onClick={props.onClose} />}
           {onToggleBm && (
             <button
-              class={'detail-act' + (isBm ? ' on' : '')}
+              class={'detail-act act-bm' + (isBm ? ' on' : '')}
               onClick={() => onToggleBm(bmKey)}
               aria-pressed={isBm}
               aria-label={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
@@ -222,7 +227,7 @@ function NumDetailPanel(props: Props) {
           )}
           {onEdit && (
             <button
-              class="detail-act"
+              class="detail-act act-edit"
               onClick={onEdit}
               aria-label={`${d.num} を編集`}
             >

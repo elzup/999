@@ -297,23 +297,11 @@ body {
   height: 14px;
 }
 
-/* 幅いっぱいのテキストボタン。閉じるは «並べた側» が 1 つだけ持つ */
+/* 積んだ面の閉じる (PanelClose)。閉じるは «並べた側» が 1 つだけ持つ */
 .panel-foot {
+  display: flex;
+  gap: 6px;
   padding: 0 14px 12px;
-}
-.btn-wide {
-  width: 100%;
-  padding: 9px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--text2);
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.btn-wide:hover {
-  color: var(--text);
-  border-color: var(--text2);
 }
 
 /* 番号の列 */
@@ -361,15 +349,17 @@ body {
   gap: 6px;
   flex-shrink: 0;
 }
-/* 詳細カードの操作 (ブックマーク / 編集 / 閉じる) はカードの最下段に横並び。
-   Detail Panel は dock の直上なので、ここが親指に一番近い */
+/* 詳細カードの操作 (閉じる / ブックマーク / 編集) はカードの最下段に横並び。
+   Detail Panel は dock の直上なので、ここが親指に一番近い。
+   幅は 閉じる 4 : 他 3。一番押す閉じるを広く、色でも見分ける */
 .detail-foot-actions {
   display: flex;
   gap: 6px;
   margin-top: 10px;
 }
 .detail-act {
-  flex: 1;
+  flex: 3 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -386,9 +376,28 @@ body {
   width: 16px;
   height: 16px;
 }
-.detail-act.on {
+.detail-act > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-act.act-close {
+  flex-grow: 4;
+  color: var(--text);
+  font-weight: bold;
+  border-color: var(--text2);
+  background: color-mix(in srgb, var(--text) 10%, var(--surface2));
+}
+.detail-act.act-bm {
   color: var(--warn);
+}
+.detail-act.act-bm.on {
   border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface2));
+}
+.detail-act.act-edit {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 /* 語は折り返す。nowrap + flex-shrink:0 のままだと縮む余地がゼロになり、
    カードごと横スクロールする (実際に踏んだ) */
@@ -5457,6 +5466,18 @@ button.activate-link {
 .quit-btn {
   min-width: 64px;
   padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: bold;
+  color: var(--text);
+  border-color: var(--text2);
+  background: color-mix(in srgb, var(--text) 10%, var(--surface2));
+}
+.quit-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* ===== 下から上へ並べる =====

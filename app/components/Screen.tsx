@@ -1,6 +1,7 @@
 import { h } from 'preact'
 import type { ComponentChildren } from 'preact'
 import { useLayoutEffect, useRef } from 'preact/hooks'
+import { IconClose } from './Icons'
 
 // 全画面共通の枠。片手持ちで親指が画面の上半分へ伸びないことを最優先にする。
 //
@@ -90,18 +91,43 @@ export function DockRow({ children }: { children: ComponentChildren }) {
   return <div class="dock-row">{children}</div>
 }
 
-/** テスト画面の終了ボタン。全テストで同じ見た目・同じ位置 (DockBar の右端) */
+/**
+ * テスト画面の終了ボタン。全テストで同じ見た目・同じ位置 (DockBar の右端)。
+ * «採点» や «一覧へ戻る» のように閉じるのでない操作は icon={false} で × を外す
+ */
 export function QuitButton({
   onClick,
   label = '終了',
+  icon = true,
 }: {
   onClick: () => void
   label?: string
+  icon?: boolean
 }) {
   return (
     <button class="filter-btn quit-btn" onClick={onClick}>
-      {label}
+      {icon ? <IconClose /> : null}
+      <span>{label}</span>
     </button>
+  )
+}
+
+/** 詳細カードの «閉じる»。ブックマーク / 編集と同じ段に並べ、それより一回り広く目立たせる */
+export function CloseButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button class="detail-act act-close" onClick={onClick}>
+      <IconClose />
+      <span>閉じる</span>
+    </button>
+  )
+}
+
+/** カードを複数枚積む面 (π / 年号) や、カードの下に別の操作がある面の閉じる。積んだ側が 1 つだけ持つ */
+export function PanelClose({ onClick }: { onClick: () => void }) {
+  return (
+    <div class="panel-foot">
+      <CloseButton onClick={onClick} />
+    </div>
   )
 }
 

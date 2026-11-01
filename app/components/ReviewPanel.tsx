@@ -160,12 +160,8 @@ function ReviewPanel({
               d={detail}
               bookmarks={ctx.bookmarks}
               onToggleBm={ctx.onToggleBm}
+              onClose={() => setDetailNum(null)}
             />
-            <div class="panel-foot">
-              <button class="btn-wide" onClick={() => setDetailNum(null)}>
-                閉じる
-              </button>
-            </div>
           </div>
         </div>
       ) : null}

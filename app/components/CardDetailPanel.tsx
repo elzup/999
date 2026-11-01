@@ -1,6 +1,7 @@
 import type { CardEntry } from '../data/schema'
 import { cardValues, formatCardId } from '../data/cards'
 import { IconStar, IconStarOutline } from './Icons'
+import { CloseButton } from './Screen'
 
 type Props = {
   c: CardEntry
@@ -61,19 +62,15 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
       </div>
       {/* 操作はカードの最下段 (NumDetailPanel と同じ並び・見た目) */}
       <div class="detail-foot-actions">
+        {onClose && <CloseButton onClick={onClose} />}
         <button
-          class={'detail-act' + (isBm ? ' on' : '')}
+          class={'detail-act act-bm' + (isBm ? ' on' : '')}
           onClick={() => onToggleBm(bmKey)}
           aria-pressed={isBm}
         >
           {isBm ? <IconStar /> : <IconStarOutline />}
           <span>{isBm ? '登録済み' : 'ブックマーク'}</span>
         </button>
-        {onClose && (
-          <button class="detail-act" onClick={onClose}>
-            閉じる
-          </button>
-        )}
       </div>
     </div>
   )

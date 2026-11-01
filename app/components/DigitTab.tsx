@@ -2,7 +2,7 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
-import Screen, { DockRow, PanelCards } from './Screen'
+import Screen, { CloseButton, DockRow, PanelCards } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { candidatesOf } from '../lib/choice'
 
@@ -184,8 +184,9 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
         ))}
       </PanelCards>
       <div class="panel-foot detail-foot-actions">
+        <CloseButton onClick={clearSel} />
         <button
-          class={'detail-act' + (isBm ? ' on' : '')}
+          class={'detail-act act-bm' + (isBm ? ' on' : '')}
           onClick={() => bmKey && onToggleBm(bmKey)}
           aria-pressed={isBm}
         >
@@ -194,9 +195,6 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
           <span>
             {detailLabel} {isBm ? '登録済み' : 'をブックマーク'}
           </span>
-        </button>
-        <button class="detail-act" onClick={clearSel}>
-          閉じる
         </button>
       </div>
     </>

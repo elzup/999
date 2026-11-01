@@ -456,12 +456,8 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
             d={selectedPrefixEntry}
             bookmarks={bookmarks}
             onToggleBm={onToggleBm}
+            onClose={() => setSelected(null)}
           />
-        </div>
-        <div class="panel-foot">
-          <button class="btn-wide" onClick={() => setSelected(null)}>
-            閉じる
-          </button>
         </div>
       </>
     ) : null

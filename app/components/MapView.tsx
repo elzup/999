@@ -16,7 +16,7 @@ import {
   type Slot,
 } from '../lib/choice'
 import NumDetailPanel from './NumDetailPanel'
-import Screen, { DockRow } from './Screen'
+import Screen, { DockRow, PanelClose } from './Screen'
 
 export type MapBounds = {
   minX: number
@@ -155,11 +155,7 @@ function MapView({
         current={selSlot}
         onPick={(slot) => pick(selEntry.num, slot)}
       />
-      <div class="panel-foot">
-        <button class="btn-wide" onClick={() => setSel(null)}>
-          閉じる
-        </button>
-      </div>
+      <PanelClose onClick={() => setSel(null)} />
     </>
   ) : null
 

@@ -14,7 +14,7 @@ import ReviewPanel from './ReviewPanel'
 import type { ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import MarkButton from './MarkButton'
-import Screen, { DockBar, PanelCards, QuitButton } from './Screen'
+import Screen, { DockBar, PanelCards, QuitButton, PanelClose } from './Screen'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 
 type Props = {
@@ -673,11 +673,7 @@ function PiTab({ numbers }: Props) {
           ))}
         </PanelCards>
         {/* 複数枚まとめて 1 つの閉じる。詳細カード側は閉じるを持たない */}
-        <div class="panel-foot">
-          <button class="btn-wide" onClick={() => setSelected(null)}>
-            閉じる
-          </button>
-        </div>
+        <PanelClose onClick={() => setSelected(null)} />
       </>
     ) : null
 

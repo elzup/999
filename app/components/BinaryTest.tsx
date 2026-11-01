@@ -594,7 +594,11 @@ function BinaryTest({
             }
             sub={`${curRow + 1}/${rows.length}行 ${curCol}/${COLS}`}
           >
-            <QuitButton label="終了して採点" onClick={() => finish(entered)} />
+            <QuitButton
+              label="終了して採点"
+              icon={false}
+              onClick={() => finish(entered)}
+            />
           </DockBar>
           {/* 0/1 キーパッド(dock の最下段) */}
           <TestPad

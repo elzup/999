@@ -192,14 +192,8 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
             ? () => onEditWord(selectedData.num)
             : undefined
         }
+        onClose={() => setSelected(null)}
       />
-      {/* 閉じるはカードの外に 1 つ。カード内に置くと、複数枚並ぶ面
-          (π / 年号 / 2桁) で «閉じる» が枚数ぶん並んでしまう */}
-      <div class="panel-foot">
-        <button class="btn-wide" onClick={() => setSelected(null)}>
-          閉じる
-        </button>
-      </div>
     </>
   ) : null
 

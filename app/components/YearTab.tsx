@@ -48,7 +48,7 @@ import TestNavBar from './TestNavBar'
 import MarkButton from './MarkButton'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
-import Screen, { DockBar, DockRow, QuitButton } from './Screen'
+import Screen, { DockBar, DockRow, QuitButton, PanelClose } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
 
 type Props = {
@@ -439,11 +439,7 @@ function YearTab({ numbers }: Props) {
         {selectedNums.map((d) => (
           <NumDetailPanel key={d.num} d={d} />
         ))}
-        <div class="panel-foot">
-          <button class="btn-wide" onClick={() => setSelected(null)}>
-            閉じる
-          </button>
-        </div>
+        <PanelClose onClick={() => setSelected(null)} />
       </>
     ) : null
 

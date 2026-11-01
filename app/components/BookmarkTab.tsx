@@ -100,12 +100,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
 
   const panel = selectedNum ? (
     <>
-      <NumDetailPanel d={selectedNum} />
-      <div class="panel-foot">
-        <button class="btn-wide" onClick={() => setSelected(null)}>
-          閉じる
-        </button>
-      </div>
+      <NumDetailPanel d={selectedNum} onClose={() => setSelected(null)} />
     </>
   ) : selectedCard ? (
     <CardDetailPanel

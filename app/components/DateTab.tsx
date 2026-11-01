@@ -30,13 +30,8 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
         d={selectedDay.entry}
         bookmarks={bookmarks}
         onToggleBm={onToggleBm}
+        onClose={() => setSelected(null)}
       />
-      {/* 閉じるはカードの外に 1 つ (NumberTab と同じ規則) */}
-      <div class="panel-foot">
-        <button class="btn-wide" onClick={() => setSelected(null)}>
-          閉じる
-        </button>
-      </div>
     </>
   ) : null
 
