@@ -3,7 +3,9 @@
    local() で済みダウンロードしない */
 @font-face {
   font-family: 'Droid Sans Mono';
-  src: local('Droid Sans Mono'), local('DroidSansMono'),
+  src:
+    local('Droid Sans Mono'),
+    local('DroidSansMono'),
     url('./fonts/DroidSansMono.ttf') format('truetype');
   font-display: swap;
 }
@@ -40,7 +42,8 @@ body {
   color: var(--text);
   /* Windows では -apple-system / Helvetica Neue が無く、既定の日本語フォントに
      落ちて英数字の字形が崩れる。英数字は Segoe UI、かなは Yu Gothic UI / Meiryo */
-  font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
+  font-family:
+    -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
     'Yu Gothic UI', Meiryo, sans-serif;
   font-size: 14px;
   height: 100%;
@@ -270,7 +273,9 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -5238,11 +5243,35 @@ button.activate-link {
   font-size: 13px;
   color: var(--warn);
 }
-/* 確定済みは塗りつぶさず、文字と枠の色だけで示す */
-.nd-rep-btn.on {
-  color: var(--accent);
-  background: none;
+/* 状態はバッジと枠で示し、ボタンは操作名だけを書く */
+.nd-rep.on {
   border-color: var(--accent);
+}
+.nd-rep-state {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text2);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+}
+.nd-rep-state.on {
+  color: var(--bg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+}
+/* 未確定のときの「確定する」は次にやる操作なので緑の枠で誘う */
+.nd-rep-btn:not(.undo):not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+/* 確定済みのときの「確定を外す」は控えめに */
+.nd-rep-btn.undo {
+  color: var(--text2);
+  background: none;
+}
+.nd-rep-btn:disabled {
+  opacity: 0.5;
 }
 
 /* ---- テストの入力パッド (TestPad / 全テスト共通) ----

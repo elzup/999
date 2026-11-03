@@ -137,8 +137,8 @@ export default function NumberDetailTab({
   const notice = loading
     ? '読み込み中…'
     : state.saving
-    ? '保存中…'
-    : state.status
+      ? '保存中…'
+      : state.status
   const changed = doc ? changedSlots(doc, drafts) : []
   const dirty = changed.length > 0
 
@@ -305,9 +305,16 @@ export default function NumberDetailTab({
       </DockBar>
       {doc ? (
         <>
-          {/* 代表の状態はここ 1 か所にまとめる。候補の保存とは別の操作 */}
-          <section class="nd-rep" aria-label="代表">
-            <span class="nd-rep-label">代表</span>
+          {/* 代表の状態はここ 1 か所にまとめる。候補の保存とは別の操作。
+              状態 (バッジ) と操作 (ボタン) を分ける。ボタン 1 つの文言と色で
+              両方を表すと、押した直後にどちらの状態なのか読み取れない */}
+          <section
+            class={'nd-rep' + (confirmed ? ' on' : '')}
+            aria-label="代表"
+          >
+            <span class={'nd-rep-state' + (confirmed ? ' on' : '')}>
+              {confirmed ? '✓ 確定' : '未確定'}
+            </span>
             {REP_RANKS.map((rank) => {
               const pick = picks[rank - 1]
               return (
@@ -317,13 +324,10 @@ export default function NumberDetailTab({
               )
             })}
             <button
-              class={'nd-rep-btn' + (confirmed ? ' on' : '')}
+              class={'nd-rep-btn' + (confirmed ? ' undo' : '')}
               disabled={state.saving || (!confirmed && liveCount === 0)}
-              aria-pressed={confirmed}
               title={
-                confirmed
-                  ? '押すと代表の確定を外す'
-                  : liveCount === 0
+                !confirmed && liveCount === 0
                   ? '候補の ①② で代表を選ぶと確定します'
                   : undefined
               }
@@ -334,7 +338,7 @@ export default function NumberDetailTab({
                 )
               }
             >
-              {confirmed ? '✓ 代表確定済み' : '代表を確定'}
+              {state.saving ? '保存中…' : confirmed ? '確定を外す' : '確定する'}
             </button>
           </section>
           <DockRow>
