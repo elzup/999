@@ -365,6 +365,7 @@ export function App() {
           initialNum={editTarget?.num}
           focusSlot={editTarget?.slot}
           numbers={data.numbers}
+          rules={data.rules}
           // 戻る (popstate) が実際の状態遷移を行う。ここで直接閉じると
           // 積んだ履歴が 1 つ残り、次の «戻る» が空振りする
           onClose={editTarget ? closeEditor : undefined}
@@ -399,6 +400,7 @@ export function App() {
             token={token}
             initialNum={overlayEditNum}
             numbers={data.numbers}
+            rules={data.rules}
             onClose={closeOverlayEditor}
           />
         </div>

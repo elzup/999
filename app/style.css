@@ -5092,6 +5092,10 @@ button.activate-link {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* 未保存の間は ①② と評価の代わりに一文を出す。高さを揃えないと、
+     1 文字打つたびにカードが縮んで画面全体が上下に揺れる。
+     border-box なので ①② の高さ 24px + padding-top 6px + 線 1px */
+  min-height: 31px;
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid var(--border);
@@ -5208,7 +5212,9 @@ button.activate-link {
 .nd-rep {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  /* 折り返すと語の長さやボタンの文言で欄の高さが変わり、画面全体が揺れる */
+  flex-wrap: nowrap;
+  min-width: 0;
   gap: 8px;
   padding: 8px 10px;
   background: var(--surface);
@@ -5220,34 +5226,52 @@ button.activate-link {
   color: var(--text2);
 }
 .nd-rep-pick {
+  /* ①② で幅を分け合う。片方の語が長くてももう片方を潰さない */
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 14px;
 }
 .nd-rep-pick.none {
   color: var(--text2);
 }
 .nd-rep .nd-rep-btn {
+  flex: none;
   margin-left: auto;
+  /* 「確定する」「確定を外す」「保存中…」で幅を変えない */
+  min-width: 6.5em;
   font-size: 13px;
+  white-space: nowrap;
 }
-.nd-savebar {
+.nd-editrow {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--surface);
-  border: 1px solid var(--warn);
-  border-radius: 10px;
+  gap: 6px;
+  /* 未保存の有無で中身が変わっても行の高さは変えない (dock が揺れる) */
+  min-height: 34px;
 }
-.nd-savebar-text {
-  flex: 1;
-  font-size: 13px;
+.nd-dirty {
+  margin-left: auto;
+  font-size: 12px;
   color: var(--warn);
+  white-space: nowrap;
+}
+.nd-editrow .nd-ghost,
+.nd-editrow .nd-save {
+  white-space: nowrap;
 }
 /* 状態はバッジと枠で示し、ボタンは操作名だけを書く */
 .nd-rep.on {
   border-color: var(--accent);
 }
 .nd-rep-state {
+  flex: none;
+  min-width: 4.5em;
+  text-align: center;
+  white-space: nowrap;
   padding: 2px 8px;
   font-size: 12px;
   font-weight: bold;
@@ -5939,4 +5963,93 @@ button.activate-link {
   max-width: calc(100% - 4px);
   border-radius: 2px;
   background: var(--accent);
+}
+
+/* ---- 番号詳細: 読みの目印と別番号への移動 ---- */
+.nd-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.nd-read-warn {
+  margin-top: 2px;
+  padding: 0 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+}
+/* 入力中は押せないが、どの番号の読みかは見せ続ける */
+.nd-read-warn:disabled {
+  opacity: 0.8;
+}
+.nd-move-btn.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.nd-move-btn:disabled,
+.nd-del:disabled {
+  opacity: 0.4;
+}
+.nd-move {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--surface2);
+  border-radius: 8px;
+}
+.nd-move-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nd-move-label {
+  font-size: 11px;
+  color: var(--text2);
+}
+.nd-move-input {
+  width: 4em;
+  padding: 4px 6px;
+  font-size: 16px;
+  font-family: var(--font-mono);
+  text-align: center;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nd-move-row .nd-save {
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+.nd-move-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nd-move-chip small {
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--text2);
+}
+.nd-move-chip.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.nd-move-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text2);
 }

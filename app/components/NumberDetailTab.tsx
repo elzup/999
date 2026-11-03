@@ -5,7 +5,7 @@
 // 4 つの面 (シート / 編集画面 / 代表語コンソール / 画像コンソール) に散っていた
 // 操作を 1 番号ぶんの 1 画面に集める。読み書きは numbers/{num} だけを見る。
 
-import { useCallback, useEffect, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
 import { fetchNumber, patchNumber, type PatchOp } from '../lib/numberApi'
 import {
   applyDraftEdit,
@@ -18,6 +18,7 @@ import {
   mergeDraftRows,
   moveItem,
   nextRatingValue,
+  planMove,
   RATING_VALUES,
   repPickOp,
   slotRows,
@@ -26,9 +27,16 @@ import {
   type SlotRow,
   withDeliveredImages,
 } from '../lib/numberDetail'
-import type { NumberEntry } from '../data/schema'
+import type { NumberEntry, RulesData } from '../data/schema'
+import {
+  checkReading,
+  readingOf,
+  tablesFromRules,
+  type ReadingCheck,
+  type ReadingTables,
+} from '../lib/reading'
 import Rankey from './Rankey'
-import Screen, { DockBar, DockRow, QuitButton } from './Screen'
+import Screen, { DockBar, QuitButton } from './Screen'
 
 const REP_RANKS = [1, 2] as const
 const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
@@ -50,9 +58,12 @@ export default function NumberDetailTab({
   initialNum = '000',
   focusSlot,
   numbers,
+  rules,
   onClose,
 }: {
   token: string
+  /** 読みルール。かなが番号の読みになっているかの確認と、付け替え先の提案に使う */
+  rules?: RulesData
   /** 配信データ。numbers/{num} に無い画像をここから補う */
   numbers?: NumberEntry[]
   initialNum?: string
@@ -67,12 +78,16 @@ export default function NumberDetailTab({
   // 未保存の編集内容。保存に成功したら doc 側に取り込むので、ここは空に戻る
   const [drafts, setDrafts] = useState<Record<string, SlotRow>>({})
   const [dragFrom, setDragFrom] = useState<number | null>(null)
+  // 別の番号へ移す欄を開いている枠
+  const [moving, setMoving] = useState<string | null>(null)
+  const tables = useMemo(() => (rules ? tablesFromRules(rules) : null), [rules])
 
   const load = useCallback(
     (target: string) => {
       if (!token) return
       setLoading(true)
       setDrafts({})
+      setMoving(null)
       fetchNumber(target, token)
         .then((doc) => setState({ doc, status: '', saving: false }))
         .catch((error) =>
@@ -181,6 +196,80 @@ export default function NumberDetailTab({
     })
   }
 
+  /**
+   * 語を別の番号へ付け替える。API は 1 番号 1 操作なので «移動先に足す → 移動元から抜く»
+   * の順に送る (途中で落ちても語は消えない)。未保存の編集があると移動元の最終形が
+   * 決まらないので、先に保存してもらう
+   */
+  const moveWord = async (row: SlotRow, to: string) => {
+    if (!doc || state.saving) return
+    if (dirty) {
+      setState((prev) => ({
+        ...prev,
+        status: '未保存の変更を先に保存してください',
+        failed: true,
+      }))
+      return
+    }
+    setState((prev) => ({ ...prev, saving: true, status: '' }))
+    let added = false
+    try {
+      const target = await fetchNumber(to, token).catch((error) => {
+        throw error instanceof Error && error.message === 'not_found'
+          ? new Error(`${to} が見つかりません`)
+          : error
+      })
+      const plan = planMove(doc, row, target)
+      if (!plan.ok) throw new Error(plan.error)
+
+      const saved = await patchNumber({
+        num: to,
+        token,
+        op: { op: 'slots', slots: plan.targetSlots },
+        expectedUpdatedAt: target.updatedAt ?? null,
+      })
+      added = true
+      if (plan.rating) {
+        await patchNumber({
+          num: to,
+          token,
+          op: { op: 'rating', ...plan.rating },
+          expectedUpdatedAt: saved.updatedAt ?? null,
+        })
+      }
+      let source = await patchNumber({
+        num: doc.num,
+        token,
+        op: { op: 'slots', slots: plan.sourceSlots },
+        expectedUpdatedAt: doc.updatedAt ?? null,
+      })
+      if (plan.sourceRep) {
+        source = await patchNumber({
+          num: doc.num,
+          token,
+          op: { op: 'rep', ...plan.sourceRep },
+          expectedUpdatedAt: source.updatedAt ?? null,
+        })
+      }
+      setMoving(null)
+      setState((prev) =>
+        applySaved(prev, source, `「${row.word}」を ${to} に移しました`)
+      )
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      setState((prev) =>
+        applyFailure(
+          prev,
+          new Error(
+            added
+              ? `${to} には追加済み。${doc.num} から外せませんでした (${reason})。↻ で読み直してください`
+              : reason
+          )
+        )
+      )
+    }
+  }
+
   const addRow = useCallback(
     (family: SlotFamily) => {
       const slot = nextFreeSlot(rows, family)
@@ -214,6 +303,13 @@ export default function NumberDetailTab({
           key={row.slot}
           row={row}
           index={index}
+          num={doc.num}
+          tables={tables}
+          moveOpen={moving === row.slot}
+          onToggleMove={() =>
+            setMoving((prev) => (prev === row.slot ? null : row.slot))
+          }
+          onMove={(to) => moveWord(row, to)}
           focused={row.slot === focusSlot}
           saving={state.saving}
           isSaved={Boolean(doc.slots?.[row.slot])}
@@ -341,7 +437,9 @@ export default function NumberDetailTab({
               {state.saving ? '保存中…' : confirmed ? '確定を外す' : '確定する'}
             </button>
           </section>
-          <DockRow>
+          {/* 追加と保存を 1 行にまとめる。未保存バーを別の行で出し入れすると、
+              dock の高さが変わって画面全体が上下に揺れる */}
+          <div class="nd-editrow">
             <button
               class="nd-add"
               onClick={() => addRow('wh')}
@@ -356,29 +454,32 @@ export default function NumberDetailTab({
             >
               ＋ 物
             </button>
-          </DockRow>
-          {/* 未保存があるあいだは dock に出し続ける。dock は常に見えている */}
-          {dirty ? (
-            <div class="nd-savebar" role="region" aria-label="未保存の変更">
-              <span class="nd-savebar-text">
-                ● 未保存の変更 {changed.length} 件
-              </span>
-              <button
-                class="nd-ghost"
-                disabled={state.saving}
-                onClick={() => setDrafts({})}
-              >
-                元に戻す
-              </button>
-              <button
-                class="nd-save"
-                disabled={state.saving}
-                onClick={() => saveSlots(rows, '保存しました')}
-              >
-                保存
-              </button>
-            </div>
-          ) : null}
+            {dirty ? (
+              <>
+                <span
+                  class="nd-dirty"
+                  role="status"
+                  aria-label={`未保存の変更 ${changed.length} 件`}
+                >
+                  ● 未保存 {changed.length}
+                </span>
+                <button
+                  class="nd-ghost"
+                  disabled={state.saving}
+                  onClick={() => setDrafts({})}
+                >
+                  戻す
+                </button>
+                <button
+                  class="nd-save"
+                  disabled={state.saving}
+                  onClick={() => saveSlots(rows, '保存しました')}
+                >
+                  保存
+                </button>
+              </>
+            ) : null}
+          </div>
         </>
       ) : null}
     </div>
@@ -390,6 +491,11 @@ export default function NumberDetailTab({
 function SlotCard({
   row,
   index,
+  num,
+  tables,
+  moveOpen,
+  onToggleMove,
+  onMove,
   focused,
   saving,
   isSaved,
@@ -405,6 +511,12 @@ function SlotCard({
 }: {
   row: SlotRow
   index: number
+  /** この画面の番号。かながその読みになっているかを見る */
+  num: string
+  tables: ReadingTables | null
+  moveOpen: boolean
+  onToggleMove: () => void
+  onMove: (to: string) => void
   focused: boolean
   saving: boolean
   /** サーバに保存済みの枠か。追加しただけの候補は代表・評価の対象にできない */
@@ -423,6 +535,13 @@ function SlotCard({
   // 書き換え中・足しただけの枠は、代表と評価を付ける相手 (保存された語) と
   // 画面の語がずれている。押せない飾りを並べず、保存が先だと書く
   const pending = !isSaved || changed
+  // 入力中もその場で判定する。打ったかながどの番号の読みかが分かる
+  const check: ReadingCheck | null = tables
+    ? checkReading(tables, row.kana, num)
+    : null
+  const suspicious =
+    check?.status === 'mismatch' || check?.status === 'unreadable'
+  const canMove = !pending && !saving
   return (
     <li
       class={
@@ -449,6 +568,21 @@ function SlotCard({
           {row.slot}
           {pending ? (
             <span class="nd-draft-tag">{isSaved ? '未保存' : '新規'}</span>
+          ) : null}
+          {/* 読みルールで別の番号になるかなは目印を出す。押すと移動欄を開く */}
+          {suspicious ? (
+            <button
+              class="nd-read-warn"
+              disabled={!canMove}
+              onClick={onToggleMove}
+              title={
+                check?.status === 'mismatch'
+                  ? `読みルールでは ${check.suggest[0]}`
+                  : '読みルールに無いかなを含む'
+              }
+            >
+              ⚠{check?.status === 'mismatch' ? check.suggest[0] : '?'}
+            </button>
           ) : null}
         </span>
         {row.imageUrl ? (
@@ -478,6 +612,15 @@ function SlotCard({
           />
         </div>
         <button
+          class={'nd-del nd-move-btn' + (moveOpen ? ' on' : '')}
+          disabled={!canMove}
+          onClick={onToggleMove}
+          aria-expanded={moveOpen}
+          title={pending ? '保存してから移せます' : '別の番号へ移す'}
+        >
+          ⇄
+        </button>
+        <button
           class="nd-del"
           disabled={saving}
           onClick={onDelete}
@@ -486,6 +629,16 @@ function SlotCard({
           ×
         </button>
       </div>
+      {moveOpen ? (
+        <MovePanel
+          num={num}
+          kana={row.kana}
+          tables={tables}
+          saving={saving}
+          onMove={onMove}
+          onCancel={onToggleMove}
+        />
+      ) : null}
 
       <div class="nd-card-foot">
         {row.rankey && !pending ? <Rankey value={row.rankey} /> : null}
@@ -528,5 +681,82 @@ function SlotCard({
         )}
       </div>
     </li>
+  )
+}
+
+/**
+ * 別の番号へ移す欄。読みルールで読んだ番号 (と中間省略で読める番号) を候補に出し、
+ * 押せばその番号が入る。手で打ってもよい
+ */
+function MovePanel({
+  num,
+  kana,
+  tables,
+  saving,
+  onMove,
+  onCancel,
+}: {
+  num: string
+  kana: string
+  tables: ReadingTables | null
+  saving: boolean
+  onMove: (to: string) => void
+  onCancel: () => void
+}) {
+  const reading = tables ? readingOf(tables, kana) : { num: null, omitted: [] }
+  const suggestions = [
+    ...(reading.num ? [{ num: reading.num, label: '読み' }] : []),
+    ...reading.omitted.map((n) => ({ num: n, label: '省略' })),
+  ].filter((item) => item.num !== num)
+  const [to, setTo] = useState(suggestions[0]?.num ?? '')
+  const valid = /^\d{3}$/.test(to) && to !== num
+
+  return (
+    <div class="nd-move" role="group" aria-label="別の番号へ移す">
+      <div class="nd-move-row">
+        <span class="nd-move-label">移動先</span>
+        <input
+          class="nd-move-input"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={3}
+          value={to}
+          onInput={(event) =>
+            setTo(event.currentTarget.value.replace(/\D/g, '').slice(0, 3))
+          }
+        />
+        <button
+          class="nd-save"
+          disabled={saving || !valid}
+          onClick={() => onMove(to)}
+        >
+          移す
+        </button>
+        <button class="nd-ghost" onClick={onCancel}>
+          やめる
+        </button>
+      </div>
+      {suggestions.length ? (
+        <div class="nd-move-row">
+          <span class="nd-move-label">候補</span>
+          {suggestions.map((item) => (
+            <button
+              key={item.num}
+              class={'nd-move-chip' + (to === item.num ? ' on' : '')}
+              onClick={() => setTo(item.num)}
+            >
+              {item.num}
+              <small>{item.label}</small>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p class="nd-move-note">
+          {reading.num === num
+            ? 'このかなはこの番号の読みです'
+            : '読みルールから番号を出せないかなです'}
+        </p>
+      )}
+    </div>
   )
 }
