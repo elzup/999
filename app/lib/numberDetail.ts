@@ -4,7 +4,14 @@
 // 画面から切り離してあるのは、保存の成否と state の更新がずれていないかを
 // テストで確かめるため (console/rep-state.js を分けているのと同じ理由)。
 
-import type { NumberDoc, NumberSlot, RepPick, Rating } from './numberApi'
+import type {
+  NumberDoc,
+  NumberSlot,
+  PatchOp,
+  RepPick,
+  Rating,
+} from './numberApi'
+import { parseWord } from './wordTags'
 import type { NumberEntry } from '../data/schema'
 import { candidatesOf } from './choice'
 
@@ -412,4 +419,71 @@ export function planMove(
           }
         : null,
   }
+}
+
+/**
+ * 代表欄に出す状態。①② を押すと «選ぶ = 確定» で書くので (repPickOp)、
+ * 確定フラグは代表があるかどうかとほぼ同じになる。ずれるのは次の 2 つだけ:
+ * - stale: 代表にした語を後から書き換え・削除して、今の候補に当たらない
+ * - held: 代表はあるが未確定 (確定を別操作にしていた頃のデータ)
+ */
+export type RepStatus = 'confirmed' | 'open' | 'stale' | 'held'
+
+export function repStatus(doc: NumberDoc): RepStatus {
+  const picks = doc.rep?.picks ?? []
+  const live = livePicks(doc)
+  if (live.length < picks.length) return 'stale'
+  if (live.length === 0) return 'open'
+  return doc.rep?.confirmed ? 'confirmed' : 'held'
+}
+
+/** 状態の表示。幅が変わらないよう 4 文字に揃える */
+export const REP_STATUS_LABEL: Record<RepStatus, string> = {
+  confirmed: '代表確定',
+  open: '代表未確',
+  held: '代表未確',
+  stale: '要再確認',
+}
+
+/**
+ * slots を保存したあとに続けて送る操作。代表と評価は語の文字列 ({k,w}) で指すので、
+ * タグやラベルを付け外ししただけ (鯉 → 鯉#g) でも当たらなくなる。
+ * 本体とかなが同じならタグ・ラベルの付け外しとみなし、代表と評価を新しい文字列へ付け直す。
+ * 本体やかなを書き換えたときは付け直さない (別の語になったので選び直しを促す)。
+ * 古い評価は消さない (値で残す方針: console-writes.js#saveSlots)。
+ */
+export function carryOverOps(
+  doc: NumberDoc,
+  rows: Array<Pick<SlotRow, 'slot' | 'word' | 'kana'>>
+): PatchOp[] {
+  const renames: Array<[RepPick, RepPick]> = []
+  for (const row of rows) {
+    const before = doc.slots?.[row.slot]
+    if (!before) continue
+    const after = { k: row.kana.trim(), w: row.word.trim() }
+    const prev = { k: before.kana, w: before.word }
+    if (sameValue(prev, after)) continue
+    if (norm(prev.k.trim()) !== norm(after.k)) continue
+    if (parseWord(prev.w).base !== parseWord(after.w).base) continue
+    renames.push([prev, after])
+  }
+  if (!renames.length) return []
+
+  const ops: PatchOp[] = []
+  const picks = doc.rep?.picks ?? []
+  const mapped = picks.map(
+    (pick) => renames.find(([from]) => sameValue(from, pick))?.[1] ?? pick
+  )
+  if (mapped.some((pick, i) => pick !== picks[i])) {
+    ops.push({
+      op: 'rep',
+      picks: mapped,
+      confirmed: Boolean(doc.rep?.confirmed),
+    })
+  }
+  for (const [from, to] of renames) {
+    const hit = (doc.ratings ?? []).find((rating) => sameValue(rating, from))
+    if (hit) ops.push({ op: 'rating', ...to, v: hit.v })
+  }
+  return ops
 }

@@ -11,6 +11,7 @@ import {
   applyDraftEdit,
   applyFailure,
   applySaved,
+  carryOverOps,
   changedSlots,
   livePicks,
   nextFreeSlot,
@@ -20,6 +21,8 @@ import {
   nextRatingValue,
   planMove,
   RATING_VALUES,
+  REP_STATUS_LABEL,
+  repStatus,
   repPickOp,
   slotRows,
   slotsFromRows,
@@ -35,6 +38,17 @@ import {
   type ReadingCheck,
   type ReadingTables,
 } from '../lib/reading'
+import { collectNumberTags } from '../lib/tags'
+import {
+  addLabel,
+  addTag,
+  LABELS,
+  parseWord,
+  removeLabel,
+  removeTag,
+  suggestTags,
+  type TagSuggestion,
+} from '../lib/wordTags'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
 
@@ -81,6 +95,14 @@ export default function NumberDetailTab({
   // 別の番号へ移す欄を開いている枠
   const [moving, setMoving] = useState<string | null>(null)
   const tables = useMemo(() => (rules ? tablesFromRules(rules) : null), [rules])
+  // タグ追加の候補。配信データの人・物の一覧で使われているタグを回数順に
+  const knownTags = useMemo<TagSuggestion[]>(
+    () =>
+      numbers
+        ? collectNumberTags(numbers).map(({ tag, count }) => ({ tag, count }))
+        : [],
+    [numbers]
+  )
 
   const load = useCallback(
     (target: string) => {
@@ -114,29 +136,40 @@ export default function NumberDetailTab({
     return () => clearTimeout(timer)
   }, [state.status, state.failed])
 
-  const send = useCallback(
-    async (op: PatchOp, message?: string) => {
+  /**
+   * 操作を順に送る。2 つ目以降は直前の保存で進んだ updatedAt を添える
+   * (slots の保存に続けて代表・評価を付け直すときに使う)
+   */
+  const sendAll = useCallback(
+    async (ops: PatchOp[], message?: string) => {
       const doc = state.doc
-      if (!doc || state.saving) return
+      if (!doc || state.saving || !ops.length) return
 
       setState((prev) => ({ ...prev, saving: true, status: '' }))
       try {
-        const saved = await patchNumber({
-          num: doc.num,
-          token,
-          op,
-          // 読んだ時点を添える。ここが古ければサーバが 409 で止める
-          expectedUpdatedAt: doc.updatedAt ?? null,
-        })
-        // 代表・評価の保存で未保存の編集 (追加したばかりの候補など) を捨てない。
-        // 下書きは slots を保存したときだけ保存済みの内容に置き換わる
-        if (op.op === 'slots') setDrafts({})
+        let saved = doc
+        for (const op of ops) {
+          saved = await patchNumber({
+            num: doc.num,
+            token,
+            op,
+            // 読んだ時点を添える。ここが古ければサーバが 409 で止める
+            expectedUpdatedAt: saved.updatedAt ?? null,
+          })
+          // 代表・評価の保存で未保存の編集 (追加したばかりの候補など) を捨てない。
+          // 下書きは slots を保存したときだけ保存済みの内容に置き換わる
+          if (op.op === 'slots') setDrafts({})
+        }
         setState((prev) => applySaved(prev, saved, message))
       } catch (error) {
         setState((prev) => applyFailure(prev, error))
       }
     },
     [state.doc, state.saving, token]
+  )
+  const send = useCallback(
+    (op: PatchOp, message?: string) => sendAll([op], message),
+    [sendAll]
   )
 
   const doc = state.doc
@@ -146,9 +179,7 @@ export default function NumberDetailTab({
     ? withDeliveredImages(mergeDraftRows(slotRows(doc), drafts), entry)
     : []
   const picks = doc?.rep?.picks ?? []
-  const confirmed = Boolean(doc?.rep?.confirmed)
-  // 語を書き換えて当たらなくなった代表は数えない
-  const liveCount = doc ? livePicks(doc).length : 0
+  const repState = doc ? repStatus(doc) : 'open'
   const notice = loading
     ? '読み込み中…'
     : state.saving
@@ -171,9 +202,16 @@ export default function NumberDetailTab({
   const saveSlots = useCallback(
     (nextRows: SlotRow[], message: string) => {
       if (!doc) return
-      send({ op: 'slots', slots: slotsFromRows(nextRows, doc) }, message)
+      sendAll(
+        [
+          { op: 'slots', slots: slotsFromRows(nextRows, doc) },
+          // タグ・ラベルだけの変更で代表と評価が外れないよう付け直す
+          ...carryOverOps(doc, nextRows),
+        ],
+        message
+      )
     },
-    [doc, send]
+    [doc, sendAll]
   )
 
   const editRow = useCallback((row: SlotRow, patch: Partial<SlotRow>) => {
@@ -305,6 +343,7 @@ export default function NumberDetailTab({
           index={index}
           num={doc.num}
           tables={tables}
+          knownTags={knownTags}
           moveOpen={moving === row.slot}
           onToggleMove={() =>
             setMoving((prev) => (prev === row.slot ? null : row.slot))
@@ -401,41 +440,50 @@ export default function NumberDetailTab({
       </DockBar>
       {doc ? (
         <>
-          {/* 代表の状態はここ 1 か所にまとめる。候補の保存とは別の操作。
-              状態 (バッジ) と操作 (ボタン) を分ける。ボタン 1 つの文言と色で
-              両方を表すと、押した直後にどちらの状態なのか読み取れない */}
-          <section
-            class={'nd-rep' + (confirmed ? ' on' : '')}
-            aria-label="代表"
-          >
-            <span class={'nd-rep-state' + (confirmed ? ' on' : '')}>
-              {confirmed ? '✓ 確定' : '未確定'}
-            </span>
-            {REP_RANKS.map((rank) => {
-              const pick = picks[rank - 1]
-              return (
-                <span key={rank} class={'nd-rep-pick' + (pick ? '' : ' none')}>
-                  {REP_LABEL[rank]} {pick ? pick.w : '—'}
-                </span>
-              )
-            })}
+          {/* 代表の状態はここ 1 か所にまとめる。①② を押した時点で «選ぶ = 確定»
+              として保存されるので、確定の操作ボタンは置かない。状態だけを出す。
+              代表はあるのに未確定 (確定を別操作にしていた頃のデータ) のときだけ、
+              バッジを押して確定できる */}
+          <section class={'nd-rep ' + repState} aria-label="代表">
             <button
-              class={'nd-rep-btn' + (confirmed ? ' undo' : '')}
-              disabled={state.saving || (!confirmed && liveCount === 0)}
+              class={'nd-rep-state ' + repState}
+              disabled={repState !== 'held' || state.saving}
               title={
-                !confirmed && liveCount === 0
-                  ? '候補の ①② で代表を選ぶと確定します'
-                  : undefined
+                repState === 'stale'
+                  ? '代表にした語が今の候補にありません。①② で選び直してください'
+                  : repState === 'held'
+                    ? '押すと今の代表で確定します'
+                    : repState === 'open'
+                      ? '候補の ①② を押すと代表に決まります'
+                      : '①② を押すと代表を変更・解除できます'
               }
               onClick={() =>
                 send(
-                  { op: 'rep', picks, confirmed: !confirmed },
-                  confirmed ? '代表の確定を外しました' : '代表を確定しました'
+                  { op: 'rep', picks, confirmed: true },
+                  '代表を確定しました'
                 )
               }
             >
-              {state.saving ? '保存中…' : confirmed ? '確定を外す' : '確定する'}
+              {REP_STATUS_LABEL[repState]}
             </button>
+            {REP_RANKS.map((rank) => {
+              const pick = picks[rank - 1]
+              const live = pick && livePicks(doc).includes(pick)
+              return (
+                <span
+                  key={rank}
+                  class={
+                    'nd-rep-pick' +
+                    (pick ? '' : ' none') +
+                    (pick && !live ? ' gone' : '')
+                  }
+                  title={pick && !live ? '今の候補に無い語' : undefined}
+                >
+                  {REP_LABEL[rank]}{' '}
+                  {pick ? parseWord(pick.w).base || pick.w : '—'}
+                </span>
+              )
+            })}
           </section>
           {/* 追加と保存を 1 行にまとめる。未保存バーを別の行で出し入れすると、
               dock の高さが変わって画面全体が上下に揺れる */}
@@ -493,6 +541,7 @@ function SlotCard({
   index,
   num,
   tables,
+  knownTags,
   moveOpen,
   onToggleMove,
   onMove,
@@ -514,6 +563,7 @@ function SlotCard({
   /** この画面の番号。かながその読みになっているかを見る */
   num: string
   tables: ReadingTables | null
+  knownTags: TagSuggestion[]
   moveOpen: boolean
   onToggleMove: () => void
   onMove: (to: string) => void
@@ -629,6 +679,11 @@ function SlotCard({
           ×
         </button>
       </div>
+      <TagRow
+        word={row.word}
+        knownTags={knownTags}
+        onChange={(word) => onEdit({ word })}
+      />
       {moveOpen ? (
         <MovePanel
           num={num}
@@ -757,6 +812,138 @@ function MovePanel({
             : '読みルールから番号を出せないかなです'}
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * 語の文字列 («本体#タグ -ラベル») を分けて見せる行。テキスト欄で直接書いても、
+ * ここで付け外ししても同じ語の文字列を書き換える (保存は他の編集と同じ «保存»)。
+ * 行は常に出す。タグの有無で出し入れするとカードの高さが変わって画面が揺れる
+ */
+function TagRow({
+  word,
+  knownTags,
+  onChange,
+}: {
+  word: string
+  knownTags: TagSuggestion[]
+  onChange: (word: string) => void
+}) {
+  const [adding, setAdding] = useState(false)
+  const [query, setQuery] = useState('')
+  const parsed = parseWord(word)
+  const suggestions = adding ? suggestTags(knownTags, query, parsed.tags) : []
+  const meaning = (id: string) =>
+    LABELS.find((label) => label.id === id)?.meaning ?? ''
+
+  const commit = (tag: string) => {
+    onChange(addTag(word, tag))
+    setQuery('')
+  }
+
+  return (
+    <div class="nd-tags">
+      <div class="nd-tag-row">
+        {word && !parsed.base ? (
+          <span
+            class="nd-tag warn"
+            title="本体の無い語。シートの «語#a,#b» の 2 つ目以降"
+          >
+            本体なし
+          </span>
+        ) : null}
+        {parsed.tags.map((tag) => (
+          <span key={'t' + tag} class="nd-tag">
+            #{tag}
+            <button
+              class="nd-tag-x"
+              aria-label={`タグ ${tag} を外す`}
+              onClick={() => onChange(removeTag(word, tag))}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {parsed.labels.map((label) => (
+          <span key={'l' + label} class="nd-tag label" title={meaning(label)}>
+            -{label}
+            <small>{meaning(label)}</small>
+            <button
+              class="nd-tag-x"
+              aria-label={`ラベル ${label} を外す`}
+              onClick={() => onChange(removeLabel(word, label))}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <button
+          class={'nd-tag-add' + (adding ? ' on' : '')}
+          aria-expanded={adding}
+          onClick={() => setAdding((prev) => !prev)}
+        >
+          {adding ? '閉じる' : '＋ タグ'}
+        </button>
+      </div>
+      {adding ? (
+        <div class="nd-tag-picker">
+          <input
+            class="nd-tag-input"
+            placeholder="タグを入力 (Enter で追加)"
+            value={query}
+            onInput={(event) => setQuery(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.isComposing) {
+                event.preventDefault()
+                commit(query)
+              }
+            }}
+          />
+          <div class="nd-tag-row">
+            {suggestions.map((item) => (
+              <button
+                key={item.tag}
+                class="nd-tag-cand"
+                onClick={() => commit(item.tag)}
+              >
+                #{item.tag}
+                <small>{item.count}</small>
+              </button>
+            ))}
+            {query.trim() &&
+            !suggestions.some((item) => item.tag === query.trim()) ? (
+              <button class="nd-tag-cand new" onClick={() => commit(query)}>
+                ＋ #{query.trim().replace(/^#+/, '')}
+              </button>
+            ) : null}
+          </div>
+          <div class="nd-tag-row">
+            <span class="nd-move-label">ラベル</span>
+            {LABELS.map((label) => {
+              const on = parsed.labels.includes(label.id)
+              return (
+                <button
+                  key={label.id}
+                  class={'nd-tag-cand' + (on ? ' on' : '')}
+                  aria-pressed={on}
+                  title={label.meaning}
+                  onClick={() =>
+                    onChange(
+                      on
+                        ? removeLabel(word, label.id)
+                        : addLabel(word, label.id)
+                    )
+                  }
+                >
+                  -{label.id}
+                  <small>{label.meaning}</small>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

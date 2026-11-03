@@ -4982,7 +4982,6 @@ button.activate-link {
   border-radius: 8px;
 }
 .nd-step,
-.nd-rep-btn,
 .nd-add,
 .nd-save {
   padding: 6px 12px;
@@ -5237,14 +5236,6 @@ button.activate-link {
 .nd-rep-pick.none {
   color: var(--text2);
 }
-.nd-rep .nd-rep-btn {
-  flex: none;
-  margin-left: auto;
-  /* 「確定する」「確定を外す」「保存中…」で幅を変えない */
-  min-width: 6.5em;
-  font-size: 13px;
-  white-space: nowrap;
-}
 .nd-editrow {
   display: flex;
   flex-wrap: nowrap;
@@ -5263,39 +5254,146 @@ button.activate-link {
 .nd-editrow .nd-save {
   white-space: nowrap;
 }
-/* 状態はバッジと枠で示し、ボタンは操作名だけを書く */
-.nd-rep.on {
+/* 代表の状態バッジ。4 文字に揃えて幅を変えない */
+.nd-rep.confirmed {
   border-color: var(--accent);
+}
+.nd-rep.stale {
+  border-color: var(--warn);
 }
 .nd-rep-state {
   flex: none;
-  min-width: 4.5em;
-  text-align: center;
-  white-space: nowrap;
+  min-width: 5.5em;
   padding: 2px 8px;
+  font-family: inherit;
   font-size: 12px;
   font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
   color: var(--text2);
+  background: none;
   border: 1px dashed var(--border);
   border-radius: 999px;
 }
-.nd-rep-state.on {
+.nd-rep-state:disabled {
+  cursor: default;
+}
+.nd-rep-state.confirmed {
   color: var(--bg);
   background: var(--accent);
   border: 1px solid var(--accent);
+  opacity: 1;
 }
-/* 未確定のときの「確定する」は次にやる操作なので緑の枠で誘う */
-.nd-rep-btn:not(.undo):not(:disabled) {
+.nd-rep-state.stale {
+  color: var(--warn);
+  border: 1px solid var(--warn);
+}
+/* 押せる (今の代表で確定できる) ときは緑の枠で誘う */
+.nd-rep-state.held:not(:disabled) {
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  cursor: pointer;
+}
+.nd-rep-pick.gone {
+  color: var(--warn);
+  text-decoration: line-through;
+}
+
+/* ---- 番号詳細: タグとラベル ---- */
+.nd-tags {
+  margin-top: 6px;
+}
+.nd-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  /* タグが 0 個でも行の高さを保つ (語に # を打つたびに揺れない) */
+  min-height: 24px;
+}
+.nd-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 6px;
+  font-size: 12px;
+  color: #93c5fd;
+  background: color-mix(in srgb, #93c5fd 12%, transparent);
+  border: 1px solid color-mix(in srgb, #93c5fd 40%, transparent);
+  border-radius: 999px;
+}
+.nd-tag.label {
+  color: var(--text);
+  background: var(--surface2);
+  border-color: var(--border);
+}
+.nd-tag.warn {
+  padding-right: 6px;
+  color: var(--warn);
+  border-color: var(--warn);
+  background: none;
+}
+.nd-tag small,
+.nd-tag-cand small {
+  font-size: 10px;
+  color: var(--text2);
+}
+.nd-tag-x {
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text2);
+  background: none;
+  border: none;
+}
+.nd-tag-add {
+  padding: 1px 8px;
+  font-size: 12px;
+  color: var(--text2);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+}
+.nd-tag-add.on {
   color: var(--accent);
   border-color: var(--accent);
 }
-/* 確定済みのときの「確定を外す」は控えめに */
-.nd-rep-btn.undo {
-  color: var(--text2);
-  background: none;
+.nd-tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--surface2);
+  border-radius: 8px;
 }
-.nd-rep-btn:disabled {
-  opacity: 0.5;
+.nd-tag-input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nd-tag-cand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 3px 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.nd-tag-cand.new {
+  color: var(--accent);
+  border-style: dashed;
+}
+.nd-tag-cand.on {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* ---- テストの入力パッド (TestPad / 全テスト共通) ----

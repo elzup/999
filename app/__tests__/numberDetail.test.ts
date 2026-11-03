@@ -20,6 +20,8 @@ import {
   repPickOp,
   livePicks,
   planMove,
+  repStatus,
+  carryOverOps,
 } from '../lib/numberDetail'
 
 const doc: NumberDoc = {
@@ -490,5 +492,97 @@ describe('planMove', () => {
       ok: false,
       error,
     })
+  })
+})
+
+describe('repStatus', () => {
+  const slots = {
+    wh1: { word: '鯉', kana: 'こい' },
+    wm1: { word: 'コイン', kana: 'こいん' },
+  }
+  it.each([
+    ['代表なし', { num: '051', slots }, 'open'],
+    [
+      '選んで確定',
+      {
+        num: '051',
+        slots,
+        rep: { picks: [{ k: 'こい', w: '鯉' }], confirmed: true },
+      },
+      'confirmed',
+    ],
+    [
+      '代表はあるが未確定',
+      {
+        num: '051',
+        slots,
+        rep: { picks: [{ k: 'こい', w: '鯉' }], confirmed: false },
+      },
+      'held',
+    ],
+    [
+      '代表の語を書き換えた',
+      {
+        num: '051',
+        slots,
+        rep: { picks: [{ k: 'こい', w: '恋' }], confirmed: true },
+      },
+      'stale',
+    ],
+  ])('%s', (_, doc, expected) => {
+    expect(repStatus(doc as NumberDoc)).toBe(expected)
+  })
+})
+
+describe('carryOverOps', () => {
+  const base: NumberDoc = {
+    num: '051',
+    slots: {
+      wh1: { word: '鯉', kana: 'こい' },
+      wh2: { word: '恋', kana: 'こい' },
+    },
+    rep: {
+      picks: [
+        { k: 'こい', w: '鯉' },
+        { k: 'こい', w: '恋' },
+      ],
+      confirmed: true,
+    },
+    ratings: [{ k: 'こい', w: '鯉', v: 2 }],
+  }
+  const rows = (w1: string, k1 = 'こい') => [
+    { slot: 'wh1', word: w1, kana: k1 },
+    { slot: 'wh2', word: '恋', kana: 'こい' },
+  ]
+
+  it('タグを足しただけなら代表と評価を付け直す', () => {
+    expect(carryOverOps(base, rows('鯉#g -x'))).toEqual([
+      {
+        op: 'rep',
+        picks: [
+          { k: 'こい', w: '鯉#g -x' },
+          { k: 'こい', w: '恋' },
+        ],
+        confirmed: true,
+      },
+      { op: 'rating', k: 'こい', w: '鯉#g -x', v: 2 },
+    ])
+  })
+
+  it('並べ替えても行の元の枠で対応を取る', () => {
+    const ops = carryOverOps(base, [
+      { slot: 'wh2', word: '恋', kana: 'こい' },
+      { slot: 'wh1', word: '鯉#g', kana: 'こい' },
+    ])
+    expect(ops[0]).toMatchObject({ op: 'rep' })
+  })
+
+  it('本体やかなを書き換えたときは付け直さない', () => {
+    expect(carryOverOps(base, rows('濃い'))).toEqual([])
+    expect(carryOverOps(base, rows('鯉', 'こいい'))).toEqual([])
+  })
+
+  it('変えていなければ何も送らない', () => {
+    expect(carryOverOps(base, rows('鯉'))).toEqual([])
   })
 })
