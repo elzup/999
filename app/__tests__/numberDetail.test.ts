@@ -19,6 +19,9 @@ import {
   setRepPick,
   repPickOp,
   livePicks,
+  planMove,
+  repStatus,
+  carryOverOps,
 } from '../lib/numberDetail'
 
 const doc: NumberDoc = {
@@ -384,5 +387,202 @@ describe('画像の補完', () => {
       w1Img: 'x.webp',
     } as never)
     expect(rows.find((row) => row.slot === 'wh2')?.imageUrl).toBeUndefined()
+  })
+})
+
+describe('planMove', () => {
+  const source: NumberDoc = {
+    num: '051',
+    slots: {
+      wh1: { word: '鯉', kana: 'こい', imageUrl: 'a.jpg', confirmedFor: '鯉' },
+      wh2: { word: '恋', kana: 'こい' },
+      wm1: { word: 'コイン', kana: 'こいん' },
+    },
+    rep: {
+      picks: [
+        { k: 'こい', w: '鯉' },
+        { k: 'こいん', w: 'コイン' },
+      ],
+      confirmed: true,
+    },
+    ratings: [{ k: 'こい', w: '鯉', v: 2 }],
+  }
+  const target: NumberDoc = {
+    num: '510',
+    slots: {
+      wh1: { word: '濃い', kana: 'こい' },
+      wh3: { word: 'x', kana: 'x' },
+    },
+  }
+
+  it('移動先の同じ側の空き枠に、画像と確定時点の語ごと足す', () => {
+    const plan = planMove(source, { slot: 'wh1' }, target)
+    if (!plan.ok) throw new Error(plan.error)
+    expect(plan.targetSlot).toBe('wh2')
+    expect(plan.targetSlots.wh2).toEqual({
+      word: '鯉',
+      kana: 'こい',
+      imageUrl: 'a.jpg',
+      confirmedFor: '鯉',
+    })
+    expect(plan.targetSlots.wh1).toEqual(target.slots!.wh1)
+  })
+
+  it('移動元からは抜いて詰め直す', () => {
+    const plan = planMove(source, { slot: 'wh1' }, target)
+    if (!plan.ok) throw new Error(plan.error)
+    expect(Object.keys(plan.sourceSlots).sort()).toEqual(['wh1', 'wm1'])
+    expect(plan.sourceSlots.wh1.word).toBe('恋')
+  })
+
+  it('評価は語に付いて運び、代表は移動元から外す', () => {
+    const plan = planMove(source, { slot: 'wh1' }, target)
+    if (!plan.ok) throw new Error(plan.error)
+    expect(plan.rating).toEqual({ k: 'こい', w: '鯉', v: 2 })
+    expect(plan.sourceRep).toEqual({
+      picks: [{ k: 'こいん', w: 'コイン' }],
+      confirmed: true,
+    })
+  })
+
+  it('代表でも評価済みでもない語は、付け直しを出さない', () => {
+    const plan = planMove(source, { slot: 'wh2' }, target)
+    if (!plan.ok) throw new Error(plan.error)
+    expect(plan.rating).toBeNull()
+    expect(plan.sourceRep).toBeNull()
+  })
+
+  it('代表が 1 つも残らなければ確定も外す', () => {
+    const only: NumberDoc = {
+      ...source,
+      rep: { picks: [{ k: 'こい', w: '鯉' }], confirmed: true },
+    }
+    const plan = planMove(only, { slot: 'wh1' }, target)
+    if (!plan.ok) throw new Error(plan.error)
+    expect(plan.sourceRep).toEqual({ picks: [], confirmed: false })
+  })
+
+  it('配信データから補った画像も移動先に保存する', () => {
+    const plan = planMove(source, { slot: 'wm1', imageUrl: 'd.jpg' }, target)
+    if (!plan.ok) throw new Error(plan.error)
+    expect(plan.targetSlots.wm1.imageUrl).toBe('d.jpg')
+  })
+
+  it.each([
+    [
+      '枠が埋まっている',
+      {
+        num: '510',
+        slots: {
+          wh1: { word: 'a', kana: 'a' },
+          wh2: { word: 'b', kana: 'b' },
+          wh3: { word: 'c', kana: 'c' },
+        },
+      },
+      '510 の人の枠が埋まっています',
+    ],
+    [
+      '同じ語がある',
+      { num: '510', slots: { wm2: { word: '鯉', kana: 'こい' } } },
+      '510 に同じ語があります',
+    ],
+    ['同じ番号', { num: '051' }, '同じ番号には移せません'],
+  ])('%s ときは書かない', (_, to, error) => {
+    expect(planMove(source, { slot: 'wh1' }, to as NumberDoc)).toEqual({
+      ok: false,
+      error,
+    })
+  })
+})
+
+describe('repStatus', () => {
+  const slots = {
+    wh1: { word: '鯉', kana: 'こい' },
+    wm1: { word: 'コイン', kana: 'こいん' },
+  }
+  it.each([
+    ['代表なし', { num: '051', slots }, 'open'],
+    [
+      '選んで確定',
+      {
+        num: '051',
+        slots,
+        rep: { picks: [{ k: 'こい', w: '鯉' }], confirmed: true },
+      },
+      'confirmed',
+    ],
+    [
+      '代表はあるが未確定',
+      {
+        num: '051',
+        slots,
+        rep: { picks: [{ k: 'こい', w: '鯉' }], confirmed: false },
+      },
+      'held',
+    ],
+    [
+      '代表の語を書き換えた',
+      {
+        num: '051',
+        slots,
+        rep: { picks: [{ k: 'こい', w: '恋' }], confirmed: true },
+      },
+      'stale',
+    ],
+  ])('%s', (_, doc, expected) => {
+    expect(repStatus(doc as NumberDoc)).toBe(expected)
+  })
+})
+
+describe('carryOverOps', () => {
+  const base: NumberDoc = {
+    num: '051',
+    slots: {
+      wh1: { word: '鯉', kana: 'こい' },
+      wh2: { word: '恋', kana: 'こい' },
+    },
+    rep: {
+      picks: [
+        { k: 'こい', w: '鯉' },
+        { k: 'こい', w: '恋' },
+      ],
+      confirmed: true,
+    },
+    ratings: [{ k: 'こい', w: '鯉', v: 2 }],
+  }
+  const rows = (w1: string, k1 = 'こい') => [
+    { slot: 'wh1', word: w1, kana: k1 },
+    { slot: 'wh2', word: '恋', kana: 'こい' },
+  ]
+
+  it('タグを足しただけなら代表と評価を付け直す', () => {
+    expect(carryOverOps(base, rows('鯉#g -x'))).toEqual([
+      {
+        op: 'rep',
+        picks: [
+          { k: 'こい', w: '鯉#g -x' },
+          { k: 'こい', w: '恋' },
+        ],
+        confirmed: true,
+      },
+      { op: 'rating', k: 'こい', w: '鯉#g -x', v: 2 },
+    ])
+  })
+
+  it('並べ替えても行の元の枠で対応を取る', () => {
+    const ops = carryOverOps(base, [
+      { slot: 'wh2', word: '恋', kana: 'こい' },
+      { slot: 'wh1', word: '鯉#g', kana: 'こい' },
+    ])
+    expect(ops[0]).toMatchObject({ op: 'rep' })
+  })
+
+  it('本体やかなを書き換えたときは付け直さない', () => {
+    expect(carryOverOps(base, rows('濃い'))).toEqual([])
+    expect(carryOverOps(base, rows('鯉', 'こいい'))).toEqual([])
+  })
+
+  it('変えていなければ何も送らない', () => {
+    expect(carryOverOps(base, rows('鯉'))).toEqual([])
   })
 })

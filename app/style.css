@@ -3,7 +3,9 @@
    local() で済みダウンロードしない */
 @font-face {
   font-family: 'Droid Sans Mono';
-  src: local('Droid Sans Mono'), local('DroidSansMono'),
+  src:
+    local('Droid Sans Mono'),
+    local('DroidSansMono'),
     url('./fonts/DroidSansMono.ttf') format('truetype');
   font-display: swap;
 }
@@ -40,7 +42,8 @@ body {
   color: var(--text);
   /* Windows では -apple-system / Helvetica Neue が無く、既定の日本語フォントに
      落ちて英数字の字形が崩れる。英数字は Segoe UI、かなは Yu Gothic UI / Meiryo */
-  font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
+  font-family:
+    -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
     'Yu Gothic UI', Meiryo, sans-serif;
   font-size: 14px;
   height: 100%;
@@ -270,7 +273,9 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -4977,7 +4982,6 @@ button.activate-link {
   border-radius: 8px;
 }
 .nd-step,
-.nd-rep-btn,
 .nd-add,
 .nd-save {
   padding: 6px 12px;
@@ -5087,6 +5091,10 @@ button.activate-link {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* 未保存の間は ①② と評価の代わりに一文を出す。高さを揃えないと、
+     1 文字打つたびにカードが縮んで画面全体が上下に揺れる。
+     border-box なので ①② の高さ 24px + padding-top 6px + 線 1px */
+  min-height: 31px;
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid var(--border);
@@ -5203,7 +5211,9 @@ button.activate-link {
 .nd-rep {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  /* 折り返すと語の長さやボタンの文言で欄の高さが変わり、画面全体が揺れる */
+  flex-wrap: nowrap;
+  min-width: 0;
   gap: 8px;
   padding: 8px 10px;
   background: var(--surface);
@@ -5215,33 +5225,174 @@ button.activate-link {
   color: var(--text2);
 }
 .nd-rep-pick {
+  /* ①② で幅を分け合う。片方の語が長くてももう片方を潰さない */
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 14px;
 }
 .nd-rep-pick.none {
   color: var(--text2);
 }
-.nd-rep .nd-rep-btn {
-  margin-left: auto;
-  font-size: 13px;
-}
-.nd-savebar {
+.nd-editrow {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--surface);
-  border: 1px solid var(--warn);
-  border-radius: 10px;
+  gap: 6px;
+  /* 未保存の有無で中身が変わっても行の高さは変えない (dock が揺れる) */
+  min-height: 34px;
 }
-.nd-savebar-text {
-  flex: 1;
-  font-size: 13px;
+.nd-dirty {
+  margin-left: auto;
+  font-size: 12px;
   color: var(--warn);
+  white-space: nowrap;
 }
-/* 確定済みは塗りつぶさず、文字と枠の色だけで示す */
-.nd-rep-btn.on {
-  color: var(--accent);
+.nd-editrow .nd-ghost,
+.nd-editrow .nd-save {
+  white-space: nowrap;
+}
+/* 代表の状態バッジ。4 文字に揃えて幅を変えない */
+.nd-rep.confirmed {
+  border-color: var(--accent);
+}
+.nd-rep.stale {
+  border-color: var(--warn);
+}
+.nd-rep-state {
+  flex: none;
+  min-width: 5.5em;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--text2);
   background: none;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+}
+.nd-rep-state:disabled {
+  cursor: default;
+}
+.nd-rep-state.confirmed {
+  color: var(--bg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  opacity: 1;
+}
+.nd-rep-state.stale {
+  color: var(--warn);
+  border: 1px solid var(--warn);
+}
+/* 押せる (今の代表で確定できる) ときは緑の枠で誘う */
+.nd-rep-state.held:not(:disabled) {
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  cursor: pointer;
+}
+.nd-rep-pick.gone {
+  color: var(--warn);
+  text-decoration: line-through;
+}
+
+/* ---- 番号詳細: タグとラベル ---- */
+.nd-tags {
+  margin-top: 6px;
+}
+.nd-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  /* タグが 0 個でも行の高さを保つ (語に # を打つたびに揺れない) */
+  min-height: 24px;
+}
+.nd-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 6px;
+  font-size: 12px;
+  color: #93c5fd;
+  background: color-mix(in srgb, #93c5fd 12%, transparent);
+  border: 1px solid color-mix(in srgb, #93c5fd 40%, transparent);
+  border-radius: 999px;
+}
+.nd-tag.label {
+  color: var(--text);
+  background: var(--surface2);
+  border-color: var(--border);
+}
+.nd-tag.warn {
+  padding-right: 6px;
+  color: var(--warn);
+  border-color: var(--warn);
+  background: none;
+}
+.nd-tag small,
+.nd-tag-cand small {
+  font-size: 10px;
+  color: var(--text2);
+}
+.nd-tag-x {
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text2);
+  background: none;
+  border: none;
+}
+.nd-tag-add {
+  padding: 1px 8px;
+  font-size: 12px;
+  color: var(--text2);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+}
+.nd-tag-add.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.nd-tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--surface2);
+  border-radius: 8px;
+}
+.nd-tag-input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nd-tag-cand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 3px 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.nd-tag-cand.new {
+  color: var(--accent);
+  border-style: dashed;
+}
+.nd-tag-cand.on {
+  color: var(--accent);
   border-color: var(--accent);
 }
 
@@ -5910,4 +6061,93 @@ button.activate-link {
   max-width: calc(100% - 4px);
   border-radius: 2px;
   background: var(--accent);
+}
+
+/* ---- 番号詳細: 読みの目印と別番号への移動 ---- */
+.nd-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.nd-read-warn {
+  margin-top: 2px;
+  padding: 0 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+}
+/* 入力中は押せないが、どの番号の読みかは見せ続ける */
+.nd-read-warn:disabled {
+  opacity: 0.8;
+}
+.nd-move-btn.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.nd-move-btn:disabled,
+.nd-del:disabled {
+  opacity: 0.4;
+}
+.nd-move {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--surface2);
+  border-radius: 8px;
+}
+.nd-move-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nd-move-label {
+  font-size: 11px;
+  color: var(--text2);
+}
+.nd-move-input {
+  width: 4em;
+  padding: 4px 6px;
+  font-size: 16px;
+  font-family: var(--font-mono);
+  text-align: center;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nd-move-row .nd-save {
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+.nd-move-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nd-move-chip small {
+  font-family: inherit;
+  font-size: 10px;
+  color: var(--text2);
+}
+.nd-move-chip.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.nd-move-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text2);
 }
