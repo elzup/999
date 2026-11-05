@@ -16,6 +16,7 @@ import TestFeatureList from './TestFeatureList'
 import MarkButton from './MarkButton'
 import Screen, { DockBar, PanelCards, QuitButton, PanelClose } from './Screen'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
+import { useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -85,8 +86,8 @@ function PiCheckGrid({
                     ? ' correct'
                     : ' wrong'
                   : !answered && idx > checkPos
-                  ? ' pending'
-                  : '')
+                    ? ' pending'
+                    : '')
               const cellColor = DIGIT_COLORS[Number(d)]
               return (
                 <div key={idx} class={cls}>
@@ -163,8 +164,8 @@ function PiChoiceGrid({
                     ? ' correct'
                     : ' wrong'
                   : !answered && chunk > choicePos
-                  ? ' pending'
-                  : '')
+                    ? ' pending'
+                    : '')
               const cellColor = DIGIT_COLORS[Number(d)]
               return (
                 <div key={idx} class={cls}>
@@ -358,7 +359,7 @@ function PiViewGroups({
 
 // bookmarks / onToggleBm は NumDetailPanel が NumberContext から取るので使わない
 function PiTab({ numbers }: Props) {
-  const [selected, setSelected] = useState<number | null>(null)
+  const { selected, select: setSelected } = useSelection<number>()
   const [mode, setMode] = useState<Mode>('view')
   const [checkPos, setCheckPos] = useState(1)
   const [answers, setAnswers] = useState<Answer[]>([])
@@ -695,8 +696,8 @@ function PiTab({ numbers }: Props) {
           mode === 'check'
             ? digitLabel(checkPos)
             : mode === 'choice'
-            ? chunkLabel(choicePos)
-            : null
+              ? chunkLabel(choicePos)
+              : null
         }
         marks={marks.marks}
         onToggleMark={marks.toggle}

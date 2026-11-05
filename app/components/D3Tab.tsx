@@ -15,6 +15,7 @@ import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
+import { useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -97,8 +98,8 @@ function D3CheckGrid({
               ? ' correct'
               : ' wrong'
             : i > checkIdx
-            ? ' pending'
-            : '')
+              ? ' pending'
+              : '')
         return (
           <div key={xyz} class={cls}>
             <span class="d3-check-xy">{xy}</span>
@@ -135,7 +136,7 @@ function D3CheckGrid({
 
 function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
   const [revealed, setRevealed] = useState<RevealState>({})
-  const [selected, setSelected] = useState<string | null>(null)
+  const { selected, select: setSelected } = useSelection<string>()
   const [viewMode, setViewMode] = useState<ViewMode>('group')
   const [mode, setMode] = useState<Mode>('view')
   const [order, setOrder] = useState<string[]>([])

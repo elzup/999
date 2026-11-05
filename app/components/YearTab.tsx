@@ -50,6 +50,7 @@ import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
 import Screen, { DockBar, DockRow, QuitButton, PanelClose } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
+import { useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -201,7 +202,7 @@ const yearLabel = (item: YearItem) => `${item.year} ${item.event}`
 
 // bookmarks / onToggleBm は NumDetailPanel が NumberContext から取るので使わない
 function YearTab({ numbers }: Props) {
-  const [selected, setSelected] = useState<number | null>(null)
+  const { selected, select: setSelected } = useSelection<number>()
   const [mode, setMode] = useState<Mode>('view')
   const [eraFilter, setEraFilter] = useState<EraId>('all')
   const [checkItems, setCheckItems] = useState<YearItem[]>([])
@@ -443,7 +444,7 @@ function YearTab({ numbers }: Props) {
       </>
     ) : null
 
-  const eraButton = (era: typeof ERAS[number]) => {
+  const eraButton = (era: (typeof ERAS)[number]) => {
     const count =
       era.id === 'all' ? YEAR_DATA.length : filterByEra(era.id).length
     return (

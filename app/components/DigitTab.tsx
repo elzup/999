@@ -5,6 +5,7 @@ import NumDetailPanel from './NumDetailPanel'
 import Screen, { CloseButton, DockRow, PanelCards } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { candidatesOf } from '../lib/choice'
+import { useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -99,7 +100,7 @@ function FavList({
 
 function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [mode, setMode] = useState<D2Mode>('upper')
-  const [selected, setSelected] = useState<string | null>(null)
+  const { selected, select: setSelected } = useSelection<string>()
   const [specialSel, setSpecialSel] = useState<SpecialSel>(null)
 
   const detail = useMemo(() => {

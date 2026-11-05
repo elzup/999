@@ -16,9 +16,11 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
+  /** 詳細の «編集»。«全体» と同じく編集タブで開く */
+  onEditWord?: (num: string) => void
 }
 
-function NumMapTab({ numbers, bookmarks, onToggleBm }: Props) {
+function NumMapTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
   const [hundred, setHundred] = useState<number>(1)
 
   const build = useCallback(
@@ -74,6 +76,7 @@ function NumMapTab({ numbers, bookmarks, onToggleBm }: Props) {
       build={build}
       hint={`${hundred}00〜${hundred}99 ・ 数字をタップで詳細・候補切替`}
       controls={selector}
+      onEditWord={onEditWord}
     />
   )
 }

@@ -1,10 +1,11 @@
 import { h } from 'preact'
-import { useState, useMemo } from 'preact/hooks'
+import { useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
 import { NumCell } from './NumberTab'
 import { buildDateEntries } from '../lib/dateKeys'
 import Screen from './Screen'
+import { useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -15,7 +16,7 @@ type Props = {
 
 // 365 日分の日付 → 語。キーは「月 + 日(2桁)」で、1〜9月は num 辞書を共有する。
 function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
-  const [selected, setSelected] = useState<string | null>(null)
+  const { selected, select: setSelected } = useSelection<string>()
 
   const days = useMemo(() => buildDateEntries(numbers, dates), [numbers, dates])
 

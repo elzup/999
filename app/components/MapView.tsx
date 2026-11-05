@@ -16,7 +16,8 @@ import {
   type Slot,
 } from '../lib/choice'
 import NumDetailPanel from './NumDetailPanel'
-import Screen, { DockRow, PanelClose } from './Screen'
+import Screen, { DockRow } from './Screen'
+import { useSelection } from '../lib/useSelection'
 
 export type MapBounds = {
   minX: number
@@ -35,6 +36,8 @@ type Props = {
   hint?: string
   /** dock の最下段 (サブタブの直上) に差し込む追加コントロール (マップ切替など) */
   controls?: ComponentChildren
+  /** 詳細の «編集»。省略時は NumberContext (今のタブに重ねて開く) */
+  onEditWord?: (num: string) => void
 }
 
 const GROUP_LABEL: Record<string, string> = { up: 'up', down: 'down' }
@@ -100,8 +103,9 @@ function MapView({
   build,
   hint,
   controls,
+  onEditWord,
 }: Props) {
-  const [sel, setSel] = useState<string | null>(null)
+  const { selected: sel, toggle, clear } = useSelection<string>()
   const [choices, setChoices] = useState<Record<string, Slot>>(loadYmapChoices)
   const [copied, setCopied] = useState(false)
 
@@ -110,13 +114,14 @@ function MapView({
   const units = useMemo(() => buildUnits(cells), [cells])
 
   const selEntry = useMemo(
-    () => (sel ? numbers.find((n) => n.num === sel) ?? null : null),
+    () => (sel ? (numbers.find((n) => n.num === sel) ?? null) : null),
     [sel, numbers]
   )
   const selSlot = useMemo(
     () =>
       sel
-        ? cells.flatMap((c) => c.tiles).find((t) => t.num === sel)?.slot ?? null
+        ? (cells.flatMap((c) => c.tiles).find((t) => t.num === sel)?.slot ??
+          null)
         : null,
     [sel, cells]
   )
@@ -142,21 +147,22 @@ function MapView({
 
   const pickCount = Object.keys(choices).length
 
-  // 採用の切り替えは触るものなので、カードの下 (閉じるの直上) に置く
+  // 詳細カードは «全体» と同じもの。採用の切り替えだけカードの中
+  // (閉じる・ブックマーク・編集の段の直上) に差し込む
   const panel = selEntry ? (
-    <>
-      <NumDetailPanel
-        d={selEntry}
-        bookmarks={bookmarks}
-        onToggleBm={onToggleBm}
-      />
+    <NumDetailPanel
+      d={selEntry}
+      bookmarks={bookmarks}
+      onToggleBm={onToggleBm}
+      onEdit={onEditWord ? () => onEditWord(selEntry.num) : undefined}
+      onClose={clear}
+    >
       <CandidatePicker
         entry={selEntry}
         current={selSlot}
         onPick={(slot) => pick(selEntry.num, slot)}
       />
-      <PanelClose onClick={() => setSel(null)} />
-    </>
+    </NumDetailPanel>
   ) : null
 
   const dock = (
@@ -207,7 +213,7 @@ function MapView({
             <MapTileView
               tile={unit.tile}
               selected={sel === unit.tile.num}
-              onSelect={() => setSel(unit.tile?.num ?? null)}
+              onSelect={() => unit.tile && toggle(unit.tile.num)}
             />
           ) : null}
         </div>

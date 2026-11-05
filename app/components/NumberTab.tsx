@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
 import { candidatesOf } from '../lib/choice'
-import { useBackGuard } from '../lib/useBackGuard'
+import { useSelection } from '../lib/useSelection'
 import Screen, { DockRow } from './Screen'
 
 type Props = {
@@ -133,7 +133,7 @@ function DigitFilterPads({
 }
 
 function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
-  const [selected, setSelected] = useState<string | null>(null)
+  const { selected, toggle, clear } = useSelection<string>()
   const [df, setDf] = useState<DigitFilter>([null, null, null])
   const [filterMode, setFilterMode] = useState<FilterMode>('rows')
 
@@ -152,14 +152,17 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
     return numbers.find((d) => d.num === selected) || null
   }, [numbers, selected])
 
-  const tapDigitAt = useCallback((pos: number, digit: string) => {
-    setDf((prev) => {
-      const next = [...prev] as DigitFilter
-      next[pos] = prev[pos] === digit ? null : digit
-      return next
-    })
-    setSelected(null)
-  }, [])
+  const tapDigitAt = useCallback(
+    (pos: number, digit: string) => {
+      setDf((prev) => {
+        const next = [...prev] as DigitFilter
+        next[pos] = prev[pos] === digit ? null : digit
+        return next
+      })
+      clear()
+    },
+    [clear]
+  )
 
   const clearPosAt = useCallback((pos: number) => {
     setDf((prev) => {
@@ -171,30 +174,20 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
 
   const clearFilter = useCallback(() => {
     setDf([null, null, null])
-    setSelected(null)
-  }, [])
-
-  // 番号を選んだ状態は «開いている» とみなす。戻るで閉じないと、
-  // Android のジェスチャーナビでアプリごと終了してしまう
-  useBackGuard(selected !== null, () => setSelected(null))
+    clear()
+  }, [clear])
 
   const hasFilter = df[0] !== null || df[1] !== null || df[2] !== null
   const filterLabel = df.map((d) => (d === null ? '*' : d)).join('')
 
   const panel = selectedData ? (
-    <>
-      <NumDetailPanel
-        d={selectedData}
-        bookmarks={bookmarks}
-        onToggleBm={onToggleBm}
-        onEdit={
-          onEditWord && selectedData
-            ? () => onEditWord(selectedData.num)
-            : undefined
-        }
-        onClose={() => setSelected(null)}
-      />
-    </>
+    <NumDetailPanel
+      d={selectedData}
+      bookmarks={bookmarks}
+      onToggleBm={onToggleBm}
+      onEdit={onEditWord ? () => onEditWord(selectedData.num) : undefined}
+      onClose={clear}
+    />
   ) : null
 
   // 百の位の帯は各組の先頭 (= grid-up で組の下端) に入る
@@ -217,7 +210,7 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
               key={d.num}
               d={d}
               selected={selected === d.num}
-              onSelect={() => setSelected(selected === d.num ? null : d.num)}
+              onSelect={() => toggle(d.num)}
             />
           </>
         )

@@ -45,6 +45,12 @@
     行を占有する見出しは `.grid-full` (`.num-band` / `.card-suit-header` は自動)。
 - Detail Panel の ★ / 編集 は NumDetailPanel が自分で出す (NumberContext から取る)。
   呼び出し側で `bookmarks` / `onToggleBm` / `onEdit` を渡す必要は無い (挙動を変えたいときだけ渡す)。
+- 番号を 1 つ選んで詳細を出す画面 (全体 / マップ / 日付 / ブックマーク …) は同じ作りにする。
+  - 選択状態は `useSelection` (app/lib/useSelection.ts)。再タップで外す・端末の «戻る» で閉じるはここが持つ。
+    画面ごとに `useState` で書かない (再タップや戻るの挙動が画面で食い違った)。
+  - 詳細は `NumDetailPanel` に `onClose` を渡し、閉じるを ★ / 編集 と同じ段に出す。
+    画面固有の操作 (マップの «採用» 切り替え) は children で渡し、カードの中・操作の段の直上に出る。
+    閉じるをカードの外 (`PanelClose`) に出すのは、カードを複数枚積む面 (π / 年号 / 2桁) だけ。
 - ボトムシート (RecordPanel / ReviewPanel) は見出しと 閉じる を **シートの最下段** に置く。
 - サブタブは `SubTabGroup` を使う。`.sub-tab-switch` を自前で書かない。
 - root にインラインの `display:flex; flexDirection:column; flex:1; …` を書かない (`Screen` が持つ)。

@@ -1,10 +1,11 @@
 import { h } from 'preact'
-import { useState, useMemo } from 'preact/hooks'
+import { useMemo } from 'preact/hooks'
 import type { NumberEntry, CardEntry } from '../data/schema'
 import { formatCardId } from '../data/cards'
 import NumDetailPanel from './NumDetailPanel'
 import CardDetailPanel from './CardDetailPanel'
 import Screen from './Screen'
+import { useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -86,7 +87,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
     return cards.filter((c) => keys.includes(c.suit + c.rank))
   }, [cards, bookmarks])
 
-  const [selected, setSelected] = useState<string | null>(null)
+  const { selected, select: setSelected } = useSelection<string>()
 
   const selectedNum = useMemo(() => {
     if (!selected || !selected.startsWith('n:')) return null

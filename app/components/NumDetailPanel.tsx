@@ -4,7 +4,10 @@
 // 情報量と縦幅を抑えることを優先する。閉じるは 1 枚だけ見せる面でだけ onClose で
 // 渡し、ブックマーク / 編集と同じ段に並べる。積む面では渡さない (枚数だけ «閉じる» が
 // 並んでしまう) ので、並べた側が PanelClose を 1 つだけ持つ。
+// 画面固有の操作 (マップの採用切り替え) は children で差し込む。閉じるをカードの
+// 外へ出して並べ替えると、画面によって閉じるの位置が変わってしまう。
 
+import type { ComponentChildren } from 'preact'
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
 import { IconEdit, IconStar, IconStarOutline } from './Icons'
@@ -26,6 +29,11 @@ type Props = {
   onEdit?: () => void
   /** 1 枚だけ見せる面の閉じる。操作の段の先頭に一回り広く出す */
   onClose?: () => void
+  /**
+   * その画面だけの操作 (マップの «採用» 切り替えなど)。カードの中、操作の段の
+   * 直上に出す。閉じるは操作の段に置いたままにして、どの画面でも同じ位置にする
+   */
+  children?: ComponentChildren
 }
 
 type WordRow = {
@@ -208,6 +216,8 @@ function NumDetailPanel(props: Props) {
           )}
         </div>
       ) : null}
+
+      {props.children}
 
       {/* 操作はカードの最下段。Detail Panel は dock の直上にあるので、ここが
           親指に一番近い (番号の下に置くと画面の中ほどまで指を伸ばすことになる) */}
