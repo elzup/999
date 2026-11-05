@@ -34,6 +34,7 @@
     "db:rules": "firebase deploy --only firestore:rules",
     "score": "node src/score-words.js",
     "stats:goro": "node src/analyze-goro-stats.js",
+    "stats:rankey": "node src/rankey-stats.js",
     "graph:alloc": "node src/generate-allocation-graph.js",
     "check:kana": "node src/check-kana.js",
     "check:digits": "node src/check-digits.js",

@@ -9,6 +9,9 @@
 //   t      促音                              ろっし = AtA|
 //   _      先頭0の省略 (2桁しか無い)         れい   = _CA|
 //   !      中間の省略                        りんご = ww!A|   (ん を飛ばす)
+//   ~      拗音4省略 (拗音の直後の う/ん)     びょうに = Bx~A| (う を飛ばす)
+//          読みで落とした (びょうに) か、語の側で落とした (読み びょに / 語 びょうにん)
+//          かのどちらでも付ける。後者は語がかなだけのときしか測れない
 //   v      2桁トークンが3桁境界を跨ぐ        たま   = wwv|v
 //
 //   接尾 (パイプの後ろ)
@@ -29,6 +32,8 @@ const TIER_MARK = { core: 'A', sub: 'B', bad: 'C' }
 const TARGET = 3
 // 小書きの拗音。2文字目がこれなら小書き側は独立した音を持たないので x を当てる
 const SMALL_YOUON = ['ゃ', 'ゅ', 'ょ', 'ャ', 'ュ', 'ョ']
+// 桁を持たない省略記号。本体の3桁を数えるときは飛ばす
+const OMIT_MARKS = new Set(['!', '~'])
 
 const toHira = (s) => [...normalizeDakuten(s)].map(kataToHira).join('')
 
@@ -50,6 +55,28 @@ export function leftoverOf(word, kana) {
   const hw = toHira(w)
   const hk = toHira(kana)
   return hw.startsWith(hk) ? hw.slice(hk.length) : null
+}
+
+/**
+ * 読みが語から「拗音の直後の う/ん」を落とした形か (読み びょに / 語 びょうにん)。
+ * そうなら落とした位置 (読みのかなインデックス) と、その上での余りを返す。
+ * 語がそのまま読みで始まる場合 (leftoverOf が測れる場合) や、語にかな以外を含む
+ * 場合は null。落とすのは1か所だけで、読みの途中に限る (末尾なら単なる余り)。
+ */
+export function youonDropOf(word, kana) {
+  const w = cleanWord(word)
+  if (!w || !/^[ぁ-んァ-ヶーゝゞ]+$/.test(w)) return null
+  const hw = [...toHira(w)]
+  const hk = toHira(kana)
+  if (hw.join('').startsWith(hk)) return null
+  const kanaLen = [...hk].length
+  for (let p = 1; p < Math.min(hw.length, kanaLen); p++) {
+    if (!SMALL_YOUON.includes(hw[p - 1])) continue
+    if (hw[p] !== 'う' && hw[p] !== 'ん') continue
+    const dropped = [...hw.slice(0, p), ...hw.slice(p + 1)].join('')
+    if (dropped.startsWith(hk)) return { at: p, rest: dropped.slice(hk.length) }
+  }
+  return null
 }
 
 /** 余り文字列 → 接尾記号 */
@@ -136,9 +163,14 @@ export function rankey(kana, num, word = '') {
     }
   }
 
+  // 拗音4省略の位置 (記法に載せたかな数で数える)。読みで落とした場合は拗音トークンの直後
+  const drop = detail.youon4 ? null : youonDropOf(word, kana)
+  const youonAt = detail.youon4 ? 2 : drop ? drop.at : -1
+
   const marks = []
   let consumed = 0 // 記法に載せたかな数 (省略記号の挿入位置合わせ用)
   let overflowKana = '' // 3桁を完全に超えたかな。接尾で表す
+  let youonMarked = false
 
   for (const token of detail.tokens) {
     if (token.type === 'overflow') {
@@ -148,18 +180,31 @@ export function rankey(kana, num, word = '') {
     marks.push(...tokenMarks(token))
     consumed += [...token.kana].length
     if (omitAt >= 0 && consumed === omitAt) marks.push('!')
+    if (youonAt >= 0 && !youonMarked && consumed >= youonAt) {
+      marks.push('~')
+      youonMarked = true
+    }
   }
 
   // 先頭0の省略: 3桁に足りない分を _ で埋める
-  const shortBy = TARGET - detail.digits.length
+  const shortBy = Math.max(0, TARGET - detail.digits.length)
   const head = shortBy > 0 ? '_'.repeat(shortBy) : ''
 
-  const body = head + marks.slice(0, TARGET + (omitAt >= 0 ? 1 : 0)).join('')
-  const tail = marks.slice(TARGET + (omitAt >= 0 ? 1 : 0)).join('')
+  // 3桁ぶんの記号までが本体。省略記号 (! ~) は桁を持たないので数えず、
+  // 3桁目の直後に来たものも本体に含める
+  let cut = 0
+  for (let digits = 0; cut < marks.length; cut++) {
+    if (OMIT_MARKS.has(marks[cut])) continue
+    if (digits === TARGET - shortBy) break
+    digits++
+  }
+  const body = head + marks.slice(0, cut).join('')
+  const tail = marks.slice(cut).join('')
 
   // 余りは2系統ある。読みが3桁を超えた分 (のるん の ん) と、語が読みより長い分
   // (ミッキー の ー)。どちらも「3桁に乗らなかったかな」なので繋げて1つの記号にする。
-  const rest = overflowKana + (leftoverOf(word, kana) || '')
+  const wordRest = drop ? drop.rest : leftoverOf(word, kana) || ''
+  const rest = overflowKana + wordRest
   const suffix = tail + leftoverMark(rest) + (detail.mix ? 'm' : '')
 
   return `${body}|${suffix}`

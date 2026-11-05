@@ -9,6 +9,7 @@ import {
   normalizeForCompare,
 } from './words.js'
 import { rankey } from './rankey.js'
+import { collectRankeyStats } from './rankey-stats.js'
 import { scoreWithLabel } from './scorer.js'
 import { kataToHira } from './table.js'
 
@@ -219,6 +220,8 @@ function buildData(filename = 'words.tsv') {
     kanaUsage,
     digitKanaAlloc,
     violations,
+    // rankey の型ごとの件数と拗音4省略 (~) の語。全スロット (wh1-3 / wm1-3) が対象
+    rankey: collectRankeyStats(entries),
   }
   return { data, ruleStats }
 }

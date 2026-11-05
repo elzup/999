@@ -33,6 +33,7 @@ nr push        # src/data/words.tsv を Google Sheet に書き戻す
 nr push:tags   # BCD列の #tag 一覧を tags シートへ書き出す
 nr score       # 単語スコアリング
 nr stats:goro  # ゴロ割り当て分布統計 (docs/goro-stats.md) を生成
+nr stats:rankey # rankey の型ごとの件数と拗音4省略 (~) の語一覧 (docs/rankey-stats.md) を生成
 nr check:kana  # かなカバレッジチェック
 nr check:digits # 桁数チェック
 nr check:errors # エラーチェック

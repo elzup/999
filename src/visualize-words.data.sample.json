@@ -266,6 +266,95 @@
           "digits": "86133"
         }
       ]
+    },
+    "rankey": {
+      "total": 5,
+      "unreadable": 0,
+      "byBody": [
+        {
+          "body": "Aww",
+          "count": 1,
+          "examples": [
+            {
+              "num": "001",
+              "slot": "wm1",
+              "word": "犬",
+              "kana": "いぬ"
+            }
+          ]
+        },
+        {
+          "body": "Cww",
+          "count": 1,
+          "examples": [
+            {
+              "num": "000",
+              "slot": "wh1",
+              "word": "アリス",
+              "kana": "ありす"
+            }
+          ]
+        },
+        {
+          "body": "wwA",
+          "count": 1,
+          "examples": [
+            {
+              "num": "002",
+              "slot": "wh1",
+              "word": "猫",
+              "kana": "ねこ"
+            }
+          ]
+        },
+        {
+          "body": "wwB",
+          "count": 1,
+          "examples": [
+            {
+              "num": "001",
+              "slot": "wh1",
+              "word": "ボブ",
+              "kana": "ぼぶ"
+            }
+          ]
+        },
+        {
+          "body": "wwv",
+          "count": 1,
+          "examples": [
+            {
+              "num": "002",
+              "slot": "wm1",
+              "word": "鳥",
+              "kana": "とり"
+            }
+          ]
+        }
+      ],
+      "byKey": [
+        {
+          "key": "Aww|",
+          "count": 1
+        },
+        {
+          "key": "Cww|.",
+          "count": 1
+        },
+        {
+          "key": "wwA|",
+          "count": 1
+        },
+        {
+          "key": "wwB|",
+          "count": 1
+        },
+        {
+          "key": "wwv|vm",
+          "count": 1
+        }
+      ],
+      "youon4": []
     }
   }
 }

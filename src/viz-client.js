@@ -135,14 +135,14 @@ const summaryResolvers = {
       t === 0
         ? 'sg-0'
         : t <= 50
-        ? 'sg-1'
-        : t <= 100
-        ? 'sg-2'
-        : t <= 200
-        ? 'sg-3'
-        : t <= 350
-        ? 'sg-4'
-        : 'sg-5'
+          ? 'sg-1'
+          : t <= 100
+            ? 'sg-2'
+            : t <= 200
+              ? 'sg-3'
+              : t <= 350
+                ? 'sg-4'
+                : 'sg-5'
     return { label: t > 0 ? '' + t : '', cls }
   },
   encode: (items) => {
@@ -153,12 +153,12 @@ const summaryResolvers = {
       avg < ENC_AVG_T.t1
         ? 'sg-1'
         : avg < ENC_AVG_T.t2
-        ? 'sg-2'
-        : avg < ENC_AVG_T.t3
-        ? 'sg-3'
-        : avg < ENC_AVG_T.t4
-        ? 'sg-4'
-        : 'sg-5'
+          ? 'sg-2'
+          : avg < ENC_AVG_T.t3
+            ? 'sg-3'
+            : avg < ENC_AVG_T.t4
+              ? 'sg-4'
+              : 'sg-5'
     return { label: avg.toFixed(1), cls }
   },
 }
@@ -557,8 +557,8 @@ const SummaryHeatmapTable = memo(function SummaryHeatmapTable({
     sumMode === 'yz'
       ? (r) => 'Y=' + r
       : sumMode === 'both'
-      ? (r) => r
-      : (r) => r
+        ? (r) => r
+        : (r) => r
   const colLabel =
     sumMode === 'yz' ? (c) => c : sumMode === 'both' ? (c) => c : (c) => c
 
@@ -895,6 +895,82 @@ function DigitKanaAlloc({ ruleStats }) {
   `
 }
 
+const RANKEY_TOP = 30
+const YOUON4_KIND = { reading: '読みで落とす', word: '語の側で落とす' }
+
+function RankeyTypes({ ruleStats }) {
+  const rk = ruleStats?.rankey
+  if (!rk || rk.total === 0)
+    return html`<div className="vio-empty">データなし</div>`
+  const top = rk.byBody.slice(0, RANKEY_TOP)
+  const max = Math.max(...top.map((b) => b.count), 1)
+  return html`
+    <div className="rule-columns">
+      <div className="rule-col">
+        <p className="subtitle">
+          ${rk.total} 語 / ${rk.byBody.length}
+          種${rk.byBody.length > RANKEY_TOP
+            ? ` (上位 ${RANKEY_TOP} 種を表示)`
+            : ''}
+        </p>
+        <div className="rule-section">
+          ${top.map((b) => {
+            const pct = ((b.count / rk.total) * 100).toFixed(1)
+            const barW = ((b.count / max) * 100).toFixed(1)
+            const ex = b.examples.map((e) => e.word || e.kana).join(' / ')
+            return html`
+              <div className="rule-row" key=${b.body} title=${ex}>
+                <span className="rule-label">${b.body}</span>
+                <div className="rule-bar-bg">
+                  <div
+                    className=${'rule-bar ' +
+                    (b.body.includes('~') ? 'pat-other' : 'pat-dd-d')}
+                    style=${{ width: barW + '%' }}
+                  >
+                    ${barW > 15 ? b.count : ''}
+                  </div>
+                </div>
+                <span className="rule-count">${b.count} (${pct}%)</span>
+              </div>
+            `
+          })}
+        </div>
+      </div>
+      <div className="rule-col">
+        <div className="vio-section vio-low">
+          <div className="vio-head">
+            <span className="vio-label">拗音4省略 (~)</span>
+            <span className="vio-count">${rk.youon4.length}</span>
+          </div>
+          <div className="vio-desc">
+            拗音の直後の う/ん を落として読んでいる語。読みで落とす (びょうに) /
+            語の側で落とす (読み びょに・語 びょうにん)
+          </div>
+          ${rk.youon4.length === 0
+            ? html`<div className="vio-ok">なし</div>`
+            : html`
+                <div className="vio-list">
+                  ${rk.youon4.map(
+                    (y, i) => html`
+                      <div className="vio-row" key=${i}>
+                        <span className="vio-num">${y.num}</span>
+                        <span className="vio-side">${y.slot}</span>
+                        <span className="vio-word">${y.word}</span>
+                        <span className="vio-arrow">/</span>
+                        <span className="vio-kana">${y.kana}</span>
+                        <span className="vio-actual">${y.rk}</span>
+                        <span className="vio-msg">${YOUON4_KIND[y.kind]}</span>
+                      </div>
+                    `
+                  )}
+                </div>
+              `}
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function ViolationsPanel({ ruleStats }) {
   const v = ruleStats?.violations
   if (!v) return html`<div className="vio-empty">違反データなし</div>`
@@ -1025,13 +1101,13 @@ function Tooltip({ d, x, y }) {
   const w1ScoreEl = d.w1Error
     ? html`<span className="tt-red">ERROR</span>`
     : d.w1Score !== null
-    ? html`<span className="tt-green">${d.w1Score}</span>`
-    : html`<span className="tt-gray">-</span>`
+      ? html`<span className="tt-green">${d.w1Score}</span>`
+      : html`<span className="tt-gray">-</span>`
   const w2ScoreEl = d.w2Error
     ? html`<span className="tt-red">ERROR</span>`
     : d.w2Score !== null
-    ? html`<span className="tt-green">${d.w2Score}</span>`
-    : html`<span className="tt-gray">-</span>`
+      ? html`<span className="tt-green">${d.w2Score}</span>`
+      : html`<span className="tt-gray">-</span>`
   return html`
     <div className="tooltip" ref=${ref} style=${{ display: 'block' }}>
       <div className="tt-num">${d.num}</div>
@@ -1223,6 +1299,12 @@ function App() {
       <h2>Rule Usage (採用済み word)</h2>
       <p className="subtitle">各数字の採用済みエンコードにおけるルール使用率</p>
       <${RuleCharts} ruleStats=${ruleStats} />
+
+      <h2>Rankey Types</h2>
+      <p className="subtitle">
+        全スロットの rankey を本体 (3桁の内訳) ごとに数えたもの。~ は拗音4省略
+      </p>
+      <${RankeyTypes} ruleStats=${ruleStats} />
 
       <h2>Kana Usage</h2>
       <p className="subtitle">

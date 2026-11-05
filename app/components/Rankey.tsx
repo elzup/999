@@ -13,6 +13,7 @@ const CLASS_OF: Record<string, string> = {
   v: 'rk-v',
   _: 'rk-u',
   '!': 'rk-o',
+  '~': 'rk-o',
   '|': 'rk-s',
   n: 'rk-f',
   '-': 'rk-f',

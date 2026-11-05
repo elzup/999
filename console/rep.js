@@ -173,6 +173,7 @@ const RK_CLASS = {
   v: 'k-v',
   _: 'k-u',
   '!': 'k-o',
+  '~': 'k-o',
   '|': 'k-s',
   n: 'k-f',
   '-': 'k-f',
@@ -221,8 +222,8 @@ function chipHtml(w, cand) {
       <span class="chip-body">
         <span class="chip-top">
           <span class="kindmark ${cand.kind}">${KIND_LABEL[cand.kind]}${
-    cand.rank
-  }</span>
+            cand.rank
+          }</span>
           <span class="chip-k">${escapeHtml(cand.k)}</span>
         </span>
         <span class="chip-w">${escapeHtml(cand.word || '—')}</span>
@@ -244,10 +245,10 @@ function cardHtml(w) {
   const tag = w.stale?.length
     ? '<span class="tag warn">要再確認</span>'
     : w.auto
-    ? '<span class="tag auto">自動</span>'
-    : w.confirmed
-    ? '<span class="tag ok">確定</span>'
-    : ''
+      ? '<span class="tag auto">自動</span>'
+      : w.confirmed
+        ? '<span class="tag ok">確定</span>'
+        : ''
   const swapBtn =
     w.order.length >= 2
       ? `<button class="swap" data-num="${w.num}" title="①②入替 (s)">⇅</button>`
@@ -283,7 +284,7 @@ function renderFilters() {
 function escapeHtml(s) {
   return String(s).replace(
     /[&<>"]/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]
   )
 }
 

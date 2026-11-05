@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { findOmission, leftoverMark, leftoverOf, rankey } from '../rankey.js'
+import {
+  findOmission,
+  leftoverMark,
+  leftoverOf,
+  rankey,
+  youonDropOf,
+} from '../rankey.js'
 
 describe('rankey notation', () => {
   // 記法の定義そのもの。合意した実例を仕様として固定する
@@ -73,6 +79,33 @@ describe('rankey notation', () => {
   it('finds a middle omission only when skipping one kana hits the number', () => {
     expect(findOmission('りんご', '615')).toBe(1)
     expect(findOmission('みかみ', '393')).toBe(-1)
+  })
+
+  it('marks the youon4 omission with ~ right after the youon', () => {
+    // 読みで落とす: びょうに = びょ(14) + に(2), う を飛ばす
+    expect(rankey('びょうに', '142', '')).toBe('Bx~A|')
+    expect(rankey('びょうに', '142', 'びょうにん')).toBe('Bx~A|n')
+    expect(rankey('じょんき', '649', '')).toBe('Ax~A|')
+    expect(rankey('きゅうし', '974', 'キュウシ')).toBe('Ax~A|')
+  })
+
+  it('marks the omission the same way when only the word keeps う/ん', () => {
+    // 読み びょに / 語 びょうにん: 語の側で う を落としている
+    expect(rankey('びょに', '142', 'びょうにん')).toBe('Bx~A|n')
+    expect(rankey('びょに', '142', 'ビョウニン')).toBe('Bx~A|n')
+    // 語が漢字なら測れないので付かない
+    expect(rankey('びょに', '142', '病人')).toBe('BxA|')
+    expect(rankey('びょに', '142', '')).toBe('BxA|')
+  })
+
+  it('finds where the word drops う/ん after a youon', () => {
+    expect(youonDropOf('びょうにん', 'びょに')).toEqual({ at: 2, rest: 'ん' })
+    expect(youonDropOf('じょんき', 'じょき')).toEqual({ at: 2, rest: '' })
+    // 語がそのまま読みで始まるなら普通の余り
+    expect(youonDropOf('びょうにん', 'びょうに')).toBe(null)
+    // 拗音の直後でない う は対象外
+    expect(youonDropOf('ろうそく', 'ろそ')).toBe(null)
+    expect(youonDropOf('病人', 'びょに')).toBe(null)
   })
 
   it('returns null for a reading that cannot be encoded', () => {
