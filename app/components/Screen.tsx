@@ -2,6 +2,7 @@ import { h } from 'preact'
 import type { ComponentChildren } from 'preact'
 import { useLayoutEffect, useRef } from 'preact/hooks'
 import { IconClose } from './Icons'
+import type { SelectionNav } from '../lib/useSelection'
 
 // 全画面共通の枠。片手持ちで親指が画面の上半分へ伸びないことを最優先にする。
 //
@@ -127,6 +128,35 @@ export function PanelClose({ onClick }: { onClick: () => void }) {
   return (
     <div class="panel-foot">
       <CloseButton onClick={onClick} />
+    </div>
+  )
+}
+
+/**
+ * 詳細パネルの «前へ / 次へ»。一覧を閉じずに隣の番号へ送る。
+ * 閉じる・ブックマーク・編集の段の直上に置く (どの画面でも同じ位置)。
+ * 行き先の番号をボタンに出すので、どこへ送られるかが押す前に分かる
+ */
+export function PanelNav({ nav }: { nav?: SelectionNav }) {
+  if (!nav) return null
+  return (
+    <div class="detail-nav">
+      <button
+        class="detail-act act-nav"
+        onClick={nav.onPrev ?? undefined}
+        disabled={!nav.onPrev}
+        aria-label="前へ"
+      >
+        <span>‹ 前へ{nav.prevLabel ? ` ${nav.prevLabel}` : ''}</span>
+      </button>
+      <button
+        class="detail-act act-nav"
+        onClick={nav.onNext ?? undefined}
+        disabled={!nav.onNext}
+        aria-label="次へ"
+      >
+        <span>{nav.nextLabel ? `${nav.nextLabel} ` : ''}次へ ›</span>
+      </button>
     </div>
   )
 }

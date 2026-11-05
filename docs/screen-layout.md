@@ -45,12 +45,17 @@
     行を占有する見出しは `.grid-full` (`.num-band` / `.card-suit-header` は自動)。
 - Detail Panel の ★ / 編集 は NumDetailPanel が自分で出す (NumberContext から取る)。
   呼び出し側で `bookmarks` / `onToggleBm` / `onEdit` を渡す必要は無い (挙動を変えたいときだけ渡す)。
-- 番号を 1 つ選んで詳細を出す画面 (全体 / マップ / 日付 / ブックマーク …) は同じ作りにする。
-  - 選択状態は `useSelection` (app/lib/useSelection.ts)。再タップで外す・端末の «戻る» で閉じるはここが持つ。
+- 詳細パネルを出す画面は同じ作りにする。
+  - 選択状態は `useSelection(order)` (app/lib/useSelection.ts)。再タップで外す・端末の «戻る» で閉じる・
+    **前へ / 次へ** (`nav`) はここが持つ。`order` は画面に出ている順 (絞り込み後) を渡す。
     画面ごとに `useState` で書かない (再タップや戻るの挙動が画面で食い違った)。
-  - 詳細は `NumDetailPanel` に `onClose` を渡し、閉じるを ★ / 編集 と同じ段に出す。
-    画面固有の操作 (マップの «採用» 切り替え) は children で渡し、カードの中・操作の段の直上に出る。
-    閉じるをカードの外 (`PanelClose`) に出すのは、カードを複数枚積む面 (π / 年号 / 2桁) だけ。
+  - 1 枚だけ見せる面: `NumDetailPanel` / `CardDetailPanel` に `onClose` と `nav` を渡す。
+    カードの下に «‹ 前へ | 次へ ›» の段、その下に «閉じる・ブックマーク・編集» の段が並ぶ。
+  - カードを複数枚積む面 (π / 年号 / 2桁) だけ、カードの外に `PanelNav` と閉じるを 1 つずつ置く。
+  - 該当画面: 数字 (全体 / 2桁 / マップ)、日付、カード、π、年号、曜日 (年コード / 年マップ)、
+    ブックマーク、各テストの結果 (ReviewPanel の行タップ)。
+- マップのタイルの絵は **代表①** (編集画面で選ぶもの)。マップ専用の選択は持たない。
+  000〜099 のマップは年マップと同じ配置を使う。
 - ボトムシート (RecordPanel / ReviewPanel) は見出しと 閉じる を **シートの最下段** に置く。
 - サブタブは `SubTabGroup` を使う。`.sub-tab-switch` を自前で書かない。
 - root にインラインの `display:flex; flexDirection:column; flex:1; …` を書かない (`Screen` が持つ)。

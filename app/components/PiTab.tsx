@@ -14,9 +14,15 @@ import ReviewPanel from './ReviewPanel'
 import type { ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import MarkButton from './MarkButton'
-import Screen, { DockBar, PanelCards, QuitButton, PanelClose } from './Screen'
+import Screen, {
+  DockBar,
+  PanelCards,
+  PanelNav,
+  QuitButton,
+  PanelClose,
+} from './Screen'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
-import { useSelection } from '../lib/useSelection'
+import { navAround, useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -632,6 +638,20 @@ function PiTab({ numbers }: Props) {
     return result.length > 0 ? result : null
   }, [selected, numbers, digits])
 
+  // 前へ / 次へ は 2 組 (= 詳細に出す 2 枚) ずつ送る。ボタンには行き先の先頭の番号
+  const nav = useMemo(() => {
+    if (selected === null) return undefined
+    const groupCount = Math.floor((digits.length - 1) / 3)
+    const pairStarts = Array.from(
+      { length: Math.ceil(groupCount / 2) },
+      (_, i) => i * 2
+    )
+    const current = selected % 2 === 0 ? selected : selected - 1
+    return navAround(pairStarts, current, setSelected, (g) =>
+      digits.slice(1 + g * 3, 4 + g * 3).join('')
+    )
+  }, [selected, digits, setSelected])
+
   const openRecords = useCallback((kind: RecordKind) => {
     setRecordsKind(kind)
     setShowRecords(true)
@@ -673,6 +693,9 @@ function PiTab({ numbers }: Props) {
             <NumDetailPanel key={d.num} d={d} />
           ))}
         </PanelCards>
+        <div class="panel-nav-wrap">
+          <PanelNav nav={nav} />
+        </div>
         {/* 複数枚まとめて 1 つの閉じる。詳細カード側は閉じるを持たない */}
         <PanelClose onClick={() => setSelected(null)} />
       </>

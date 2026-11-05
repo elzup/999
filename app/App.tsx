@@ -226,7 +226,11 @@ export function App() {
   // テストの結果ビューから開く編集。タブを切り替えると結果ビューごと消えるので、
   // 今のタブの上に重ねて開き、閉じたら結果ビューへ戻る
   const [overlayEditNum, setOverlayEditNum] = useState<string | null>(null)
-  const closeOverlayEditor = useCallback(() => setOverlayEditNum(null), [])
+  const [editVersion, setEditVersion] = useState(0)
+  const closeOverlayEditor = useCallback(() => {
+    setOverlayEditNum(null)
+    setEditVersion((v) => v + 1)
+  }, [])
   useBackGuard(Boolean(overlayEditNum), closeOverlayEditor)
 
   const numberCtx = useMemo<NumberContextValue>(
@@ -235,8 +239,9 @@ export function App() {
       bookmarks,
       onToggleBm: toggleBm,
       openEditor: setOverlayEditNum,
+      editVersion,
     }),
-    [data, bookmarks, toggleBm]
+    [data, bookmarks, toggleBm, editVersion]
   )
 
   // サブタブを持たないグループのスライド用デッキ。kuku は applyData で注入済みの

@@ -22,6 +22,7 @@ import type { ReviewItem } from './ReviewPanel'
 import { vibrate } from '../lib/haptics'
 import TestFeatureList from './TestFeatureList'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
+import { useSelection } from '../lib/useSelection'
 
 type Props = {
   cards: CardEntry[]
@@ -118,7 +119,15 @@ function pickCardValue(c: CardEntry): { value: string; label: string } | null {
 const SUITS = ['S', 'H', 'C', 'D'] as const
 
 function CardTab({ cards, bookmarks, onToggleBm }: Props) {
-  const [selected, setSelected] = useState<string | null>(null)
+  // 前へ / 次へ はグリッドの並び (スートごと) で送る
+  const order = useMemo(
+    () =>
+      SUITS.flatMap((s) =>
+        cards.filter((c) => c.suit === s).map((c) => s + c.rank)
+      ),
+    [cards]
+  )
+  const { selected, select: setSelected, toggle, nav } = useSelection(order)
   const [mode, setMode] = useState<Mode>('view')
 
   // Test state
@@ -443,7 +452,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
                     !revealed && toggleReveal(key, bmKey, revealed, isBm)
                   }
                 >
-                  {revealed ? prompt?.value ?? '—' : '答えを見る'}
+                  {revealed ? (prompt?.value ?? '—') : '答えを見る'}
                 </div>
                 <div class="cm-train-cardtools">
                   <button
@@ -596,6 +605,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
       bookmarks={bookmarks}
       onToggleBm={onToggleBm}
       onClose={() => setSelected(null)}
+      nav={nav}
     />
   ) : null
 
@@ -617,7 +627,7 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
                   c={c}
                   selected={selected === key}
                   stat={stats[key]}
-                  onSelect={() => setSelected(selected === key ? null : key)}
+                  onSelect={() => toggle(key)}
                 />
               )
             })}

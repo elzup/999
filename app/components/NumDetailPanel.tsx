@@ -11,7 +11,8 @@ import type { ComponentChildren } from 'preact'
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
 import { IconEdit, IconStar, IconStarOutline } from './Icons'
-import { CloseButton } from './Screen'
+import { CloseButton, PanelNav } from './Screen'
+import type { SelectionNav } from '../lib/useSelection'
 import { parseTaggedItems } from '../lib/tags'
 import { nameOf } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
@@ -34,6 +35,8 @@ type Props = {
    * 直上に出す。閉じるは操作の段に置いたままにして、どの画面でも同じ位置にする
    */
   children?: ComponentChildren
+  /** 前へ / 次へ (1 枚だけ見せる面)。操作の段の直上に出る */
+  nav?: SelectionNav
 }
 
 type WordRow = {
@@ -218,6 +221,8 @@ function NumDetailPanel(props: Props) {
       ) : null}
 
       {props.children}
+
+      <PanelNav nav={props.nav} />
 
       {/* 操作はカードの最下段。Detail Panel は dock の直上にあるので、ここが
           親指に一番近い (番号の下に置くと画面の中ほどまで指を伸ばすことになる) */}

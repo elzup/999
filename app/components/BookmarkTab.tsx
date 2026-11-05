@@ -5,7 +5,7 @@ import { formatCardId } from '../data/cards'
 import NumDetailPanel from './NumDetailPanel'
 import CardDetailPanel from './CardDetailPanel'
 import Screen from './Screen'
-import { useSelection } from '../lib/useSelection'
+import { navAround, useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -89,6 +89,31 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
 
   const { selected, select: setSelected } = useSelection<string>()
 
+  // 前へ / 次へ は 数字 → カード の順。送った先も «見た» として記録する
+  // (タップで開いたときと同じく、ブックマーク復習の既読に数える)
+  const order = useMemo(
+    () => [
+      ...bmNums.map((d) => 'n:' + d.num),
+      ...bmCards.map((c) => 'c:' + c.suit + c.rank),
+    ],
+    [bmNums, bmCards]
+  )
+  const nav = useMemo(
+    () =>
+      selected === null
+        ? undefined
+        : navAround(
+            order,
+            selected,
+            (key) => {
+              setSelected(key)
+              onView?.(key)
+            },
+            (key) => key.slice(2)
+          ),
+    [order, selected, onView]
+  )
+
   const selectedNum = useMemo(() => {
     if (!selected || !selected.startsWith('n:')) return null
     return numbers.find((d) => d.num === selected.slice(2)) || null
@@ -100,15 +125,18 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
   }, [cards, selected])
 
   const panel = selectedNum ? (
-    <>
-      <NumDetailPanel d={selectedNum} onClose={() => setSelected(null)} />
-    </>
+    <NumDetailPanel
+      d={selectedNum}
+      onClose={() => setSelected(null)}
+      nav={nav}
+    />
   ) : selectedCard ? (
     <CardDetailPanel
       c={selectedCard}
       bookmarks={bookmarks}
       onToggleBm={onToggleBm}
       onClose={() => setSelected(null)}
+      nav={nav}
     />
   ) : null
 

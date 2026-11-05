@@ -48,9 +48,15 @@ import TestNavBar from './TestNavBar'
 import MarkButton from './MarkButton'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
-import Screen, { DockBar, DockRow, QuitButton, PanelClose } from './Screen'
+import Screen, {
+  DockBar,
+  DockRow,
+  PanelNav,
+  QuitButton,
+  PanelClose,
+} from './Screen'
 import type { ReviewItem } from './ReviewPanel'
-import { useSelection } from '../lib/useSelection'
+import { navAround, useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -381,6 +387,15 @@ function YearTab({ numbers }: Props) {
     [mode, checkItems, results]
   )
 
+  // 前へ / 次へ は今の絞り込み (時代) で出ている順に送る
+  const nav = useMemo(() => {
+    if (selected === null) return undefined
+    const order = filterByEra(eraFilter).map((item) => YEAR_DATA.indexOf(item))
+    return navAround(order, selected, setSelected, (idx) =>
+      String(YEAR_DATA[idx].year)
+    )
+  }, [selected, eraFilter, setSelected])
+
   const selectedNums = useMemo(() => {
     if (selected === null || !numbers) return null
     const item = YEAR_DATA[selected]
@@ -440,6 +455,9 @@ function YearTab({ numbers }: Props) {
         {selectedNums.map((d) => (
           <NumDetailPanel key={d.num} d={d} />
         ))}
+        <div class="panel-nav-wrap">
+          <PanelNav nav={nav} />
+        </div>
         <PanelClose onClick={() => setSelected(null)} />
       </>
     ) : null

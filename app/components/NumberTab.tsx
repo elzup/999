@@ -133,7 +133,6 @@ function DigitFilterPads({
 }
 
 function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
-  const { selected, toggle, clear } = useSelection<string>()
   const [df, setDf] = useState<DigitFilter>([null, null, null])
   const [filterMode, setFilterMode] = useState<FilterMode>('rows')
 
@@ -146,6 +145,10 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
       return true
     })
   }, [numbers, df])
+
+  // 前へ / 次へ は画面に出ている順 (絞り込み後) で送る
+  const order = useMemo(() => filtered.map((d) => d.num), [filtered])
+  const { selected, toggle, clear, nav } = useSelection(order)
 
   const selectedData = useMemo(() => {
     if (selected === null) return null
@@ -187,6 +190,7 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
       onToggleBm={onToggleBm}
       onEdit={onEditWord ? () => onEditWord(selectedData.num) : undefined}
       onClose={clear}
+      nav={nav}
     />
   ) : null
 

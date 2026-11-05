@@ -15,7 +15,7 @@ import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
-import { useSelection } from '../lib/useSelection'
+import { navAround, useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -295,6 +295,14 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     setAnswers(answers.slice(0, -1))
   }, [answers])
 
+  // 前へ / 次へ は今の並び (順番 / 末尾グループ) で送る
+  const nav = useMemo(() => {
+    if (selected === null) return undefined
+    const order =
+      viewMode === 'seq' ? D3_LIST : Z_GROUPS.flatMap(([, items]) => items)
+    return navAround(order, selected, setSelected, (xyz) => xyz.slice(0, 2))
+  }, [selected, viewMode, setSelected])
+
   const selectedPrefixEntry = useMemo(() => {
     if (selected === null) return null
     const prefix = '0' + selected.slice(0, 2)
@@ -458,6 +466,7 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
             bookmarks={bookmarks}
             onToggleBm={onToggleBm}
             onClose={() => setSelected(null)}
+            nav={nav}
           />
         </div>
       </>

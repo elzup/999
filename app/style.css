@@ -408,6 +408,31 @@ body {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
+/* 前へ / 次へ (PanelNav)。閉じる・ブックマーク・編集の段の直上 */
+.detail-nav {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.detail-nav + .detail-foot-actions {
+  margin-top: 6px;
+}
+.detail-act.act-nav {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+.detail-act:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* 積んだ面 (π / 年号 / 2桁) はカードの外に置くので、PanelClose と同じ余白 */
+.panel-foot .detail-nav,
+.panel-nav-wrap .detail-nav {
+  margin-top: 0;
+}
+.panel-nav-wrap {
+  padding: 0 14px 6px;
+}
 /* 語は折り返す。nowrap + flex-shrink:0 のままだと縮む余地がゼロになり、
    カードごと横スクロールする (実際に踏んだ) */
 .word-line .detail-main-word {
@@ -3628,40 +3653,6 @@ body {
 }
 .num-map-sel-btn.empty {
   opacity: 0.4;
-}
-.ymap-pick {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px 4px;
-}
-.ymap-pick-label {
-  font-size: 11px;
-  color: var(--text2);
-}
-.ymap-pick-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px 3px 3px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface, #1a1d27);
-  color: var(--text2);
-  font-size: 13px;
-  cursor: pointer;
-}
-.ymap-pick-btn img {
-  width: 28px;
-  height: 28px;
-  object-fit: cover;
-  border-radius: 4px;
-  background: var(--img-bg);
-}
-.ymap-pick-btn.active {
-  border-color: var(--accent, #4ade80);
-  color: var(--text, #e5e7eb);
 }
 
 /* Editor */

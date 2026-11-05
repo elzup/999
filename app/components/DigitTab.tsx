@@ -2,10 +2,10 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
-import Screen, { CloseButton, DockRow, PanelCards } from './Screen'
+import Screen, { CloseButton, DockRow, PanelCards, PanelNav } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { candidatesOf } from '../lib/choice'
-import { useSelection } from '../lib/useSelection'
+import { navAround, useSelection } from '../lib/useSelection'
 
 type Props = {
   numbers: NumberEntry[]
@@ -164,6 +164,17 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
     }
   }, [])
 
+  // 前へ / 次へ は 00〜99 のグループで送る。★ から開いた特別な絞り込みには無い
+  const nav = useMemo(() => {
+    if (selected === null || specialSel) return undefined
+    const order = Array.from({ length: 100 }, (_, i) =>
+      String(i).padStart(2, '0')
+    )
+    return navAround(order, selected, setSelected, (v) =>
+      mode === 'upper' ? v + '_' : '_' + v
+    )
+  }, [selected, specialSel, mode, setSelected])
+
   // 2桁グループの ★ は番号単位の ★ (NumDetailPanel) とは別物なので、
   // 積んだカードの下に «閉じる» と並べて 1 つだけ置く
   const panel = detail ? (
@@ -184,6 +195,9 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
           />
         ))}
       </PanelCards>
+      <div class="panel-nav-wrap">
+        <PanelNav nav={nav} />
+      </div>
       <div class="panel-foot detail-foot-actions">
         <CloseButton onClick={clearSel} />
         <button

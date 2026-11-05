@@ -16,9 +16,16 @@ type Props = {
 
 // 365 日分の日付 → 語。キーは「月 + 日(2桁)」で、1〜9月は num 辞書を共有する。
 function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
-  const { selected, select: setSelected } = useSelection<string>()
-
   const days = useMemo(() => buildDateEntries(numbers, dates), [numbers, dates])
+  const order = useMemo(() => days.map((d) => d.key), [days])
+  const {
+    selected,
+    select: setSelected,
+    nav,
+  } = useSelection(order, (key) => {
+    const day = days.find((d) => d.key === key)
+    return day ? `${day.month}/${day.day}` : key
+  })
 
   const selectedDay = useMemo(
     () => (selected === null ? null : days.find((d) => d.key === selected)),
@@ -32,6 +39,7 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
         bookmarks={bookmarks}
         onToggleBm={onToggleBm}
         onClose={() => setSelected(null)}
+        nav={nav}
       />
     </>
   ) : null

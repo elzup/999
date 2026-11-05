@@ -1,6 +1,7 @@
 import type { NumberEntry } from '../data/schema'
 import {
   assignToLayout,
+  buildYearMap,
   tileFromNum,
   getMapBounds,
   type LayoutCell,
@@ -66,8 +67,14 @@ export const HUNDRED_LAYOUTS: Record<number, LayoutCell[]> = {
   ],
 }
 
+/**
+ * 000〜099 は年マップ (年コード) のレイアウトをそのまま使う。0XY の 100 個は
+ * 年コードと同じ番号なので、別の配置を作ると同じ番号が 2 通りの場所に出てしまう
+ */
+export const YEAR_MAP_HUNDRED = 0
+
 export function hasHundredLayout(hundred: number): boolean {
-  return HUNDRED_LAYOUTS[hundred] !== undefined
+  return hundred === YEAR_MAP_HUNDRED || HUNDRED_LAYOUTS[hundred] !== undefined
 }
 
 /** tens base (3桁, 末尾0) からその 10 個の 3桁番号を昇順で返す */
@@ -77,6 +84,7 @@ function tensMembers(base: string): string[] {
 }
 
 export function getNumMapBounds(hundred: number) {
+  if (hundred === YEAR_MAP_HUNDRED) return getMapBounds()
   const layout = HUNDRED_LAYOUTS[hundred]
   return layout ? getMapBounds(layout) : null
 }
@@ -87,6 +95,7 @@ export function buildNumMap(
   hundred: number,
   overrides: Record<string, Slot> = {}
 ): RenderedCell[] | null {
+  if (hundred === YEAR_MAP_HUNDRED) return buildYearMap(numbers, overrides)
   const layout = HUNDRED_LAYOUTS[hundred]
   if (!layout) return null
   const byNum = new Map(numbers.map((n) => [n.num, n]))

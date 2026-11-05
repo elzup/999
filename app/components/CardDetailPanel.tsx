@@ -1,13 +1,16 @@
 import type { CardEntry } from '../data/schema'
 import { cardValues, formatCardId } from '../data/cards'
 import { IconStar, IconStarOutline } from './Icons'
-import { CloseButton } from './Screen'
+import { CloseButton, PanelNav } from './Screen'
+import type { SelectionNav } from '../lib/useSelection'
 
 type Props = {
   c: CardEntry
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
   onClose?: () => void
+  /** 前へ / 次へ。操作の段の直上に出る (NumDetailPanel と同じ) */
+  nav?: SelectionNav
 }
 
 type CardValueItem = [label: string, val: string, score: number]
@@ -19,7 +22,7 @@ function suitColor(suit: string): string {
   return '#94a3b8'
 }
 
-function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
+function CardDetailPanel({ c, bookmarks, onToggleBm, onClose, nav }: Props) {
   const bmKey = 'c:' + c.suit + c.rank
   const isBm = bookmarks.has(bmKey)
 
@@ -60,6 +63,7 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose }: Props) {
           )
         })}
       </div>
+      <PanelNav nav={nav} />
       {/* 操作はカードの最下段 (NumDetailPanel と同じ並び・見た目) */}
       <div class="detail-foot-actions">
         {onClose && <CloseButton onClick={onClose} />}
