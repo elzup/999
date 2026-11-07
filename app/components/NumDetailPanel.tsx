@@ -76,6 +76,25 @@ function wordRows(d: NumberEntry): WordRow[] {
   return rows
 }
 
+/**
+ * 人 / 物 / 念 の 1 欄 ("信長,空海#a") から、語の行に出ていない語を取り出す。
+ * "ニーナ#a,#b" のように同じ語が続くものは 1 つにまとめてタグを合わせる
+ */
+function extraItems(
+  raw: string,
+  shownNames: Set<string>
+): { name: string; tags: string[] }[] {
+  const out: { name: string; tags: string[] }[] = []
+  for (const item of parseTaggedItems(raw)) {
+    const name = item.base || item.label
+    if (shownNames.has(nameOf(name))) continue
+    const same = out.find((x) => x.name === name)
+    if (same) same.tags = [...new Set([...same.tags, ...item.tags])]
+    else out.push({ name, tags: item.tags })
+  }
+  return out
+}
+
 function NumDetailPanel(props: Props) {
   const { d } = props
   const ctx = useNumberContext()
@@ -88,17 +107,30 @@ function NumDetailPanel(props: Props) {
   // 語の行にはタグ込みの語 (鯉#g) がそのまま出ている。同じものを
   // タグ行にもう一度出すと、1 枚のカードに同じ語が 2 回並ぶ
   const shownNames = new Set(rows.map((row) => nameOf(row.word)))
-  const tagged = [
-    ['人', parseTaggedItems(d.hito)],
-    ['物', parseTaggedItems(d.mono)],
-    ['念', parseTaggedItems(d.gainen)],
-  ] as const
+  // 人 / 物 / 念 のうち、上の語の行に大きく出していないものだけをチップにする。
+  // 以前は 人 / 物 の生の文字列、wh1〜wm2 の枠、タグ付きの語 を別々に並べていて、
+  // 代表の語が 1 枚のカードに 3〜4 回出ていた。タグはその語のチップの中に付ける
+  const extras = (
+    [
+      ['人', d.hito],
+      ['物', d.mono],
+      ['念', d.gainen],
+    ] as const
+  )
+    .map(([label, raw]) => [label, extraItems(raw, shownNames)] as const)
+    .filter(([, items]) => items.length > 0)
 
   return (
     <div class="detail-panel">
       <div class="detail-row1">
+        {/* 番号の下は語の 2 行目の高さだけ空くので、Cat をここに置く */}
         <div class="detail-idcol">
           <span class="detail-id">{d.num}</span>
+          {d.catScore ? (
+            <span class="detail-cat" title="カテゴリスコア">
+              Cat {d.catScore}
+            </span>
+          ) : null}
         </div>
 
         <div class="word-list">
@@ -132,77 +164,23 @@ function NumDetailPanel(props: Props) {
         </div>
       </div>
 
-      <div class="detail-row2">
-        {d.hito ? (
-          <div class="detail-chip">
-            <span class="dc-label">人</span>
-            <span class="dc-val">{d.hito}</span>
-          </div>
-        ) : null}
-        {d.mono ? (
-          <div class="detail-chip">
-            <span class="dc-label">物</span>
-            <span class="dc-val">{d.mono}</span>
-          </div>
-        ) : null}
-        {d.gainen ? (
-          <div class="detail-chip">
-            <span class="dc-label">念</span>
-            <span class="dc-val">{d.gainen}</span>
-          </div>
-        ) : null}
-        {d.catScore ? (
-          <div class="detail-chip cat">
-            <span class="dc-label">Cat</span>
-            <span class="dc-val">{d.catScore}</span>
-          </div>
-        ) : null}
-      </div>
-
-      <div class="detail-body">
-        <div class="detail-chip">
-          <span class="dc-label">wh1</span>
-          <span class="dc-val">{d.wh1 || d.w1 || '-'}</span>
-        </div>
-        <div class="detail-chip">
-          <span class="dc-label">wh2</span>
-          <span class="dc-val">{d.wh2 || d.w1_2 || '-'}</span>
-        </div>
-        <div class="detail-chip">
-          <span class="dc-label">wm1</span>
-          <span class="dc-val">{d.wm1 || d.w2 || '-'}</span>
-        </div>
-        <div class="detail-chip">
-          <span class="dc-label">wm2</span>
-          <span class="dc-val">{d.wm2 || d.w2_2 || '-'}</span>
-        </div>
-      </div>
-
-      {tagged.some(([, items]) =>
-        items.some(
-          (item) =>
-            item.tags.length > 0 &&
-            !shownNames.has(nameOf(item.base || item.label))
-        )
-      ) ? (
-        <div class="detail-tag-row">
-          {tagged.map(([label, items]) =>
-            items
-              .filter(
-                (item) =>
-                  item.tags.length > 0 &&
-                  !shownNames.has(nameOf(item.base || item.label))
-              )
-              .map((item) => (
-                <div key={`${label}-${item.label}`} class="detail-tag-chip">
-                  <span class="detail-tag-cat">{label}</span>
-                  <span class="detail-tag-name">{item.base || item.label}</span>
-                  <span class="detail-tag-tags">
-                    {item.tags.map((tag) => `#${tag}`).join(' ')}
-                  </span>
-                </div>
-              ))
-          )}
+      {extras.length > 0 ? (
+        <div class="detail-extras">
+          {extras.map(([label, items]) => (
+            <div key={label} class="detail-chip">
+              <span class="dc-label">{label}</span>
+              {items.map((item) => (
+                <span key={item.name} class="dc-val">
+                  {item.name}
+                  {item.tags.map((tag) => (
+                    <span key={tag} class="dc-tag">
+                      #{tag}
+                    </span>
+                  ))}
+                </span>
+              ))}
+            </div>
+          ))}
         </div>
       ) : null}
 

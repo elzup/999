@@ -197,41 +197,6 @@ body {
   gap: 8px;
   min-height: 52px;
 }
-.detail-row2 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-.detail-tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-.detail-tag-chip {
-  background: #13211a;
-  border: 1px solid #1f6f4a;
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.detail-tag-cat {
-  color: var(--text2);
-}
-.detail-tag-name {
-  color: var(--text);
-  font-weight: 600;
-}
-.detail-tag-tags {
-  color: var(--accent);
-  font-family: var(--font-mono);
-}
 .detail-id {
   font-size: 28px;
   font-weight: bold;
@@ -448,11 +413,6 @@ body {
 .detail-main-word.dim {
   color: var(--text2);
 }
-.detail-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 .detail-chip {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -471,14 +431,37 @@ body {
   color: var(--text);
   font-weight: 500;
 }
+/* 語の行に出ていない 人 / 物 / 念 (NumDetailPanel)。1 欄 1 チップ、語はチップの中で並べる */
+.detail-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.detail-extras .detail-chip {
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.detail-chip .dc-tag {
+  margin-left: 3px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+/* 番号の下の Cat (語の 2 行目の高さぶん空く所) */
+.detail-cat {
+  margin-top: 6px;
+  padding: 2px 6px;
+  border: 1px solid #7c3aed33;
+  border-radius: 6px;
+  background: var(--surface2);
+  color: #c4b5fd;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
 .detail-chip.error .dc-val {
   color: #f87171;
-}
-.detail-chip.cat {
-  border-color: #7c3aed33;
-}
-.detail-chip.cat .dc-val {
-  color: #c4b5fd;
 }
 .detail-score {
   background: var(--surface2);
