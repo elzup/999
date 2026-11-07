@@ -174,9 +174,10 @@ body {
 .detail-panel {
   padding: 12px 14px;
 }
+/* 番号は語の行 (1〜2 行) の真ん中に置く。上寄せだと 2 行目の横が空いて見える */
 .detail-row1 {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   min-height: 52px;
 }
@@ -447,18 +448,6 @@ body {
   color: var(--accent);
   font-family: var(--font-mono);
   font-size: 11px;
-}
-/* 番号の下の Cat (語の 2 行目の高さぶん空く所) */
-.detail-cat {
-  margin-top: 6px;
-  padding: 2px 6px;
-  border: 1px solid #7c3aed33;
-  border-radius: 6px;
-  background: var(--surface2);
-  color: #c4b5fd;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  white-space: nowrap;
 }
 .detail-chip.error .dc-val {
   color: #f87171;

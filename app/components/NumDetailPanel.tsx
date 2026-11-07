@@ -123,14 +123,8 @@ function NumDetailPanel(props: Props) {
   return (
     <div class="detail-panel">
       <div class="detail-row1">
-        {/* 番号の下は語の 2 行目の高さだけ空くので、Cat をここに置く */}
         <div class="detail-idcol">
           <span class="detail-id">{d.num}</span>
-          {d.catScore ? (
-            <span class="detail-cat" title="カテゴリスコア">
-              Cat {d.catScore}
-            </span>
-          ) : null}
         </div>
 
         <div class="word-list">
