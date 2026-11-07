@@ -32,6 +32,8 @@
   --kind-h: #7cc4ff;
   --kind-m: #f5b65b;
   --kind-g: #c4b5fd;
+  /* ラベル (-n 等) の右肩の文字・点線 */
+  --label: #f0a8c8;
   --img-bg: #eceff1; /* 透過画像をダークテーマ上でも見やすくする白グレー地 */
   --bar-h: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -216,10 +218,6 @@ body {
   color: var(--text);
   white-space: nowrap;
   flex-shrink: 0;
-}
-.detail-sub-word {
-  font-size: 12px;
-  color: var(--text2);
 }
 .detail-word-img {
   width: 52px;
@@ -454,6 +452,67 @@ body {
 .detail-extras .detail-chip .dc-label {
   font-weight: bold;
 }
+/* タグ・ラベル付きの語 (TaggedWord)。右肩に 1 文字、
+   概念 (#g) は斜体、馴染みがない (-n) は点線下線 */
+.tw-concept {
+  font-style: italic;
+}
+.tw-unfamiliar {
+  text-decoration: underline dotted var(--label);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+.tw-marks {
+  margin-left: 1px;
+  font-size: 0.62em;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  vertical-align: super;
+  line-height: 0;
+}
+.tw-tag {
+  color: var(--accent);
+}
+.tw-label {
+  color: var(--label);
+  font-style: italic;
+}
+/* ヨミはフリガナの位置。場所は常に取り、タップした行だけ見せる (出し入れでガタつかない) */
+.word-line {
+  cursor: pointer;
+}
+.word-line ruby {
+  ruby-position: over;
+}
+.word-line .yomi {
+  font-size: 9.5px;
+  font-weight: normal;
+  font-style: normal;
+  color: var(--text2);
+  letter-spacing: 0.04em;
+  visibility: hidden;
+}
+.word-line.open .yomi {
+  visibility: visible;
+}
+/* タップした語のタグ・ラベルの意味 */
+.detail-meanings {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--surface2);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text2);
+}
+.detail-meanings .dm-word {
+  color: var(--text);
+  font-weight: bold;
+}
+.detail-extras .dc-val.tappable {
+  cursor: pointer;
+}
 /* 人 / 物 / 念 の色 (語の行の «人» «物» と同じ) */
 .detail-chip.kind-h .dc-label,
 .word-line.kind-h .wl-kind {
@@ -481,12 +540,6 @@ body {
   font-size: 11px;
   font-weight: bold;
   text-align: center;
-}
-.detail-chip .dc-tag {
-  margin-left: 3px;
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 11px;
 }
 .detail-chip.error .dc-val {
   color: #f87171;

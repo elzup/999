@@ -110,3 +110,22 @@ export function suggestTags(
   )
   return [...head, ...mid].slice(0, limit)
 }
+
+/** タグの意味。表に無いタグはそのまま «#tri» と出す */
+export const TAG_MEANINGS: Record<string, string> = {
+  g: '概念',
+  i: '身内',
+}
+
+/** «#g 概念» «-n 馴染みがない» のような意味の一覧 (詳細カードで語をタップしたとき) */
+export function marksMeaning(tags: string[], labels: string[]): string[] {
+  return [
+    ...tags.map((t) =>
+      TAG_MEANINGS[t] ? `#${t} ${TAG_MEANINGS[t]}` : `#${t}`
+    ),
+    ...labels.map((l) => {
+      const meaning = LABELS.find((x) => x.id === l)?.meaning
+      return meaning ? `-${l} ${meaning}` : `-${l}`
+    }),
+  ]
+}

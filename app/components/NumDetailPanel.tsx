@@ -4,6 +4,7 @@
 // 情報量と縦幅を抑えることを優先する。カードが持つ操作は ★ / 編集 だけ。
 // 閉じる・前へ / 次へ は DetailSheet (パネルの枠) の最下段に 1 つだけ置く。
 
+import { useEffect, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
 import { IconEdit } from './Icons'
@@ -12,6 +13,8 @@ import { parseTaggedItems } from '../lib/tags'
 import { nameOf } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
+import { marksMeaning, parseWord } from '../lib/wordTags'
+import TaggedWord, { hasMarks } from './TaggedWord'
 
 type Props = {
   d: NumberEntry
@@ -90,21 +93,30 @@ const KIND_OF_LABEL: Record<string, Kind> = {
   念: 'kind-g',
 }
 
+type ExtraItem = { name: string; tags: string[]; labels: string[] }
+
+/** タグ・ラベルを語の記法に戻す (TaggedWord に渡す) */
+const toWord = (item: ExtraItem) =>
+  item.name +
+  item.tags.map((t) => '#' + t).join('') +
+  item.labels.map((l) => ' -' + l).join('')
+
 /**
- * 人 / 物 / 念 の 1 欄 ("信長,空海#a") から、語の行に出ていない語を取り出す。
+ * 人 / 物 / 念 の 1 欄 ("信長,空海#a -n") から、語の行に出ていない語を取り出す。
  * "ニーナ#a,#b" のように同じ語が続くものは 1 つにまとめてタグを合わせる
  */
-function extraItems(
-  raw: string,
-  shownNames: Set<string>
-): { name: string; tags: string[] }[] {
-  const out: { name: string; tags: string[] }[] = []
+function extraItems(raw: string, shownNames: Set<string>): ExtraItem[] {
+  const out: ExtraItem[] = []
   for (const item of parseTaggedItems(raw)) {
-    const name = item.base || item.label
-    if (shownNames.has(nameOf(name))) continue
-    const same = out.find((x) => x.name === name)
-    if (same) same.tags = [...new Set([...same.tags, ...item.tags])]
-    else out.push({ name, tags: item.tags })
+    const { base, labels } = parseWord(item.base || item.label)
+    const own = parseWord(item.label).labels
+    if (shownNames.has(nameOf(base))) continue
+    const allLabels = [...new Set([...labels, ...own])]
+    const same = out.find((x) => x.name === base)
+    if (same) {
+      same.tags = [...new Set([...same.tags, ...item.tags])]
+      same.labels = [...new Set([...same.labels, ...allLabels])]
+    } else out.push({ name: base, tags: item.tags, labels: allLabels })
   }
   return out
 }
@@ -134,6 +146,29 @@ function NumDetailPanel(props: Props) {
     .map(([label, raw]) => [label, extraItems(raw, shownNames)] as const)
     .filter(([, items]) => items.length > 0)
 
+  // タップで開いたもの。語の行はヨミと意味、チップの語は意味を出す。
+  // 番号が変わったら (前へ / 次へ) 閉じた状態に戻す
+  const [open, setOpen] = useState<Set<string>>(new Set())
+  useEffect(() => setOpen(new Set()), [d.num])
+  const toggle = (key: string) =>
+    setOpen((cur) => {
+      const next = new Set(cur)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  const meanings = [
+    ...rows
+      .filter((row) => open.has(row.slot) && hasMarks(row.word))
+      .map((row) => row.word),
+    ...extras.flatMap(([label, items]) =>
+      items.filter((item) => open.has(`x:${label}:${item.name}`)).map(toWord)
+    ),
+  ].map((word) => {
+    const { base, tags, labels } = parseWord(word)
+    return { base, text: marksMeaning(tags, labels).join(' ・ ') }
+  })
+
   return (
     <div class="detail-panel">
       <div class="detail-row1">
@@ -143,7 +178,15 @@ function NumDetailPanel(props: Props) {
 
         <div class="word-list">
           {rows.map((row) => (
-            <div key={row.slot} class={'word-line ' + kindOf(row.slot)}>
+            <div
+              key={row.slot}
+              class={
+                'word-line ' +
+                kindOf(row.slot) +
+                (open.has(row.slot) ? ' open' : '')
+              }
+              onClick={() => toggle(row.slot)}
+            >
               {/* 人 (wh) か 物 (wm) か。チップの 人 / 物 と同じ色 */}
               <span class="wl-kind">{KIND_LABEL[kindOf(row.slot)]}</span>
               {row.img ? (
@@ -156,11 +199,13 @@ function NumDetailPanel(props: Props) {
               ) : (
                 <span class="wl-img empty" />
               )}
+              {/* ヨミはフリガナの位置。普段は見せずに場所だけ取っておき、
+                  タップで出す (出し入れで行の高さ・幅が変わらない) */}
               <span class={'detail-main-word' + (row.dim ? ' dim' : '')}>
-                {row.word}
-                {row.kana ? (
-                  <span class="detail-sub-word"> {row.kana}</span>
-                ) : null}
+                <ruby>
+                  <TaggedWord word={row.word} />
+                  <rt class="yomi">{row.kana ?? ''}</rt>
+                </ruby>
               </span>
               {/* 出すのは rankey だけ。スコアのチップ (min-width 120px) を
                   行に置くと縮む余地が無くなり、横スクロールが出ていた */}
@@ -179,19 +224,32 @@ function NumDetailPanel(props: Props) {
           {extras.map(([label, items]) => (
             <div key={label} class={'detail-chip ' + KIND_OF_LABEL[label]}>
               <span class="dc-label">{label}</span>
-              {items.map((item) => (
-                <span key={item.name} class="dc-val">
-                  {item.name}
-                  {item.tags.map((tag) => (
-                    <span key={tag} class="dc-tag">
-                      #{tag}
-                    </span>
-                  ))}
-                </span>
-              ))}
+              {items.map((item) => {
+                const key = `x:${label}:${item.name}`
+                const word = toWord(item)
+                return (
+                  <span
+                    key={item.name}
+                    class={'dc-val' + (hasMarks(word) ? ' tappable' : '')}
+                    onClick={hasMarks(word) ? () => toggle(key) : undefined}
+                  >
+                    <TaggedWord word={word} />
+                  </span>
+                )
+              })}
             </div>
           ))}
         </div>
+      ) : null}
+
+      {meanings.length > 0 ? (
+        <ul class="detail-meanings">
+          {meanings.map((m) => (
+            <li key={m.base}>
+              <span class="dm-word">{m.base}</span> {m.text}
+            </li>
+          ))}
+        </ul>
       ) : null}
 
       {/* カードの操作は ★ / 編集 だけ。閉じる・前へ / 次へ は DetailSheet の最下段 */}
