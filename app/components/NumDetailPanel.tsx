@@ -76,6 +76,20 @@ function wordRows(d: NumberEntry): WordRow[] {
   return rows
 }
 
+type Kind = 'kind-h' | 'kind-m' | 'kind-g'
+const kindOf = (slot: string): Kind =>
+  slot.startsWith('wm') ? 'kind-m' : 'kind-h'
+const KIND_LABEL: Record<Kind, string> = {
+  'kind-h': '人',
+  'kind-m': '物',
+  'kind-g': '念',
+}
+const KIND_OF_LABEL: Record<string, Kind> = {
+  人: 'kind-h',
+  物: 'kind-m',
+  念: 'kind-g',
+}
+
 /**
  * 人 / 物 / 念 の 1 欄 ("信長,空海#a") から、語の行に出ていない語を取り出す。
  * "ニーナ#a,#b" のように同じ語が続くものは 1 つにまとめてタグを合わせる
@@ -129,7 +143,9 @@ function NumDetailPanel(props: Props) {
 
         <div class="word-list">
           {rows.map((row) => (
-            <div key={row.slot} class="word-line">
+            <div key={row.slot} class={'word-line ' + kindOf(row.slot)}>
+              {/* 人 (wh) か 物 (wm) か。チップの 人 / 物 と同じ色 */}
+              <span class="wl-kind">{KIND_LABEL[kindOf(row.slot)]}</span>
               {row.img ? (
                 <img
                   class="wl-img"
@@ -161,7 +177,7 @@ function NumDetailPanel(props: Props) {
       {extras.length > 0 ? (
         <div class="detail-extras">
           {extras.map(([label, items]) => (
-            <div key={label} class="detail-chip">
+            <div key={label} class={'detail-chip ' + KIND_OF_LABEL[label]}>
               <span class="dc-label">{label}</span>
               {items.map((item) => (
                 <span key={item.name} class="dc-val">

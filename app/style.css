@@ -28,6 +28,10 @@
   /* 同期でどちら側の版かを見分ける色 (設定 > シート同期) */
   --sync-sheet: #60a5fa;
   --sync-db: #c084fc;
+  /* 人 (wh) / 物 (wm) / 念 の見分け。詳細カードの語の行とチップで同じ色 */
+  --kind-h: #7cc4ff;
+  --kind-m: #f5b65b;
+  --kind-g: #c4b5fd;
   --img-bg: #eceff1; /* 透過画像をダークテーマ上でも見やすくする白グレー地 */
   --bar-h: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -432,16 +436,51 @@ body {
   color: var(--text);
   font-weight: 500;
 }
-/* 語の行に出ていない 人 / 物 / 念 (NumDetailPanel)。1 欄 1 チップ、語はチップの中で並べる */
+/* 語の行に出ていない 人 / 物 / 念 (NumDetailPanel)。1 欄 1 チップ、語はチップの中で並べる。
+   語の行より一段控えめ (小さく) にして、上の語の行とは間を空ける */
 .detail-extras {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 4px;
+  margin-top: 10px;
 }
 .detail-extras .detail-chip {
   flex-wrap: wrap;
-  gap: 2px 8px;
+  gap: 1px 6px;
+  padding: 2px 7px;
+  font-size: 11px;
+  border-radius: 5px;
+}
+.detail-extras .detail-chip .dc-label {
+  font-weight: bold;
+}
+/* 人 / 物 / 念 の色 (語の行の «人» «物» と同じ) */
+.detail-chip.kind-h .dc-label,
+.word-line.kind-h .wl-kind {
+  color: var(--kind-h);
+}
+.detail-chip.kind-m .dc-label,
+.word-line.kind-m .wl-kind {
+  color: var(--kind-m);
+}
+.detail-chip.kind-g .dc-label {
+  color: var(--kind-g);
+}
+.detail-chip.kind-h {
+  border-color: color-mix(in srgb, var(--kind-h) 30%, var(--border));
+}
+.detail-chip.kind-m {
+  border-color: color-mix(in srgb, var(--kind-m) 30%, var(--border));
+}
+.detail-chip.kind-g {
+  border-color: color-mix(in srgb, var(--kind-g) 30%, var(--border));
+}
+.wl-kind {
+  flex-shrink: 0;
+  width: 1em;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
 }
 .detail-chip .dc-tag {
   margin-left: 3px;
