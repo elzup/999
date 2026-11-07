@@ -1,11 +1,12 @@
 import { h } from 'preact'
 import { useMemo } from 'preact/hooks'
 import type { NumberEntry, CardEntry } from '../data/schema'
-import { formatCardId } from '../data/cards'
+import { CardCell, NumCell } from './Cells'
 import NumDetailPanel from './NumDetailPanel'
 import CardDetailPanel from './CardDetailPanel'
 import Screen from './Screen'
 import { navAround, useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -14,54 +15,6 @@ type Props = {
   onToggleBm: (key: string) => void
   // 詳細を開いたら呼ぶ (復習リマインドの閲覧時刻更新)
   onView?: (key: string) => void
-}
-
-type CardCellProps = {
-  c: CardEntry
-  selected: boolean
-  onSelect: () => void
-}
-
-function CardCell({ c, selected, onSelect }: CardCellProps) {
-  const id = formatCardId(c)
-  return (
-    <div class={'card-cell' + (selected ? ' selected' : '')} onClick={onSelect}>
-      <div class={'card-id ' + c.suit}>{id}</div>
-    </div>
-  )
-}
-
-function scoreColor(score: number | null): string | null {
-  if (score === null || score === undefined) return null
-  return score >= 3.5 ? '#4ade80' : score >= 2.5 ? '#fbbf24' : '#f87171'
-}
-
-type NumCellProps = {
-  d: NumberEntry
-  selected: boolean
-  onSelect: () => void
-}
-
-function NumCell({ d, selected, onSelect }: NumCellProps) {
-  const hasWord = d.w1 || d.w2
-  const sc = d.w1Score != null ? d.w1Score : d.w2Score
-  const color = scoreColor(sc)
-  const borderStyle = color && !selected ? { borderColor: color + '66' } : {}
-
-  return (
-    <div
-      class={
-        'num-cell' + (selected ? ' selected' : '') + (!hasWord ? ' empty' : '')
-      }
-      style={borderStyle}
-      onClick={onSelect}
-    >
-      <div class="num-id">{d.num}</div>
-      {color ? (
-        <div class="num-score-dot" style={{ background: color }} />
-      ) : null}
-    </div>
-  )
 }
 
 function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
@@ -125,19 +78,17 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
   }, [cards, selected])
 
   const panel = selectedNum ? (
-    <NumDetailPanel
-      d={selectedNum}
-      onClose={() => setSelected(null)}
-      nav={nav}
-    />
+    <DetailSheet nav={nav} onClose={() => setSelected(null)}>
+      <NumDetailPanel d={selectedNum} />
+    </DetailSheet>
   ) : selectedCard ? (
-    <CardDetailPanel
-      c={selectedCard}
-      bookmarks={bookmarks}
-      onToggleBm={onToggleBm}
-      onClose={() => setSelected(null)}
-      nav={nav}
-    />
+    <DetailSheet nav={nav} onClose={() => setSelected(null)}>
+      <CardDetailPanel
+        c={selectedCard}
+        bookmarks={bookmarks}
+        onToggleBm={onToggleBm}
+      />
+    </DetailSheet>
   ) : null
 
   const isEmpty = bmNums.length === 0 && bmCards.length === 0

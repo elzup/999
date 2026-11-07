@@ -1,8 +1,7 @@
 import { h } from 'preact'
 import type { ComponentChildren } from 'preact'
 import { useLayoutEffect, useRef } from 'preact/hooks'
-import { IconClose } from './Icons'
-import type { SelectionNav } from '../lib/useSelection'
+import { IconClose, IconStar, IconStarOutline } from './Icons'
 
 // 全画面共通の枠。片手持ちで親指が画面の上半分へ伸びないことを最優先にする。
 //
@@ -113,7 +112,7 @@ export function QuitButton({
   )
 }
 
-/** 詳細カードの «閉じる»。ブックマーク / 編集と同じ段に並べ、それより一回り広く目立たせる */
+/** 詳細パネル最下段の «閉じる» (DetailSheet が置く)。前へ / 次へ より一回り広く目立たせる */
 export function CloseButton({ onClick }: { onClick: () => void }) {
   return (
     <button class="detail-act act-close" onClick={onClick}>
@@ -123,41 +122,31 @@ export function CloseButton({ onClick }: { onClick: () => void }) {
   )
 }
 
-/** カードを複数枚積む面 (π / 年号) や、カードの下に別の操作がある面の閉じる。積んだ側が 1 つだけ持つ */
-export function PanelClose({ onClick }: { onClick: () => void }) {
-  return (
-    <div class="panel-foot">
-      <CloseButton onClick={onClick} />
-    </div>
-  )
-}
-
 /**
- * 詳細パネルの «前へ / 次へ»。一覧を閉じずに隣の番号へ送る。
- * 閉じる・ブックマーク・編集の段の直上に置く (どの画面でも同じ位置)。
- * 行き先の番号をボタンに出すので、どこへ送られるかが押す前に分かる
+ * ブックマークの切り替え。番号カード・トランプカード・2桁グループで同じ見た目。
+ * label は «登録済み / ブックマーク» の代わりに出す文言 (2桁: «12_ をブックマーク»)
  */
-export function PanelNav({ nav }: { nav?: SelectionNav }) {
-  if (!nav) return null
+export function BookmarkButton({
+  on,
+  onToggle,
+  label,
+}: {
+  on: boolean
+  onToggle: () => void
+  label?: { on: string; off: string }
+}) {
   return (
-    <div class="detail-nav">
-      <button
-        class="detail-act act-nav"
-        onClick={nav.onPrev ?? undefined}
-        disabled={!nav.onPrev}
-        aria-label="前へ"
-      >
-        <span>‹ 前へ{nav.prevLabel ? ` ${nav.prevLabel}` : ''}</span>
-      </button>
-      <button
-        class="detail-act act-nav"
-        onClick={nav.onNext ?? undefined}
-        disabled={!nav.onNext}
-        aria-label="次へ"
-      >
-        <span>{nav.nextLabel ? `${nav.nextLabel} ` : ''}次へ ›</span>
-      </button>
-    </div>
+    <button
+      class={'detail-act act-bm' + (on ? ' on' : '')}
+      onClick={onToggle}
+      aria-pressed={on}
+      aria-label={on ? 'ブックマークを外す' : 'ブックマークに追加'}
+    >
+      {on ? <IconStar /> : <IconStarOutline />}
+      <span>
+        {on ? (label?.on ?? '登録済み') : (label?.off ?? 'ブックマーク')}
+      </span>
+    </button>
   )
 }
 

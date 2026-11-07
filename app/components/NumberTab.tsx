@@ -2,9 +2,10 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
-import { candidatesOf } from '../lib/choice'
+import { NumCell } from './Cells'
 import { useSelection } from '../lib/useSelection'
 import Screen, { DockRow } from './Screen'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -12,39 +13,6 @@ type Props = {
   onToggleBm: (key: string) => void
   /** 語をタップして編集へ (REQ-NDV-012) */
   onEditWord?: (num: string, slot?: string) => void
-}
-
-function scoreColor(score: number | null): string | null {
-  if (score === null || score === undefined) return null
-  return score >= 3.5 ? '#4ade80' : score >= 2.5 ? '#fbbf24' : '#f87171'
-}
-
-type NumCellProps = {
-  d: NumberEntry
-  selected: boolean
-  onSelect: () => void
-}
-
-export function NumCell({ d, selected, onSelect }: NumCellProps) {
-  const hasWord = candidatesOf(d).length > 0
-  const sc = d.w1Score != null ? d.w1Score : d.w2Score
-  const color = scoreColor(sc)
-  const borderStyle = color && !selected ? { borderColor: color + '66' } : {}
-
-  return (
-    <div
-      class={
-        'num-cell' + (selected ? ' selected' : '') + (!hasWord ? ' empty' : '')
-      }
-      style={borderStyle}
-      onClick={onSelect}
-    >
-      <div class="num-id">{d.num}</div>
-      {color ? (
-        <div class="num-score-dot" style={{ background: color }} />
-      ) : null}
-    </div>
-  )
 }
 
 type FilterMode = 'rows' | 'pads'
@@ -184,14 +152,14 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
   const filterLabel = df.map((d) => (d === null ? '*' : d)).join('')
 
   const panel = selectedData ? (
-    <NumDetailPanel
-      d={selectedData}
-      bookmarks={bookmarks}
-      onToggleBm={onToggleBm}
-      onEdit={onEditWord ? () => onEditWord(selectedData.num) : undefined}
-      onClose={clear}
-      nav={nav}
-    />
+    <DetailSheet nav={nav} onClose={clear}>
+      <NumDetailPanel
+        d={selectedData}
+        bookmarks={bookmarks}
+        onToggleBm={onToggleBm}
+        onEdit={onEditWord ? () => onEditWord(selectedData.num) : undefined}
+      />
+    </DetailSheet>
   ) : null
 
   // 百の位の帯は各組の先頭 (= grid-up で組の下端) に入る

@@ -1,18 +1,13 @@
 // 1 番号の詳細カード。
 //
-// 複数枚を縦に積む面がある (π / 年号 / 2桁 は map で並べる) ので、1 枚あたりの
-// 情報量と縦幅を抑えることを優先する。閉じるは 1 枚だけ見せる面でだけ onClose で
-// 渡し、ブックマーク / 編集と同じ段に並べる。積む面では渡さない (枚数だけ «閉じる» が
-// 並んでしまう) ので、並べた側が PanelClose を 1 つだけ持つ。
-// 画面固有の操作 (マップの採用切り替え) は children で差し込む。閉じるをカードの
-// 外へ出して並べ替えると、画面によって閉じるの位置が変わってしまう。
+// 複数枚を縦に積む面がある (π の 2 枚、2桁の 10 枚) ので、1 枚あたりの
+// 情報量と縦幅を抑えることを優先する。カードが持つ操作は ★ / 編集 だけ。
+// 閉じる・前へ / 次へ は DetailSheet (パネルの枠) の最下段に 1 つだけ置く。
 
-import type { ComponentChildren } from 'preact'
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
-import { IconEdit, IconStar, IconStarOutline } from './Icons'
-import { CloseButton, PanelNav } from './Screen'
-import type { SelectionNav } from '../lib/useSelection'
+import { IconEdit } from './Icons'
+import { BookmarkButton } from './Screen'
 import { parseTaggedItems } from '../lib/tags'
 import { nameOf } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
@@ -28,15 +23,6 @@ type Props = {
    * openEditor (今のタブに重ねて開く) を使うので、どのタブでも鉛筆が出る
    */
   onEdit?: () => void
-  /** 1 枚だけ見せる面の閉じる。操作の段の先頭に一回り広く出す */
-  onClose?: () => void
-  /**
-   * その画面だけの操作 (マップの «採用» 切り替えなど)。カードの中、操作の段の
-   * 直上に出す。閉じるは操作の段に置いたままにして、どの画面でも同じ位置にする
-   */
-  children?: ComponentChildren
-  /** 前へ / 次へ (1 枚だけ見せる面)。操作の段の直上に出る */
-  nav?: SelectionNav
 }
 
 type WordRow = {
@@ -220,25 +206,11 @@ function NumDetailPanel(props: Props) {
         </div>
       ) : null}
 
-      {props.children}
-
-      <PanelNav nav={props.nav} />
-
-      {/* 操作はカードの最下段。Detail Panel は dock の直上にあるので、ここが
-          親指に一番近い (番号の下に置くと画面の中ほどまで指を伸ばすことになる) */}
-      {onToggleBm || onEdit || props.onClose ? (
+      {/* カードの操作は ★ / 編集 だけ。閉じる・前へ / 次へ は DetailSheet の最下段 */}
+      {onToggleBm || onEdit ? (
         <div class="detail-foot-actions">
-          {props.onClose && <CloseButton onClick={props.onClose} />}
           {onToggleBm && (
-            <button
-              class={'detail-act act-bm' + (isBm ? ' on' : '')}
-              onClick={() => onToggleBm(bmKey)}
-              aria-pressed={isBm}
-              aria-label={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
-            >
-              {isBm ? <IconStar /> : <IconStarOutline />}
-              <span>{isBm ? '登録済み' : 'ブックマーク'}</span>
-            </button>
+            <BookmarkButton on={isBm} onToggle={() => onToggleBm(bmKey)} />
           )}
           {onEdit && (
             <button

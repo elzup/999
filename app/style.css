@@ -306,7 +306,7 @@ body {
   height: 14px;
 }
 
-/* 積んだ面の閉じる (PanelClose)。閉じるは «並べた側» が 1 つだけ持つ */
+/* パネルの最下段 (DetailSheet の 前後・閉じる、2桁グループの ★) */
 .panel-foot {
   display: flex;
   gap: 6px;
@@ -358,9 +358,9 @@ body {
   gap: 6px;
   flex-shrink: 0;
 }
-/* 詳細カードの操作 (閉じる / ブックマーク / 編集) はカードの最下段に横並び。
-   Detail Panel は dock の直上なので、ここが親指に一番近い。
-   幅は 閉じる 4 : 他 3。一番押す閉じるを広く、色でも見分ける */
+/* 詳細カードの操作 (ブックマーク / 編集) はカードの最下段に横並び。
+   閉じる・前後は DetailSheet の最下段。幅は 閉じる 4 : 前後 3 で、
+   一番押す閉じるを広く、色でも見分ける */
 .detail-foot-actions {
   display: flex;
   gap: 6px;
@@ -408,14 +408,9 @@ body {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
-/* 前へ / 次へ (PanelNav)。閉じる・ブックマーク・編集の段の直上 */
-.detail-nav {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-}
-.detail-nav + .detail-foot-actions {
-  margin-top: 6px;
+/* 詳細パネルの最下段 (DetailSheet): ‹ 前 ｜ 閉じる ｜ 次 ›。全画面で同じ */
+.sheet-foot {
+  padding-top: 2px;
 }
 .detail-act.act-nav {
   color: var(--text);
@@ -425,13 +420,17 @@ body {
   opacity: 0.35;
   cursor: default;
 }
-/* 積んだ面 (π / 年号 / 2桁) はカードの外に置くので、PanelClose と同じ余白 */
-.panel-foot .detail-nav,
-.panel-nav-wrap .detail-nav {
-  margin-top: 0;
+/* 見出しの補足 (2桁 «10件» など) */
+.panel-head-sub {
+  font-size: 11px;
+  color: var(--text2);
 }
-.panel-nav-wrap {
-  padding: 0 14px 6px;
+/* 年コードの見出し «12 → 3» の答え */
+.d3-head-z {
+  font-size: 20px;
+  font-weight: bold;
+  font-family: var(--font-mono);
+  color: var(--text);
 }
 /* 語は折り返す。nowrap + flex-shrink:0 のままだと縮む余地がゼロになり、
    カードごと横スクロールする (実際に踏んだ) */
@@ -653,16 +652,6 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-}
-.d2-detail-list {
-  flex: 1;
-  overflow-y: auto;
-}
-.d2-detail-list .detail-panel {
-  border-bottom: 1px solid var(--border);
-}
-.d2-detail-list .detail-panel:last-child {
-  border-bottom: none;
 }
 .sticky-empty {
   min-height: 100px;

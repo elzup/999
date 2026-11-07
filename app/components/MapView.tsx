@@ -13,6 +13,7 @@ import { useRepSlots } from '../lib/useRepSlots'
 import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockRow } from './Screen'
 import { useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 export type MapBounds = {
   minX: number
@@ -95,16 +96,16 @@ function MapView({
     [sel, numbers]
   )
 
-  // 詳細カードは «全体» と同じもの。タイルの絵は代表①なので、変えたいときは «編集» で
+  // 詳細は «全体» と同じ枠とカード。タイルの絵は代表①なので、変えたいときは «編集» で
   const panel = selEntry ? (
-    <NumDetailPanel
-      d={selEntry}
-      bookmarks={bookmarks}
-      onToggleBm={onToggleBm}
-      onEdit={onEditWord ? () => onEditWord(selEntry.num) : undefined}
-      onClose={clear}
-      nav={nav}
-    />
+    <DetailSheet nav={nav} onClose={clear}>
+      <NumDetailPanel
+        d={selEntry}
+        bookmarks={bookmarks}
+        onToggleBm={onToggleBm}
+        onEdit={onEditWord ? () => onEditWord(selEntry.num) : undefined}
+      />
+    </DetailSheet>
   ) : null
 
   const repNote =

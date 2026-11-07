@@ -2,10 +2,11 @@ import { h } from 'preact'
 import { useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
-import { NumCell } from './NumberTab'
+import { NumCell } from './Cells'
 import { buildDateEntries } from '../lib/dateKeys'
 import Screen from './Screen'
 import { useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -33,15 +34,13 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
   )
 
   const panel = selectedDay ? (
-    <>
+    <DetailSheet nav={nav} onClose={() => setSelected(null)}>
       <NumDetailPanel
         d={selectedDay.entry}
         bookmarks={bookmarks}
         onToggleBm={onToggleBm}
-        onClose={() => setSelected(null)}
-        nav={nav}
       />
-    </>
+    </DetailSheet>
   ) : null
 
   const main = (

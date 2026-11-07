@@ -1,6 +1,7 @@
 import { h } from 'preact'
 import { useMemo, useState } from 'preact/hooks'
 import NumDetailPanel from './NumDetailPanel'
+import DetailSheet from './DetailSheet'
 import { numOfBmKey, useNumberContext } from '../lib/numberContext'
 import { useSelection } from '../lib/useSelection'
 
@@ -166,13 +167,13 @@ function ReviewPanel({
           }}
         >
           <div class="review-detail-body">
-            <NumDetailPanel
-              d={detail}
-              bookmarks={ctx.bookmarks}
-              onToggleBm={ctx.onToggleBm}
-              onClose={() => setDetailNum(null)}
-              nav={nav}
-            />
+            <DetailSheet nav={nav} onClose={() => setDetailNum(null)}>
+              <NumDetailPanel
+                d={detail}
+                bookmarks={ctx.bookmarks}
+                onToggleBm={ctx.onToggleBm}
+              />
+            </DetailSheet>
           </div>
         </div>
       ) : null}

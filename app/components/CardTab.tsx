@@ -11,7 +11,8 @@ import {
   loadCardTrainSettings,
   saveCardTrainSettings,
 } from '../data/storage'
-import { formatCardId, pickCardPrompt } from '../data/cards'
+import { formatCardId, pickCardPrompt, suitColor } from '../data/cards'
+import { CardCell } from './Cells'
 import CardDetailPanel from './CardDetailPanel'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
@@ -23,6 +24,7 @@ import { vibrate } from '../lib/haptics'
 import TestFeatureList from './TestFeatureList'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import { useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   cards: CardEntry[]
@@ -63,13 +65,6 @@ function shuffle<T>(arr: readonly T[]): T[] {
   return a
 }
 
-function suitColor(suit: string): string {
-  if (suit === 'H') return '#f87171'
-  if (suit === 'C') return '#4ade80'
-  if (suit === 'D') return '#60a5fa'
-  return '#94a3b8'
-}
-
 function groupCards(
   cards: CardEntry[],
   groupSize: CardTrainSettings['groupSize'],
@@ -80,36 +75,6 @@ function groupCards(
     out.push(cards.slice(i, i + groupSize))
   }
   return out
-}
-
-type CardCellProps = {
-  c: CardEntry
-  selected: boolean
-  stat: CardStats[string] | undefined
-  onSelect: () => void
-}
-
-function CardCell({ c, selected, stat, onSelect }: CardCellProps) {
-  const id = formatCardId(c)
-  const avgSec =
-    stat && stat.attempts > 0
-      ? (stat.totalTime / stat.attempts / 1000).toFixed(1)
-      : null
-  return (
-    <div class={'card-cell' + (selected ? ' selected' : '')} onClick={onSelect}>
-      <div class={'card-id ' + c.suit}>{id}</div>
-      {stat && stat.attempts > 0 ? (
-        <div class="card-stat">
-          {stat.wrong > 0 ? (
-            <span class="card-stat-wrong">×{stat.wrong}</span>
-          ) : null}
-          {avgSec !== null ? (
-            <span class="card-stat-time">{avgSec}s</span>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  )
 }
 
 function pickCardValue(c: CardEntry): { value: string; label: string } | null {
@@ -600,13 +565,13 @@ function CardTab({ cards, bookmarks, onToggleBm }: Props) {
   }
 
   const panel = selectedCard ? (
-    <CardDetailPanel
-      c={selectedCard}
-      bookmarks={bookmarks}
-      onToggleBm={onToggleBm}
-      onClose={() => setSelected(null)}
-      nav={nav}
-    />
+    <DetailSheet nav={nav} onClose={() => setSelected(null)}>
+      <CardDetailPanel
+        c={selectedCard}
+        bookmarks={bookmarks}
+        onToggleBm={onToggleBm}
+      />
+    </DetailSheet>
   ) : null
 
   // スートの見出しは grid-up が行ごと占有させる。先頭のスペードが下端 (親指側)

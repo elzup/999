@@ -48,15 +48,10 @@ import TestNavBar from './TestNavBar'
 import MarkButton from './MarkButton'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
-import Screen, {
-  DockBar,
-  DockRow,
-  PanelNav,
-  QuitButton,
-  PanelClose,
-} from './Screen'
+import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
 import { navAround, useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -449,17 +444,14 @@ function YearTab({ numbers }: Props) {
     </div>
   )
 
+  // 年号 1 件 = 番号カード 1 枚 (全体と同じ形)
   const panel =
     mode === 'view' && selectedNums ? (
-      <>
+      <DetailSheet nav={nav} onClose={() => setSelected(null)}>
         {selectedNums.map((d) => (
           <NumDetailPanel key={d.num} d={d} />
         ))}
-        <div class="panel-nav-wrap">
-          <PanelNav nav={nav} />
-        </div>
-        <PanelClose onClick={() => setSelected(null)} />
-      </>
+      </DetailSheet>
     ) : null
 
   const eraButton = (era: (typeof ERAS)[number]) => {

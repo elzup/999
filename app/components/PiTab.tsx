@@ -14,15 +14,10 @@ import ReviewPanel from './ReviewPanel'
 import type { ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import MarkButton from './MarkButton'
-import Screen, {
-  DockBar,
-  PanelCards,
-  PanelNav,
-  QuitButton,
-  PanelClose,
-} from './Screen'
+import Screen, { DockBar, QuitButton } from './Screen'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import { navAround, useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -685,20 +680,14 @@ function PiTab({ numbers }: Props) {
       />
     )
 
+  // 2 組 (= 2 枚) をまとめて出す
   const panel =
     mode === 'view' && selectedPair ? (
-      <>
-        <PanelCards>
-          {selectedPair.map((d) => (
-            <NumDetailPanel key={d.num} d={d} />
-          ))}
-        </PanelCards>
-        <div class="panel-nav-wrap">
-          <PanelNav nav={nav} />
-        </div>
-        {/* 複数枚まとめて 1 つの閉じる。詳細カード側は閉じるを持たない */}
-        <PanelClose onClick={() => setSelected(null)} />
-      </>
+      <DetailSheet stacked nav={nav} onClose={() => setSelected(null)}>
+        {selectedPair.map((d) => (
+          <NumDetailPanel key={d.num} d={d} />
+        ))}
+      </DetailSheet>
     ) : null
 
   const dock = (

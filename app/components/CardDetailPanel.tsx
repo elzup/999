@@ -1,28 +1,16 @@
 import type { CardEntry } from '../data/schema'
-import { cardValues, formatCardId } from '../data/cards'
-import { IconStar, IconStarOutline } from './Icons'
-import { CloseButton, PanelNav } from './Screen'
-import type { SelectionNav } from '../lib/useSelection'
+import { cardValues, formatCardId, suitColor } from '../data/cards'
+import { BookmarkButton } from './Screen'
 
 type Props = {
   c: CardEntry
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  onClose?: () => void
-  /** 前へ / 次へ。操作の段の直上に出る (NumDetailPanel と同じ) */
-  nav?: SelectionNav
 }
 
 type CardValueItem = [label: string, val: string, score: number]
 
-function suitColor(suit: string): string {
-  if (suit === 'H') return '#f87171'
-  if (suit === 'C') return '#4ade80'
-  if (suit === 'D') return '#60a5fa'
-  return '#94a3b8'
-}
-
-function CardDetailPanel({ c, bookmarks, onToggleBm, onClose, nav }: Props) {
+function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {
   const bmKey = 'c:' + c.suit + c.rank
   const isBm = bookmarks.has(bmKey)
 
@@ -63,18 +51,9 @@ function CardDetailPanel({ c, bookmarks, onToggleBm, onClose, nav }: Props) {
           )
         })}
       </div>
-      <PanelNav nav={nav} />
-      {/* 操作はカードの最下段 (NumDetailPanel と同じ並び・見た目) */}
+      {/* カードの操作は ★ だけ (NumDetailPanel と同じ)。閉じる・前後は DetailSheet */}
       <div class="detail-foot-actions">
-        {onClose && <CloseButton onClick={onClose} />}
-        <button
-          class={'detail-act act-bm' + (isBm ? ' on' : '')}
-          onClick={() => onToggleBm(bmKey)}
-          aria-pressed={isBm}
-        >
-          {isBm ? <IconStar /> : <IconStarOutline />}
-          <span>{isBm ? '登録済み' : 'ブックマーク'}</span>
-        </button>
+        <BookmarkButton on={isBm} onToggle={() => onToggleBm(bmKey)} />
       </div>
     </div>
   )

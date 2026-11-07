@@ -16,6 +16,7 @@ import Numpad from './Numpad'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
 import { navAround, useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -445,31 +446,23 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
       </>
     ) : null
 
+  // 見出しは «XY → Z» (年コードの答え)。カードは XY の 0XY 番
   const panel =
     selected !== null && selectedPrefixEntry ? (
-      <>
-        <div class="panel-head">
-          <span class="detail-id">{selected.slice(0, 2)}</span>
-          <span
-            style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            → {selected[2]}
-          </span>
-        </div>
-        <div class="d2-detail-list">
-          <NumDetailPanel
-            d={selectedPrefixEntry}
-            bookmarks={bookmarks}
-            onToggleBm={onToggleBm}
-            onClose={() => setSelected(null)}
-            nav={nav}
-          />
-        </div>
-      </>
+      <DetailSheet
+        head={{
+          id: selected.slice(0, 2),
+          sub: <span class="d3-head-z">→ {selected[2]}</span>,
+        }}
+        nav={nav}
+        onClose={() => setSelected(null)}
+      >
+        <NumDetailPanel
+          d={selectedPrefixEntry}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      </DetailSheet>
     ) : null
 
   // グリッドは下端 (親指側) から、凡例はその上
