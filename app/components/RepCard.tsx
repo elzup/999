@@ -17,19 +17,26 @@ import { confirmOp, defaultPickSlots } from '../lib/repPicker'
 import Rankey from './Rankey'
 import TaggedWord from './TaggedWord'
 import { IconEdit } from './Icons'
+import type { SaveMark } from '../lib/repQueue'
 
 const MARK = ['', '①', '②']
+const SAVE_LABEL: Record<SaveMark, string> = {
+  pending: '保存待ち',
+  saved: '保存済み',
+  error: '保存失敗',
+}
 
 type Props = {
   doc: NumberDoc
   entry: NumberEntry | undefined
-  saving: boolean
+  /** 保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)。押せなくはしない */
+  mark?: SaveMark
   onPick: (slot: string) => void
   onConfirm: () => void
   onOpen?: () => void
 }
 
-function RepCard({ doc, entry, saving, onPick, onConfirm, onOpen }: Props) {
+function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
   const status = repStatus(doc)
   const rows = withDeliveredImages(slotRows(doc), entry)
   const hasPicks = rows.some((row) => row.repRank > 0)
@@ -38,11 +45,17 @@ function RepCard({ doc, entry, saving, onPick, onConfirm, onOpen }: Props) {
   const canConfirm = confirmOp(doc) !== null
 
   return (
-    <div class={'detail-panel rep-card ' + status} data-num={doc.num}>
+    <div
+      class={'detail-panel rep-card ' + status + (mark ? ' save-' + mark : '')}
+      data-num={doc.num}
+    >
       <div class="detail-row1">
         <div class="detail-idcol">
           <span class="detail-id">{doc.num}</span>
           <span class={'detail-rep ' + status}>{REP_STATUS_LABEL[status]}</span>
+          {mark ? (
+            <span class={'rep-save ' + mark}>{SAVE_LABEL[mark]}</span>
+          ) : null}
         </div>
         <div class="word-list">
           {rows.map((row) => {
@@ -52,7 +65,6 @@ function RepCard({ doc, entry, saving, onPick, onConfirm, onOpen }: Props) {
               <button
                 key={row.slot}
                 class={'word-line rep-line open ' + kind}
-                disabled={saving}
                 aria-pressed={row.repRank > 0}
                 onClick={() => onPick(row.slot)}
               >
@@ -99,7 +111,7 @@ function RepCard({ doc, entry, saving, onPick, onConfirm, onOpen }: Props) {
         ) : (
           <button
             class="detail-act act-confirm"
-            disabled={!canConfirm || saving}
+            disabled={!canConfirm}
             onClick={onConfirm}
           >
             <span>

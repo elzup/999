@@ -6305,9 +6305,6 @@ button.activate-link {
 .rep-line[aria-pressed='true'] .detail-main-word {
   color: var(--text);
 }
-.rep-line:disabled {
-  cursor: progress;
-}
 /* 代表が空のとき、確定で入る既定の ①② (薄く) */
 .wl-rep.ghost {
   color: var(--text2);
@@ -6347,5 +6344,82 @@ button.activate-link {
 }
 .rp-bulk-note {
   flex-shrink: 0;
+  color: var(--warn);
+}
+
+/* 代表の保存状態 (RepSaveQueue)。押した瞬間に黄、保存できたら緑、失敗は赤。
+   どの状態でも押せなくはしない (待機を作らない) */
+.rep-card.save-pending,
+.rp-row.save-pending {
+  border-color: var(--warn);
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+.rep-card.save-saved,
+.rp-row.save-saved {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  transition:
+    box-shadow 0.4s,
+    border-color 0.4s;
+}
+.rep-card.save-error,
+.rp-row.save-error {
+  border-color: var(--bad);
+  box-shadow: inset 0 0 0 1px var(--bad);
+}
+/* 保存待ちのカードは確定済みでも沈めない (今触っているものなので) */
+.rep-card.confirmed.save-pending,
+.rep-card.confirmed.save-saved {
+  opacity: 1;
+}
+.rep-save {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.rep-save.pending {
+  color: var(--warn);
+}
+.rep-save.saved {
+  color: var(--accent);
+}
+.rep-save.error {
+  color: var(--bad);
+}
+.rp-save-count {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.rp-save.pending {
+  color: var(--warn);
+}
+.rp-save.error {
+  color: var(--bad);
+}
+
+/* 編集画面の保存状態 (NumberOpQueue)。押した所が黄 → 保存できたら緑、失敗は赤。
+   保存中も押せなくはしない */
+.nd-rep.save-pending,
+.nd-rank-group.save-pending,
+.nd-rate.save-pending {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.nd-rep.save-saved,
+.nd-rank-group.save-saved,
+.nd-rate.save-saved {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--accent);
+  transition: box-shadow 0.4s;
+}
+.nd-rep.save-error,
+.nd-rank-group.save-error,
+.nd-rate.save-error {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--bad);
+}
+.nd-status.pending {
   color: var(--warn);
 }

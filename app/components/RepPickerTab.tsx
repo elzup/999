@@ -3,10 +3,16 @@
 //
 // 行は人 / 物の 2 段に候補チップを並べ、チップの左に画像を出す (D-0030)。
 // dock は 絞り込み / 百の位 / 十の位ジャンプ (D-0029)。
-import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { loadSubTab, saveSubTab } from '../data/storage'
-import { fetchHundred, patchNumber, type NumberDoc } from '../lib/numberApi'
+import {
+  fetchHundred,
+  fetchNumber,
+  patchNumber,
+  type NumberDoc,
+} from '../lib/numberApi'
+import { RepSaveQueue, type RepChange, type SaveMark } from '../lib/repQueue'
 import {
   slotRows,
   withDeliveredImages,
@@ -22,7 +28,6 @@ import {
   togglePick,
   type RepFilter,
 } from '../lib/repPicker'
-import type { RepPick } from '../lib/numberApi'
 import Screen, { DockBar, DockRow } from './Screen'
 import RepCard from './RepCard'
 
@@ -38,15 +43,7 @@ type Props = {
   numbers: NumberEntry[]
 }
 
-function PickChip({
-  row,
-  disabled,
-  onPick,
-}: {
-  row: SlotRow
-  disabled: boolean
-  onPick: () => void
-}) {
+function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
   return (
     <button
       class={
@@ -54,7 +51,6 @@ function PickChip({
         (row.slot.startsWith('wh') ? 'is-hito' : 'is-mono') +
         (row.repRank ? ' is-rank' + row.repRank : '')
       }
-      disabled={disabled}
       aria-pressed={row.repRank > 0}
       onClick={onPick}
     >
@@ -75,13 +71,14 @@ function PickChip({
 function RepRow({
   doc,
   entry,
-  saving,
+  mark,
   onPick,
   onOpen,
 }: {
   doc: NumberDoc
   entry: NumberEntry | undefined
-  saving: boolean
+  /** 保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
+  mark?: SaveMark
   onPick: (slot: string) => void
   onOpen?: () => void
 }) {
@@ -92,7 +89,11 @@ function RepRow({
   ]
   return (
     <li
-      class={'rp-row' + (doc.rep?.confirmed ? ' is-done' : '')}
+      class={
+        'rp-row' +
+        (doc.rep?.confirmed ? ' is-done' : '') +
+        (mark ? ' save-' + mark : '')
+      }
       data-num={doc.num}
     >
       <button class="rp-num" onClick={onOpen} disabled={!onOpen}>
@@ -107,7 +108,6 @@ function RepRow({
                 <PickChip
                   key={row.slot}
                   row={row}
-                  disabled={saving}
                   onPick={() => onPick(row.slot)}
                 />
               ))}
@@ -127,7 +127,6 @@ function RepPickerTab({ token, numbers }: Props) {
   const [docs, setDocs] = useState<NumberDoc[]>([])
   const [filter, setFilter] = useState<RepFilter>('all')
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState<string | null>(null)
   const [status, setStatus] = useState('')
   // 行 (チップを横に並べて一覧) と カード (詳細カードを縦に並べて 1 件ずつ確定)
   const [view, setView] = useState<View>(() =>
@@ -135,7 +134,54 @@ function RepPickerTab({ token, numbers }: Props) {
   )
   // まとめて確定は 2 回押しで実行する (1 回目で件数を見せて構える)
   const [bulkArmed, setBulkArmed] = useState(false)
-  const [bulkProgress, setBulkProgress] = useState<string | null>(null)
+  // 番号ごとの保存状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)。
+  // 押した瞬間に画面へ反映し、保存は裏で送る。送っている間も他は押せる
+  const [marks, setMarks] = useState<Record<string, SaveMark>>({})
+  const tokenRef = useRef(token)
+  tokenRef.current = token
+  const queueRef = useRef<RepSaveQueue | null>(null)
+  if (!queueRef.current) {
+    queueRef.current = new RepSaveQueue({
+      send: (num, change, expectedUpdatedAt) =>
+        patchNumber({
+          num,
+          token: tokenRef.current,
+          op: { op: 'rep', ...change },
+          // 読んだ時点を添える。他の面が先に書いていればサーバが 409 で止める
+          expectedUpdatedAt,
+        }),
+      reload: (num) => fetchNumber(num, tokenRef.current),
+      // 次の変更が待っているなら、画面の (楽観的な) 代表は残して時刻だけ進める
+      onSaved: (saved, again) =>
+        setDocs((prev) =>
+          prev.map((d) =>
+            d.num !== saved.num
+              ? d
+              : again
+                ? { ...d, updatedAt: saved.updatedAt }
+                : saved
+          )
+        ),
+      onMark: (num, mark) => {
+        setMarks((cur) => ({ ...cur, [num]: mark }))
+        // 緑は少し見せてから消す (確定の状態は番号の下の «代表確定» に残る)
+        if (mark === 'saved') {
+          window.setTimeout(
+            () =>
+              setMarks((cur) => {
+                if (cur[num] !== 'saved') return cur
+                const next = { ...cur }
+                delete next[num]
+                return next
+              }),
+            1500
+          )
+        }
+      },
+      onError: (num, message) => setStatus(`${num}: ${message}`),
+    })
+  }
+  const queue = queueRef.current
 
   useEffect(() => {
     if (!token) return
@@ -164,62 +210,38 @@ function RepPickerTab({ token, numbers }: Props) {
   const progress = decadeProgress(docs)
   const doneCount = docs.filter((doc) => doc.rep?.confirmed).length
 
-  // 1 件ぶんの代表を送る。成功したら一覧の doc を差し替えて true
-  const sendRep = useCallback(
-    async (doc: NumberDoc, picks: RepPick[], confirmed: boolean) => {
-      try {
-        const saved = await patchNumber({
-          num: doc.num,
-          token,
-          op: { op: 'rep', picks, confirmed },
-          // 読んだ時点を添える。他の面が先に書いていればサーバが 409 で止める
-          expectedUpdatedAt: doc.updatedAt ?? null,
-        })
-        setDocs((prev) => prev.map((d) => (d.num === saved.num ? saved : d)))
-        return true
-      } catch (error) {
-        setStatus(`${doc.num}: ${(error as Error).message}`)
-        return false
-      }
+  // 押した瞬間に画面の代表を書き換えて (黄)、保存はキューに入れる
+  const change = useCallback(
+    (doc: NumberDoc, next: RepChange) => {
+      keep(doc.num)
+      setStatus('')
+      queue.enqueue(doc, next)
+      setDocs((prev) =>
+        prev.map((d) => (d.num === doc.num ? { ...d, rep: next } : d))
+      )
     },
-    [token]
+    [queue]
   )
 
-  const pick = useCallback(
-    async (doc: NumberDoc, slot: string) => {
-      if (saving) return
-      const picks = togglePick(doc, slot)
-      keep(doc.num)
-      setSaving(doc.num)
-      setStatus('')
-      await sendRep(doc, picks, picks.length > 0)
-      setSaving(null)
-    },
-    [saving, sendRep]
-  )
+  const pick = (doc: NumberDoc, slot: string) => {
+    const picks = togglePick(doc, slot)
+    change(doc, { picks, confirmed: picks.length > 0 })
+  }
 
-  // カードの «確定»。確定したら次の未確定のカードへ送る (次々と確定していける)
-  const confirmOne = useCallback(
-    async (doc: NumberDoc) => {
-      const op = confirmOp(doc)
-      if (!op || saving) return
-      keep(doc.num)
-      setSaving(doc.num)
-      setStatus('')
-      const ok = await sendRep(doc, op.picks, true)
-      setSaving(null)
-      if (!ok) return
-      const order = docs.filter(isVisible)
-      const after = order.slice(order.findIndex((d) => d.num === doc.num) + 1)
-      const next = after.find((d) => confirmOp(d) !== null)
-      if (next) {
-        document
-          .querySelector(`.rp-cards [data-num="${next.num}"]`)
-          ?.scrollIntoView({ block: 'end', behavior: 'smooth' })
-      }
-    },
-    [docs, filter, kept, saving, sendRep]
-  )
+  // カードの «確定»。確定したら次の未確定のカードへ送る (保存の完了は待たない)
+  const confirmOne = (doc: NumberDoc) => {
+    const op = confirmOp(doc)
+    if (!op) return
+    change(doc, { picks: op.picks, confirmed: true })
+    const order = docs.filter(isVisible)
+    const after = order.slice(order.findIndex((d) => d.num === doc.num) + 1)
+    const next = after.find((d) => confirmOp(d) !== null)
+    if (next) {
+      document
+        .querySelector(`.rp-cards [data-num="${next.num}"]`)
+        ?.scrollIntoView({ block: 'end', behavior: 'smooth' })
+    }
+  }
 
   const chooseHundred = (next: string) => {
     saveSubTab(HUNDRED_KEY, next)
@@ -236,34 +258,26 @@ function RepPickerTab({ token, numbers }: Props) {
   const confirmable = visible.filter((doc) => confirmOp(doc) !== null)
   const staleCount = visible.filter((doc) => isStale(doc)).length
 
-  const confirmAll = async () => {
+  // 表示中の未確定をまとめてキューに入れる。保存は裏でまとめて送る
+  const confirmAll = () => {
     if (!bulkArmed) {
       setBulkArmed(true)
       window.setTimeout(() => setBulkArmed(false), 4000)
       return
     }
     setBulkArmed(false)
-    setStatus('')
-    const targets = confirmable
-    let done = 0
-    let failed = 0
-    setSaving('bulk')
-    for (const doc of targets) {
+    for (const doc of confirmable) {
       const op = confirmOp(doc)
-      if (!op) continue
-      setBulkProgress(`確定中 ${done + failed + 1}/${targets.length}`)
-      // 1 件ずつ送る。まとめて投げると 409 (他の面が先に書いた) の扱いが分からなくなる
-      if (await sendRep(doc, op.picks, true)) done += 1
-      else failed += 1
+      if (op) change(doc, { picks: op.picks, confirmed: true })
     }
-    setSaving(null)
-    setBulkProgress(null)
-    setStatus(
-      failed
-        ? `${done} 件を確定、${failed} 件は失敗 (上の番号を確認)`
-        : `${done} 件を確定しました`
-    )
   }
+
+  const pendingCount = Object.values(marks).filter(
+    (mark) => mark === 'pending'
+  ).length
+  const errorCount = Object.values(marks).filter(
+    (mark) => mark === 'error'
+  ).length
 
   // 一覧は下から上へ積むので、十の位の先頭の行を画面の下端に合わせる
   const jumpTo = (decade: number) => {
@@ -296,7 +310,7 @@ function RepPickerTab({ token, numbers }: Props) {
           key={doc.num}
           doc={doc}
           entry={entries.get(doc.num)}
-          saving={saving !== null}
+          mark={marks[doc.num]}
           onPick={(slot) => pick(doc, slot)}
           onConfirm={() => confirmOne(doc)}
           onOpen={ctx ? () => ctx.openEditor(doc.num) : undefined}
@@ -310,7 +324,7 @@ function RepPickerTab({ token, numbers }: Props) {
           key={doc.num}
           doc={doc}
           entry={entries.get(doc.num)}
-          saving={saving !== null}
+          mark={marks[doc.num]}
           onPick={(slot) => pick(doc, slot)}
           onOpen={ctx ? () => ctx.openEditor(doc.num) : undefined}
         />
@@ -342,14 +356,23 @@ function RepPickerTab({ token, numbers }: Props) {
       <DockRow>
         <button
           class={'filter-btn rp-bulk' + (bulkArmed ? ' armed' : '')}
-          disabled={confirmable.length === 0 || saving !== null}
+          disabled={confirmable.length === 0}
           onClick={confirmAll}
         >
-          {bulkProgress ??
-            (bulkArmed
-              ? `もう一度押すと ${confirmable.length} 件を確定`
-              : `表示中の未確定 ${confirmable.length} 件をまとめて確定`)}
+          {bulkArmed
+            ? `もう一度押すと ${confirmable.length} 件を確定`
+            : `表示中の未確定 ${confirmable.length} 件をまとめて確定`}
         </button>
+        {pendingCount || errorCount ? (
+          <span class="dock-row-label rp-save-count">
+            {pendingCount ? (
+              <span class="rp-save pending">保存待ち {pendingCount}</span>
+            ) : null}
+            {errorCount ? (
+              <span class="rp-save error">失敗 {errorCount}</span>
+            ) : null}
+          </span>
+        ) : null}
         {staleCount ? (
           <span class="dock-row-label rp-bulk-note">
             要再確認 {staleCount} 件は除く

@@ -487,3 +487,35 @@ export function carryOverOps(
   }
   return ops
 }
+
+/**
+ * 送る前の操作を手元の文書に当てる (待たせない UI: 押した瞬間に画面へ出す)。
+ * サーバが返す文書と同じ形になるのは rep / rating / slots / image の中身だけで、
+ * derived (rankey など) や updatedAt は保存の返事で置き換わる。
+ */
+export function applyOpLocally(doc: NumberDoc, op: PatchOp): NumberDoc {
+  switch (op.op) {
+    case 'rep':
+      return { ...doc, rep: { picks: op.picks, confirmed: op.confirmed } }
+    case 'rating': {
+      const others = (doc.ratings ?? []).filter(
+        (rating) => !sameValue(rating, { k: op.k, w: op.w })
+      )
+      return {
+        ...doc,
+        ratings:
+          op.v === null ? others : [...others, { k: op.k, w: op.w, v: op.v }],
+      }
+    }
+    case 'slots':
+      return { ...doc, slots: op.slots }
+    case 'image': {
+      const slot = doc.slots?.[op.slot]
+      if (!slot) return doc
+      return {
+        ...doc,
+        slots: { ...doc.slots, [op.slot]: { ...slot, imageUrl: op.imageUrl } },
+      }
+    }
+  }
+}

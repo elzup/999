@@ -5,12 +5,10 @@
 // 4 つの面 (シート / 編集画面 / 代表語コンソール / 画像コンソール) に散っていた
 // 操作を 1 番号ぶんの 1 画面に集める。読み書きは numbers/{num} だけを見る。
 
-import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { fetchNumber, patchNumber, type PatchOp } from '../lib/numberApi'
 import {
   applyDraftEdit,
-  applyFailure,
-  applySaved,
   carryOverOps,
   changedSlots,
   livePicks,
@@ -26,7 +24,6 @@ import {
   repPickOp,
   slotRows,
   slotsFromRows,
-  type DetailState,
   type SlotRow,
   withDeliveredImages,
 } from '../lib/numberDetail'
@@ -49,6 +46,8 @@ import {
   suggestTags,
   type TagSuggestion,
 } from '../lib/wordTags'
+import { NumberOpQueue } from '../lib/opQueue'
+import type { SaveMark } from '../lib/repQueue'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
 
@@ -62,7 +61,12 @@ const RATING_LABEL: Record<number, string> = {
   [2]: '+2',
 }
 
-const EMPTY: DetailState = { doc: null, status: '', saving: false }
+/** dock の上に出す知らせ。failed なら失敗の理由 (次の操作まで残す) */
+type Note = { status: string; failed?: boolean }
+const EMPTY_NOTE: Note = { status: '' }
+
+/** 保存状態の class (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
+const saveClass = (mark?: SaveMark) => (mark ? ' save-' + mark : '')
 
 // 成功の知らせを出しておく時間。失敗の理由は次の操作まで残す
 const NOTICE_MS = 2000
@@ -87,7 +91,34 @@ export default function NumberDetailTab({
 }) {
   const [num, setNum] = useState(initialNum)
   const [jump, setJump] = useState(initialNum)
-  const [state, setState] = useState<DetailState>(EMPTY)
+  const [note, setNote] = useState<Note>(EMPTY_NOTE)
+  // 別の番号へ移す操作だけは、移動先・移動元の 2 番号にまたがるので終わるまで待つ
+  const [moveBusy, setMoveBusy] = useState(false)
+  // 保存は待たせない: 押した瞬間に画面へ出し (黄)、裏で順に送る (緑)。
+  // 送っている間も他のボタンは押せる (NumberOpQueue)
+  const [, bump] = useState(0)
+  const tokenRef = useRef(token)
+  tokenRef.current = token
+  const queueRef = useRef<NumberOpQueue | null>(null)
+  if (!queueRef.current) {
+    queueRef.current = new NumberOpQueue({
+      send: (target, op, expectedUpdatedAt) =>
+        patchNumber({
+          num: target,
+          token: tokenRef.current,
+          op,
+          // 読んだ時点を添える。ここが古ければサーバが 409 で止める
+          expectedUpdatedAt,
+        }),
+      reload: (target) => fetchNumber(target, tokenRef.current),
+      onChange: () => bump((v) => v + 1),
+      onSettled: (_target, message) =>
+        setNote({ status: message ?? '保存しました' }),
+      onError: (target, message) =>
+        setNote({ status: `${target}: ${message}`, failed: true }),
+    })
+  }
+  const queue = queueRef.current
   const [loading, setLoading] = useState(false)
   // 未保存の編集内容。保存に成功したら doc 側に取り込むので、ここは空に戻る
   const [drafts, setDrafts] = useState<Record<string, SlotRow>>({})
@@ -111,14 +142,12 @@ export default function NumberDetailTab({
       setDrafts({})
       setMoving(null)
       fetchNumber(target, token)
-        .then((doc) => setState({ doc, status: '', saving: false }))
+        .then((doc) => {
+          queue.setBase(doc)
+          setNote(EMPTY_NOTE)
+        })
         .catch((error) =>
-          setState({
-            doc: null,
-            status: String(error.message),
-            saving: false,
-            failed: true,
-          })
+          setNote({ status: String(error.message), failed: true })
         )
         .finally(() => setLoading(false))
     },
@@ -128,51 +157,32 @@ export default function NumberDetailTab({
   useEffect(() => load(num), [num, load])
 
   useEffect(() => {
-    if (!state.status || state.failed) return
-    const timer = setTimeout(
-      () => setState((prev) => ({ ...prev, status: '' })),
-      NOTICE_MS
-    )
+    if (!note.status || note.failed) return
+    const timer = setTimeout(() => setNote(EMPTY_NOTE), NOTICE_MS)
     return () => clearTimeout(timer)
-  }, [state.status, state.failed])
+  }, [note.status, note.failed])
 
   /**
-   * 操作を順に送る。2 つ目以降は直前の保存で進んだ updatedAt を添える
-   * (slots の保存に続けて代表・評価を付け直すときに使う)
+   * 操作をキューに積む。押した瞬間に画面へ出し、保存は裏で順に送る
+   * (slots の保存に続けて代表・評価を付け直すときは複数をまとめて積む)
    */
   const sendAll = useCallback(
-    async (ops: PatchOp[], message?: string) => {
-      const doc = state.doc
-      if (!doc || state.saving || !ops.length) return
-
-      setState((prev) => ({ ...prev, saving: true, status: '' }))
-      try {
-        let saved = doc
-        for (const op of ops) {
-          saved = await patchNumber({
-            num: doc.num,
-            token,
-            op,
-            // 読んだ時点を添える。ここが古ければサーバが 409 で止める
-            expectedUpdatedAt: saved.updatedAt ?? null,
-          })
-          // 代表・評価の保存で未保存の編集 (追加したばかりの候補など) を捨てない。
-          // 下書きは slots を保存したときだけ保存済みの内容に置き換わる
-          if (op.op === 'slots') setDrafts({})
-        }
-        setState((prev) => applySaved(prev, saved, message))
-      } catch (error) {
-        setState((prev) => applyFailure(prev, error))
-      }
+    (ops: PatchOp[], message?: string) => {
+      const current = queue.view(num)
+      if (!current || !ops.length) return
+      setNote(EMPTY_NOTE)
+      // 候補 (slots) を積んだら、下書きはもう画面の文書に入っている
+      if (ops.some((op) => op.op === 'slots')) setDrafts({})
+      queue.enqueue(current.num, ops, message)
     },
-    [state.doc, state.saving, token]
+    [num, queue]
   )
   const send = useCallback(
     (op: PatchOp, message?: string) => sendAll([op], message),
     [sendAll]
   )
 
-  const doc = state.doc
+  const doc = queue.view(num)
   // 表示行 = 保存済みの内容に、未保存の編集を重ねたもの
   const entry = numbers?.find((item) => item.num === doc?.num)
   const rows: SlotRow[] = doc
@@ -180,11 +190,14 @@ export default function NumberDetailTab({
     : []
   const picks = doc?.rep?.picks ?? []
   const repState = doc ? repStatus(doc) : 'open'
+  const pendingCount = queue.pendingCount(num)
   const notice = loading
     ? '読み込み中…'
-    : state.saving
-      ? '保存中…'
-      : state.status
+    : note.failed
+      ? note.status
+      : pendingCount
+        ? `保存待ち ${pendingCount}`
+        : note.status
   const changed = doc ? changedSlots(doc, drafts) : []
   const dirty = changed.length > 0
 
@@ -240,16 +253,18 @@ export default function NumberDetailTab({
    * 決まらないので、先に保存してもらう
    */
   const moveWord = async (row: SlotRow, to: string) => {
-    if (!doc || state.saving) return
-    if (dirty) {
-      setState((prev) => ({
-        ...prev,
-        status: '未保存の変更を先に保存してください',
+    if (!doc || moveBusy) return
+    if (dirty || queue.pendingCount(doc.num)) {
+      setNote({
+        status: dirty
+          ? '未保存の変更を先に保存してください'
+          : '保存待ちが終わってから移せます',
         failed: true,
-      }))
+      })
       return
     }
-    setState((prev) => ({ ...prev, saving: true, status: '' }))
+    setMoveBusy(true)
+    setNote(EMPTY_NOTE)
     let added = false
     try {
       const target = await fetchNumber(to, token).catch((error) => {
@@ -290,21 +305,18 @@ export default function NumberDetailTab({
         })
       }
       setMoving(null)
-      setState((prev) =>
-        applySaved(prev, source, `「${row.word}」を ${to} に移しました`)
-      )
+      queue.setBase(source)
+      setNote({ status: `「${row.word}」を ${to} に移しました` })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      setState((prev) =>
-        applyFailure(
-          prev,
-          new Error(
-            added
-              ? `${to} には追加済み。${doc.num} から外せませんでした (${reason})。↻ で読み直してください`
-              : reason
-          )
-        )
-      )
+      setNote({
+        status: added
+          ? `${to} には追加済み。${doc.num} から外せませんでした (${reason})。↻ で読み直してください`
+          : reason,
+        failed: true,
+      })
+    } finally {
+      setMoveBusy(false)
     }
   }
 
@@ -312,10 +324,7 @@ export default function NumberDetailTab({
     (family: SlotFamily) => {
       const slot = nextFreeSlot(rows, family)
       if (!slot) {
-        setState((prev) => ({
-          ...prev,
-          status: '空き枠がありません (各 3 つまで)',
-        }))
+        setNote({ status: '空き枠がありません (各 3 つまで)' })
         return
       }
       setDrafts((prev) => ({
@@ -350,7 +359,9 @@ export default function NumberDetailTab({
           }
           onMove={(to) => moveWord(row, to)}
           focused={row.slot === focusSlot}
-          saving={state.saving}
+          moveBusy={moveBusy}
+          repMark={queue.mark(doc.num, 'rep')}
+          rateMark={queue.mark(doc.num, `rating:${row.kana}|${row.word}`)}
           isSaved={Boolean(doc.slots?.[row.slot])}
           changed={changed.includes(row.slot)}
           dragging={dragFrom === index}
@@ -404,7 +415,8 @@ export default function NumberDetailTab({
         class={
           'nd-status' +
           (notice ? ' show' : '') +
-          (state.failed && !state.saving && !loading ? ' error' : '')
+          (note.failed && !loading ? ' error' : '') +
+          (!note.failed && pendingCount && !loading ? ' pending' : '')
         }
         role="status"
         aria-live="polite"
@@ -444,10 +456,13 @@ export default function NumberDetailTab({
               として保存されるので、確定の操作ボタンは置かない。状態だけを出す。
               代表はあるのに未確定 (確定を別操作にしていた頃のデータ) のときだけ、
               バッジを押して確定できる */}
-          <section class={'nd-rep ' + repState} aria-label="代表">
+          <section
+            class={'nd-rep ' + repState + saveClass(queue.mark(doc.num, 'rep'))}
+            aria-label="代表"
+          >
             <button
               class={'nd-rep-state ' + repState}
-              disabled={repState !== 'held' || state.saving}
+              disabled={repState !== 'held'}
               title={
                 repState === 'stale'
                   ? '代表にした語が今の候補にありません。①② で選び直してください'
@@ -491,14 +506,14 @@ export default function NumberDetailTab({
             <button
               class="nd-add"
               onClick={() => addRow('wh')}
-              disabled={state.saving || !nextFreeSlot(rows, 'wh')}
+              disabled={!nextFreeSlot(rows, 'wh')}
             >
               ＋ 人
             </button>
             <button
               class="nd-add"
               onClick={() => addRow('wm')}
-              disabled={state.saving || !nextFreeSlot(rows, 'wm')}
+              disabled={!nextFreeSlot(rows, 'wm')}
             >
               ＋ 物
             </button>
@@ -511,16 +526,11 @@ export default function NumberDetailTab({
                 >
                   ● 未保存 {changed.length}
                 </span>
-                <button
-                  class="nd-ghost"
-                  disabled={state.saving}
-                  onClick={() => setDrafts({})}
-                >
+                <button class="nd-ghost" onClick={() => setDrafts({})}>
                   戻す
                 </button>
                 <button
                   class="nd-save"
-                  disabled={state.saving}
                   onClick={() => saveSlots(rows, '保存しました')}
                 >
                   保存
@@ -546,7 +556,9 @@ function SlotCard({
   onToggleMove,
   onMove,
   focused,
-  saving,
+  moveBusy,
+  repMark,
+  rateMark,
   isSaved,
   changed,
   dragging,
@@ -568,7 +580,11 @@ function SlotCard({
   onToggleMove: () => void
   onMove: (to: string) => void
   focused: boolean
-  saving: boolean
+  /** 別の番号へ移している最中 (移す操作だけは 2 番号にまたがるので待つ) */
+  moveBusy: boolean
+  /** 保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)。押せなくはしない */
+  repMark?: SaveMark
+  rateMark?: SaveMark
   /** サーバに保存済みの枠か。追加しただけの候補は代表・評価の対象にできない */
   isSaved: boolean
   /** 保存済みの内容から書き換えた (または新しく足した) 枠 */
@@ -591,7 +607,7 @@ function SlotCard({
     : null
   const suspicious =
     check?.status === 'mismatch' || check?.status === 'unreadable'
-  const canMove = !pending && !saving
+  const canMove = !pending && !moveBusy
   return (
     <li
       class={
@@ -670,12 +686,7 @@ function SlotCard({
         >
           ⇄
         </button>
-        <button
-          class="nd-del"
-          disabled={saving}
-          onClick={onDelete}
-          title="この候補を削除"
-        >
+        <button class="nd-del" onClick={onDelete} title="この候補を削除">
           ×
         </button>
       </div>
@@ -689,7 +700,7 @@ function SlotCard({
           num={num}
           kana={row.kana}
           tables={tables}
-          saving={saving}
+          saving={moveBusy}
           onMove={onMove}
           onCancel={onToggleMove}
         />
@@ -706,12 +717,18 @@ function SlotCard({
           </span>
         ) : (
           <>
-            <div class="nd-rank-group" role="group" aria-label="代表">
+            <div
+              class={
+                'nd-rank-group' + saveClass(row.repRank ? repMark : undefined)
+              }
+              role="group"
+              aria-label="代表"
+            >
               {REP_RANKS.map((rank) => (
                 <button
                   key={rank}
                   class={'nd-rank' + (row.repRank === rank ? ' on' : '')}
-                  disabled={saving || !row.word}
+                  disabled={!row.word}
                   aria-pressed={row.repRank === rank}
                   onClick={() => onPickRep(rank)}
                   title={`代表${REP_LABEL[rank]}にする / 外す`}
@@ -720,12 +737,12 @@ function SlotCard({
                 </button>
               ))}
             </div>
-            <div class="nd-rate">
+            <div class={'nd-rate' + saveClass(rateMark)}>
               {RATING_VALUES.map((value) => (
                 <button
                   key={value}
                   class={'nd-rate-btn' + (row.rating === value ? ' on' : '')}
-                  disabled={saving || !row.word}
+                  disabled={!row.word}
                   onClick={() => onRate(value)}
                 >
                   {RATING_LABEL[value]}
