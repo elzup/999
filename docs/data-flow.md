@@ -207,8 +207,10 @@ build
 build:preview = generate-preview-data.js + (stats.html 等を public/ へ cp)
 sync:private  = private/data.json → functions/private/ へコピー
 viz           = generate-viz.js 単体
-deploy        = build:preview → build → sync:private → firebase deploy --only functions:api,hosting
+deploy        = build:preview → build → sync:private → sync:functions → firebase deploy --only functions:api,functions:sheetSync,hosting
 ```
+
+> デプロイの経路 (画面は CI、Function と辞書データは手元の `nr deploy`) と、アプリに届くまでの流れは [deploy.md](deploy.md)。
 
 > 配信データは **`private/data.json`**。私的な辞書なので公開 hosting には置かず、
 > `functions/private/` に同梱して**認証付き Function (`GET /api/app/data`) からのみ**
