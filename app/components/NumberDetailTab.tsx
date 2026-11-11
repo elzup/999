@@ -6,7 +6,7 @@
 // 操作を 1 番号ぶんの 1 画面に集める。読み書きは numbers/{num} だけを見る。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { fetchHundred, fetchNumber, type PatchOp } from '../lib/numberApi'
+import { fetchNumber, type PatchOp } from '../lib/numberApi'
 import {
   applyDraftEdit,
   carryOverOps,
@@ -45,7 +45,6 @@ import {
   suggestTags,
   type TagSuggestion,
 } from '../lib/wordTags'
-import type { NumberOpQueue } from '../lib/opQueue'
 import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
@@ -64,16 +63,6 @@ const RATING_LABEL: Record<number, string> = {
 /** dock の上に出す知らせ。failed なら失敗の理由 (次の操作まで残す) */
 type Note = { status: string; failed?: boolean }
 const EMPTY_NOTE: Note = { status: '' }
-
-/** 先読み済みの百の位。同じ百を何度も読まない (失敗したら次の機会に読み直す) */
-const prefetched = new Set<number>()
-function prefetchHundred(queue: NumberOpQueue, hundred: number, token: string) {
-  if (prefetched.has(hundred)) return
-  prefetched.add(hundred)
-  fetchHundred(hundred, token)
-    .then((docs) => queue.seed(docs))
-    .catch(() => prefetched.delete(hundred))
-}
 
 /** 保存状態の class (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
 const saveClass = (mark?: SaveMark) => (mark ? ' save-' + mark : '')
@@ -139,9 +128,8 @@ export default function NumberDetailTab({
   )
 
   /**
-   * 番号を開く。読んだことのある番号 (先読み済みを含む) はすぐ出して裏で読み直す。
-   * 初めての番号だけ読み込みを待つ。開いたら同じ百の位をまとめて先読みして、
-   * − ＋ で隣へ送ったときに待たないようにする
+   * 番号を開く。読んだことのある番号 (詳細カード・マップ・代表タブで読んだものを含む)
+   * はすぐ出して読み直す。初めての番号だけ読み込みを待つ。先読みはしない
    */
   const load = useCallback(
     (target: string) => {
@@ -150,7 +138,6 @@ export default function NumberDetailTab({
       if (!cached) setLoading(true)
       setDrafts({})
       setMoving(null)
-      prefetchHundred(queue, Number(target[0]), token)
       fetchNumber(target, token)
         .then((doc) => {
           queue.setBase(doc)
