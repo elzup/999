@@ -12,6 +12,11 @@ export type NumberContextValue = {
   onToggleBm: (key: string) => void
   /** 編集をオーバーレイで開く。今のタブ (テストの結果ビュー) は閉じない */
   openEditor: (num: string) => void
+  /**
+   * 編集を閉じるたびに 1 増える。配信データに無い値 (マップの代表①) を
+   * API から読んでいる画面が、これを見て読み直す
+   */
+  editVersion: number
 }
 
 export const NumberContext = createContext<NumberContextValue | null>(null)

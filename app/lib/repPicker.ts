@@ -89,3 +89,33 @@ export function decadeProgress(docs: NumberDoc[]): number[] {
   }
   return done.map((count, i) => (total[i] ? count / total[i] : 0))
 }
+
+/** 代表を選んでいない番号を «そのまま確定» するときの並び (rep-store の DEFAULT_PRIORITY と同じ) */
+const DEFAULT_PRIORITY = ['wh1', 'wm1', 'wh2', 'wm2', 'wh3', 'wm3']
+
+/** 代表が空のときに既定で入る枠 (① 人の 1 番手、② 物の 1 番手。無ければ次の候補) */
+export function defaultPickSlots(doc: NumberDoc): string[] {
+  return DEFAULT_PRIORITY.filter((slot) => doc.slots?.[slot]).slice(
+    0,
+    MAX_PICKS
+  )
+}
+
+/**
+ * «確定» を押したとき (1 件でも一括でも) に送る操作。確定済み・要再確認は null:
+ * - 代表があって未確定 → その代表のまま確定
+ * - 代表が空 → 既定 (人の 1 番手 ①・物の 1 番手 ②) で確定
+ * - 要再確認 (代表にした語が今の候補に無い) → 黙って付け替えず、選び直してもらう
+ */
+export function confirmOp(
+  doc: NumberDoc
+): { op: 'rep'; picks: RepPick[]; confirmed: true } | null {
+  if (isStale(doc) || doc.rep?.confirmed) return null
+  const live = livePicks(doc)
+  if (live.length > 0) return { op: 'rep', picks: live, confirmed: true }
+  const picks = defaultPickSlots(doc).map((slot) => ({
+    k: doc.slots![slot]!.kana,
+    w: doc.slots![slot]!.word,
+  }))
+  return picks.length ? { op: 'rep', picks, confirmed: true } : null
+}

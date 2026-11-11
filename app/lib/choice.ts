@@ -1,5 +1,4 @@
 import type { NumberEntry } from '../data/schema'
-import picksJson from '../data/ymapPicks.json'
 
 const LEGACY_SLOT_MAP = {
   w1: 'wh1',
@@ -21,16 +20,6 @@ export function normalizeSlot(slot?: string | null): CanonicalSlot | null {
   if ((SLOTS as readonly string[]).includes(slot)) return slot as CanonicalSlot
   return (LEGACY_SLOT_MAP as Record<string, CanonicalSlot>)[slot] ?? null
 }
-
-/**
- * リポジトリにコミットされた既定の採用スロット (num -> slot)。
- * これが「全端末の既定値」。各端末の一時上書きは localStorage が担う。
- * 永続化したいときは export して ymapPicks.json に貼り commit する。
- */
-export const YMAP_PICKS: Record<string, Slot> = picksJson as Record<
-  string,
-  Slot
->
 
 export type Candidate = {
   slot: Slot
@@ -71,8 +60,11 @@ export function candidatesOf(entry: NumberEntry): Candidate[] {
 }
 
 /**
- * 年マップで採用するスロットを決める。
- * 優先順位: localStorage override > リポジトリ既定 (ymapPicks.json) > 最初の候補。
+ * マップのタイルに出すスロットを決める。
+ * 優先順位: 代表① (overrides = 編集画面で選んだ代表を num → スロットにしたもの) > 最初の候補。
+ *
+ * 以前はマップ専用の «採用» (端末の localStorage + ymapPicks.json) を別に持っていたが、
+ * 編集画面の代表と二重になり、端末ごとにずれていた。代表 1 本に寄せた。
  */
 export function resolveSlot(
   entry: NumberEntry,
@@ -84,8 +76,6 @@ export function resolveSlot(
     !!s && cands.some((c) => c.slot === normalizeSlot(s))
   const ov = normalizeSlot(overrides[entry.num])
   if (has(ov)) return ov
-  const def = normalizeSlot(YMAP_PICKS[entry.num])
-  if (has(def)) return def
   return cands[0].slot
 }
 
@@ -99,43 +89,19 @@ export function candidateAt(
   return candidatesOf(entry).find((c) => c.slot === canonical) ?? null
 }
 
-// --- localStorage (年マップ専用の選択) ---
-const KEY = 'ymapchoice999'
-
-export function loadYmapChoices(): Record<string, Slot> {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return {}
-    const obj = JSON.parse(raw)
-    if (!obj || typeof obj !== 'object') return {}
-    return Object.fromEntries(
-      Object.entries(obj).flatMap(([num, slot]) => {
-        const normalized = typeof slot === 'string' ? normalizeSlot(slot) : null
-        return normalized ? [[num, normalized]] : []
-      })
-    ) as Record<string, Slot>
-  } catch {
-    return {}
-  }
-}
-
-export function saveYmapChoices(choices: Record<string, Slot>) {
-  localStorage.setItem(KEY, JSON.stringify(choices))
-}
-
 /**
- * export 用 JSON 文字列。リポジトリ既定に localStorage の上書きを重ねた
- * 「現在の完全な状態」を num 昇順で出力する。これを ymapPicks.json に貼り commit。
+ * 代表 (読み + 語) が、この番号の候補のどのスロットに当たるか。
+ * 代表は値で持つ (並び替えに強い) ので、表示の直前にスロットへ引き直す。
+ * 語が書き換わって当たらなければ null (タイルは最初の候補に戻る)
  */
-export function exportYmapChoices(local: Record<string, Slot>): string {
-  const merged = { ...YMAP_PICKS, ...local }
-  const sorted = Object.keys(merged)
-    .sort()
-    .reduce<Record<string, Slot>>((acc, k) => {
-      acc[k] = normalizeSlot(merged[k]) ?? merged[k]
-      return acc
-    }, {})
-  return JSON.stringify(sorted, null, 2)
+export function slotOfPick(
+  entry: NumberEntry,
+  pick: { k: string; w: string }
+): Slot | null {
+  const cands = candidatesOf(entry)
+  const exact = cands.find((c) => c.word === pick.w && c.kana === pick.k)
+  const byWord = cands.find((c) => c.word === pick.w)
+  return (exact ?? byWord)?.slot ?? null
 }
 
 function slotText(

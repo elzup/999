@@ -1,12 +1,11 @@
 import { h } from 'preact'
 import { useState, useCallback } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
-import { getMapBounds } from '../lib/yearMap'
 import {
   HUNDREDS,
-  HUNDRED_LAYOUTS,
   hasHundredLayout,
   buildNumMap,
+  getNumMapBounds,
 } from '../lib/numMap'
 import type { Slot } from '../lib/choice'
 import MapView from './MapView'
@@ -16,21 +15,23 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
+  /** 詳細の «編集»。«全体» と同じく編集タブで開く */
+  onEditWord?: (num: string) => void
 }
 
-function NumMapTab({ numbers, bookmarks, onToggleBm }: Props) {
+function NumMapTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
   const [hundred, setHundred] = useState<number>(1)
 
   const build = useCallback(
-    (choices: Record<string, Slot>) => {
-      const layout = HUNDRED_LAYOUTS[hundred]
-      return {
-        cells: buildNumMap(numbers, hundred, choices) ?? [],
-        bounds: layout
-          ? getMapBounds(layout)
-          : { minX: 0, minY: 0, cols: 1, rows: 1 },
-      }
-    },
+    (repSlots: Record<string, Slot>) => ({
+      cells: buildNumMap(numbers, hundred, repSlots) ?? [],
+      bounds: getNumMapBounds(hundred) ?? {
+        minX: 0,
+        minY: 0,
+        cols: 1,
+        rows: 1,
+      },
+    }),
     [numbers, hundred]
   )
 
@@ -72,8 +73,14 @@ function NumMapTab({ numbers, bookmarks, onToggleBm }: Props) {
       bookmarks={bookmarks}
       onToggleBm={onToggleBm}
       build={build}
-      hint={`${hundred}00〜${hundred}99 ・ 数字をタップで詳細・候補切替`}
+      hundred={hundred}
+      hint={
+        hundred === 0
+          ? '000〜099 ・ 年マップと同じ配置 ・ 絵は代表①'
+          : `${hundred}00〜${hundred}99 ・ 絵は代表①`
+      }
       controls={selector}
+      onEditWord={onEditWord}
     />
   )
 }

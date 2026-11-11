@@ -13,8 +13,8 @@ type Props = {
 
 function YearMapTab({ numbers, bookmarks, onToggleBm }: Props) {
   const build = useCallback(
-    (choices: Record<string, Slot>) => ({
-      cells: buildYearMap(numbers, choices),
+    (repSlots: Record<string, Slot>) => ({
+      cells: buildYearMap(numbers, repSlots),
       bounds: getMapBounds(),
     }),
     [numbers]
@@ -26,7 +26,8 @@ function YearMapTab({ numbers, bookmarks, onToggleBm }: Props) {
       bookmarks={bookmarks}
       onToggleBm={onToggleBm}
       build={build}
-      hint="2桁数字をタップで詳細・候補切替 ・ 色=年コード"
+      hundred={0}
+      hint="2桁数字をタップで詳細 ・ 色=年コード ・ 絵は代表①"
     />
   )
 }

@@ -1,10 +1,12 @@
 import { h } from 'preact'
-import { useState, useMemo } from 'preact/hooks'
+import { useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
-import { NumCell } from './NumberTab'
+import { NumCell } from './Cells'
 import { buildDateEntries } from '../lib/dateKeys'
 import Screen from './Screen'
+import { useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -15,9 +17,16 @@ type Props = {
 
 // 365 日分の日付 → 語。キーは「月 + 日(2桁)」で、1〜9月は num 辞書を共有する。
 function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
-  const [selected, setSelected] = useState<string | null>(null)
-
   const days = useMemo(() => buildDateEntries(numbers, dates), [numbers, dates])
+  const order = useMemo(() => days.map((d) => d.key), [days])
+  const {
+    selected,
+    select: setSelected,
+    nav,
+  } = useSelection(order, (key) => {
+    const day = days.find((d) => d.key === key)
+    return day ? `${day.month}/${day.day}` : key
+  })
 
   const selectedDay = useMemo(
     () => (selected === null ? null : days.find((d) => d.key === selected)),
@@ -25,14 +34,13 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
   )
 
   const panel = selectedDay ? (
-    <>
+    <DetailSheet nav={nav} onClose={() => setSelected(null)}>
       <NumDetailPanel
         d={selectedDay.entry}
         bookmarks={bookmarks}
         onToggleBm={onToggleBm}
-        onClose={() => setSelected(null)}
       />
-    </>
+    </DetailSheet>
   ) : null
 
   const main = (

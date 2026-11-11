@@ -2,9 +2,10 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
-import { candidatesOf } from '../lib/choice'
-import { useBackGuard } from '../lib/useBackGuard'
+import { NumCell } from './Cells'
+import { useSelection } from '../lib/useSelection'
 import Screen, { DockRow } from './Screen'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -12,39 +13,6 @@ type Props = {
   onToggleBm: (key: string) => void
   /** 語をタップして編集へ (REQ-NDV-012) */
   onEditWord?: (num: string, slot?: string) => void
-}
-
-function scoreColor(score: number | null): string | null {
-  if (score === null || score === undefined) return null
-  return score >= 3.5 ? '#4ade80' : score >= 2.5 ? '#fbbf24' : '#f87171'
-}
-
-type NumCellProps = {
-  d: NumberEntry
-  selected: boolean
-  onSelect: () => void
-}
-
-export function NumCell({ d, selected, onSelect }: NumCellProps) {
-  const hasWord = candidatesOf(d).length > 0
-  const sc = d.w1Score != null ? d.w1Score : d.w2Score
-  const color = scoreColor(sc)
-  const borderStyle = color && !selected ? { borderColor: color + '66' } : {}
-
-  return (
-    <div
-      class={
-        'num-cell' + (selected ? ' selected' : '') + (!hasWord ? ' empty' : '')
-      }
-      style={borderStyle}
-      onClick={onSelect}
-    >
-      <div class="num-id">{d.num}</div>
-      {color ? (
-        <div class="num-score-dot" style={{ background: color }} />
-      ) : null}
-    </div>
-  )
 }
 
 type FilterMode = 'rows' | 'pads'
@@ -133,7 +101,6 @@ function DigitFilterPads({
 }
 
 function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
-  const [selected, setSelected] = useState<string | null>(null)
   const [df, setDf] = useState<DigitFilter>([null, null, null])
   const [filterMode, setFilterMode] = useState<FilterMode>('rows')
 
@@ -147,19 +114,26 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
     })
   }, [numbers, df])
 
+  // 前へ / 次へ は画面に出ている順 (絞り込み後) で送る
+  const order = useMemo(() => filtered.map((d) => d.num), [filtered])
+  const { selected, toggle, clear, nav } = useSelection(order)
+
   const selectedData = useMemo(() => {
     if (selected === null) return null
     return numbers.find((d) => d.num === selected) || null
   }, [numbers, selected])
 
-  const tapDigitAt = useCallback((pos: number, digit: string) => {
-    setDf((prev) => {
-      const next = [...prev] as DigitFilter
-      next[pos] = prev[pos] === digit ? null : digit
-      return next
-    })
-    setSelected(null)
-  }, [])
+  const tapDigitAt = useCallback(
+    (pos: number, digit: string) => {
+      setDf((prev) => {
+        const next = [...prev] as DigitFilter
+        next[pos] = prev[pos] === digit ? null : digit
+        return next
+      })
+      clear()
+    },
+    [clear]
+  )
 
   const clearPosAt = useCallback((pos: number) => {
     setDf((prev) => {
@@ -171,30 +145,21 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
 
   const clearFilter = useCallback(() => {
     setDf([null, null, null])
-    setSelected(null)
-  }, [])
-
-  // 番号を選んだ状態は «開いている» とみなす。戻るで閉じないと、
-  // Android のジェスチャーナビでアプリごと終了してしまう
-  useBackGuard(selected !== null, () => setSelected(null))
+    clear()
+  }, [clear])
 
   const hasFilter = df[0] !== null || df[1] !== null || df[2] !== null
   const filterLabel = df.map((d) => (d === null ? '*' : d)).join('')
 
   const panel = selectedData ? (
-    <>
+    <DetailSheet nav={nav} onClose={clear}>
       <NumDetailPanel
         d={selectedData}
         bookmarks={bookmarks}
         onToggleBm={onToggleBm}
-        onEdit={
-          onEditWord && selectedData
-            ? () => onEditWord(selectedData.num)
-            : undefined
-        }
-        onClose={() => setSelected(null)}
+        onEdit={onEditWord ? () => onEditWord(selectedData.num) : undefined}
       />
-    </>
+    </DetailSheet>
   ) : null
 
   // 百の位の帯は各組の先頭 (= grid-up で組の下端) に入る
@@ -217,7 +182,7 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
               key={d.num}
               d={d}
               selected={selected === d.num}
-              onSelect={() => setSelected(selected === d.num ? null : d.num)}
+              onSelect={() => toggle(d.num)}
             />
           </>
         )

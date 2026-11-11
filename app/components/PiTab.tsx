@@ -14,8 +14,10 @@ import ReviewPanel from './ReviewPanel'
 import type { ReviewItem } from './ReviewPanel'
 import TestFeatureList from './TestFeatureList'
 import MarkButton from './MarkButton'
-import Screen, { DockBar, PanelCards, QuitButton, PanelClose } from './Screen'
+import Screen, { DockBar, QuitButton } from './Screen'
 import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
+import { navAround, useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -85,8 +87,8 @@ function PiCheckGrid({
                     ? ' correct'
                     : ' wrong'
                   : !answered && idx > checkPos
-                  ? ' pending'
-                  : '')
+                    ? ' pending'
+                    : '')
               const cellColor = DIGIT_COLORS[Number(d)]
               return (
                 <div key={idx} class={cls}>
@@ -163,8 +165,8 @@ function PiChoiceGrid({
                     ? ' correct'
                     : ' wrong'
                   : !answered && chunk > choicePos
-                  ? ' pending'
-                  : '')
+                    ? ' pending'
+                    : '')
               const cellColor = DIGIT_COLORS[Number(d)]
               return (
                 <div key={idx} class={cls}>
@@ -358,7 +360,7 @@ function PiViewGroups({
 
 // bookmarks / onToggleBm は NumDetailPanel が NumberContext から取るので使わない
 function PiTab({ numbers }: Props) {
-  const [selected, setSelected] = useState<number | null>(null)
+  const { selected, select: setSelected } = useSelection<number>()
   const [mode, setMode] = useState<Mode>('view')
   const [checkPos, setCheckPos] = useState(1)
   const [answers, setAnswers] = useState<Answer[]>([])
@@ -631,6 +633,20 @@ function PiTab({ numbers }: Props) {
     return result.length > 0 ? result : null
   }, [selected, numbers, digits])
 
+  // 前へ / 次へ は 2 組 (= 詳細に出す 2 枚) ずつ送る。ボタンには行き先の先頭の番号
+  const nav = useMemo(() => {
+    if (selected === null) return undefined
+    const groupCount = Math.floor((digits.length - 1) / 3)
+    const pairStarts = Array.from(
+      { length: Math.ceil(groupCount / 2) },
+      (_, i) => i * 2
+    )
+    const current = selected % 2 === 0 ? selected : selected - 1
+    return navAround(pairStarts, current, setSelected, (g) =>
+      digits.slice(1 + g * 3, 4 + g * 3).join('')
+    )
+  }, [selected, digits, setSelected])
+
   const openRecords = useCallback((kind: RecordKind) => {
     setRecordsKind(kind)
     setShowRecords(true)
@@ -664,17 +680,14 @@ function PiTab({ numbers }: Props) {
       />
     )
 
+  // 2 組 (= 2 枚) をまとめて出す
   const panel =
     mode === 'view' && selectedPair ? (
-      <>
-        <PanelCards>
-          {selectedPair.map((d) => (
-            <NumDetailPanel key={d.num} d={d} />
-          ))}
-        </PanelCards>
-        {/* 複数枚まとめて 1 つの閉じる。詳細カード側は閉じるを持たない */}
-        <PanelClose onClick={() => setSelected(null)} />
-      </>
+      <DetailSheet stacked nav={nav} onClose={() => setSelected(null)}>
+        {selectedPair.map((d) => (
+          <NumDetailPanel key={d.num} d={d} />
+        ))}
+      </DetailSheet>
     ) : null
 
   const dock = (
@@ -695,8 +708,8 @@ function PiTab({ numbers }: Props) {
           mode === 'check'
             ? digitLabel(checkPos)
             : mode === 'choice'
-            ? chunkLabel(choicePos)
-            : null
+              ? chunkLabel(choicePos)
+              : null
         }
         marks={marks.marks}
         onToggleMark={marks.toggle}

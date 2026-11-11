@@ -45,6 +45,23 @@
     行を占有する見出しは `.grid-full` (`.num-band` / `.card-suit-header` は自動)。
 - Detail Panel の ★ / 編集 は NumDetailPanel が自分で出す (NumberContext から取る)。
   呼び出し側で `bookmarks` / `onToggleBm` / `onEdit` を渡す必要は無い (挙動を変えたいときだけ渡す)。
+- 詳細パネルは **`DetailSheet` (app/components/DetailSheet.tsx) だけで組む**。画面側で枠を手書きしない。
+  ```
+  ┌ 見出し (任意: 年コード «12 → 3» / 2桁 «12_ 10件»)
+  ├ カード (NumDetailPanel / CardDetailPanel。操作は ★ / 編集 だけ)
+  ├ グループの ★ (任意: 2桁)
+  └ ‹ 011 ｜ 閉じる ｜ 013 ›   ← 全画面で同じ最下段
+  ```
+
+  - カードを複数枚積む面 (π の 2 枚、2桁の 10 枚) は `stacked` を付けるだけ。最下段は同じ。
+  - 選択状態は `useSelection(order)` (app/lib/useSelection.ts)。再タップで外す・端末の «戻る» で閉じる・
+    前へ / 次へ (`nav`) はここが持つ。`order` は画面に出ている順 (絞り込み後) を渡す。
+    画面ごとに `useState` で書かない (再タップや戻るの挙動が画面で食い違った)。
+  - 該当画面: 数字 (全体 / 2桁 / マップ)、日付、カード、π、年号、曜日 (年コード / 年マップ)、
+    ブックマーク、各テストの結果 (ReviewPanel の行タップ)。
+- 一覧のマス (番号 `NumCell`・カード `CardCell`) は app/components/Cells.tsx の 1 つを使う。
+- マップのタイルの絵は **代表①** (編集画面で選ぶもの)。マップ専用の選択は持たない。
+  000〜099 のマップは年マップと同じ配置を使う。
 - ボトムシート (RecordPanel / ReviewPanel) は見出しと 閉じる を **シートの最下段** に置く。
 - サブタブは `SubTabGroup` を使う。`.sub-tab-switch` を自前で書かない。
 - root にインラインの `display:flex; flexDirection:column; flex:1; …` を書かない (`Screen` が持つ)。

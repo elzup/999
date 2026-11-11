@@ -68,6 +68,7 @@ function NumGroupTab({
               numbers={numbers}
               bookmarks={bookmarks}
               onToggleBm={onToggleBm}
+              onEditWord={onEditWord}
             />
           ),
         },

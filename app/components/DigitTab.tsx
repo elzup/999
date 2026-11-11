@@ -2,9 +2,10 @@ import { h } from 'preact'
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
-import Screen, { CloseButton, DockRow, PanelCards } from './Screen'
-import { IconStar, IconStarOutline } from './Icons'
+import Screen, { DockRow } from './Screen'
 import { candidatesOf } from '../lib/choice'
+import { navAround, useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -99,7 +100,7 @@ function FavList({
 
 function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
   const [mode, setMode] = useState<D2Mode>('upper')
-  const [selected, setSelected] = useState<string | null>(null)
+  const { selected, select: setSelected } = useSelection<string>()
   const [specialSel, setSpecialSel] = useState<SpecialSel>(null)
 
   const detail = useMemo(() => {
@@ -163,41 +164,48 @@ function DigitTab({ numbers, bookmarks, onToggleBm }: Props) {
     }
   }, [])
 
+  // 前へ / 次へ は 00〜99 のグループで送る。★ から開いた特別な絞り込みには無い
+  const nav = useMemo(() => {
+    if (selected === null || specialSel) return undefined
+    const order = Array.from({ length: 100 }, (_, i) =>
+      String(i).padStart(2, '0')
+    )
+    return navAround(order, selected, setSelected, (v) =>
+      mode === 'upper' ? v + '_' : '_' + v
+    )
+  }, [selected, specialSel, mode, setSelected])
+
   // 2桁グループの ★ は番号単位の ★ (NumDetailPanel) とは別物なので、
   // 積んだカードの下に «閉じる» と並べて 1 つだけ置く
+  // 2桁グループの ★ は番号ごとの ★ とは別物なので、グループ名を出して区別する
   const panel = detail ? (
-    <>
-      <div class="panel-head">
-        <span class="detail-id">{detailLabel}</span>
-        <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
-          {detail.length}件
-        </span>
-      </div>
-      <PanelCards>
-        {detail.map((d) => (
-          <NumDetailPanel
-            key={d.num}
-            d={d}
-            bookmarks={bookmarks}
-            onToggleBm={onToggleBm}
-          />
-        ))}
-      </PanelCards>
-      <div class="panel-foot detail-foot-actions">
-        <CloseButton onClick={clearSel} />
-        <button
-          class={'detail-act act-bm' + (isBm ? ' on' : '')}
-          onClick={() => bmKey && onToggleBm(bmKey)}
-          aria-pressed={isBm}
-        >
-          {isBm ? <IconStar /> : <IconStarOutline />}
-          {/* 直上のカードにも «ブックマーク» があるので、対象のグループ名を出して区別する */}
-          <span>
-            {detailLabel} {isBm ? '登録済み' : 'をブックマーク'}
-          </span>
-        </button>
-      </div>
-    </>
+    <DetailSheet
+      stacked
+      head={{ id: detailLabel, sub: `${detail.length}件` }}
+      groupBookmark={
+        bmKey
+          ? {
+              on: isBm,
+              onToggle: () => onToggleBm(bmKey),
+              label: {
+                on: `${detailLabel} 登録済み`,
+                off: `${detailLabel} をブックマーク`,
+              },
+            }
+          : undefined
+      }
+      nav={nav}
+      onClose={clearSel}
+    >
+      {detail.map((d) => (
+        <NumDetailPanel
+          key={d.num}
+          d={d}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      ))}
+    </DetailSheet>
   ) : null
 
   // よく使う は親指に一番近い main の下端、その上に 2 桁のグリッド

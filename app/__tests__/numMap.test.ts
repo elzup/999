@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildNumMap, hasHundredLayout, HUNDRED_LAYOUTS } from '../lib/numMap'
+import { buildYearMap } from '../lib/yearMap'
 import type { NumberEntry } from '../data/schema'
 
 const num = (n: string, over: Partial<NumberEntry> = {}): NumberEntry => ({
@@ -25,6 +26,10 @@ describe('hasHundredLayout', () => {
   it('100番台は定義済み、未設計の百は false', () => {
     expect(hasHundredLayout(1)).toBe(true)
     expect(hasHundredLayout(5)).toBe(false)
+  })
+
+  it('000番台は年マップのレイアウトを使うので定義済み', () => {
+    expect(hasHundredLayout(0)).toBe(true)
   })
 })
 
@@ -61,6 +66,16 @@ describe('buildNumMap', () => {
       )
       expect(new Set(units).size).toBe(units.length)
     }
+  })
+
+  it('000-099 は年マップと同じ配置で 100 件を重複なく置く', () => {
+    const entries = Array.from({ length: 100 }, (_, i) =>
+      num(String(i).padStart(3, '0'))
+    )
+    const cells = buildNumMap(entries, 0)!
+    expect(cells).toEqual(buildYearMap(entries))
+    const tiles = cells.flatMap((c) => c.tiles)
+    expect(new Set(tiles.map((t) => t.num)).size).toBe(100)
   })
 
   it('tens グループ 1X0 のセルに 1X0-1X9 が入る', () => {

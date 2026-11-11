@@ -1,7 +1,9 @@
 import { h } from 'preact'
-import { useState } from 'preact/hooks'
+import { useMemo, useState } from 'preact/hooks'
 import NumDetailPanel from './NumDetailPanel'
+import DetailSheet from './DetailSheet'
 import { numOfBmKey, useNumberContext } from '../lib/numberContext'
+import { useSelection } from '../lib/useSelection'
 
 export type ReviewItem = {
   label: string
@@ -42,13 +44,22 @@ function ReviewPanel({
 }: Props) {
   const ctx = useNumberContext()
   const [onlyMarked, setOnlyMarked] = useState(false)
-  const [detailNum, setDetailNum] = useState<string | null>(null)
 
   const markedCount = items.filter((i) => i.marked).length
   const shown = onlyMarked ? items.filter((i) => i.marked) : items
   const wrongItems = shown.filter((i) => !i.correct)
   const correctItems = shown.filter((i) => i.correct)
   const wrongTotal = items.filter((i) => !i.correct).length
+
+  // 前へ / 次へ は一覧の並び (不正解 → 正解) で、番号を持つ行だけを送る
+  const order = useMemo(() => {
+    const nums = [...wrongItems, ...correctItems]
+      .map((item) => (ctx ? numOf(item) : null))
+      .filter((num): num is string => Boolean(num))
+    return [...new Set(nums)]
+    // wrongItems / correctItems は items と onlyMarked から決まる
+  }, [items, onlyMarked, ctx])
+  const { selected: detailNum, select: setDetailNum, nav } = useSelection(order)
   const detail = detailNum
     ? ctx?.numbers.find((entry) => entry.num === detailNum)
     : undefined
@@ -156,12 +167,13 @@ function ReviewPanel({
           }}
         >
           <div class="review-detail-body">
-            <NumDetailPanel
-              d={detail}
-              bookmarks={ctx.bookmarks}
-              onToggleBm={ctx.onToggleBm}
-              onClose={() => setDetailNum(null)}
-            />
+            <DetailSheet nav={nav} onClose={() => setDetailNum(null)}>
+              <NumDetailPanel
+                d={detail}
+                bookmarks={ctx.bookmarks}
+                onToggleBm={ctx.onToggleBm}
+              />
+            </DetailSheet>
           </div>
         </div>
       ) : null}

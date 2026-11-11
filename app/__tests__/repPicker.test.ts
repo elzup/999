@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { NumberDoc } from '../lib/numberApi'
 import {
+  confirmOp,
   decadeProgress,
   isStale,
   matchesFilter,
@@ -141,5 +142,34 @@ describe('decadeProgress', () => {
     expect(progress[0]).toBe(0.5)
     expect(progress[9]).toBe(1)
     expect(progress[5]).toBe(0)
+  })
+})
+
+describe('confirmOp (まとめて / 次々と確定)', () => {
+  it('代表があって未確定なら、その代表のまま確定する', () => {
+    const picks = [pick('こい', '鯉')]
+    expect(confirmOp(doc({ rep: { picks, confirmed: false } }))).toEqual({
+      op: 'rep',
+      picks,
+      confirmed: true,
+    })
+  })
+
+  it('代表が空なら 人の 1 番手 ① と 物の 1 番手 ② で確定する', () => {
+    expect(confirmOp(doc())?.picks).toEqual([
+      pick('こい', '鯉太郎'),
+      pick('こい', '鯉'),
+    ])
+  })
+
+  it('確定済みと要再確認は送らない', () => {
+    expect(
+      confirmOp(doc({ rep: { picks: [pick('こい', '鯉')], confirmed: true } }))
+    ).toBeNull()
+    expect(
+      confirmOp(
+        doc({ rep: { picks: [pick('ふる', '消えた語')], confirmed: false } })
+      )
+    ).toBeNull()
   })
 })

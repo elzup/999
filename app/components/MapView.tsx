@@ -1,5 +1,5 @@
 import { h } from 'preact'
-import { useState, useMemo, useCallback } from 'preact/hooks'
+import { useMemo } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import type { NumberEntry } from '../data/schema'
 import {
@@ -8,15 +8,13 @@ import {
   type MapTile,
   type RenderedCell,
 } from '../lib/yearMap'
-import {
-  candidatesOf,
-  loadYmapChoices,
-  saveYmapChoices,
-  exportYmapChoices,
-  type Slot,
-} from '../lib/choice'
+import type { Slot } from '../lib/choice'
+import { useRepSlots } from '../lib/useRepSlots'
+import { REP_STATUS_LABEL, type RepStatus } from '../lib/numberDetail'
 import NumDetailPanel from './NumDetailPanel'
-import Screen, { DockRow, PanelClose } from './Screen'
+import Screen, { DockRow } from './Screen'
+import { useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 export type MapBounds = {
   minX: number
@@ -30,11 +28,15 @@ type Props = {
   numbers: NumberEntry[]
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
-  /** choices を受けて cells/bounds を組み立てる (choices 変更で再構築) */
-  build: (choices: Record<string, Slot>) => BuildResult
+  /** 代表① (num → スロット) を受けて cells/bounds を組み立てる (代表が読めたら再構築) */
+  build: (repSlots: Record<string, Slot>) => BuildResult
+  /** 代表①を読む百の位 (年マップは 0) */
+  hundred: number
   hint?: string
   /** dock の最下段 (サブタブの直上) に差し込む追加コントロール (マップ切替など) */
   controls?: ComponentChildren
+  /** 詳細の «編集»。省略時は NumberContext (今のタブに重ねて開く) */
+  onEditWord?: (num: string) => void
 }
 
 const GROUP_LABEL: Record<string, string> = { up: 'up', down: 'down' }
@@ -43,17 +45,25 @@ function MapTileView({
   tile,
   selected,
   onSelect,
+  rep,
 }: {
   tile: MapTile
   selected: boolean
   onSelect: () => void
+  /** 代表の確定状態。確定していないタイルだけ右上に印を付ける */
+  rep?: RepStatus
 }) {
   return (
     <button
       class={'ymap-tile' + (selected ? ' sel' : '')}
-      title={`${tile.xy} → ${tile.num}${tile.word ? ' ' + tile.word : ''}`}
+      title={`${tile.xy} → ${tile.num}${tile.word ? ' ' + tile.word : ''}${
+        rep && rep !== 'confirmed' ? ' (' + REP_STATUS_LABEL[rep] + ')' : ''
+      }`}
       onClick={onSelect}
     >
+      {rep && rep !== 'confirmed' ? (
+        <span class={'ymap-tile-rep ' + rep} aria-hidden="true" />
+      ) : null}
       {tile.img ? (
         <img class="ymap-tile-img" loading="lazy" src={tile.img} alt="" />
       ) : (
@@ -64,35 +74,6 @@ function MapTileView({
   )
 }
 
-/** 採用候補を選ぶピッカー (語句が2つ以上ある番号のみ意味を持つ) */
-function CandidatePicker({
-  entry,
-  current,
-  onPick,
-}: {
-  entry: NumberEntry
-  current: Slot | null
-  onPick: (slot: Slot) => void
-}) {
-  const cands = candidatesOf(entry)
-  if (cands.length <= 1) return null
-  return (
-    <div class="ymap-pick">
-      <span class="ymap-pick-label">採用</span>
-      {cands.map((c) => (
-        <button
-          key={c.slot}
-          class={'ymap-pick-btn' + (c.slot === current ? ' active' : '')}
-          onClick={() => onPick(c.slot)}
-        >
-          {c.img ? <img src={c.img} alt="" loading="lazy" /> : null}
-          <span>{c.word}</span>
-        </button>
-      ))}
-    </div>
-  )
-}
-
 function MapView({
   numbers,
   bookmarks,
@@ -100,79 +81,76 @@ function MapView({
   build,
   hint,
   controls,
+  onEditWord,
+  hundred,
 }: Props) {
-  const [sel, setSel] = useState<string | null>(null)
-  const [choices, setChoices] = useState<Record<string, Slot>>(loadYmapChoices)
-  const [copied, setCopied] = useState(false)
-
-  const { cells, bounds } = useMemo(() => build(choices), [build, choices])
+  const {
+    slots: repSlots,
+    status: repStatusOf,
+    state: repState,
+  } = useRepSlots(hundred, numbers)
+  const { cells, bounds } = useMemo(() => build(repSlots), [build, repSlots])
 
   const units = useMemo(() => buildUnits(cells), [cells])
 
+  // 前へ / 次へ は番号順 (マップ上の位置はばらばらなので、番号で隣へ送る)
+  const order = useMemo(
+    () =>
+      cells
+        .flatMap((c) => c.tiles)
+        .map((t) => t.num)
+        .sort(),
+    [cells]
+  )
+  const { selected: sel, toggle, clear, nav } = useSelection(order)
+
   const selEntry = useMemo(
-    () => (sel ? numbers.find((n) => n.num === sel) ?? null : null),
+    () => (sel ? (numbers.find((n) => n.num === sel) ?? null) : null),
     [sel, numbers]
   )
-  const selSlot = useMemo(
-    () =>
-      sel
-        ? cells.flatMap((c) => c.tiles).find((t) => t.num === sel)?.slot ?? null
-        : null,
-    [sel, cells]
-  )
 
-  const pick = useCallback((num: string, slot: Slot) => {
-    setChoices((prev) => {
-      const next = { ...prev, [num]: slot }
-      saveYmapChoices(next)
-      return next
-    })
-  }, [])
-
-  const exportChoices = useCallback(() => {
-    const text = exportYmapChoices(choices)
-    navigator.clipboard?.writeText(text).then(
-      () => {
-        setCopied(true)
-        window.setTimeout(() => setCopied(false), 1500)
-      },
-      () => {}
-    )
-  }, [choices])
-
-  const pickCount = Object.keys(choices).length
-
-  // 採用の切り替えは触るものなので、カードの下 (閉じるの直上) に置く
+  // 詳細は «全体» と同じ枠とカード。タイルの絵は代表①なので、変えたいときは «編集» で
   const panel = selEntry ? (
-    <>
+    <DetailSheet nav={nav} onClose={clear}>
       <NumDetailPanel
         d={selEntry}
         bookmarks={bookmarks}
         onToggleBm={onToggleBm}
+        onEdit={onEditWord ? () => onEditWord(selEntry.num) : undefined}
       />
-      <CandidatePicker
-        entry={selEntry}
-        current={selSlot}
-        onPick={(slot) => pick(selEntry.num, slot)}
-      />
-      <PanelClose onClick={() => setSel(null)} />
-    </>
+    </DetailSheet>
   ) : null
+
+  const repNote =
+    repState === 'loading'
+      ? '代表を読み込み中…'
+      : repState === 'error'
+        ? '代表を読めないので人の 1 番手で表示中'
+        : null
+
+  // 代表が確定していない番号の数 (タイル右上の印と同じ)
+  const unconfirmed = order.filter(
+    (num) => repStatusOf[num] && repStatusOf[num] !== 'confirmed'
+  ).length
 
   const dock = (
     <>
       {selEntry ? null : (
         <DockRow>
           <span class="dock-row-label ymap-hint">
-            {hint ?? '数字をタップで詳細・候補切替'}
+            {repNote ?? hint ?? '数字をタップで詳細 ・ 絵は代表①'}
           </span>
-          <button
-            class="filter-btn"
-            onClick={exportChoices}
-            disabled={pickCount === 0}
-          >
-            {copied ? 'コピー済' : `選択をエクスポート (${pickCount})`}
-          </button>
+          {repState === 'ready' ? (
+            <span class="ymap-rep-count">
+              {unconfirmed > 0 ? (
+                <>
+                  <span class="ymap-rep-dot" /> 未確定 {unconfirmed}
+                </>
+              ) : (
+                '代表すべて確定'
+              )}
+            </span>
+          ) : null}
         </DockRow>
       )}
       {controls}
@@ -207,7 +185,8 @@ function MapView({
             <MapTileView
               tile={unit.tile}
               selected={sel === unit.tile.num}
-              onSelect={() => setSel(unit.tile?.num ?? null)}
+              onSelect={() => unit.tile && toggle(unit.tile.num)}
+              rep={repStatusOf[unit.tile.num]}
             />
           ) : null}
         </div>

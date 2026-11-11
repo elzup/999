@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { candidatesOf, resolveSlot, candidateAt } from '../lib/choice'
+import {
+  candidatesOf,
+  resolveSlot,
+  candidateAt,
+  slotOfPick,
+} from '../lib/choice'
 import type { NumberEntry } from '../data/schema'
 
 const base = (over: Partial<NumberEntry>): NumberEntry => ({
@@ -50,7 +55,6 @@ describe('candidatesOf', () => {
 })
 
 describe('resolveSlot', () => {
-  // ymapPicks.json の既定に含まれない番号を使う (テストを既定から独立させる)
   const e = base({ num: '055', wh1: 'ナギ', wm1: '泣く' })
 
   it('override を最優先', () => {
@@ -75,5 +79,22 @@ describe('candidateAt', () => {
     const e = base({ wh1: 'ナギ', wm1: '泣く', wm1Img: 'b' })
     expect(candidateAt(e, 'wm1')).toMatchObject({ word: '泣く', img: 'b' })
     expect(candidateAt(e, null)).toBeNull()
+  })
+})
+
+describe('slotOfPick (マップのタイル = 代表①)', () => {
+  it('代表の読み + 語が当たる候補のスロットを返す', () => {
+    const e = base({ wh1: '鯉', wh1k: 'こい', wm1: '傘', wm1k: 'かさ' })
+    expect(slotOfPick(e, { k: 'かさ', w: '傘' })).toBe('wm1')
+  })
+
+  it('読みが変わっていても語が同じなら当てる', () => {
+    const e = base({ wh1: '鯉', wh1k: 'こい', wm1: '傘', wm1k: 'かさ' })
+    expect(slotOfPick(e, { k: 'さん', w: '傘' })).toBe('wm1')
+  })
+
+  it('語が消えていれば null (タイルは最初の候補に戻る)', () => {
+    const e = base({ wh1: '鯉', wh1k: 'こい' })
+    expect(slotOfPick(e, { k: 'かさ', w: '傘' })).toBeNull()
   })
 })

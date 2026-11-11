@@ -15,6 +15,8 @@ import { useReviewMarks, applyMarks } from '../lib/reviewMarks'
 import Numpad from './Numpad'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import type { ReviewItem } from './ReviewPanel'
+import { navAround, useSelection } from '../lib/useSelection'
+import DetailSheet from './DetailSheet'
 
 type Props = {
   numbers: NumberEntry[]
@@ -97,8 +99,8 @@ function D3CheckGrid({
               ? ' correct'
               : ' wrong'
             : i > checkIdx
-            ? ' pending'
-            : '')
+              ? ' pending'
+              : '')
         return (
           <div key={xyz} class={cls}>
             <span class="d3-check-xy">{xy}</span>
@@ -135,7 +137,7 @@ function D3CheckGrid({
 
 function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
   const [revealed, setRevealed] = useState<RevealState>({})
-  const [selected, setSelected] = useState<string | null>(null)
+  const { selected, select: setSelected } = useSelection<string>()
   const [viewMode, setViewMode] = useState<ViewMode>('group')
   const [mode, setMode] = useState<Mode>('view')
   const [order, setOrder] = useState<string[]>([])
@@ -294,6 +296,14 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
     setAnswers(answers.slice(0, -1))
   }, [answers])
 
+  // 前へ / 次へ は今の並び (順番 / 末尾グループ) で送る
+  const nav = useMemo(() => {
+    if (selected === null) return undefined
+    const order =
+      viewMode === 'seq' ? D3_LIST : Z_GROUPS.flatMap(([, items]) => items)
+    return navAround(order, selected, setSelected, (xyz) => xyz.slice(0, 2))
+  }, [selected, viewMode, setSelected])
+
   const selectedPrefixEntry = useMemo(() => {
     if (selected === null) return null
     const prefix = '0' + selected.slice(0, 2)
@@ -436,30 +446,23 @@ function D3Tab({ numbers, bookmarks, onToggleBm }: Props) {
       </>
     ) : null
 
+  // 見出しは «XY → Z» (年コードの答え)。カードは XY の 0XY 番
   const panel =
     selected !== null && selectedPrefixEntry ? (
-      <>
-        <div class="panel-head">
-          <span class="detail-id">{selected.slice(0, 2)}</span>
-          <span
-            style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            → {selected[2]}
-          </span>
-        </div>
-        <div class="d2-detail-list">
-          <NumDetailPanel
-            d={selectedPrefixEntry}
-            bookmarks={bookmarks}
-            onToggleBm={onToggleBm}
-            onClose={() => setSelected(null)}
-          />
-        </div>
-      </>
+      <DetailSheet
+        head={{
+          id: selected.slice(0, 2),
+          sub: <span class="d3-head-z">→ {selected[2]}</span>,
+        }}
+        nav={nav}
+        onClose={() => setSelected(null)}
+      >
+        <NumDetailPanel
+          d={selectedPrefixEntry}
+          bookmarks={bookmarks}
+          onToggleBm={onToggleBm}
+        />
+      </DetailSheet>
     ) : null
 
   // グリッドは下端 (親指側) から、凡例はその上
