@@ -49,6 +49,11 @@ export class RepSaveQueue {
     this.schedule(this.deps.delayMs ?? 300)
   }
 
+  /** この番号の変更がまだ保存されていない (待ち・送信中) */
+  has(num: string): boolean {
+    return this.queue.has(num) || this.inflight.has(num)
+  }
+
   /** 保存待ち・送信中の番号の数 */
   get pendingCount(): number {
     return new Set([...this.queue.keys(), ...this.inflight]).size

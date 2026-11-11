@@ -112,3 +112,15 @@ describe('applyOpLocally', () => {
     expect(cleared.ratings).toEqual([])
   })
 })
+
+describe('NumberOpQueue.seed (先読み)', () => {
+  it('持っていない番号だけ入れ、開いて読んだ文書は上書きしない', () => {
+    const { q } = setup()
+    q.seed([
+      { ...base('old'), num: '051' },
+      { ...base('t0'), num: '052' },
+    ])
+    expect(q.view('051')?.updatedAt).toBe('t0') // setup で読んだもの
+    expect(q.has('052')).toBe(true)
+  })
+})

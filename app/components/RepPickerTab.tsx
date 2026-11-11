@@ -13,6 +13,7 @@ import {
   type NumberDoc,
 } from '../lib/numberApi'
 import { RepSaveQueue, type RepChange, type SaveMark } from '../lib/repQueue'
+import { editorQueue } from '../lib/editorQueue'
 import {
   slotRows,
   withDeliveredImages,
@@ -152,7 +153,9 @@ function RepPickerTab({ token, numbers }: Props) {
         }),
       reload: (num) => fetchNumber(num, tokenRef.current),
       // 次の変更が待っているなら、画面の (楽観的な) 代表は残して時刻だけ進める
-      onSaved: (saved, again) =>
+      onSaved: (saved, again) => {
+        // 編集画面にも最新の文書を渡す (古い時刻のまま押して 409 にならないように)
+        if (!again) editorQueue().setBase(saved)
         setDocs((prev) =>
           prev.map((d) =>
             d.num !== saved.num
@@ -161,7 +164,8 @@ function RepPickerTab({ token, numbers }: Props) {
                 ? { ...d, updatedAt: saved.updatedAt }
                 : saved
           )
-        ),
+        )
+      },
       onMark: (num, mark) => {
         setMarks((cur) => ({ ...cur, [num]: mark }))
         // 緑は少し見せてから消す (確定の状態は番号の下の «代表確定» に残る)
@@ -183,15 +187,61 @@ function RepPickerTab({ token, numbers }: Props) {
   }
   const queue = queueRef.current
 
+  // 読んだ百の位は覚えておき、切り替えたらすぐ出して裏で読み直す。
+  // 隣の百の位も先読みして、切り替えで読み込みを待たないようにする
+  const hundredCache = useRef(new Map<string, NumberDoc[]>())
+  const docsRef = useRef(docs)
+  docsRef.current = docs
   useEffect(() => {
     if (!token) return
-    setLoading(true)
+    const cached = hundredCache.current.get(hundred)
+    setDocs(cached ?? [])
+    setLoading(!cached)
     setStatus('')
-    fetchHundred(Number(hundred), token)
-      .then((list) => setDocs(list.sort((a, b) => a.num.localeCompare(b.num))))
-      .catch((error) => setStatus(String(error.message)))
-      .finally(() => setLoading(false))
+    let alive = true
+    const read = (h: string) =>
+      fetchHundred(Number(h), token).then((list) =>
+        list.sort((a, b) => a.num.localeCompare(b.num))
+      )
+    read(hundred)
+      .then((fresh) => {
+        if (!alive) return
+        // まだ保存されていない番号は、画面の (押した後の) 値を残す
+        const merged = fresh.map((doc) =>
+          queue.has(doc.num)
+            ? (docsRef.current.find((d) => d.num === doc.num) ?? doc)
+            : doc
+        )
+        hundredCache.current.set(hundred, merged)
+        editorQueue().seed(fresh)
+        setDocs(merged)
+        // 隣の百の位を先読み (覚えていないものだけ)
+        for (const next of [Number(hundred) + 1, Number(hundred) - 1]) {
+          const h = String((next + 10) % 10)
+          if (hundredCache.current.has(h)) continue
+          read(h)
+            .then((list) => {
+              if (!hundredCache.current.has(h)) {
+                hundredCache.current.set(h, list)
+                editorQueue().seed(list)
+              }
+            })
+            .catch(() => {})
+        }
+      })
+      .catch((error) => alive && setStatus(String(error.message)))
+      .finally(() => alive && setLoading(false))
+    return () => {
+      alive = false
+    }
   }, [hundred, token])
+
+  // 押した変更も覚えておく (百の位を行き来しても押した後の値が出る)
+  useEffect(() => {
+    if (docs.length && docs[0].num[0] === hundred) {
+      hundredCache.current.set(hundred, docs)
+    }
+  }, [docs, hundred])
 
   const entries = useMemo(
     () => new Map(numbers.map((entry) => [entry.num, entry])),

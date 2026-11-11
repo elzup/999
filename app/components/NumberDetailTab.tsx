@@ -6,7 +6,12 @@
 // 操作を 1 番号ぶんの 1 画面に集める。読み書きは numbers/{num} だけを見る。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { fetchNumber, patchNumber, type PatchOp } from '../lib/numberApi'
+import {
+  fetchHundred,
+  fetchNumber,
+  patchNumber,
+  type PatchOp,
+} from '../lib/numberApi'
 import {
   applyDraftEdit,
   carryOverOps,
@@ -46,7 +51,8 @@ import {
   suggestTags,
   type TagSuggestion,
 } from '../lib/wordTags'
-import { NumberOpQueue } from '../lib/opQueue'
+import type { NumberOpQueue } from '../lib/opQueue'
+import { editorQueue, listenEditorQueue } from '../lib/editorQueue'
 import type { SaveMark } from '../lib/repQueue'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
@@ -64,6 +70,16 @@ const RATING_LABEL: Record<number, string> = {
 /** dock の上に出す知らせ。failed なら失敗の理由 (次の操作まで残す) */
 type Note = { status: string; failed?: boolean }
 const EMPTY_NOTE: Note = { status: '' }
+
+/** 先読み済みの百の位。同じ百を何度も読まない (失敗したら次の機会に読み直す) */
+const prefetched = new Set<number>()
+function prefetchHundred(queue: NumberOpQueue, hundred: number, token: string) {
+  if (prefetched.has(hundred)) return
+  prefetched.add(hundred)
+  fetchHundred(hundred, token)
+    .then((docs) => queue.seed(docs))
+    .catch(() => prefetched.delete(hundred))
+}
 
 /** 保存状態の class (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
 const saveClass = (mark?: SaveMark) => (mark ? ' save-' + mark : '')
@@ -95,30 +111,25 @@ export default function NumberDetailTab({
   // 別の番号へ移す操作だけは、移動先・移動元の 2 番号にまたがるので終わるまで待つ
   const [moveBusy, setMoveBusy] = useState(false)
   // 保存は待たせない: 押した瞬間に画面へ出し (黄)、裏で順に送る (緑)。
-  // 送っている間も他のボタンは押せる (NumberOpQueue)
+  // 送っている間も他のボタンは押せる。キューはアプリで 1 つ (閉じて開き直しても
+  // 読んだ文書と保存待ちが残る)
   const [, bump] = useState(0)
-  const tokenRef = useRef(token)
-  tokenRef.current = token
-  const queueRef = useRef<NumberOpQueue | null>(null)
-  if (!queueRef.current) {
-    queueRef.current = new NumberOpQueue({
-      send: (target, op, expectedUpdatedAt) =>
-        patchNumber({
-          num: target,
-          token: tokenRef.current,
-          op,
-          // 読んだ時点を添える。ここが古ければサーバが 409 で止める
-          expectedUpdatedAt,
-        }),
-      reload: (target) => fetchNumber(target, tokenRef.current),
-      onChange: () => bump((v) => v + 1),
-      onSettled: (_target, message) =>
-        setNote({ status: message ?? '保存しました' }),
-      onError: (target, message) =>
-        setNote({ status: `${target}: ${message}`, failed: true }),
-    })
-  }
-  const queue = queueRef.current
+  const queue = editorQueue()
+  const numRef = useRef(num)
+  numRef.current = num
+  useEffect(
+    () =>
+      listenEditorQueue({
+        onChange: () => bump((v) => v + 1),
+        onSettled: (target, message) => {
+          if (target === numRef.current)
+            setNote({ status: message ?? '保存しました' })
+        },
+        onError: (target, message) =>
+          setNote({ status: `${target}: ${message}`, failed: true }),
+      }),
+    []
+  )
   const [loading, setLoading] = useState(false)
   // 未保存の編集内容。保存に成功したら doc 側に取り込むので、ここは空に戻る
   const [drafts, setDrafts] = useState<Record<string, SlotRow>>({})
@@ -135,16 +146,23 @@ export default function NumberDetailTab({
     [numbers]
   )
 
+  /**
+   * 番号を開く。読んだことのある番号 (先読み済みを含む) はすぐ出して裏で読み直す。
+   * 初めての番号だけ読み込みを待つ。開いたら同じ百の位をまとめて先読みして、
+   * − ＋ で隣へ送ったときに待たないようにする
+   */
   const load = useCallback(
     (target: string) => {
       if (!token) return
-      setLoading(true)
+      const cached = queue.has(target)
+      if (!cached) setLoading(true)
       setDrafts({})
       setMoving(null)
+      prefetchHundred(queue, Number(target[0]), token)
       fetchNumber(target, token)
         .then((doc) => {
           queue.setBase(doc)
-          setNote(EMPTY_NOTE)
+          if (!cached) setNote(EMPTY_NOTE)
         })
         .catch((error) =>
           setNote({ status: String(error.message), failed: true })

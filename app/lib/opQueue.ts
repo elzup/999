@@ -63,6 +63,24 @@ export class NumberOpQueue {
     this.deps.onChange()
   }
 
+  /**
+   * 先読みした文書 (百の位ぶんなど) を入れる。まだ持っていない番号だけ。
+   * 持っている番号は、画面で開いたときに読み直す (setBase) ので上書きしない
+   */
+  seed(docs: NumberDoc[]) {
+    let changed = false
+    for (const doc of docs) {
+      if (this.base.has(doc.num)) continue
+      this.base.set(doc.num, doc)
+      changed = true
+    }
+    if (changed) this.deps.onChange()
+  }
+
+  has(num: string): boolean {
+    return this.base.has(num)
+  }
+
   /** 画面に出す文書 = サーバの最後の文書 + まだ送っていない操作 */
   view(num: string): NumberDoc | null {
     const base = this.base.get(num)
