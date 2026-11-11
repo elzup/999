@@ -5,7 +5,7 @@ import { livePicks, nameOf, repStatus, type RepStatus } from './numberDetail'
 import { slotOfPick, type Slot } from './choice'
 import { loadEditorToken } from './editorAuth'
 import { useNumberContext } from './numberContext'
-import { editorQueue } from './editorQueue'
+import { writeQueue } from './writeQueue'
 
 export type RepSlotsState = 'loading' | 'ready' | 'error'
 
@@ -27,7 +27,7 @@ function loadHundred(hundred: number, version: number): Promise<NumberDoc[]> {
   if (!hit) {
     hit = fetchHundred(hundred, token)
     // 編集画面にも渡しておく (詳細カードから «編集» を開いたとき待たない)
-    hit.then((docs) => editorQueue().seed(docs)).catch(() => {})
+    hit.then((docs) => writeQueue().seed(docs)).catch(() => {})
     // 失敗は覚えない (次に開いたとき読み直す)
     hit.catch(() => cache.delete(key))
     cache.set(key, hit)

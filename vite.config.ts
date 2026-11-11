@@ -68,7 +68,8 @@ export default defineConfig({
     devPrivateApi(),
     preact(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 更新の当て方は main.tsx が決める (保存待ちを送り終えてから入れ替える)
+      registerType: 'prompt',
       includeAssets: [
         'favicon.ico',
         'apple-touch-icon.png',

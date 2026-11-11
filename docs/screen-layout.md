@@ -46,6 +46,7 @@
 - Detail Panel の ★ / 編集 は NumDetailPanel が自分で出す (NumberContext から取る)。
   呼び出し側で `bookmarks` / `onToggleBm` / `onEdit` を渡す必要は無い (挙動を変えたいときだけ渡す)。
 - 詳細パネルは **`DetailSheet` (app/components/DetailSheet.tsx) だけで組む**。画面側で枠を手書きしない。
+
   ```
   ┌ 見出し (任意: 年コード «12 → 3» / 2桁 «12_ 10件»)
   ├ カード (NumDetailPanel / CardDetailPanel。操作は ★ / 編集 だけ)
@@ -59,9 +60,22 @@
     画面ごとに `useState` で書かない (再タップや戻るの挙動が画面で食い違った)。
   - 該当画面: 数字 (全体 / 2桁 / マップ)、日付、カード、π、年号、曜日 (年コード / 年マップ)、
     ブックマーク、各テストの結果 (ReviewPanel の行タップ)。
+
 - 一覧のマス (番号 `NumCell`・カード `CardCell`) は app/components/Cells.tsx の 1 つを使う。
 - マップのタイルの絵は **代表①** (編集画面で選ぶもの)。マップ専用の選択は持たない。
   000〜099 のマップは年マップと同じ配置を使う。
 - ボトムシート (RecordPanel / ReviewPanel) は見出しと 閉じる を **シートの最下段** に置く。
 - サブタブは `SubTabGroup` を使う。`.sub-tab-switch` を自前で書かない。
 - root にインラインの `display:flex; flexDirection:column; flex:1; …` を書かない (`Screen` が持つ)。
+
+## 保存は待たせない (writeQueue)
+
+番号への書き込み (代表・評価・候補・画像・別の番号へ移す) は、すべてアプリで 1 本の
+保存キュー (`app/lib/writeQueue.ts` / `opQueue.ts`) に積む。画面から直接 `patchNumber` を呼ばない。
+
+- 押した瞬間に積んで画面へ反映し、黄 (保存待ち) にする。**保存中でもボタンを disabled にしない**
+- 画面に出す文書は `writeQueue().view(num)` (サーバの最後の文書 + まだ送っていない操作)
+- 圏外・タイムアウト・5xx では捨てない。黄のまま送り直す (オンラインに戻ったらすぐ)
+- キューは localStorage にも残し、閉じても続きから送る
+- 赤 (失敗) は送り直しても通らないもの (409 衝突・4xx) だけ。読み直して実際の値に戻す
+- PWA の更新は、保存待ちを送り終えてから入れ替える (`main.tsx`)
