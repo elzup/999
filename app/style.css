@@ -516,10 +516,20 @@ body {
 .word-line {
   cursor: pointer;
 }
-.word-line ruby {
-  ruby-position: over;
+/* ruby だとヨミが語より長いとき語の字間が広がる (空 海) ので、語の真上に重ねて置く。
+   語の行は 36px あり、語の上に 1 行ぶんの余白があるので行の高さは変わらない */
+.yomi-host {
+  position: relative;
+  display: inline-block;
 }
 .word-line .yomi {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: -1px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
   font-size: 9.5px;
   font-weight: normal;
   font-style: normal;
@@ -6260,4 +6270,82 @@ button.activate-link {
   margin: 0;
   font-size: 12px;
   color: var(--text2);
+}
+
+/* 代表タブの «カード» 表示 (RepCard)。詳細カードと同じ中身を縦に並べ、
+   語の行をタップで ①②、カード下の «確定» で 1 件ずつ確定していく */
+.rp-cards {
+  padding: 4px 0;
+}
+.rep-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+/* 確定済みは一段沈めて、未確定が目に入るようにする */
+.rep-card.confirmed {
+  opacity: 0.6;
+}
+.rep-card.stale {
+  border-color: var(--warn);
+}
+.rep-line {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.word-line.rep-line + .word-line.rep-line {
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+.rep-line[aria-pressed='true'] .detail-main-word {
+  color: var(--text);
+}
+.rep-line:disabled {
+  cursor: progress;
+}
+/* 代表が空のとき、確定で入る既定の ①② (薄く) */
+.wl-rep.ghost {
+  color: var(--text2);
+  opacity: 0.45;
+}
+.detail-act.act-confirm {
+  flex-grow: 4;
+  color: var(--bg);
+  font-weight: bold;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.rep-card.confirmed .detail-act.act-confirm {
+  color: var(--text2);
+  background: var(--surface2);
+  border-color: var(--border);
+}
+.rep-card-note {
+  flex: 4 1 0;
+  align-self: center;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--warn);
+}
+.rp-views {
+  display: flex;
+  gap: 4px;
+}
+.rp-bulk {
+  flex: 1;
+}
+.rp-bulk.armed {
+  color: var(--bg);
+  background: var(--warn);
+  border-color: var(--warn);
+  font-weight: bold;
+}
+.rp-bulk-note {
+  flex-shrink: 0;
+  color: var(--warn);
 }

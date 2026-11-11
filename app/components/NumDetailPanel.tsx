@@ -211,10 +211,10 @@ function NumDetailPanel(props: Props) {
               {/* ヨミはフリガナの位置。普段は見せずに場所だけ取っておき、
                   タップで出す (出し入れで行の高さ・幅が変わらない) */}
               <span class={'detail-main-word' + (row.dim ? ' dim' : '')}>
-                <ruby>
+                <span class="yomi-host">
                   <TaggedWord word={row.word} />
-                  <rt class="yomi">{row.kana ?? ''}</rt>
-                </ruby>
+                  <span class="yomi">{row.kana ?? ''}</span>
+                </span>
               </span>
               {repRankOf(rep, row.word) ? (
                 <span
