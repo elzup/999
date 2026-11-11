@@ -6398,3 +6398,28 @@ button.activate-link {
 .rp-save.error {
   color: var(--bad);
 }
+
+/* 編集画面の保存状態 (NumberOpQueue)。押した所が黄 → 保存できたら緑、失敗は赤。
+   保存中も押せなくはしない */
+.nd-rep.save-pending,
+.nd-rank-group.save-pending,
+.nd-rate.save-pending {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.nd-rep.save-saved,
+.nd-rank-group.save-saved,
+.nd-rate.save-saved {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--accent);
+  transition: box-shadow 0.4s;
+}
+.nd-rep.save-error,
+.nd-rank-group.save-error,
+.nd-rate.save-error {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--bad);
+}
+.nd-status.pending {
+  color: var(--warn);
+}
