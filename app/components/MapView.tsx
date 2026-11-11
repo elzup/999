@@ -10,6 +10,7 @@ import {
 } from '../lib/yearMap'
 import type { Slot } from '../lib/choice'
 import { useRepSlots } from '../lib/useRepSlots'
+import { REP_STATUS_LABEL, type RepStatus } from '../lib/numberDetail'
 import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockRow } from './Screen'
 import { useSelection } from '../lib/useSelection'
@@ -44,17 +45,25 @@ function MapTileView({
   tile,
   selected,
   onSelect,
+  rep,
 }: {
   tile: MapTile
   selected: boolean
   onSelect: () => void
+  /** 代表の確定状態。確定していないタイルだけ右上に印を付ける */
+  rep?: RepStatus
 }) {
   return (
     <button
       class={'ymap-tile' + (selected ? ' sel' : '')}
-      title={`${tile.xy} → ${tile.num}${tile.word ? ' ' + tile.word : ''}`}
+      title={`${tile.xy} → ${tile.num}${tile.word ? ' ' + tile.word : ''}${
+        rep && rep !== 'confirmed' ? ' (' + REP_STATUS_LABEL[rep] + ')' : ''
+      }`}
       onClick={onSelect}
     >
+      {rep && rep !== 'confirmed' ? (
+        <span class={'ymap-tile-rep ' + rep} aria-hidden="true" />
+      ) : null}
       {tile.img ? (
         <img class="ymap-tile-img" loading="lazy" src={tile.img} alt="" />
       ) : (
@@ -75,7 +84,11 @@ function MapView({
   onEditWord,
   hundred,
 }: Props) {
-  const { slots: repSlots, state: repState } = useRepSlots(hundred, numbers)
+  const {
+    slots: repSlots,
+    status: repStatusOf,
+    state: repState,
+  } = useRepSlots(hundred, numbers)
   const { cells, bounds } = useMemo(() => build(repSlots), [build, repSlots])
 
   const units = useMemo(() => buildUnits(cells), [cells])
@@ -115,6 +128,11 @@ function MapView({
         ? '代表を読めないので人の 1 番手で表示中'
         : null
 
+  // 代表が確定していない番号の数 (タイル右上の印と同じ)
+  const unconfirmed = order.filter(
+    (num) => repStatusOf[num] && repStatusOf[num] !== 'confirmed'
+  ).length
+
   const dock = (
     <>
       {selEntry ? null : (
@@ -122,6 +140,17 @@ function MapView({
           <span class="dock-row-label ymap-hint">
             {repNote ?? hint ?? '数字をタップで詳細 ・ 絵は代表①'}
           </span>
+          {repState === 'ready' ? (
+            <span class="ymap-rep-count">
+              {unconfirmed > 0 ? (
+                <>
+                  <span class="ymap-rep-dot" /> 未確定 {unconfirmed}
+                </>
+              ) : (
+                '代表すべて確定'
+              )}
+            </span>
+          ) : null}
         </DockRow>
       )}
       {controls}
@@ -157,6 +186,7 @@ function MapView({
               tile={unit.tile}
               selected={sel === unit.tile.num}
               onSelect={() => unit.tile && toggle(unit.tile.num)}
+              rep={repStatusOf[unit.tile.num]}
             />
           ) : null}
         </div>

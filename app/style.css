@@ -452,6 +452,41 @@ body {
 .detail-extras .detail-chip .dc-label {
   font-weight: bold;
 }
+/* 代表の確定状態 (番号の下)。編集画面の代表欄 (.nd-rep-state) と同じ色分け:
+   確定 = 緑で塗る / 未確定 = 点線 / 要再確認 = 黄。ぱっと見で «確定済みか» が分かるように */
+.detail-rep {
+  margin-top: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: var(--text2);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+}
+.detail-rep.confirmed {
+  color: var(--bg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+}
+.detail-rep.stale {
+  color: var(--warn);
+  border: 1px solid var(--warn);
+}
+/* 代表に選ばれている語の ①② (語の行の右、rankey の手前) */
+.wl-rep {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1;
+  color: var(--text2);
+}
+.wl-rep.confirmed {
+  color: var(--accent);
+}
+.wl-rep.stale {
+  color: var(--warn);
+}
 /* タグ・ラベル付きの語 (TaggedWord)。右肩に 1 文字、
    概念 (#g) は斜体、馴染みがない (-n) は点線下線 */
 .tw-concept {
@@ -3667,6 +3702,37 @@ body {
   width: 100%;
   height: 100%;
   background: var(--surface2, #22262f);
+}
+/* 代表が未確定のタイル: 右上の点 (要再確認は黄)。左上はグループ名と重なる */
+.ymap-tile-rep {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.ymap-tile-rep.stale {
+  background: var(--warn);
+}
+.ymap-rep-count {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.ymap-rep-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid #fff;
 }
 .ymap-tile-num {
   position: absolute;

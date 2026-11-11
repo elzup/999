@@ -10,11 +10,12 @@ import Rankey from './Rankey'
 import { IconEdit } from './Icons'
 import { BookmarkButton } from './Screen'
 import { parseTaggedItems } from '../lib/tags'
-import { nameOf } from '../lib/numberDetail'
+import { nameOf, REP_STATUS_LABEL } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
+import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 
 type Props = {
   d: NumberEntry
@@ -130,6 +131,8 @@ function NumDetailPanel(props: Props) {
   const bmKey = 'n:' + d.num
   const isBm = bookmarks ? bookmarks.has(bmKey) : false
   const rows = wordRows(d)
+  // 代表①② と確定状態 (編集画面で選ぶもの)。読めるまでは出さない
+  const rep = useRepInfo(d.num)
   // 語の行にはタグ込みの語 (鯉#g) がそのまま出ている。同じものを
   // タグ行にもう一度出すと、1 枚のカードに同じ語が 2 回並ぶ
   const shownNames = new Set(rows.map((row) => nameOf(row.word)))
@@ -172,8 +175,14 @@ function NumDetailPanel(props: Props) {
   return (
     <div class="detail-panel">
       <div class="detail-row1">
+        {/* 番号の下に代表の確定状態。編集画面の代表欄と同じ文言・色 */}
         <div class="detail-idcol">
           <span class="detail-id">{d.num}</span>
+          {rep ? (
+            <span class={'detail-rep ' + rep.status}>
+              {REP_STATUS_LABEL[rep.status]}
+            </span>
+          ) : null}
         </div>
 
         <div class="word-list">
@@ -207,6 +216,14 @@ function NumDetailPanel(props: Props) {
                   <rt class="yomi">{row.kana ?? ''}</rt>
                 </ruby>
               </span>
+              {repRankOf(rep, row.word) ? (
+                <span
+                  class={'wl-rep ' + (rep?.status ?? '')}
+                  title={`代表${repRankOf(rep, row.word) === 1 ? '①' : '②'}`}
+                >
+                  {repRankOf(rep, row.word) === 1 ? '①' : '②'}
+                </span>
+              ) : null}
               {/* 出すのは rankey だけ。スコアのチップ (min-width 120px) を
                   行に置くと縮む余地が無くなり、横スクロールが出ていた */}
               {row.rk ? (
