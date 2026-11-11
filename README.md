@@ -57,7 +57,7 @@ nr sync:all
   └ build:data   visualize-words.data.json と private/data.json を再生成
 ```
 
-本番へ出すのは別で `nr deploy`。
+本番への出し方 (デプロイ・CI・アプリの更新の流れ) は [docs/deploy.md](docs/deploy.md)。
 
 > ⚠️ **`nr push` は `sync:all` に含めません。** `push` は 999 タブを clear → 全上書き
 > するため、`words.tsv` に無い列（`check` / `rankey` / スロット 4 以降 / 手動列）が
