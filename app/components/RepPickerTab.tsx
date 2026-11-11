@@ -151,7 +151,16 @@ function RepPickerTab({ token, numbers }: Props) {
     () => new Map(numbers.map((entry) => [entry.num, entry])),
     [numbers]
   )
-  const visible = docs.filter((doc) => matchesFilter(doc, filter))
+  // この絞り込みのあいだに触った番号。«選ぶ = 確定» なので、未確定で絞っていると
+  // ① を選んだ瞬間にカードが消え、② を選べなかった。絞り込みや百の位を
+  // 変えるまでは残す (一覧が詰まってガタつくのも防ぐ)
+  const [kept, setKept] = useState<Set<string>>(new Set())
+  useEffect(() => setKept(new Set()), [filter, hundred])
+  const keep = (num: string) =>
+    setKept((cur) => (cur.has(num) ? cur : new Set(cur).add(num)))
+  const isVisible = (doc: NumberDoc) =>
+    matchesFilter(doc, filter) || kept.has(doc.num)
+  const visible = docs.filter(isVisible)
   const progress = decadeProgress(docs)
   const doneCount = docs.filter((doc) => doc.rep?.confirmed).length
 
@@ -180,6 +189,7 @@ function RepPickerTab({ token, numbers }: Props) {
     async (doc: NumberDoc, slot: string) => {
       if (saving) return
       const picks = togglePick(doc, slot)
+      keep(doc.num)
       setSaving(doc.num)
       setStatus('')
       await sendRep(doc, picks, picks.length > 0)
@@ -193,12 +203,13 @@ function RepPickerTab({ token, numbers }: Props) {
     async (doc: NumberDoc) => {
       const op = confirmOp(doc)
       if (!op || saving) return
+      keep(doc.num)
       setSaving(doc.num)
       setStatus('')
       const ok = await sendRep(doc, op.picks, true)
       setSaving(null)
       if (!ok) return
-      const order = docs.filter((d) => matchesFilter(d, filter))
+      const order = docs.filter(isVisible)
       const after = order.slice(order.findIndex((d) => d.num === doc.num) + 1)
       const next = after.find((d) => confirmOp(d) !== null)
       if (next) {
@@ -207,7 +218,7 @@ function RepPickerTab({ token, numbers }: Props) {
           ?.scrollIntoView({ block: 'end', behavior: 'smooth' })
       }
     },
-    [docs, filter, saving, sendRep]
+    [docs, filter, kept, saving, sendRep]
   )
 
   const chooseHundred = (next: string) => {
