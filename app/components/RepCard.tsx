@@ -17,7 +17,7 @@ import { confirmOp, defaultPickSlots } from '../lib/repPicker'
 import Rankey from './Rankey'
 import TaggedWord from './TaggedWord'
 import { IconEdit } from './Icons'
-import type { SaveMark } from '../lib/repQueue'
+import type { SaveMark } from '../lib/opQueue'
 
 const MARK = ['', '①', '②']
 const SAVE_LABEL: Record<SaveMark, string> = {

@@ -6,7 +6,7 @@
 // 操作を 1 番号ぶんの 1 画面に集める。読み書きは numbers/{num} だけを見る。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { fetchNumber, patchNumber, type PatchOp } from '../lib/numberApi'
+import { fetchHundred, fetchNumber, type PatchOp } from '../lib/numberApi'
 import {
   applyDraftEdit,
   carryOverOps,
@@ -17,7 +17,6 @@ import {
   mergeDraftRows,
   moveItem,
   nextRatingValue,
-  planMove,
   RATING_VALUES,
   REP_STATUS_LABEL,
   repStatus,
@@ -46,8 +45,9 @@ import {
   suggestTags,
   type TagSuggestion,
 } from '../lib/wordTags'
-import { NumberOpQueue } from '../lib/opQueue'
-import type { SaveMark } from '../lib/repQueue'
+import type { NumberOpQueue } from '../lib/opQueue'
+import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
+import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
 
@@ -64,6 +64,16 @@ const RATING_LABEL: Record<number, string> = {
 /** dock の上に出す知らせ。failed なら失敗の理由 (次の操作まで残す) */
 type Note = { status: string; failed?: boolean }
 const EMPTY_NOTE: Note = { status: '' }
+
+/** 先読み済みの百の位。同じ百を何度も読まない (失敗したら次の機会に読み直す) */
+const prefetched = new Set<number>()
+function prefetchHundred(queue: NumberOpQueue, hundred: number, token: string) {
+  if (prefetched.has(hundred)) return
+  prefetched.add(hundred)
+  fetchHundred(hundred, token)
+    .then((docs) => queue.seed(docs))
+    .catch(() => prefetched.delete(hundred))
+}
 
 /** 保存状態の class (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
 const saveClass = (mark?: SaveMark) => (mark ? ' save-' + mark : '')
@@ -92,33 +102,26 @@ export default function NumberDetailTab({
   const [num, setNum] = useState(initialNum)
   const [jump, setJump] = useState(initialNum)
   const [note, setNote] = useState<Note>(EMPTY_NOTE)
-  // 別の番号へ移す操作だけは、移動先・移動元の 2 番号にまたがるので終わるまで待つ
-  const [moveBusy, setMoveBusy] = useState(false)
   // 保存は待たせない: 押した瞬間に画面へ出し (黄)、裏で順に送る (緑)。
-  // 送っている間も他のボタンは押せる (NumberOpQueue)
+  // 送っている間も他のボタンは押せる。キューはアプリで 1 つ (閉じて開き直しても
+  // 読んだ文書と保存待ちが残る)
   const [, bump] = useState(0)
-  const tokenRef = useRef(token)
-  tokenRef.current = token
-  const queueRef = useRef<NumberOpQueue | null>(null)
-  if (!queueRef.current) {
-    queueRef.current = new NumberOpQueue({
-      send: (target, op, expectedUpdatedAt) =>
-        patchNumber({
-          num: target,
-          token: tokenRef.current,
-          op,
-          // 読んだ時点を添える。ここが古ければサーバが 409 で止める
-          expectedUpdatedAt,
-        }),
-      reload: (target) => fetchNumber(target, tokenRef.current),
-      onChange: () => bump((v) => v + 1),
-      onSettled: (_target, message) =>
-        setNote({ status: message ?? '保存しました' }),
-      onError: (target, message) =>
-        setNote({ status: `${target}: ${message}`, failed: true }),
-    })
-  }
-  const queue = queueRef.current
+  const queue = writeQueue()
+  const numRef = useRef(num)
+  numRef.current = num
+  useEffect(
+    () =>
+      listenWriteQueue({
+        onChange: () => bump((v) => v + 1),
+        onSettled: (target, message) => {
+          if (target === numRef.current)
+            setNote({ status: message ?? '保存しました' })
+        },
+        onError: (target, message) =>
+          setNote({ status: `${target}: ${message}`, failed: true }),
+      }),
+    []
+  )
   const [loading, setLoading] = useState(false)
   // 未保存の編集内容。保存に成功したら doc 側に取り込むので、ここは空に戻る
   const [drafts, setDrafts] = useState<Record<string, SlotRow>>({})
@@ -135,16 +138,23 @@ export default function NumberDetailTab({
     [numbers]
   )
 
+  /**
+   * 番号を開く。読んだことのある番号 (先読み済みを含む) はすぐ出して裏で読み直す。
+   * 初めての番号だけ読み込みを待つ。開いたら同じ百の位をまとめて先読みして、
+   * − ＋ で隣へ送ったときに待たないようにする
+   */
   const load = useCallback(
     (target: string) => {
       if (!token) return
-      setLoading(true)
+      const cached = queue.has(target)
+      if (!cached) setLoading(true)
       setDrafts({})
       setMoving(null)
+      prefetchHundred(queue, Number(target[0]), token)
       fetchNumber(target, token)
         .then((doc) => {
           queue.setBase(doc)
-          setNote(EMPTY_NOTE)
+          if (!cached) setNote(EMPTY_NOTE)
         })
         .catch((error) =>
           setNote({ status: String(error.message), failed: true })
@@ -196,7 +206,7 @@ export default function NumberDetailTab({
     : note.failed
       ? note.status
       : pendingCount
-        ? `保存待ち ${pendingCount}`
+        ? `保存待ち ${pendingCount}${queue.retrying ? ' ・通信待ち (つながったら送ります)' : ''}`
         : note.status
   const changed = doc ? changedSlots(doc, drafts) : []
   const dirty = changed.length > 0
@@ -252,72 +262,28 @@ export default function NumberDetailTab({
    * の順に送る (途中で落ちても語は消えない)。未保存の編集があると移動元の最終形が
    * 決まらないので、先に保存してもらう
    */
-  const moveWord = async (row: SlotRow, to: string) => {
-    if (!doc || moveBusy) return
-    if (dirty || queue.pendingCount(doc.num)) {
+  /**
+   * 語を別の番号へ付け替える。これもキューに積むだけで待たない: 移動元からはすぐ消えて
+   * 黄になり、前に積んだ保存のあとに «移動先に足す → 移動元から抜く» の順で送られる
+   * (途中で通信が切れても、済んだ段から続ける)。
+   * この候補自体に未保存の書き換えがあると、どちらを移すか決まらないので先に保存してもらう
+   */
+  const moveWord = (row: SlotRow, to: string) => {
+    if (!doc) return
+    if (changed.includes(row.slot)) {
       setNote({
-        status: dirty
-          ? '未保存の変更を先に保存してください'
-          : '保存待ちが終わってから移せます',
+        status: 'この候補の変更を先に保存してください',
         failed: true,
       })
       return
     }
-    setMoveBusy(true)
+    setMoving(null)
     setNote(EMPTY_NOTE)
-    let added = false
-    try {
-      const target = await fetchNumber(to, token).catch((error) => {
-        throw error instanceof Error && error.message === 'not_found'
-          ? new Error(`${to} が見つかりません`)
-          : error
-      })
-      const plan = planMove(doc, row, target)
-      if (!plan.ok) throw new Error(plan.error)
-
-      const saved = await patchNumber({
-        num: to,
-        token,
-        op: { op: 'slots', slots: plan.targetSlots },
-        expectedUpdatedAt: target.updatedAt ?? null,
-      })
-      added = true
-      if (plan.rating) {
-        await patchNumber({
-          num: to,
-          token,
-          op: { op: 'rating', ...plan.rating },
-          expectedUpdatedAt: saved.updatedAt ?? null,
-        })
-      }
-      let source = await patchNumber({
-        num: doc.num,
-        token,
-        op: { op: 'slots', slots: plan.sourceSlots },
-        expectedUpdatedAt: doc.updatedAt ?? null,
-      })
-      if (plan.sourceRep) {
-        source = await patchNumber({
-          num: doc.num,
-          token,
-          op: { op: 'rep', ...plan.sourceRep },
-          expectedUpdatedAt: source.updatedAt ?? null,
-        })
-      }
-      setMoving(null)
-      queue.setBase(source)
-      setNote({ status: `「${row.word}」を ${to} に移しました` })
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
-      setNote({
-        status: added
-          ? `${to} には追加済み。${doc.num} から外せませんでした (${reason})。↻ で読み直してください`
-          : reason,
-        failed: true,
-      })
-    } finally {
-      setMoveBusy(false)
-    }
+    queue.enqueueMove(
+      doc.num,
+      { row: { slot: row.slot, imageUrl: row.imageUrl }, to },
+      `「${row.word}」を ${to} に移しました`
+    )
   }
 
   const addRow = useCallback(
@@ -359,7 +325,6 @@ export default function NumberDetailTab({
           }
           onMove={(to) => moveWord(row, to)}
           focused={row.slot === focusSlot}
-          moveBusy={moveBusy}
           repMark={queue.mark(doc.num, 'rep')}
           rateMark={queue.mark(doc.num, `rating:${row.kana}|${row.word}`)}
           isSaved={Boolean(doc.slots?.[row.slot])}
@@ -556,7 +521,6 @@ function SlotCard({
   onToggleMove,
   onMove,
   focused,
-  moveBusy,
   repMark,
   rateMark,
   isSaved,
@@ -580,8 +544,6 @@ function SlotCard({
   onToggleMove: () => void
   onMove: (to: string) => void
   focused: boolean
-  /** 別の番号へ移している最中 (移す操作だけは 2 番号にまたがるので待つ) */
-  moveBusy: boolean
   /** 保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)。押せなくはしない */
   repMark?: SaveMark
   rateMark?: SaveMark
@@ -607,7 +569,7 @@ function SlotCard({
     : null
   const suspicious =
     check?.status === 'mismatch' || check?.status === 'unreadable'
-  const canMove = !pending && !moveBusy
+  const canMove = !pending
   return (
     <li
       class={
@@ -700,7 +662,6 @@ function SlotCard({
           num={num}
           kana={row.kana}
           tables={tables}
-          saving={moveBusy}
           onMove={onMove}
           onCancel={onToggleMove}
         />
@@ -764,14 +725,12 @@ function MovePanel({
   num,
   kana,
   tables,
-  saving,
   onMove,
   onCancel,
 }: {
   num: string
   kana: string
   tables: ReadingTables | null
-  saving: boolean
   onMove: (to: string) => void
   onCancel: () => void
 }) {
@@ -797,11 +756,7 @@ function MovePanel({
             setTo(event.currentTarget.value.replace(/\D/g, '').slice(0, 3))
           }
         />
-        <button
-          class="nd-save"
-          disabled={saving || !valid}
-          onClick={() => onMove(to)}
-        >
+        <button class="nd-save" disabled={!valid} onClick={() => onMove(to)}>
           移す
         </button>
         <button class="nd-ghost" onClick={onCancel}>

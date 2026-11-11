@@ -34,6 +34,40 @@ export type PatchOp =
   | { op: 'slots'; slots: Record<string, NumberSlot> }
   | { op: 'image'; slot: string; imageUrl: string }
 
+/**
+ * API の失敗。retryable は «送り直せば通りうる» (圏外・タイムアウト・サーバ側の 5xx)。
+ * 保存キューは retryable なら捨てずに積んだまま送り直し、そうでなければ (409 衝突・
+ * 4xx の形の誤り) 赤にして読み直す。
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly retryable: boolean
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+export const isRetryable = (error: unknown) =>
+  !(error instanceof ApiError) || error.retryable
+
+// 通信が返ってこないまま止まらないよう、この時間で切って «送り直す» 側に倒す
+const TIMEOUT_MS = 15_000
+
+async function request(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } catch {
+    throw new ApiError('通信できません (圏外・タイムアウト)', 0, true)
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 async function readJson(res: Response) {
   return res.json().catch(() => null)
 }
@@ -46,25 +80,32 @@ async function readJson(res: Response) {
  */
 function transportError(res: Response, fallback: string) {
   if (res.status >= 500) {
-    return new Error(
-      `API に届いていません (${res.status})。ローカルなら nr dev:api を起動`
+    return new ApiError(
+      `API に届いていません (${res.status})。ローカルなら nr dev:api を起動`,
+      res.status,
+      true
     )
   }
-  return new Error(`${fallback} (${res.status})`)
+  return new ApiError(`${fallback} (${res.status})`, res.status, false)
+}
+
+/** JSON で返ってきた失敗。5xx は送り直す側、4xx (409 含む) は送り直しても同じ */
+function apiError(res: Response, message: string) {
+  return new ApiError(message, res.status, res.status >= 500)
 }
 
 export async function fetchNumber(
   num: string,
   token: string
 ): Promise<NumberDoc> {
-  const res = await fetch(`/api/numbers/${num}`, {
+  const res = await request(`/api/numbers/${num}`, {
     headers: { authorization: `Bearer ${token}` },
   })
 
   const data = await readJson(res)
   if (!res.ok || !data?.ok) {
     if (!data) throw transportError(res, '取得に失敗しました')
-    throw new Error(data.error || `取得に失敗しました (${res.status})`)
+    throw apiError(res, data.error || `取得に失敗しました (${res.status})`)
   }
   return data.number
 }
@@ -84,7 +125,7 @@ export async function patchNumber({
   op: PatchOp
   expectedUpdatedAt: string | null
 }): Promise<NumberDoc> {
-  const res = await fetch(`/api/numbers/${num}`, {
+  const res = await request(`/api/numbers/${num}`, {
     method: 'PATCH',
     headers: {
       authorization: `Bearer ${token}`,
@@ -96,10 +137,14 @@ export async function patchNumber({
   const data = await readJson(res)
   if (!res.ok || !data?.ok) {
     if (data?.error === 'conflict') {
-      throw new Error('他の画面が先に保存しました。読み直してください')
+      throw new ApiError(
+        '他の画面が先に保存しました。読み直してください',
+        409,
+        false
+      )
     }
     if (!data) throw transportError(res, '保存に失敗しました')
-    throw new Error(data.error || `保存に失敗しました (${res.status})`)
+    throw apiError(res, data.error || `保存に失敗しました (${res.status})`)
   }
   return data.number
 }
@@ -109,14 +154,14 @@ export async function fetchHundred(
   hundred: number,
   token: string
 ): Promise<NumberDoc[]> {
-  const res = await fetch(`/api/numbers?hundred=${hundred}`, {
+  const res = await request(`/api/numbers?hundred=${hundred}`, {
     headers: { authorization: `Bearer ${token}` },
   })
 
   const data = await readJson(res)
   if (!res.ok || !data?.ok) {
     if (!data) throw transportError(res, '取得に失敗しました')
-    throw new Error(data.error || `取得に失敗しました (${res.status})`)
+    throw apiError(res, data.error || `取得に失敗しました (${res.status})`)
   }
   return data.numbers
 }

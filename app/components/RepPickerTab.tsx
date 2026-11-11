@@ -3,16 +3,15 @@
 //
 // 行は人 / 物の 2 段に候補チップを並べ、チップの左に画像を出す (D-0030)。
 // dock は 絞り込み / 百の位 / 十の位ジャンプ (D-0029)。
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { loadSubTab, saveSubTab } from '../data/storage'
-import {
-  fetchHundred,
-  fetchNumber,
-  patchNumber,
-  type NumberDoc,
-} from '../lib/numberApi'
-import { RepSaveQueue, type RepChange, type SaveMark } from '../lib/repQueue'
+import { fetchHundred, type NumberDoc } from '../lib/numberApi'
+import type { SaveMark } from '../lib/opQueue'
+import { listenWriteQueue, writeQueue } from '../lib/writeQueue'
+import type { RepPick } from '../lib/numberApi'
+
+type RepChange = { picks: RepPick[]; confirmed: boolean }
 import {
   slotRows,
   withDeliveredImages,
@@ -124,7 +123,8 @@ function RepPickerTab({ token, numbers }: Props) {
   const [hundred, setHundred] = useState(() =>
     loadSubTab(HUNDRED_KEY, DIGITS, '0')
   )
-  const [docs, setDocs] = useState<NumberDoc[]>([])
+  // この百の位の番号 (並び)。文書の中身は保存キューから引く (押した後の値を含む)
+  const [nums, setNums] = useState<string[]>([])
   const [filter, setFilter] = useState<RepFilter>('all')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState('')
@@ -134,64 +134,57 @@ function RepPickerTab({ token, numbers }: Props) {
   )
   // まとめて確定は 2 回押しで実行する (1 回目で件数を見せて構える)
   const [bulkArmed, setBulkArmed] = useState(false)
-  // 番号ごとの保存状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)。
-  // 押した瞬間に画面へ反映し、保存は裏で送る。送っている間も他は押せる
-  const [marks, setMarks] = useState<Record<string, SaveMark>>({})
-  const tokenRef = useRef(token)
-  tokenRef.current = token
-  const queueRef = useRef<RepSaveQueue | null>(null)
-  if (!queueRef.current) {
-    queueRef.current = new RepSaveQueue({
-      send: (num, change, expectedUpdatedAt) =>
-        patchNumber({
-          num,
-          token: tokenRef.current,
-          op: { op: 'rep', ...change },
-          // 読んだ時点を添える。他の面が先に書いていればサーバが 409 で止める
-          expectedUpdatedAt,
-        }),
-      reload: (num) => fetchNumber(num, tokenRef.current),
-      // 次の変更が待っているなら、画面の (楽観的な) 代表は残して時刻だけ進める
-      onSaved: (saved, again) =>
-        setDocs((prev) =>
-          prev.map((d) =>
-            d.num !== saved.num
-              ? d
-              : again
-                ? { ...d, updatedAt: saved.updatedAt }
-                : saved
-          )
-        ),
-      onMark: (num, mark) => {
-        setMarks((cur) => ({ ...cur, [num]: mark }))
-        // 緑は少し見せてから消す (確定の状態は番号の下の «代表確定» に残る)
-        if (mark === 'saved') {
-          window.setTimeout(
-            () =>
-              setMarks((cur) => {
-                if (cur[num] !== 'saved') return cur
-                const next = { ...cur }
-                delete next[num]
-                return next
-              }),
-            1500
-          )
-        }
-      },
-      onError: (num, message) => setStatus(`${num}: ${message}`),
-    })
-  }
-  const queue = queueRef.current
 
+  // 書き込みはアプリで 1 本の保存キューに積む (編集画面と同じ)。押した瞬間に黄、
+  // 保存できたら緑。通信できなくても捨てずに送り直す。どのボタンもロックしない
+  const queue = writeQueue()
+  const [, bump] = useState(0)
+  useEffect(
+    () =>
+      listenWriteQueue({
+        onChange: () => bump((v) => v + 1),
+        onError: (num, message) => setStatus(`${num}: ${message}`),
+      }),
+    []
+  )
+
+  // 読んだ百の位は覚えておき、切り替えたらすぐ出して裏で読み直す。
+  // 隣の百の位も先読みして、切り替えで読み込みを待たないようにする
+  const hundredCache = useRef(new Map<string, string[]>())
   useEffect(() => {
     if (!token) return
-    setLoading(true)
+    const cached = hundredCache.current.get(hundred)
+    setNums(cached ?? [])
+    setLoading(!cached)
     setStatus('')
-    fetchHundred(Number(hundred), token)
-      .then((list) => setDocs(list.sort((a, b) => a.num.localeCompare(b.num))))
-      .catch((error) => setStatus(String(error.message)))
-      .finally(() => setLoading(false))
+    let alive = true
+    const read = (h: string) =>
+      fetchHundred(Number(h), token).then((list) => {
+        // 保存待ちの番号は、押した後の値 (と前提の時刻) をキューが残す
+        for (const doc of list) queue.setBase(doc)
+        const order = list.map((doc) => doc.num).sort()
+        hundredCache.current.set(h, order)
+        return order
+      })
+    read(hundred)
+      .then((order) => {
+        if (!alive) return
+        setNums(order)
+        for (const next of [Number(hundred) + 1, Number(hundred) - 1]) {
+          const h = String((next + 10) % 10)
+          if (!hundredCache.current.has(h)) read(h).catch(() => {})
+        }
+      })
+      .catch((error) => alive && setStatus(String(error.message)))
+      .finally(() => alive && setLoading(false))
+    return () => {
+      alive = false
+    }
   }, [hundred, token])
+
+  const docs = nums
+    .map((num) => queue.view(num))
+    .filter((doc): doc is NumberDoc => doc !== null)
 
   const entries = useMemo(
     () => new Map(numbers.map((entry) => [entry.num, entry])),
@@ -210,18 +203,12 @@ function RepPickerTab({ token, numbers }: Props) {
   const progress = decadeProgress(docs)
   const doneCount = docs.filter((doc) => doc.rep?.confirmed).length
 
-  // 押した瞬間に画面の代表を書き換えて (黄)、保存はキューに入れる
-  const change = useCallback(
-    (doc: NumberDoc, next: RepChange) => {
-      keep(doc.num)
-      setStatus('')
-      queue.enqueue(doc, next)
-      setDocs((prev) =>
-        prev.map((d) => (d.num === doc.num ? { ...d, rep: next } : d))
-      )
-    },
-    [queue]
-  )
+  // 押した瞬間にキューへ積む (画面はキューの文書を出すので、その場で変わって黄)
+  const change = (doc: NumberDoc, next: RepChange) => {
+    keep(doc.num)
+    setStatus('')
+    queue.enqueue(doc.num, [{ op: 'rep', ...next }])
+  }
 
   const pick = (doc: NumberDoc, slot: string) => {
     const picks = togglePick(doc, slot)
@@ -272,9 +259,11 @@ function RepPickerTab({ token, numbers }: Props) {
     }
   }
 
-  const pendingCount = Object.values(marks).filter(
-    (mark) => mark === 'pending'
-  ).length
+  const marks = Object.fromEntries(
+    docs.map((doc) => [doc.num, queue.mark(doc.num, 'rep')])
+  ) as Record<string, SaveMark | undefined>
+  // 保存待ちはアプリ全体 (他の百の位・編集画面の分も) を出す
+  const pendingCount = queue.pendingCount()
   const errorCount = Object.values(marks).filter(
     (mark) => mark === 'error'
   ).length
@@ -366,7 +355,10 @@ function RepPickerTab({ token, numbers }: Props) {
         {pendingCount || errorCount ? (
           <span class="dock-row-label rp-save-count">
             {pendingCount ? (
-              <span class="rp-save pending">保存待ち {pendingCount}</span>
+              <span class="rp-save pending">
+                保存待ち {pendingCount}
+                {queue.retrying ? ' ・通信待ち' : ''}
+              </span>
             ) : null}
             {errorCount ? (
               <span class="rp-save error">失敗 {errorCount}</span>

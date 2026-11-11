@@ -3,6 +3,22 @@ import preact from '@preact/preset-vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { execSync } from 'node:child_process'
+
+// 動いている版 (設定 > タブ の一番上に出す)。PWA は端末に古い版を持ち続けることがあり、
+// «デプロイされていないのか / 端末が古いのか» を画面から見分けられるようにする
+function buildStamp() {
+  const env = process.env.GITHUB_SHA || process.env.COMMIT_SHA || ''
+  let sha = env.slice(0, 7)
+  if (!sha) {
+    try {
+      sha = execSync('git rev-parse --short HEAD').toString().trim()
+    } catch {
+      sha = 'unknown'
+    }
+  }
+  return { sha, builtAt: new Date().toISOString() }
+}
 
 // dev 専用: 本番は認証付き Cloud Function が配信する私的データを、
 // ローカルファイルから (emulator 無し・認証不要で) 返すミドルウェア。
@@ -36,6 +52,9 @@ function devPrivateApi(): PluginOption {
 
 export default defineConfig({
   logLevel: 'warn',
+  define: {
+    __BUILD__: JSON.stringify(buildStamp()),
+  },
   server: {
     proxy: {
       '/api': {
@@ -49,7 +68,8 @@ export default defineConfig({
     devPrivateApi(),
     preact(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 更新の当て方は main.tsx が決める (保存待ちを送り終えてから入れ替える)
+      registerType: 'prompt',
       includeAssets: [
         'favicon.ico',
         'apple-touch-icon.png',

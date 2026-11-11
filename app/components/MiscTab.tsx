@@ -9,6 +9,7 @@ import ActivatePanel from './ActivatePanel'
 import SheetSyncPanel from './SheetSyncPanel'
 import TabVisibilityPanel from './TabVisibilityPanel'
 import SubTabGroup from './SubTabGroup'
+import BuildStamp from './BuildStamp'
 import Screen from './Screen'
 import { SHEET_EDIT_URL } from '../data/constants'
 import type { TabId } from '../data/constants'
@@ -65,6 +66,7 @@ function MiscTab({
         </a>
       </div>
       <StorageEstimatePanel />
+      <BuildStamp />
     </div>
   )
 

@@ -6423,3 +6423,14 @@ button.activate-link {
 .nd-status.pending {
   color: var(--warn);
 }
+
+/* 設定 > タブ の一番上: 動いている版 */
+.build-stamp {
+  padding: 4px 2px;
+  font-size: 11px;
+  color: var(--text2);
+}
+.build-stamp code {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
