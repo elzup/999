@@ -57,7 +57,24 @@ nr sync:all
   └ build:data   visualize-words.data.json と private/data.json を再生成
 ```
 
-本番へ出すのは別で `nr deploy`。
+本番へ出すのは別で、出すものによって 2 経路ある。
+
+| 出すもの                                                          | どうやって                                                                                                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 画面 (Firebase Hosting)                                           | **main に入れば GitHub Actions が自動で出す** (`.github/workflows/deploy-hosting.yml`)。手で出すときは Actions の «Deploy hosting» → Run workflow |
+| Function (`api` / `sheetSync`) と辞書データ (`private/data.json`) | 手元で `nr deploy` (私的データを使うので CI では出さない)。`nr deploy` は画面も一緒に出す                                                         |
+
+デプロイされた版は、アプリの 設定 > タブ の一番上 («版» のコミット) で確かめられる。
+
+### CI のデプロイの準備 (最初の 1 回)
+
+1. Google Cloud コンソール (プロジェクト `anoz-memosupo`) → IAM と管理 → サービスアカウント → 作成
+   (例: `github-hosting-deploy`)。ロールは «Firebase Hosting 管理者»。
+   Hosting の rewrites が Function `api` を指しているので «Cloud Functions 閲覧者» と «Cloud Run 閲覧者» も付ける
+2. そのサービスアカウントの «鍵» → 鍵を追加 → JSON をダウンロード
+3. GitHub のリポジトリ → Settings → Secrets and variables → Actions → New repository secret。
+   名前 `FIREBASE_SERVICE_ACCOUNT_ANOZ_MEMOSUPO`、値に JSON の中身をそのまま貼る
+4. Actions → «Deploy hosting» → Run workflow で 1 回動かして確かめる (ダウンロードした JSON は消す)
 
 > ⚠️ **`nr push` は `sync:all` に含めません。** `push` は 999 タブを clear → 全上書き
 > するため、`words.tsv` に無い列（`check` / `rankey` / スロット 4 以降 / 手動列）が

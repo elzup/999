@@ -1,0 +1,58 @@
+# main に入ったら画面 (Firebase Hosting) だけをデプロイする。
+#
+# Function (api / sheetSync) と辞書データ (private/data.json) は手元にしか無いデータを
+# 使うので、今までどおり手元の `nr deploy` で出す。ここでは出さない。
+# 統計ページ (stats.html) の画面ファイルはリポジトリの src/ からコピーするだけで作れ、
+# データは本番の /api/app/stats から読むので、CI でも欠けない。
+#
+# 必要な設定: リポジトリの Secrets に FIREBASE_SERVICE_ACCOUNT_ANOZ_MEMOSUPO
+# (Firebase Hosting にデプロイできるサービスアカウントの鍵 JSON)。手順は README。
+name: Deploy hosting
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 続けてマージしても順に出す (途中で打ち切って古い版が残らないように)
+concurrency:
+  group: deploy-hosting
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+
+      - run: npm ci
+
+      # ffQuiz は私的データ (private/ff.json) を読むので CI では外す
+      - name: Test
+        run: npx vitest run app --exclude app/__tests__/ffQuiz.test.ts
+
+      - name: Copy stats page files
+        run: |
+          cp src/visualize-words.html public/stats.html
+          cp src/visualize-words.css public/
+          cp src/viz-client.js public/
+
+      # 設定タブの «版» には GITHUB_SHA (このコミット) が入る
+      - name: Build
+        run: npx vite build
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ANOZ_MEMOSUPO }}
+          projectId: anoz-memosupo
+          channelId: live
