@@ -9,25 +9,13 @@ import './style.css'
 const queue = writeQueue()
 
 // ---- PWA の更新 ----
-// 以前は起動したときしか新しい版を探さず、スマホでアプリを戻しただけでは古い版のまま
-// だった。見つけると操作の途中でも即リロードしていた。
-// - 探す: 起動時・アプリが前面に戻ったとき・開いている間 30 分ごと
-// - 入れ替える: 新しい版が見つかったら、保存待ちを全部送り終えてから (キューは端末にも
-//   残すので失われないが、送っている最中に切り替えない)
-const CHECK_MS = 30 * 60 * 1000
+// 新しい版を探すのは起動したときだけ (sw.js 約 2 KB を 1 回)。開いている間に
+// 裏で探しに行くことはしない。
+// 見つかったら、保存待ちを全部送り終えてから入れ替える (送っている最中に再読み込み
+// しない。キューは端末にも残すので、閉じても失われない)
 let waiting = false
 const updateSW = registerSW({
   immediate: true,
-  onRegisteredSW(_url, registration) {
-    if (!registration) return
-    const check = () => {
-      if (navigator.onLine) registration.update().catch(() => {})
-    }
-    setInterval(check, CHECK_MS)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') check()
-    })
-  },
   onNeedRefresh() {
     if (waiting) return
     waiting = true

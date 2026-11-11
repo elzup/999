@@ -148,8 +148,7 @@ function RepPickerTab({ token, numbers }: Props) {
     []
   )
 
-  // 読んだ百の位は覚えておき、切り替えたらすぐ出して裏で読み直す。
-  // 隣の百の位も先読みして、切り替えで読み込みを待たないようにする
+  // 読んだ百の位は覚えておき、切り替えたらすぐ出して読み直す (先読みはしない)
   const hundredCache = useRef(new Map<string, string[]>())
   useEffect(() => {
     if (!token) return
@@ -170,10 +169,6 @@ function RepPickerTab({ token, numbers }: Props) {
       .then((order) => {
         if (!alive) return
         setNums(order)
-        for (const next of [Number(hundred) + 1, Number(hundred) - 1]) {
-          const h = String((next + 10) % 10)
-          if (!hundredCache.current.has(h)) read(h).catch(() => {})
-        }
       })
       .catch((error) => alive && setStatus(String(error.message)))
       .finally(() => alive && setLoading(false))
