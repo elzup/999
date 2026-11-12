@@ -16,6 +16,7 @@ import { useNumberContext } from '../lib/numberContext'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
+import { wordImage } from '../lib/wordImage'
 
 type Props = {
   d: NumberEntry
@@ -202,7 +203,7 @@ function NumDetailPanel(props: Props) {
                 <img
                   class="wl-img"
                   loading="lazy"
-                  src={row.img}
+                  {...wordImage(row.img, 34)}
                   alt={row.word}
                 />
               ) : (
