@@ -12,6 +12,14 @@
 
 **マージしただけでは本番は変わらない** (画面の CI を入れるまでは、どちらも `nr deploy` だけだった)。
 
+### 手元の古い版で上書きしないためのガード
+
+`nr deploy` (と `deploy:api` / `deploy:legacy`) は最初に [`scripts/deploy-guard.ts`](../scripts/deploy-guard.ts) を通す。
+今のコミットが `origin/main` と同じで、追跡しているファイルに未コミットの変更が無いときだけ先へ進む。
+手元の main が古いまま出すと、CI が出した新しい画面を古い版で上書きしてしまうため
+(2026-11-11 には手元の main が origin/main から 28 コミット遅れていた)。
+どうしても今の状態で出すときは `DEPLOY_FORCE=1 nr deploy`。
+
 ### `nr deploy` が手元でしか動かない理由
 
 `nr deploy` = `build:preview` → `build` → `sync:private` → `sync:functions` →

@@ -23,9 +23,11 @@ export type SelectionNav = {
  */
 export function useSelection<K>(
   order?: readonly K[],
-  labelOf: (key: K) => string = String
+  labelOf: (key: K) => string = String,
+  /** 開いた時点で選んでおくもの (画面が一度消えても選択を戻したいとき) */
+  initial: K | null = null
 ) {
-  const [selected, setSelected] = useState<K | null>(null)
+  const [selected, setSelected] = useState<K | null>(initial)
 
   const clear = useCallback(() => setSelected(null), [])
   const toggle = useCallback(
