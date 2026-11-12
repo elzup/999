@@ -51,9 +51,9 @@
     "build:preview": "node src/generate-preview-data.js && cp src/visualize-words.html public/stats.html && cp src/visualize-words.css public/ && cp src/viz-client.js public/",
     "sync:private": "mkdir -p functions/private && cp private/data.json functions/private/data.json && cp src/visualize-words.data.json functions/private/visualize-words.data.json",
     "sync:functions": "bash scripts/sync-functions-lib.sh",
-    "deploy:legacy": "npm run build:preview && firebase deploy --only hosting",
-    "deploy": "npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
-    "deploy:api": "npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
+    "deploy:legacy": "node scripts/deploy-guard.ts && npm run build:preview && firebase deploy --only hosting",
+    "deploy": "node scripts/deploy-guard.ts && npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
+    "deploy:api": "node scripts/deploy-guard.ts && npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
