@@ -1,5 +1,6 @@
 import { h } from 'preact'
 import { useEffect, useState, useCallback, useRef } from 'preact/hooks'
+import { formatBytes } from '../lib/format'
 
 type StorageEstimate = {
   usage: number | null
@@ -64,13 +65,6 @@ function estimateLocalStorageKey(key: string) {
     bytes: keyBytes + valueBytes,
     valueBytes,
   }
-}
-
-function formatBytes(bytes: number | null) {
-  if (bytes === null) return '-'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
 function StorageEstimatePanel() {
@@ -232,7 +226,7 @@ function StorageEstimatePanel() {
             </div>
           </div>
           <div class="storage-summary-item">
-            <div class="storage-summary-label">全体 quota</div>
+            <div class="storage-summary-label">全体 quota (使ってよい上限)</div>
             <div class="storage-summary-value">
               {formatBytes(estimate.quota)}
             </div>
