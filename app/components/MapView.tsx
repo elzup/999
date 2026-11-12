@@ -15,6 +15,7 @@ import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockRow } from './Screen'
 import { useSelection } from '../lib/useSelection'
 import DetailSheet from './DetailSheet'
+import { wordImage } from '../lib/wordImage'
 
 export type MapBounds = {
   minX: number
@@ -65,7 +66,7 @@ function MapTileView({
         <span class={'ymap-tile-rep ' + rep} aria-hidden="true" />
       ) : null}
       {tile.img ? (
-        <img class="ymap-tile-img" loading="lazy" src={tile.img} alt="" />
+        <img class="ymap-tile-img" loading="lazy" {...wordImage(tile.img, 48)} alt="" />
       ) : (
         <span class="ymap-tile-noimg" />
       )}

@@ -18,6 +18,7 @@ import Rankey from './Rankey'
 import TaggedWord from './TaggedWord'
 import { IconEdit } from './Icons'
 import type { SaveMark } from '../lib/opQueue'
+import { wordImage } from '../lib/wordImage'
 
 const MARK = ['', '①', '②']
 const SAVE_LABEL: Record<SaveMark, string> = {
@@ -72,7 +73,7 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
                 {row.imageUrl ? (
                   <img
                     class="wl-img"
-                    src={row.imageUrl}
+                    {...wordImage(row.imageUrl, 34)}
                     alt=""
                     loading="lazy"
                   />

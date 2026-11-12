@@ -49,6 +49,7 @@ import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
+import { wordImage } from '../lib/wordImage'
 
 const REP_RANKS = [1, 2] as const
 const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
@@ -604,7 +605,7 @@ function SlotCard({
           <img
             class={'nd-img' + (row.imageStale ? ' stale' : '')}
             loading="lazy"
-            src={row.imageUrl}
+            {...wordImage(row.imageUrl, 40)}
             alt={row.word}
             title={row.imageStale ? '確定時点の語と違う画像' : undefined}
           />

@@ -8,6 +8,7 @@ import { ETYMOLOGY_DATA } from '../data/etymology'
 import { getFfRows, isValidFfRow } from '../lib/ffQuiz'
 import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
 import type { SlideDeck } from '../lib/slideDeck'
+import { wordImage } from '../lib/wordImage'
 
 // 各グループのデータを SlideDeck (問題面 → 答え面) に写す。
 // 表示部品はここに閉じ、SlidePlayer には中身を意識させない。
@@ -39,7 +40,7 @@ function WordRow({
   return (
     <div class={'slide-word-row' + (isSub ? ' sub' : '')}>
       {img ? (
-        <img class="slide-word-img" loading="lazy" src={img} alt={word} />
+        <img class="slide-word-img" loading="lazy" {...wordImage(img, 72)} alt={word} />
       ) : null}
       <div class="slide-word-text">
         <span class="slide-word-main">{word}</span>

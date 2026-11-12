@@ -29,6 +29,7 @@ import {
 } from '../lib/repPicker'
 import Screen, { DockBar, DockRow } from './Screen'
 import RepCard from './RepCard'
+import { wordImage } from '../lib/wordImage'
 
 const HUNDRED_KEY = 'rep.hundred'
 const VIEW_KEY = 'rep.view'
@@ -54,7 +55,7 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       onClick={onPick}
     >
       {row.imageUrl ? (
-        <img class="rp-thumb" src={row.imageUrl} alt="" loading="lazy" />
+        <img class="rp-thumb" {...wordImage(row.imageUrl, 28)} alt="" loading="lazy" />
       ) : (
         <span class="rp-thumb is-empty" />
       )}
