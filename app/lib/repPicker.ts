@@ -9,6 +9,7 @@ import { livePicks, sameValue, slotRows } from './numberDetail'
 export type RepFilter =
   | 'all'
   | 'open'
+  | 'second'
   | 'multi'
   | 'sameKind'
   | 'mono1'
@@ -17,6 +18,7 @@ export type RepFilter =
 export const REP_FILTERS: Array<[RepFilter, string]> = [
   ['all', 'すべて'],
   ['open', '未確定'],
+  ['second', '②未定'],
   ['multi', '2択+'],
   ['sameKind', '同種ペア'],
   ['mono1', '物優先'],
@@ -65,6 +67,10 @@ export function matchesFilter(doc: NumberDoc, filter: RepFilter): boolean {
   switch (filter) {
     case 'open':
       return !doc.rep?.confirmed
+    // ② を選べる (候補が 2 つ以上ある) のに、まだ ① しか決めていない。確定済みも含む
+    // («未確定» は確定ボタンの状態なので、① だけで確定したものは出てこない)
+    case 'second':
+      return order.length < MAX_PICKS && slotRows(doc).length >= MAX_PICKS
     case 'multi':
       return slotRows(doc).length >= 2
     case 'sameKind':
@@ -102,7 +108,7 @@ export function defaultPickSlots(doc: NumberDoc): string[] {
 }
 
 /**
- * «確定» を押したとき (1 件でも一括でも) に送る操作。確定済み・要再確認は null:
+ * «確定» を押したときに送る操作。確定済み・要再確認は null:
  * - 代表があって未確定 → その代表のまま確定
  * - 代表が空 → 既定 (人の 1 番手 ①・物の 1 番手 ②) で確定
  * - 要再確認 (代表にした語が今の候補に無い) → 黙って付け替えず、選び直してもらう

@@ -6333,20 +6333,6 @@ button.activate-link {
   display: flex;
   gap: 4px;
 }
-.rp-bulk {
-  flex: 1;
-}
-.rp-bulk.armed {
-  color: var(--bg);
-  background: var(--warn);
-  border-color: var(--warn);
-  font-weight: bold;
-}
-.rp-bulk-note {
-  flex-shrink: 0;
-  color: var(--warn);
-}
-
 /* 代表の保存状態 (RepSaveQueue)。押した瞬間に黄、保存できたら緑、失敗は赤。
    どの状態でも押せなくはしない (待機を作らない) */
 .rep-card.save-pending,
