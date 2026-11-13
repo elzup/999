@@ -1,7 +1,7 @@
 import { h } from 'preact'
 import { useMemo } from 'preact/hooks'
 import type { NumberEntry, CardEntry } from '../data/schema'
-import { CardCell, NumCell } from './Cells'
+import { BmCardCard, BmNumCard } from './Cells'
 import NumDetailPanel from './NumDetailPanel'
 import CardDetailPanel from './CardDetailPanel'
 import Screen from './Screen'
@@ -101,9 +101,9 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
       {bmNums.length > 0 ? (
         <section class="stack-up" style={{ '--stack-gap': '8px' }}>
           <div class="section-label">数字 ({bmNums.length})</div>
-          <div class="num-grid grid-up">
+          <div class="grid-up" style={{ '--cols': 3, '--gap': '6px' }}>
             {bmNums.map((d) => (
-              <NumCell
+              <BmNumCard
                 key={d.num}
                 d={d}
                 selected={selected === 'n:' + d.num}
@@ -116,14 +116,11 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
       {bmCards.length > 0 ? (
         <section class="stack-up" style={{ '--stack-gap': '8px' }}>
           <div class="section-label">カード ({bmCards.length})</div>
-          <div
-            class="card-grid grid-up"
-            style={{ '--cols': 4, '--gap': '6px' }}
-          >
+          <div class="grid-up" style={{ '--cols': 3, '--gap': '6px' }}>
             {bmCards.map((c) => {
               const key = c.suit + c.rank
               return (
-                <CardCell
+                <BmCardCard
                   key={key}
                   c={c}
                   selected={selected === 'c:' + key}
