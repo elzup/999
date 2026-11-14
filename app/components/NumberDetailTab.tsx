@@ -611,7 +611,7 @@ function SlotCard({
           <img
             class={'nd-img' + (row.imageStale ? ' stale' : '')}
             loading="lazy"
-            {...wordImage(row.imageUrl, 40)}
+            {...wordImage(row.imageUrl, 40, row.word)}
             alt={row.word}
             title={row.imageStale ? '確定時点の語と違う画像' : undefined}
           />

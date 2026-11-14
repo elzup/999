@@ -55,7 +55,7 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       onClick={onPick}
     >
       {row.imageUrl ? (
-        <img class="rp-thumb" {...wordImage(row.imageUrl, 28)} alt="" loading="lazy" />
+        <img class="rp-thumb" {...wordImage(row.imageUrl, 28, row.word)} alt="" loading="lazy" />
       ) : (
         <span class="rp-thumb is-empty" />
       )}

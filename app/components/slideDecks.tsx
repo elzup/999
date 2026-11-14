@@ -40,7 +40,7 @@ function WordRow({
   return (
     <div class={'slide-word-row' + (isSub ? ' sub' : '')}>
       {img ? (
-        <img class="slide-word-img" loading="lazy" {...wordImage(img, 72)} alt={word} />
+        <img class="slide-word-img" loading="lazy" {...wordImage(img, 72, word)} alt={word} />
       ) : null}
       <div class="slide-word-text">
         <span class="slide-word-main">{word}</span>

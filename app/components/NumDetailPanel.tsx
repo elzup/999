@@ -203,7 +203,7 @@ function NumDetailPanel(props: Props) {
                 <img
                   class="wl-img"
                   loading="lazy"
-                  {...wordImage(row.img, 34)}
+                  {...wordImage(row.img, 34, row.word)}
                   alt={row.word}
                 />
               ) : (
