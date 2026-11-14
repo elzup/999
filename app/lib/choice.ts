@@ -1,4 +1,5 @@
 import type { NumberEntry } from '../data/schema'
+import { splitVariants, variantTag } from './tagVariants'
 
 const LEGACY_SLOT_MAP = {
   w1: 'wh1',
@@ -26,6 +27,8 @@ export type Candidate = {
   word: string
   kana: string
   img?: string
+  /** タグ違いで分けた語の出典タグ (D-0039)。分けていない語は undefined */
+  variant?: string
 }
 
 const SLOT_FIELDS: Record<
@@ -40,8 +43,26 @@ const SLOT_FIELDS: Record<
   wm3: { word: 'wm3', kana: 'wm3k', img: 'wm3Img' },
 }
 
-/** entry が実際に持つ (語句が空でない) 候補だけを返す */
+/**
+ * entry が実際に持つ (語句が空でない) 候補。出典タグが 2 つ以上ある語は
+ * タグ 1 つずつの候補に分ける (同じ slot が続く)。分けた語の画像は
+ * そのタグの画像だけを使い、スロットの画像は流用しない (別人の画像になるため)
+ */
 export function candidatesOf(entry: NumberEntry): Candidate[] {
+  return slotCandidates(entry).flatMap((cand) => {
+    const words = splitVariants(cand.word)
+    if (words.length < 2) return [cand]
+    const tagImages = entry[`${cand.slot as CanonicalSlot}TagImg`] ?? {}
+    return words.map((word) => {
+      const variant = variantTag(word) ?? undefined
+      const img = variant ? tagImages[variant] || undefined : undefined
+      return { slot: cand.slot, word, kana: cand.kana, img, variant }
+    })
+  })
+}
+
+/** スロット単位の候補 (分けない)。スロットの位置で引く candidateAt や編集フォーム用 */
+export function slotCandidates(entry: NumberEntry): Candidate[] {
   const out: Candidate[] = []
   for (const slot of SLOTS) {
     const canonical = normalizeSlot(slot)
@@ -86,7 +107,7 @@ export function candidateAt(
   if (!slot) return null
   const canonical = normalizeSlot(slot)
   if (!canonical) return null
-  return candidatesOf(entry).find((c) => c.slot === canonical) ?? null
+  return slotCandidates(entry).find((c) => c.slot === canonical) ?? null
 }
 
 /**
@@ -98,7 +119,8 @@ export function slotOfPick(
   entry: NumberEntry,
   pick: { k: string; w: string }
 ): Slot | null {
-  const cands = candidatesOf(entry)
+  // 分けた語 (カレン#res) でも、分ける前の語 (カレン#res#ｺｰﾄﾞｷﾞｱｽ) でも当てる
+  const cands = [...candidatesOf(entry), ...slotCandidates(entry)]
   const exact = cands.find((c) => c.word === pick.w && c.kana === pick.k)
   const byWord = cands.find((c) => c.word === pick.w)
   return (exact ?? byWord)?.slot ?? null

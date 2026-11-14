@@ -13,7 +13,8 @@ import type {
 } from './numberApi'
 import { parseWord } from './wordTags'
 import type { NumberEntry } from '../data/schema'
-import { candidatesOf } from './choice'
+import { candidatesOf, slotCandidates } from './choice'
+import { splitVariants, variantTag } from './tagVariants'
 
 /** 候補スロットの並び。rep-store の SLOT_ORDER と同じ */
 export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3'] as const
@@ -22,7 +23,11 @@ export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3'] as const
 export const RATING_VALUES = [-1, 0, 1, 2] as const
 
 export type SlotRow = {
+  /** 行の識別子。スロット名、タグ違いで分けた行は «スロット#タグ» */
+  key: string
   slot: string
+  /** タグ違いで分けた行の出典タグ (D-0039)。分けていない行は undefined */
+  variant?: string
   word: string
   kana: string
   imageUrl?: string
@@ -57,22 +62,30 @@ export function nameOf(word: string | undefined): string {
     .trim()
 }
 
+/** 語 (k / w) の評価。未評価は null */
+function ratingOfValue(doc: NumberDoc, value: RepPick): number | null {
+  const hit = (doc.ratings ?? []).find((rating) => sameValue(rating, value))
+  return hit ? hit.v : null
+}
+
+/** 語 (k / w) が代表の何番目か (1, 2)。代表でなければ 0 */
+function repRankOfValue(doc: NumberDoc, value: RepPick): number {
+  const index = (doc.rep?.picks ?? []).findIndex((pick) =>
+    sameValue(pick, value)
+  )
+  return index < 0 ? 0 : index + 1
+}
+
 export function ratingOf(doc: NumberDoc, slot: string): number | null {
   const value = doc.slots?.[slot]
   if (!value) return null
-  const hit = (doc.ratings ?? []).find((rating) =>
-    sameValue(rating, { k: value.kana, w: value.word })
-  )
-  return hit ? hit.v : null
+  return ratingOfValue(doc, { k: value.kana, w: value.word })
 }
 
 export function repRankOf(doc: NumberDoc, slot: string): number {
   const value = doc.slots?.[slot]
   if (!value) return 0
-  const index = (doc.rep?.picks ?? []).findIndex((pick) =>
-    sameValue(pick, { k: value.kana, w: value.word })
-  )
-  return index < 0 ? 0 : index + 1
+  return repRankOfValue(doc, { k: value.kana, w: value.word })
 }
 
 /** 1 番号ぶんの表示行。語が入っているスロットだけを SLOT_ORDER 順に返す */
@@ -80,6 +93,7 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
   return SLOT_ORDER.filter((slot) => doc.slots?.[slot]).map((slot) => {
     const value = doc.slots![slot]!
     return {
+      key: slot,
       slot,
       word: value.word,
       kana: value.kana,
@@ -98,6 +112,35 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
 }
 
 /**
+ * 代表を選ぶ・見る面の候補行。slotRows のうち、出典タグが 2 つ以上ある語を
+ * タグ 1 つずつの行に分ける (D-0039)。編集フォームはスロット単位の slotRows を使う。
+ *
+ * 分けた行の画像はそのタグの画像 (tagImages) だけ。スロットの画像は
+ * どのタグの人のものか分からないので流用しない (別人の画像を出さない)。
+ */
+export function candidateRows(doc: NumberDoc): SlotRow[] {
+  return slotRows(doc).flatMap((row) => {
+    const words = splitVariants(row.word)
+    if (words.length < 2) return [row]
+    const tagImages = doc.slots?.[row.slot]?.tagImages ?? {}
+    return words.map((word) => {
+      const variant = variantTag(word) ?? undefined
+      const value = { k: row.kana, w: word }
+      return {
+        ...row,
+        key: variant ? `${row.slot}#${variant}` : row.slot,
+        variant,
+        word,
+        imageUrl: (variant && tagImages[variant]) || undefined,
+        imageStale: false,
+        rating: ratingOfValue(doc, value),
+        repRank: repRankOfValue(doc, value),
+      }
+    })
+  })
+}
+
+/**
  * 画像の正本は画像パイプラインの manifest で、numbers/{num} の imageUrl には
  * 入っていないことが多い (同期は imageUrl を書かない: spec:sheet-to-db-sync)。
  * 配信データはビルド時に manifest を合流しているので、そこから補う。
@@ -110,14 +153,32 @@ export function withDeliveredImages(
   entry: NumberEntry | undefined
 ): SlotRow[] {
   if (!entry) return rows
-  const images = new Map<string, string>()
-  for (const cand of candidatesOf(entry)) {
+  // 語の全文で当てるのを先にする。本体 (タグ抜き) だけで当てると、
+  // ハブ#ｳｼｼﾞﾏ と ハブ、カレン#res と カレン#ｺｰﾄﾞｷﾞｱｽ が同じ画像になる
+  const byWord = new Map<string, string>()
+  const byName = new Map<string, Set<string>>()
+  // 分けた語の候補に加え、分ける前の語 (編集フォームの行) の画像も引けるようにする
+  for (const cand of [...candidatesOf(entry), ...slotCandidates(entry)]) {
+    if (!cand.img) continue
+    const word = norm(cand.word).trim()
+    if (word && !byWord.has(word)) byWord.set(word, cand.img)
     const name = nameOf(cand.word)
-    if (name && cand.img && !images.has(name)) images.set(name, cand.img)
+    if (name) {
+      byName.set(name, new Set([...(byName.get(name) ?? []), cand.img]))
+    }
+  }
+  const imageFor = (row: SlotRow) => {
+    const exact = byWord.get(norm(row.word).trim())
+    if (exact) return exact
+    // タグ違いで分けた行は全文が当たったときだけ (別人の画像を出さない)
+    if (row.variant) return undefined
+    // 本体での照合は、画像が 1 つに決まるときだけ (タグを付け替えた後など)
+    const byBase = byName.get(nameOf(row.word))
+    return byBase?.size === 1 ? [...byBase][0] : undefined
   }
   return rows.map((row) => {
     if (row.imageUrl) return row
-    const img = images.get(nameOf(row.word))
+    const img = imageFor(row)
     return img ? { ...row, imageUrl: img, imageDelivered: true } : row
   })
 }
@@ -177,9 +238,11 @@ export function repPickOp(
  * 値として残る (捨てない) が、件数表示や確定可否には数えない。
  */
 export function livePicks(doc: NumberDoc): RepPick[] {
-  const values = Object.values(doc.slots ?? {})
+  // 候補は分けた後の語。分ける前の語 (カレン#res#ｺｰﾄﾞｷﾞｱｽ) を指す代表は
+  // どちらのカレンか決まらないので、当たらない (要再確認) として選び直してもらう
+  const rows = candidateRows(doc)
   return (doc.rep?.picks ?? []).filter((pick) =>
-    values.some((value) => sameValue(pick, { k: value.kana, w: value.word }))
+    rows.some((row) => sameValue(pick, { k: row.kana, w: row.word }))
   )
 }
 
@@ -512,10 +575,10 @@ export function applyOpLocally(doc: NumberDoc, op: PatchOp): NumberDoc {
     case 'image': {
       const slot = doc.slots?.[op.slot]
       if (!slot) return doc
-      return {
-        ...doc,
-        slots: { ...doc.slots, [op.slot]: { ...slot, imageUrl: op.imageUrl } },
-      }
+      const next = op.tag
+        ? { ...slot, tagImages: { ...slot.tagImages, [op.tag]: op.imageUrl } }
+        : { ...slot, imageUrl: op.imageUrl }
+      return { ...doc, slots: { ...doc.slots, [op.slot]: next } }
     }
   }
 }

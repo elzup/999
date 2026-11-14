@@ -12,6 +12,8 @@ export type NumberSlot = {
   imageUrl?: string
   /** 画像を確定した時点の語。現在の語とずれたら要再確認 (REQ-CON-005) */
   confirmedFor?: string
+  /** タグ違いで分けた語の画像 (出典タグ → URL)。D-0039 */
+  tagImages?: Record<string, string>
 }
 
 export type NumberDoc = {
@@ -32,7 +34,8 @@ export type PatchOp =
   | { op: 'rating'; k: string; w: string; v: number | null }
   // 語・かなの編集、並べ替え、追加、削除。どれも slots の最終形を送る
   | { op: 'slots'; slots: Record<string, NumberSlot> }
-  | { op: 'image'; slot: string; imageUrl: string }
+  // tag 付きはタグ違いで分けた語の画像 (D-0039)
+  | { op: 'image'; slot: string; tag?: string; imageUrl: string }
 
 /**
  * API の失敗。retryable は «送り直せば通りうる» (圏外・タイムアウト・サーバ側の 5xx)。

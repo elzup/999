@@ -10,7 +10,7 @@ import type { NumberDoc } from '../lib/numberApi'
 import {
   REP_STATUS_LABEL,
   repStatus,
-  slotRows,
+  candidateRows,
   withDeliveredImages,
 } from '../lib/numberDetail'
 import { confirmOp, defaultPickSlots } from '../lib/repPicker'
@@ -32,14 +32,14 @@ type Props = {
   entry: NumberEntry | undefined
   /** 保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)。押せなくはしない */
   mark?: SaveMark
-  onPick: (slot: string) => void
+  onPick: (key: string) => void
   onConfirm: () => void
   onOpen?: () => void
 }
 
 function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
   const status = repStatus(doc)
-  const rows = withDeliveredImages(slotRows(doc), entry)
+  const rows = withDeliveredImages(candidateRows(doc), entry)
   const hasPicks = rows.some((row) => row.repRank > 0)
   // 代表が空なら、確定で入る既定の枠を薄く見せる
   const ghost = hasPicks ? [] : defaultPickSlots(doc)
@@ -61,13 +61,13 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
         <div class="word-list">
           {rows.map((row) => {
             const kind = row.slot.startsWith('wm') ? 'kind-m' : 'kind-h'
-            const ghostRank = ghost.indexOf(row.slot) + 1
+            const ghostRank = ghost.indexOf(row.key) + 1
             return (
               <button
-                key={row.slot}
+                key={row.key}
                 class={'word-line rep-line open ' + kind}
                 aria-pressed={row.repRank > 0}
-                onClick={() => onPick(row.slot)}
+                onClick={() => onPick(row.key)}
               >
                 <span class="wl-kind">{kind === 'kind-m' ? '物' : '人'}</span>
                 {row.imageUrl ? (

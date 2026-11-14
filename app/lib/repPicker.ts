@@ -4,7 +4,7 @@
 // 画面から切り離してあるのは、選ぶ順番と ①② の付き方をテストで確かめるため
 // (numberDetail.ts を分けているのと同じ理由)。
 import type { NumberDoc, RepPick } from './numberApi'
-import { livePicks, sameValue, slotRows } from './numberDetail'
+import { candidateRows, livePicks, sameValue } from './numberDetail'
 
 export type RepFilter =
   | 'all'
@@ -28,9 +28,9 @@ const DECADES = 10
 
 const isMono = (slot: string) => slot.startsWith('wm')
 
-/** 代表に選ばれている枠を ①② の順に */
+/** 代表に選ばれている枠を ①② の順に (タグ違いで分けた行もその枠の名前で返す) */
 export function pickedSlots(doc: NumberDoc): string[] {
-  return slotRows(doc)
+  return candidateRows(doc)
     .filter((row) => row.repRank > 0)
     .sort((a, b) => a.repRank - b.repRank)
     .map((row) => row.slot)
@@ -45,15 +45,16 @@ export function isStale(doc: NumberDoc): boolean {
 }
 
 /**
- * 1 回のタップで代表がどう変わるか。
+ * 1 回のタップで代表がどう変わるか。key は候補行の key (candidateRows。
+ * 分けていない行はスロット名なので、従来どおりスロット名でも引ける)。
  * 選ばれていない候補 → 空いている方 (① → ②) に入る。①② が埋まっていれば ② を置き換える。
  * 選ばれている候補 → 外す。① を外すと ② が ① に繰り上がる
  */
-export function togglePick(doc: NumberDoc, slot: string): RepPick[] {
+export function togglePick(doc: NumberDoc, key: string): RepPick[] {
   const picks = livePicks(doc)
-  const value = doc.slots?.[slot]
-  if (!value) return picks
-  const target = { k: value.kana, w: value.word }
+  const row = candidateRows(doc).find((candidate) => candidate.key === key)
+  if (!row) return picks
+  const target = { k: row.kana, w: row.word }
   if (picks.some((pick) => sameValue(pick, target))) {
     return picks.filter((pick) => !sameValue(pick, target))
   }
@@ -66,7 +67,7 @@ export function matchesFilter(doc: NumberDoc, filter: RepFilter): boolean {
     case 'open':
       return !doc.rep?.confirmed
     case 'multi':
-      return slotRows(doc).length >= 2
+      return candidateRows(doc).length >= 2
     case 'sameKind':
       return order.length === 2 && isMono(order[0]) === isMono(order[1])
     case 'mono1':
@@ -93,12 +94,16 @@ export function decadeProgress(docs: NumberDoc[]): number[] {
 /** 代表を選んでいない番号を «そのまま確定» するときの並び (rep-store の DEFAULT_PRIORITY と同じ) */
 const DEFAULT_PRIORITY = ['wh1', 'wm1', 'wh2', 'wm2', 'wh3', 'wm3']
 
-/** 代表が空のときに既定で入る枠 (① 人の 1 番手、② 物の 1 番手。無ければ次の候補) */
+/**
+ * 代表が空のときに既定で入る候補行の key (① 人の 1 番手、② 物の 1 番手。無ければ次の候補)。
+ * タグ違いで分けた枠は、その枠の先頭の行 (最初に書かれたタグ) を使う
+ */
 export function defaultPickSlots(doc: NumberDoc): string[] {
-  return DEFAULT_PRIORITY.filter((slot) => doc.slots?.[slot]).slice(
-    0,
-    MAX_PICKS
-  )
+  const rows = candidateRows(doc)
+  return DEFAULT_PRIORITY.map((slot) => rows.find((row) => row.slot === slot))
+    .filter((row) => row !== undefined)
+    .slice(0, MAX_PICKS)
+    .map((row) => row.key)
 }
 
 /**
@@ -113,9 +118,10 @@ export function confirmOp(
   if (isStale(doc) || doc.rep?.confirmed) return null
   const live = livePicks(doc)
   if (live.length > 0) return { op: 'rep', picks: live, confirmed: true }
-  const picks = defaultPickSlots(doc).map((slot) => ({
-    k: doc.slots![slot]!.kana,
-    w: doc.slots![slot]!.word,
-  }))
+  const rows = candidateRows(doc)
+  const picks = defaultPickSlots(doc).flatMap((key) => {
+    const row = rows.find((candidate) => candidate.key === key)
+    return row ? [{ k: row.kana, w: row.word }] : []
+  })
   return picks.length ? { op: 'rep', picks, confirmed: true } : null
 }

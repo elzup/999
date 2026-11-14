@@ -68,6 +68,8 @@ async function applyOperation({ body, current, num, now, writes, db }) {
       return writes.confirmImage(db, {
         num,
         slot: body.slot,
+        // タグ違いで分けた語の画像 (D-0039)。無ければスロットの画像
+        tag: typeof body.tag === 'string' && body.tag ? body.tag : undefined,
         imageUrl: body.imageUrl,
         current,
         now,

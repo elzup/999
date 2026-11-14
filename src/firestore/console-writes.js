@@ -82,6 +82,9 @@ export async function saveRating(db, { num, k, w, v, current, now, source }) {
  * その語を戻せばまた効く。代表が消えた語を指していれば stale として扱う
  * (値は捨てない: spec:rep-migration の REQ-MIG-003 と同じ方針)。
  */
+const isPlainObject = (v) =>
+  v !== null && typeof v === 'object' && !Array.isArray(v)
+
 export async function saveSlots(db, { num, slots, current, now, source }) {
   if (!current) return { error: 'unknown num' }
   if (!slots || typeof slots !== 'object' || Array.isArray(slots)) {
@@ -100,6 +103,10 @@ export async function saveSlots(db, { num, slots, current, now, source }) {
       // validateNumberDoc が string を要求する。未設定は空文字で埋める
       imageUrl: String(value?.imageUrl ?? ''),
       ...(value?.confirmedFor ? { confirmedFor: value.confirmedFor } : {}),
+      // 落とすとタグ違いの画像 (D-0039) が語の編集のたびに消える
+      ...(isPlainObject(value?.tagImages)
+        ? { tagImages: value.tagImages }
+        : {}),
     }
   }
 
@@ -119,16 +126,17 @@ export async function saveSlots(db, { num, slots, current, now, source }) {
  */
 export async function confirmImage(
   db,
-  { num, slot, imageUrl, current, now, source }
+  { num, slot, tag, imageUrl, current, now, source }
 ) {
   if (!current) return { error: 'unknown num' }
   const slotNow = current.slots?.[slot]
   if (!slotNow) return { error: `unknown slot: ${slot}` }
 
-  const slots = {
-    ...current.slots,
-    [slot]: { ...slotNow, imageUrl, confirmedFor: slotNow.word },
-  }
+  // tag 付きはタグ違いで分けた語の画像 (D-0039)。スロットの imageUrl には触れない
+  const nextSlot = tag
+    ? { ...slotNow, tagImages: { ...slotNow.tagImages, [tag]: imageUrl } }
+    : { ...slotNow, imageUrl, confirmedFor: slotNow.word }
+  const slots = { ...current.slots, [slot]: nextSlot }
   const built = patch(current, 'slots', slots, { now, source })
   if (built.error) return built
   return writeNumber(db, {

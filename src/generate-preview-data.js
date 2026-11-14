@@ -13,6 +13,7 @@ import {
   toHiragana,
 } from './words.js'
 import { buildYomiUse } from './yomi.js'
+import { tagImagesOf } from './images/tag-images.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 // data.json は辞書本体 (私的連想) を含むため、公開 hosting (public/→dist) には出さず
@@ -25,6 +26,8 @@ function buildCandidateSlotShape(prefix) {
     shape[`${prefix}${i}`] = z.string().default('')
     shape[`${prefix}${i}k`] = z.string().default('')
     shape[`${prefix}${i}Img`] = z.string().optional()
+    // タグ違いで分けた語の画像 (出典タグ → URL)。D-0039
+    shape[`${prefix}${i}TagImg`] = z.record(z.string(), z.string()).optional()
   }
   return shape
 }
@@ -214,6 +217,7 @@ if (existsSync(imagesPath)) {
     if (slots.w2?.url) n.w2Img = slots.w2.url
     if (slots.w1_2?.url) n.w1_2Img = slots.w1_2.url
     if (slots.w2_2?.url) n.w2_2Img = slots.w2_2.url
+    Object.assign(n, tagImagesOf(slots))
   }
 }
 
