@@ -1,4 +1,4 @@
-// グループ > タグ: タグを選ぶと、その語を持つ番号だけを並べる。
+// 番号 > グループ: タグを選ぶと、その語を持つ番号だけを並べる。
 // タグの選択とその絞り込み (検索) は dock に置き、番号の一覧は下から上へ積む。
 import { h } from 'preact'
 import { useMemo, useState } from 'preact/hooks'
