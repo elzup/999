@@ -6,6 +6,8 @@ const CandidateSlotSchema = {
   word: z.string().optional(),
   kana: z.string().optional(),
   image: z.string().optional(),
+  /** タグ違いで分けた語の画像 (出典タグ → URL)。D-0039 */
+  tagImages: z.record(z.string(), z.string()).optional(),
 }
 
 type CandidateRank = 1 | 2 | 3
@@ -15,6 +17,8 @@ type CandidateSlotShape<Prefix extends 'wh' | 'wm'> = {
   [Key in `${Prefix}${CandidateRank}k`]: typeof CandidateSlotSchema.kana
 } & {
   [Key in `${Prefix}${CandidateRank}Img`]: typeof CandidateSlotSchema.image
+} & {
+  [Key in `${Prefix}${CandidateRank}TagImg`]: typeof CandidateSlotSchema.tagImages
 }
 
 function buildCandidateSlotShape<Prefix extends 'wh' | 'wm'>(
@@ -24,12 +28,15 @@ function buildCandidateSlotShape<Prefix extends 'wh' | 'wm'>(
     [`${prefix}1`]: CandidateSlotSchema.word,
     [`${prefix}1k`]: CandidateSlotSchema.kana,
     [`${prefix}1Img`]: CandidateSlotSchema.image,
+    [`${prefix}1TagImg`]: CandidateSlotSchema.tagImages,
     [`${prefix}2`]: CandidateSlotSchema.word,
     [`${prefix}2k`]: CandidateSlotSchema.kana,
     [`${prefix}2Img`]: CandidateSlotSchema.image,
+    [`${prefix}2TagImg`]: CandidateSlotSchema.tagImages,
     [`${prefix}3`]: CandidateSlotSchema.word,
     [`${prefix}3k`]: CandidateSlotSchema.kana,
     [`${prefix}3Img`]: CandidateSlotSchema.image,
+    [`${prefix}3TagImg`]: CandidateSlotSchema.tagImages,
   } as CandidateSlotShape<Prefix>
 }
 

@@ -165,6 +165,23 @@ describe('console partial writes', () => {
     expect(db.docs['051'].slots.wh1).toEqual(stored.slots.wh1)
   })
 
+  it('tag 付きの画像はタグ違いの画像 (tagImages) に入れ、スロットの画像に触れない', async () => {
+    const db = fakeDb({ '051': stored })
+    await confirmImage(db, {
+      num: '051',
+      slot: 'wh1',
+      tag: 'res',
+      imageUrl: 'https://x.test/r.webp',
+      current: stored,
+      now,
+    })
+
+    expect(db.docs['051'].slots.wh1).toEqual({
+      ...stored.slots.wh1,
+      tagImages: { res: 'https://x.test/r.webp' },
+    })
+  })
+
   it('REQ-CON-005: reports an image whose word body changed', () => {
     const doc = {
       slots: {
@@ -232,6 +249,17 @@ describe('saveSlots — 語の編集・並べ替え・追加・削除', () => {
     expect(db.docs['051'].slots.wh1.word).toBe('鯉のぼり')
     expect(db.docs['051'].rep).toEqual(stored.rep)
     expect(db.docs['051'].ratings).toEqual(stored.ratings)
+  })
+
+  it('タグ違いの画像 (tagImages) を語の編集で落とさない', async () => {
+    const db = fakeDb({ '051': stored })
+    const tagImages = { res: 'https://x.test/r.webp' }
+    await save(
+      { wh1: { ...stored.slots.wh1, word: '鯉#res#pr', tagImages } },
+      db
+    )
+
+    expect(db.docs['051'].slots.wh1.tagImages).toEqual(tagImages)
   })
 
   it('並べ替えは語ごと別のキーへ移すこと。画像も一緒に移る', async () => {
