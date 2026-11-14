@@ -273,7 +273,13 @@ const dates = existsSync(datesPath)
       .filter(Boolean)
   : []
 
-const out = { numbers, cards, rules, yomiUse, ff, kuku, dates }
+// タグの表示名。sync:tags を回していない手元では無いので、無ければ載せない
+const tagsPath = join(baseDir, 'data', 'tags.json')
+const tagNames = existsSync(tagsPath)
+  ? JSON.parse(readFileSync(tagsPath, 'utf8'))
+  : undefined
+
+const out = { numbers, cards, rules, yomiUse, ff, kuku, dates, tagNames }
 mkdirSync(privateDir, { recursive: true })
 writeFileSync(join(privateDir, 'data.json'), JSON.stringify(out))
 console.log(

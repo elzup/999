@@ -6498,6 +6498,7 @@ button.activate-link {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   word-break: break-all;
+}
 
 /* グループ > タグ のタグ選択。件数が多いので横にスクロールさせ、dock を 1 行に保つ */
 .tag-filter-chips {
@@ -6507,4 +6508,10 @@ button.activate-link {
 .tag-filter-chips .tag-count {
   margin-left: 2px;
   color: var(--text2);
+}
+/* タグ候補の表示名 (res → アトリエ)。id だけでは何のタグか分からないので添える */
+.nd-tag-name {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.8;
 }

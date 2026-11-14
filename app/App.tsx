@@ -240,6 +240,7 @@ export function App() {
       onToggleBm: toggleBm,
       openEditor: setOverlayEditNum,
       editVersion,
+      tagNames: data?.tagNames,
     }),
     [data, bookmarks, toggleBm, editVersion]
   )
