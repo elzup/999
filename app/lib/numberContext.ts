@@ -17,6 +17,8 @@ export type NumberContextValue = {
    * API から読んでいる画面が、これを見て読み直す
    */
   editVersion: number
+  /** タグの表示名 (res → アトリエ)。シートの tags タブから配信データに載せる */
+  tagNames?: Record<string, string>
 }
 
 export const NumberContext = createContext<NumberContextValue | null>(null)

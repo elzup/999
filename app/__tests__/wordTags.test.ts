@@ -82,3 +82,28 @@ describe('suggestTags', () => {
     ])
   })
 })
+
+describe('suggestTags の表示名での検索', () => {
+  const known = [
+    { tag: 'res', count: 15, name: 'アトリエ' },
+    { tag: 'splatoon', count: 16, name: 'スプラ' },
+    { tag: 'ｺｰﾄﾞｷﾞｱｽ', count: 5 },
+  ]
+  it('表示名の前方一致・部分一致で出す', () => {
+    expect(suggestTags(known, 'アトリ', []).map((s) => s.tag)).toEqual(['res'])
+    expect(suggestTags(known, 'リエ', []).map((s) => s.tag)).toEqual(['res'])
+  })
+  it('半角カナ・全角の違いをそろえて当てる', () => {
+    expect(suggestTags(known, 'ｽﾌﾟﾗ', []).map((s) => s.tag)).toEqual([
+      'splatoon',
+    ])
+    expect(suggestTags(known, 'コード', []).map((s) => s.tag)).toEqual([
+      'ｺｰﾄﾞｷﾞｱｽ',
+    ])
+  })
+  it('id でも今までどおり当たる', () => {
+    expect(suggestTags(known, 'spl', []).map((s) => s.tag)).toEqual([
+      'splatoon',
+    ])
+  })
+})

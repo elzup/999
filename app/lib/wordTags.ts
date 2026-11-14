@@ -87,11 +87,16 @@ export const LABELS: Array<{ id: string; meaning: string }> = [
   { id: 'j', meaning: '熟語' },
 ]
 
-export type TagSuggestion = { tag: string; count: number }
+/** name はシートの tags タブの表示名 (res → アトリエ)。無いタグもある */
+export type TagSuggestion = { tag: string; count: number; name?: string }
+
+// 半角カナ・全角英数・大文字小文字の違いで当たらないことが無いようにそろえる
+const foldForSearch = (text: string) => text.normalize('NFKC').toLowerCase()
 
 /**
- * 入力中の文字に合うタグ候補。前方一致を先に、その中は使われている回数の多い順。
- * 既に付いているタグは出さない
+ * 入力中の文字に合うタグ候補。タグ (id) と表示名のどちらにも当てる
+ * («アトリエ» と打って #res を出せるように)。前方一致を先に、その中は使われている
+ * 回数の多い順。既に付いているタグは出さない
  */
 export function suggestTags(
   known: TagSuggestion[],
@@ -99,14 +104,14 @@ export function suggestTags(
   exclude: string[],
   limit = 8
 ): TagSuggestion[] {
-  const q = normalizeTag(input).toLowerCase()
+  const q = foldForSearch(normalizeTag(input))
   const pool = known.filter((item) => !exclude.includes(item.tag))
   if (!q) return pool.slice(0, limit)
-  const head = pool.filter((item) => item.tag.toLowerCase().startsWith(q))
+  const keysOf = (item: TagSuggestion) =>
+    [item.tag, item.name ?? ''].filter(Boolean).map(foldForSearch)
+  const head = pool.filter((item) => keysOf(item).some((k) => k.startsWith(q)))
   const mid = pool.filter(
-    (item) =>
-      !item.tag.toLowerCase().startsWith(q) &&
-      item.tag.toLowerCase().includes(q)
+    (item) => !head.includes(item) && keysOf(item).some((k) => k.includes(q))
   )
   return [...head, ...mid].slice(0, limit)
 }
