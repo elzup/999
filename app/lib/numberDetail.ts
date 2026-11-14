@@ -104,20 +104,35 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
  *
  * 枠の位置ではなく語で当てる。並べ替えや書き換えの後に、位置で当てると
  * 別の語の画像が付いてしまう。
+ *
+ * 語は全文 (タグ込み) で当てる。本体 (nameOf) だけで当てると «ハブ#ｳｼｼﾞﾏ» と
+ * «ハブ» が同じ語扱いになり、別の画像の片方が両方に付いた (082)。
+ * 全文で当たらないとき (タグを付け替えた等) だけ本体で当て、その本体の画像が
+ * 1 つに決まらなければ付けない (違う画像を付けるより、無いほうがまし)。
  */
 export function withDeliveredImages(
   rows: SlotRow[],
   entry: NumberEntry | undefined
 ): SlotRow[] {
   if (!entry) return rows
-  const images = new Map<string, string>()
+  const byWord = new Map<string, string>()
+  const byName = new Map<string, Set<string>>()
   for (const cand of candidatesOf(entry)) {
+    if (!cand.img) continue
+    const word = norm(cand.word).trim()
+    if (word && !byWord.has(word)) byWord.set(word, cand.img)
     const name = nameOf(cand.word)
-    if (name && cand.img && !images.has(name)) images.set(name, cand.img)
+    if (name) byName.set(name, new Set([...(byName.get(name) ?? []), cand.img]))
+  }
+  const imageFor = (word: string | undefined) => {
+    const exact = byWord.get(norm(word).trim())
+    if (exact) return exact
+    const byBase = byName.get(nameOf(word))
+    return byBase?.size === 1 ? [...byBase][0] : undefined
   }
   return rows.map((row) => {
     if (row.imageUrl) return row
-    const img = images.get(nameOf(row.word))
+    const img = imageFor(row.word)
     return img ? { ...row, imageUrl: img, imageDelivered: true } : row
   })
 }

@@ -380,6 +380,48 @@ describe('画像の補完', () => {
     expect(slotsFromRows(rows, doc).wh1.imageUrl).toBe('a.jpg')
   })
 
+  it('タグだけ違う語には、それぞれの画像を付ける (082 の ハブ#ｳｼｼﾞﾏ / ハブ)', () => {
+    const hub: NumberDoc = {
+      num: '082',
+      slots: {
+        wh1: { word: 'ハブ#ｳｼｼﾞﾏ', kana: 'はぶ' },
+        wm1: { word: 'ハブ', kana: 'はぶ' },
+      },
+    }
+    const rows = withDeliveredImages(slotRows(hub), {
+      num: '082',
+      w1: 'ハブ#ｳｼｼﾞﾏ',
+      w1Img: 'ushijima.webp',
+      w2: 'ハブ',
+      w2Img: 'lan.webp',
+    } as never)
+    const bySlot = Object.fromEntries(rows.map((row) => [row.slot, row]))
+    expect(bySlot.wh1.imageUrl).toBe('ushijima.webp')
+    expect(bySlot.wm1.imageUrl).toBe('lan.webp')
+  })
+
+  it('タグを付け替えた語は本体で当てるが、本体の画像が 1 つに決まらなければ付けない', () => {
+    const retagged: NumberDoc = {
+      num: '082',
+      slots: { wh1: { word: 'ハブ#沖縄', kana: 'はぶ' } },
+    }
+    const one = withDeliveredImages(slotRows(retagged), {
+      num: '082',
+      w1: 'ハブ#ｳｼｼﾞﾏ',
+      w1Img: 'ushijima.webp',
+    } as never)
+    expect(one[0].imageUrl).toBe('ushijima.webp')
+
+    const two = withDeliveredImages(slotRows(retagged), {
+      num: '082',
+      w1: 'ハブ#ｳｼｼﾞﾏ',
+      w1Img: 'ushijima.webp',
+      w2: 'ハブ',
+      w2Img: 'lan.webp',
+    } as never)
+    expect(two[0].imageUrl).toBeUndefined()
+  })
+
   it('一致する語が無ければ付けない', () => {
     const rows = withDeliveredImages(slotRows(doc), {
       num: '051',
