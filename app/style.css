@@ -6515,3 +6515,12 @@ button.activate-link {
   color: var(--text);
   opacity: 0.8;
 }
+
+/* 概念 (#g) の語の画像。実物の写真と取り違えないよう、額縁のように二重の枠で囲む。
+   <img> には内側の box-shadow が描けない (画像の下に隠れる) ので、
+   画像の上に描かれる outline を内側へずらして内枠、box-shadow で外枠にする */
+img[data-concept] {
+  outline: 1.5px solid var(--kind-g);
+  outline-offset: -4px;
+  box-shadow: 0 0 0 1.5px var(--kind-g);
+}

@@ -66,7 +66,7 @@ function MapTileView({
         <span class={'ymap-tile-rep ' + rep} aria-hidden="true" />
       ) : null}
       {tile.img ? (
-        <img class="ymap-tile-img" loading="lazy" {...wordImage(tile.img, 48)} alt="" />
+        <img class="ymap-tile-img" loading="lazy" {...wordImage(tile.img, 48, tile.word)} alt="" />
       ) : (
         <span class="ymap-tile-noimg" />
       )}

@@ -18,4 +18,17 @@ describe('wordImage', () => {
       src: 'https://example.com/a.jpg',
     })
   })
+
+  it('#g (概念) の語には枠を付ける印を足す。#gx のような別タグには付けない', () => {
+    expect(wordImage('https://example.com/a.jpg', 34, '重力#g')).toEqual({
+      src: 'https://example.com/a.jpg',
+      'data-concept': true,
+    })
+    expect(
+      wordImage('https://example.com/a.jpg', 34, '重力#gx')
+    ).not.toHaveProperty('data-concept')
+    expect(wordImage('https://example.com/a.jpg', 34, '重力')).not.toHaveProperty(
+      'data-concept'
+    )
+  })
 })

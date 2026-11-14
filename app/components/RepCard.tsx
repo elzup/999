@@ -73,7 +73,7 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
                 {row.imageUrl ? (
                   <img
                     class="wl-img"
-                    {...wordImage(row.imageUrl, 34)}
+                    {...wordImage(row.imageUrl, 34, row.word)}
                     alt=""
                     loading="lazy"
                   />

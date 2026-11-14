@@ -100,7 +100,7 @@ export function BmNumCard({ d, selected, onSelect }: NumCellProps) {
             <img
               key={c.slot}
               class="bm-thumb"
-              {...wordImage(c.img, BM_THUMB_PX)}
+              {...wordImage(c.img, BM_THUMB_PX, c.word)}
               alt=""
               loading="lazy"
             />
