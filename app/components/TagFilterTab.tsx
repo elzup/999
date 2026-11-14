@@ -2,16 +2,14 @@
 //
 // 1. タグ一覧: 作品名 + #タグ + 語の数。よく使うタグほど下 (親指側) に置く。
 //    dock の検索欄で作品名でも #タグでも絞れる (タグは id だけでは何の作品か分からない)
-// 2. タグを選ぶと、そのタグが付いた語を画像付きのカードで並べる。
-//    番号だけのマスだと «どの語がそのタグか» が開くまで分からないため、語と画像を出す
+// 2. タグを選ぶと、その語を持つ番号を md カードで並べる。画像はそのタグの語のもの
 import { h } from 'preact'
 import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
-import { candidatesOf, type Candidate } from '../lib/choice'
-import { nameOf } from '../lib/numberDetail'
+import { candidatesOf } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { parseWord, suggestTags, type TagSuggestion } from '../lib/wordTags'
-import { wordImage } from '../lib/wordImage'
+import { NumMdCard } from './Cells'
 import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockBar } from './Screen'
 import DetailSheet from './DetailSheet'
@@ -23,17 +21,13 @@ type Props = {
 
 type TagRow = TagSuggestion & { count: number }
 
-/** タグの付いた語 1 つ (同じ番号に 2 つあれば 2 枚) */
-type TaggedWord = { num: string; cand: Candidate }
+/** その番号の、そのタグが付いた語 (複数あれば先頭) */
+const taggedCand = (d: NumberEntry, tag: string) =>
+  candidatesOf(d).find((cand) => parseWord(cand.word).tags.includes(tag))
 
-const CARD_IMG_PX = 72
-
-function wordsWithTag(numbers: NumberEntry[], tag: string): TaggedWord[] {
-  return numbers.flatMap((d) =>
-    candidatesOf(d)
-      .filter((cand) => parseWord(cand.word).tags.includes(tag))
-      .map((cand) => ({ num: d.num, cand }))
-  )
+/** そのタグの語を持つ番号 */
+function numbersWithTag(numbers: NumberEntry[], tag: string): NumberEntry[] {
+  return numbers.filter((d) => taggedCand(d, tag) !== undefined)
 }
 
 /** 語に付いたタグごとの語の数 (一覧の件数と、選んだあとに並ぶ語の数を揃える) */
@@ -64,37 +58,6 @@ function TagList({ rows, onPick }: TagListProps) {
   )
 }
 
-function WordCard({
-  item,
-  selected,
-  onSelect,
-}: {
-  item: TaggedWord
-  selected: boolean
-  onSelect: () => void
-}) {
-  const { num, cand } = item
-  return (
-    <button
-      class={'tw-card' + (selected ? ' selected' : '')}
-      onClick={onSelect}
-    >
-      {cand.img ? (
-        <img
-          class="tw-img"
-          {...wordImage(cand.img, CARD_IMG_PX, cand.word)}
-          alt=""
-          loading="lazy"
-        />
-      ) : (
-        <span class="tw-img is-empty" />
-      )}
-      <span class="tw-num">{num}</span>
-      <span class="tw-word">{nameOf(cand.word)}</span>
-    </button>
-  )
-}
-
 function TagFilterTab({ numbers }: Props) {
   const tagNames = useNumberContext()?.tagNames
   const [query, setQuery] = useState('')
@@ -118,15 +81,13 @@ function TagFilterTab({ numbers }: Props) {
   }, [allRows, query])
 
   const current = allRows.find((r) => r.tag === tag) ?? null
-  const words = useMemo(
-    () => (tag ? wordsWithTag(numbers, tag) : []),
+  const matched = useMemo(
+    () => (tag ? numbersWithTag(numbers, tag) : []),
     [numbers, tag]
   )
-  const keyOf = (w: TaggedWord) => `${w.num}:${w.cand.slot}`
-  const order = useMemo(() => words.map(keyOf), [words])
+  const order = useMemo(() => matched.map((d) => d.num), [matched])
   const { selected, toggle, clear, nav } = useSelection(order)
-  const selectedNum = selected ? selected.split(':')[0] : null
-  const selectedEntry = numbers.find((d) => d.num === selectedNum) ?? null
+  const selectedEntry = matched.find((d) => d.num === selected) ?? null
 
   const pickTag = (next: string | null) => {
     clear()
@@ -140,13 +101,15 @@ function TagFilterTab({ numbers }: Props) {
   ) : null
 
   const main = current ? (
-    <div class="grid-up tw-grid">
-      {words.map((w) => (
-        <WordCard
-          key={keyOf(w)}
-          item={w}
-          selected={selected === keyOf(w)}
-          onSelect={() => toggle(keyOf(w))}
+    // md カードで、そのタグの語の画像を出す (人・物の先頭ではない)
+    <div class="grid-up" style={{ '--cols': 3, '--gap': '6px' }}>
+      {matched.map((d) => (
+        <NumMdCard
+          key={d.num}
+          num={d.num}
+          cand={taggedCand(d, current.tag)}
+          selected={selected === d.num}
+          onSelect={() => toggle(d.num)}
         />
       ))}
     </div>
@@ -157,7 +120,7 @@ function TagFilterTab({ numbers }: Props) {
   const dock = current ? (
     <DockBar
       title={current.name ?? `#${current.tag}`}
-      sub={`#${current.tag} ・ ${words.length} 語`}
+      sub={`#${current.tag} ・ ${matched.length} 番号`}
     >
       <button class="filter-btn" onClick={() => pickTag(null)}>
         タグ一覧へ

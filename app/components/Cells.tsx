@@ -73,7 +73,8 @@ export function CardCell({ c, selected, stat, onSelect }: CardCellProps) {
 
 // ブックマークは数が少ないので、番号だけのマスより語と画像が見えるカードにする
 // (並べて眺めて思い出す面なので、開かなくても何の語か分かるほうがよい)
-const BM_THUMB_PX = 48
+// md カードは 3 列で画面幅の 1/3 ほど (スマホで 120px 前後)
+const MD_CARD_PX = 140
 
 /** 人 / 物 の先頭の候補を 1 つずつ (人 → 物 の順) */
 function leadCandidates(d: NumberEntry): Candidate[] {
@@ -83,39 +84,53 @@ function leadCandidates(d: NumberEntry): Candidate[] {
   return [hito, mono].filter((c): c is Candidate => c !== undefined)
 }
 
-export function BmNumCard({ d, selected, onSelect }: NumCellProps) {
-  const leads = leadCandidates(d)
+/**
+ * 番号の md カード (UI 候補 A-2): 画像 1 枚を枠いっぱいに出し、番号を左上、語を下の帯に重ねる。
+ * どの語を出すかは画面が決めて渡す (ブックマークは人の先頭、タグ一覧はそのタグの語)
+ */
+export function NumMdCard({
+  num,
+  cand,
+  selected,
+  onSelect,
+}: {
+  num: string
+  cand: Candidate | undefined
+  selected: boolean
+  onSelect: () => void
+}) {
   return (
     <div
-      class={
-        'bm-card' +
-        (selected ? ' selected' : '') +
-        (leads.length ? '' : ' empty')
-      }
+      class={'md-card' + (selected ? ' selected' : '')}
       onClick={onSelect}
     >
-      <div class="bm-thumbs">
-        {leads.map((c) =>
-          c.img ? (
-            <img
-              key={c.slot}
-              class="bm-thumb"
-              {...wordImage(c.img, BM_THUMB_PX, c.word)}
-              alt=""
-              loading="lazy"
-            />
-          ) : (
-            <span key={c.slot} class="bm-thumb empty">
-              {nameOf(c.word).slice(0, 1)}
-            </span>
-          )
-        )}
-      </div>
-      <div class="bm-num">{d.num}</div>
-      <div class="bm-words">
-        {leads.length ? leads.map((c) => nameOf(c.word)).join(' / ') : '語なし'}
-      </div>
+      {cand?.img ? (
+        <img
+          class="md-card-img"
+          {...wordImage(cand.img, MD_CARD_PX, cand.word)}
+          alt=""
+          loading="lazy"
+        />
+      ) : (
+        <span class="md-card-img is-empty">
+          {cand ? nameOf(cand.word).slice(0, 1) : ''}
+        </span>
+      )}
+      <span class="md-card-num">{num}</span>
+      <span class="md-card-word">{cand ? nameOf(cand.word) : '語なし'}</span>
     </div>
+  )
+}
+
+/** ブックマークの md カード。画像は人の先頭 (無ければ物の先頭) */
+export function BmNumCard({ d, selected, onSelect }: NumCellProps) {
+  return (
+    <NumMdCard
+      num={d.num}
+      cand={leadCandidates(d)[0]}
+      selected={selected}
+      onSelect={onSelect}
+    />
   )
 }
 
