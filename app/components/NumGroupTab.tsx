@@ -1,7 +1,7 @@
 import { h } from 'preact'
 import type { NumberEntry, RulesData, YomiUse } from '../data/schema'
 import NumberTab from './NumberTab'
-import DigitTab from './DigitTab'
+import TagFilterTab from './TagFilterTab'
 import NumMapTab from './NumMapTab'
 import AssocTestTab from './AssocTestTab'
 import YomiTab from './YomiTab'
@@ -43,15 +43,10 @@ function NumGroupTab({
           ),
         },
         {
+          // id は保存済みの選択 (subtab.num) を活かすため d2 のまま
           id: 'd2',
-          label: '2桁',
-          render: () => (
-            <DigitTab
-              numbers={numbers}
-              bookmarks={bookmarks}
-              onToggleBm={onToggleBm}
-            />
-          ),
+          label: 'グループ',
+          render: () => <TagFilterTab numbers={numbers} />,
         },
         {
           id: 'yomi',
