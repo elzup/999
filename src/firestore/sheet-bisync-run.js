@@ -17,6 +17,7 @@ import {
   sheetFormOfDoc,
   sheetFormOfRow,
 } from './sheet-bisync.js'
+import { planRankeys } from './sheet-rankey.js'
 
 // cursor はこの回の開始時刻から少し戻す。別インスタンスの時計のずれで
 // 境目の書き込みを取りこぼすと、その番号は base と違うまま二度と読まれない
@@ -270,10 +271,35 @@ function nextState({
 }
 
 /**
- * @param apply false なら計画だけ返す (dry-run)
- * @param only  番号を絞る (アプリ保存直後の即時反映)
+ * rankey 列を計算値に揃える (D-0052)。番号指定の回では回さない
+ * (保存の応答を待たせない。5 分以内に定期の回が揃える)。
+ * rankey は見るための写しなので、書けなくても同期の結果は変わらない
  */
-export async function runBisync({ sheet, store, now, apply = true, only }) {
+async function syncRankeys({ sheet, rows, written, rankeyOf }) {
+  const updates = planRankeys({ rows, written, rankeyOf })
+  if (!updates.length) return 0
+  try {
+    const result = await sheet.writeCells(updates)
+    return result.written.length
+  } catch (error) {
+    console.error('sheetSync(rankey)', error)
+    return 0
+  }
+}
+
+/**
+ * @param apply    false なら計画だけ返す (dry-run)
+ * @param only     番号を絞る (アプリ保存直後の即時反映)
+ * @param rankeyOf (kana, num, word) => string | null。渡せば rankey 列も揃える
+ */
+export async function runBisync({
+  sheet,
+  store,
+  now,
+  apply = true,
+  only,
+  rankeyOf,
+}) {
   const nowMs = Date.parse(now)
   const { rows } = await sheet.readRows()
   const { forms, rowNumbers, duplicates } = indexRows(rows)
@@ -308,6 +334,7 @@ export async function runBisync({ sheet, store, now, apply = true, only }) {
       read: Object.keys(docs).length,
       ...summary,
       plans: plansWithForm,
+      rankeys: rankeyOf ? planRankeys({ rows, rankeyOf }) : [],
     }
 
   const result = await applyPlans({
@@ -317,9 +344,14 @@ export async function runBisync({ sheet, store, now, apply = true, only }) {
     rowNumbers,
     base,
   })
+  const rankeyWritten =
+    rankeyOf && !only
+      ? await syncRankeys({ sheet, rows, written: result.written, rankeyOf })
+      : 0
   const report = {
     conflicts: summary.conflicts,
     counts: {
+      rankeyWritten,
       read: Object.keys(docs).length,
       dbWritten: result.dbWritten,
       sheetWritten: result.sheetWritten,

@@ -47,7 +47,7 @@ flowchart LR
   Fn -->|"GET /api/app/data"| App
   App -->|"PATCH /api/editor/words<br/>唯一の逆流"| Fn
   Fn --> Sheet
-  Sheet -->|"nr sheet:rankey<br/>rankey 列を再計算"| Sheet
+  Sheet -->|"sheetSync (5 分おき)<br/>rankey 列を再計算"| Sheet
   Tsv -->|"images:search → fetch"| GCS
   GCS --> Img
   Tsv -.->|"候補を供給"| Rep
@@ -107,7 +107,7 @@ flowchart LR
 | `whNk` / `wmNk`     | その語のかな読み。**エンコード・スコアの入力**                                        | 人手 / EditorTab                       |
 | `whNImg` / `wmNImg` | 画像 URL                                                                              | 画像パイプライン経由（後述）           |
 | `check`             | 監査フラグ（`[x]` 等）。各 `k` 列の**左隣**                                           | `sheet-audit.mjs` / `sheet-remark.mjs` |
-| `rankey`            | 3 桁の内訳記法（`src/rankey.js`。旧 `pt` 列を置き換え）。各 `k` 列の**右隣**          | `sheet-audit.mjs --write-rankey`       |
+| `rankey`            | 3 桁の内訳記法（`src/rankey.js`。旧 `pt` 列を置き換え）。各 `k` 列の**右隣**          | Function `sheetSync` (5 分おき)       |
 
 > スロット列は `sheet-audit.mjs` が正規表現 `^(w[hm]\d)k$` で動的検出し、その左=`check`・右=`rankey`(旧 `pt`) を前提にする。**ヘッダ名やスロットの並びを変えると audit が例外で止まる**。
 
@@ -221,7 +221,7 @@ deploy        = build:preview → build → sync:private → sync:functions → 
 - 入力: `words.tsv`（+ sample）を `loadWords`
 - 計算: `categoryScore`→`catScore`、`scoreWithLabel(w1k,w1)/(w2k,w2)`→`w1Score`/`w2Score`/`w1Pattern`（トークン記号列）・エラー時 `w1Error`/`w2Error`、集計 `ruleStats`（patterns / tokenTypes / kanaUsage / digitKanaAlloc / violations 等）
 - 出力: `visualize-words.data.json`（本番, gitignore）と `.sample.json`（commit）
-- **pt と rankey はここで計算される派生値**（`w1Score`/`w2Score` と `w1Rk`/`w2Rk`）。ルール表を変えたら、この経路と `sheet-audit.mjs`（シートの rankey 列）の両方を作り直す（→ `nr sync:all`）。
+- **pt と rankey はここで計算される派生値**（`w1Score`/`w2Score` と `w1Rk`/`w2Rk`）。ルール表を変えたら、この経路を作り直す（→ `nr sync:all`）。シートの rankey 列は Function `sheetSync` が揃える。
 
 ### generate-preview-data.js（配信データの組み立て）
 
@@ -404,8 +404,8 @@ m      mix (同じ数字を別のかなで)
 `*_digit.tsv` や `scorer.js` を触ると pt と rankey の両方が変わる。かな → 値の
 **一方向**なので、古い値は自動更新されない。
 
-- `nr sync:all` … シートの `rankey` 列と `data.json` の両方を作り直す（**通常はこれ 1 本**）
-- 個別なら `nr sheet:rankey`（シート）/ `nr build:data`（配信データ）
+- シートの `rankey` 列 … Function `sheetSync` が 5 分おきに計算し直して揃える。規則を変えたら `nr deploy` で Function を出し直すだけ（D-0052）
+- 配信データ … `nr build:data`（`nr sync:all` にも入っている）
 
 ---
 
@@ -431,7 +431,7 @@ m      mix (同じ数字を別のかなで)
 
 | 分類         | script                                                                                                    | 役割                                                                                              |
 | ------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **一括**     | **`sync:all`**                                                                                            | **sync → sync:tags → sync:card → sheet:rankey → lyrics → build:data を順に実行。通常はこれ 1 本** |
+| **一括**     | **`sync:all`**                                                                                            | **sync → sync:tags → sync:card → lyrics → build:data を順に実行。通常はこれ 1 本** |
 | 同期         | `sync` / `sync:card` / `sync:tags` / `push` / `push:tags`                                                 | シート ⇔ ローカル TSV/JSON                                                                        |
 | シート書戻し | `sheet:audit` (dry-run) / `sheet:rankey`                                                                  | 監査プラン出力 / rankey 列を書き戻す                                                              |
 | 歌詞         | `lyrics`                                                                                                  | `lyrics/` を再生成（確定が増えたら都度）                                                          |

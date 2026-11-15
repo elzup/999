@@ -14,7 +14,9 @@ const GROUPS = {
   hito: ['wh1', 'wh2', 'wh3'],
   mono: ['wm1', 'wm2', 'wm3'],
 }
-const KANA_FIELDS = [...GROUPS.hito, ...GROUPS.mono].map((slot) => `${slot}k`)
+export const KANA_FIELDS = [...GROUPS.hito, ...GROUPS.mono].map(
+  (slot) => `${slot}k`
+)
 export const SHEET_FIELDS = ['hito', 'mono', ...KANA_FIELDS]
 
 const text = (value) =>
