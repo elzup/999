@@ -28,7 +28,6 @@ flowchart LR
   AppEdit["アプリ<br/>番号詳細 · 代表語"]
 
   Sheet <-->|"3-way merge"| Sync
-  Sync -->|"rankey 列"| Sheet
   Sync <-->|"writeNumber"| FS
   FS <--> Num
   Num <-->|"GET / PATCH"| AppEdit
@@ -107,18 +106,17 @@ sequenceDiagram
   Note over A,F: 番号詳細は次に開いた時点で新しい値
   Sh->>S: シートで直した分は 5 分おきの回で拾う
   S->>F: writeNumber
-  S->>Sh: rankey 列を計算し直して揃える
   Note over L,D: ここから先は手で回すまで止まる
   Sh->>L: nr sync:all (words.tsv → data.json)
   L->>D: nr deploy
 ```
 
-| 直した場所       | 番号詳細 (DB) | シート       | rankey 列 | 一覧・訓練 (`data.json`) |
-| ---------------- | ------------- | ------------ | --------- | ------------------------ |
-| アプリの番号詳細 | すぐ          | すぐ (即時)  | 5 分以内  | `nr sync:all` → `nr deploy` |
-| シート           | 5 分以内      | —            | 5 分以内  | `nr sync:all` → `nr deploy` |
-| 画像コンソール   | 対象外        | 対象外       | —         | `nr deploy` (manifest 経由) |
-| 代表語コンソール | 対象外 ※      | 対象外       | —         | `nr lyrics` のみ (配信には載らない) |
+| 直した場所       | 番号詳細 (DB) | シート      | 一覧・訓練 (`data.json`)            |
+| ---------------- | ------------- | ----------- | ----------------------------------- |
+| アプリの番号詳細 | すぐ          | すぐ (即時) | `nr sync:all` → `nr deploy`         |
+| シート           | 5 分以内      | —           | `nr sync:all` → `nr deploy`         |
+| 画像コンソール   | 対象外        | 対象外      | `nr deploy` (manifest 経由)         |
+| 代表語コンソール | 対象外 ※      | 対象外      | `nr lyrics` のみ (配信には載らない) |
 
 ※ 代表語コンソールはまだ `word-rep.json` に書く。アプリの代表語ピッカーは DB (`rep`) に書く。
 2 つの正本の切り替えは `spec:source-of-truth-switch` で段階的に進める途中。
@@ -158,7 +156,7 @@ sequenceDiagram
 | `whNk` / `wmNk`     | その語のかな読み。**エンコード・スコアの入力**                                        | 人手 / アプリ (sheetSync 経由)         |
 | `whNImg` / `wmNImg` | 画像 URL                                                                              | 画像パイプライン経由（後述）           |
 | `check`             | 監査フラグ（`[x]` 等）。各 `k` 列の**左隣**                                           | `sheet-audit.mjs` / `sheet-remark.mjs` |
-| `rankey`            | 3 桁の内訳記法（`src/rankey.js`。旧 `pt` 列を置き換え）。各 `k` 列の**右隣**          | Function `sheetSync` (5 分おき)       |
+| `rankey`            | 3 桁の内訳記法（`src/rankey.js`。旧 `pt` 列を置き換え）。各 `k` 列の**右隣**          | 使っていない (更新されない。D-0060)   |
 
 > スロット列は `sheet-audit.mjs` が正規表現 `^(w[hm]\d)k$` で動的検出し、その左=`check`・右=`rankey`(旧 `pt`) を前提にする。**ヘッダ名やスロットの並びを変えると audit が例外で止まる**。
 
@@ -274,7 +272,7 @@ deploy        = build:preview → build → sync:private → sync:functions → 
 - 入力: `words.tsv`（+ sample）を `loadWords`
 - 計算: `categoryScore`→`catScore`、`scoreWithLabel(w1k,w1)/(w2k,w2)`→`w1Score`/`w2Score`/`w1Pattern`（トークン記号列）・エラー時 `w1Error`/`w2Error`、集計 `ruleStats`（patterns / tokenTypes / kanaUsage / digitKanaAlloc / violations 等）
 - 出力: `visualize-words.data.json`（本番, gitignore）と `.sample.json`（commit）
-- **pt と rankey はここで計算される派生値**（`w1Score`/`w2Score` と `w1Rk`/`w2Rk`）。ルール表を変えたら、この経路を作り直す（→ `nr sync:all`）。シートの rankey 列は Function `sheetSync` が揃える。
+- **pt と rankey はここで計算される派生値**（`w1Score`/`w2Score` と `w1Rk`/`w2Rk`）。ルール表を変えたら、この経路を作り直す（→ `nr sync:all`）。シートの rankey 列は使っていない。
 
 ### generate-preview-data.js（配信データの組み立て）
 
@@ -459,7 +457,9 @@ m      mix (同じ数字を別のかなで)
 
 余りは「読みが 3 桁を超えた分」と「語が読みより長い分」の両方を指す。
 
-### rankey を計算する場所 (D-0045, D-0052)
+### rankey を計算する場所 (D-0045)
+
+シートの `rankey` 列は使っていない。アプリが計算するので、シートに表示する必要が無くなった (D-0060)。
 
 rankey は **保存して配る値ではなく、見る場所ごとに `src/rankey.js` で計算する値**。
 計算の実体は 1 か所 (`rankey.js` + 規則表) で、各所はそれを呼ぶだけ。
@@ -467,7 +467,6 @@ rankey は **保存して配る値ではなく、見る場所ごとに `src/rank
 ```mermaid
 flowchart TB
   RK["src/rankey.js<br/>+ *_digit.tsv"]
-  RK -->|"5 分おき・全行"| Sheet["シートの rankey 列<br/>(sheetSync)"]
   RK -->|"書き込みのたび"| Der["Firestore derived.rankeyBySlot<br/>(番号詳細が表示)"]
   RK -->|"nr build:data"| Viz["data.json の w1Rk / w2Rk<br/>(一覧 · NumDetailPanel)"]
   RK -->|"表示のたび"| Con["両コンソール"]
@@ -475,7 +474,6 @@ flowchart TB
 
 | 表示先                   | いつ計算し直すか                    | 規則表を変えたら                         |
 | ------------------------ | ----------------------------------- | ---------------------------------------- |
-| シートの `rankey` 列     | `sheetSync` の定期の回 (全行・差分だけ書く) | `nr deploy` で Function を出し直す       |
 | Firestore `derived`      | その番号が書かれたとき              | 書かれるまで古い (全件の再計算は未整備)  |
 | `data.json` `w1Rk/w2Rk`  | `nr build:data`                     | `nr sync:all` → `nr deploy`              |
 | コンソール               | 表示のたび                          | 再起動                                   |
@@ -487,7 +485,6 @@ flowchart TB
 `*_digit.tsv` や `scorer.js` を触ると pt と rankey の両方が変わる。かな → 値の
 **一方向**なので、古い値は自動更新されない。
 
-- シートの `rankey` 列 … Function `sheetSync` が 5 分おきに計算し直して揃える。規則を変えたら `nr deploy` で Function を出し直すだけ（D-0052）
 - 配信データ … `nr build:data`（`nr sync:all` にも入っている）
 
 ---
@@ -516,7 +513,7 @@ flowchart TB
 | ------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | **一括**     | **`sync:all`**                                                                                            | **sync → sync:tags → sync:card → lyrics → build:data を順に実行。通常はこれ 1 本** |
 | 同期         | `sync` / `sync:card` / `sync:tags` / `push` / `push:tags`                                                 | シート ⇔ ローカル TSV/JSON                                                                        |
-| シート書戻し | `sheet:audit` (dry-run) / `sheet:rankey`                                                                  | 監査プラン出力 / rankey 列を書き戻す (通常は `sheetSync` が揃えるので不要)                        |
+| シート書戻し | `sheet:audit` (dry-run) / `sheet:rankey`                                                                  | 監査プラン出力 / rankey 列を書き戻す (使っていない)                        |
 | DB 同期      | `sheet:bisync` / `sheet:status` / `db:plan` / `db:push` / `db:rules`                                  | シート ⇄ Firestore を手で回す / 状態 / 移行 / rules                                              |
 | 歌詞         | `lyrics`                                                                                                  | `lyrics/` を再生成（確定が増えたら都度）                                                          |
 | 画像         | `images:search` / `images:retag` / `images:fetch` / `images:redo` / `images:keep-all` / `images:avatar-i` | 画像 探索 → 取得 → ロック                                                                         |

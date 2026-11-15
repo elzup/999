@@ -39,7 +39,7 @@ nr check:errors # エラーチェック
 nr viz         # 単語ダッシュボード可視化HTML生成
 nr lyrics      # 代表語/FF の歌詞テキスト (lyrics/) を再生成
 nr sheet:audit # シート監査 (dry-run。書込プランを sheet-audit.out.json に出す)
-nr sheet:rankey # 各スロットの rankey 列をシートへ書き戻す (通常は不要。定期の同期が 5 分おきに揃える)
+nr sheet:rankey # 各スロットの rankey 列をシートへ書き戻す (使っていない。rankey はアプリが計算する)
 nr test        # テスト実行
 ```
 

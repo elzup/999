@@ -27,13 +27,7 @@ N 番目をそのまま取り出しているだけ。人が編集しているの
 | `wh1k`..`wm3k` | `wh1k` ほか | `slots.<slot>.kana`                                   |
 
 アプリで語を直すと `slots` だけが変わり DB の `hito` は古いまま残る。そこで DB 側の値は
-常に slots から組み立てる (`sheetFormOfDoc`)。式セル・`check` には書かない。
-
-`rankey` 列 (各かな列の右隣) は merge の対象ではなく、定期の回の最後に
-かな・番号・語から計算した値に揃える (D-0045, D-0052。`sheet-rankey.js`)。
-rankey は保存する値ではなく見る場所ごとに計算する値で、シートは Function が
-書いて揃える «表示先» という扱い。規則表を変えたら Function をデプロイし直せば、
-次の回で全行が揃う。
+常に slots から組み立てる (`sheetFormOfDoc`)。式セル・`check`・`rankey` には書かない。
 
 ## 3-way merge (1 セルずつ)
 
@@ -78,8 +72,6 @@ sequenceDiagram
     Fn->>Sh: 8 セルのうち変わったものだけ書く
   end
   Fn->>FS: 両側が揃った番号だけ base を進める (merge)
-  Note over Fn: 全行の rankey を計算 (書いたかなを反映)
-  Fn->>Sh: rankey 列のうち計算値と違うセルだけ書く (同じ読み直しを通す)
   Fn->>FS: sheetState (cursor / pending / conflicts / 件数)
 ```
 
@@ -127,8 +119,7 @@ sequenceDiagram
 
 ## Invariants
 
-- 書くのは上の 8 セルと `rankey` 列だけ。式の入ったセルには書かない (書く直前に FORMULA で読み直す)。
-- `rankey` 列は定期の回でだけ書く (番号指定の回は保存の応答を待たせない)。書けなくても同期は失敗にしない。
+- 書くのは上の 8 セルだけ。式の入ったセルには書かない (書く直前に FORMULA で読み直す)。
 - シートへ書く直前に対象セルを読み直し、読んだ時点から動いていれば書かない (次の回へ)。
 - DB への書き込みは `writeNumber` (expectedUpdatedAt 付き) を通る。`rep` / `ratings` を変えない。
 - 画像 (`imageUrl` / `confirmedFor`) は語に付いて回る。語の位置が動けば一緒に動く。
@@ -148,5 +139,4 @@ sequenceDiagram
 - REQ-BI-008: IF 同一内容で再実行された THEN THE SYSTEM SHALL 書き込みを 0 件にする
 - REQ-BI-009: IF base が無い THEN THE SYSTEM SHALL DB の source が app なら DB を、それ以外はシートを採る
 - REQ-BI-010: WHEN 同期が終わる THE SYSTEM SHALL 反映数・衝突・未反映を状態として残し、アプリから見られるようにする
-- REQ-BI-012: WHEN 定期の回が終わる THE SYSTEM SHALL rankey 列を かな・番号・語 から計算した値に揃え、かなが空なら空にする
 - REQ-BI-011: WHEN 片側の編集を相手へ流す THE SYSTEM SHALL 百の位ごとに、どちら側の何時の版を流したか (シートは流した回の時刻、DB は保存時刻) を状態に残す
