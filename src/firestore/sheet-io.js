@@ -5,8 +5,7 @@
 // Function は Secret の鍵を使うので、ここで認証方式を決めない。
 // このモジュールは Function からも読み込む。fs 依存を持ち込まないこと。
 
-import { KANA_FIELDS, normalizeCell, SHEET_FIELDS } from './sheet-bisync.js'
-import { rankeyField, wordField } from './sheet-rankey.js'
+import { normalizeCell, SHEET_FIELDS } from './sheet-bisync.js'
 
 /** 見出しの別名。古い見出し (w1k など) の行も読めるように並べる */
 const HEADERS = {
@@ -51,44 +50,7 @@ export function columnsOf(header) {
   if (lacking.length) {
     throw new Error(`sheet_columns_missing: ${lacking.join(',')}`)
   }
-  return { ...columns, ...rankeyColumnsOf(header, columns) }
-}
-
-const RANKEY_HEADER = 'rankey'
-
-/**
- * rankey 列は各かな列の右隣、語の列はかな列の見出しから k を落とした名前 (wh1k → wh1)。
- * rankey は同じ見出しが 6 回並ぶので、名前ではなく位置で引く。
- * 無い列は扱わない (rankey を書かないだけで、同期は止めない)
- */
-function rankeyColumnsOf(header, columns) {
-  const out = {}
-  for (const field of KANA_FIELDS) {
-    const kanaCol = columns[field]
-    if (String(header[kanaCol + 1] ?? '').trim() !== RANKEY_HEADER) continue
-    out[rankeyField(field)] = kanaCol + 1
-    const wordName = String(header[kanaCol] ?? '')
-      .trim()
-      .replace(/k$/, '')
-    const wordCol = header.findIndex(
-      (name) => String(name ?? '').trim() === wordName
-    )
-    if (wordCol >= 0) out[wordField(field)] = wordCol
-  }
-  return out
-}
-
-/** rankey 列がある枠だけ、その行の rankey と語を取り出す */
-function rankeyCellsOf(row, columns) {
-  const fields = KANA_FIELDS.filter((f) => rankeyField(f) in columns)
-  if (!fields.length) return {}
-  const pick = (key) =>
-    Object.fromEntries(
-      fields
-        .filter((f) => key(f) in columns)
-        .map((f) => [f, row[columns[key(f)]] ?? ''])
-    )
-  return { rankeys: pick(rankeyField), words: pick(wordField) }
+  return columns
 }
 
 /** values API の行を { num, rowNumber, cells } にする。3 桁の番号の行だけ */
@@ -102,12 +64,7 @@ export function rowsOf(values) {
       SHEET_FIELDS.map((field) => [field, row[columns[field]] ?? ''])
     )
     // 見出しが 1 行目なので、データの i 番目はシートの i + 2 行目
-    rows.push({
-      num,
-      rowNumber: i + 2,
-      cells,
-      ...rankeyCellsOf(row, columns),
-    })
+    rows.push({ num, rowNumber: i + 2, cells })
   })
   return { rows, columns }
 }

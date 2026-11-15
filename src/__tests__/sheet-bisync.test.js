@@ -7,8 +7,6 @@ import {
 } from '../firestore/sheet-bisync.js'
 import { nextHundreds, runBisync } from '../firestore/sheet-bisync-run.js'
 import { rowsOf } from '../firestore/sheet-io.js'
-import { planRankeys } from '../firestore/sheet-rankey.js'
-import { rankey } from '../rankey.js'
 
 const NOW = '2026-10-20T00:00:00.000Z'
 const LATER = '2026-10-20T00:10:00.000Z'
@@ -220,70 +218,8 @@ describe('rowsOf', () => {
           wm2k: '',
           wm3k: '',
         },
-        rankeys: { wh1k: '', wh2k: '', wh3k: '', wm1k: '', wm2k: '', wm3k: '' },
-        words: { wh1k: '鬼', wh2k: '', wh3k: '', wm1k: '', wm2k: '', wm3k: '' },
       },
     ])
-    expect(columns['wh1k:rankey']).toBe(8)
-    expect(columns['wh1k:word']).toBe(5)
-  })
-
-  it('rankey 列が無い枠は rankey を持たない (同期は止めない)', () => {
-    const header = ['num', '人', '物', 'wh1k', 'wh2k', 'wh3k']
-      .concat(['wm1k', 'wm2k', 'wm3k'])
-    const { rows } = rowsOf([header, ['003', '', '', 'さ']])
-    expect(rows[0].rankeys).toBeUndefined()
-  })
-})
-
-describe('planRankeys (D-0052)', () => {
-  const rankeyOf = (kana, num) => (kana === 'だめ' ? null : `${num}:${kana}`)
-  const row = (over = {}) => ({
-    num: '001',
-    rowNumber: 2,
-    cells: cells(),
-    rankeys: { wh1k: '001:まい', wm1k: '', wm3k: '古い' },
-    words: { wh1k: '麻衣(先輩)' },
-    ...over,
-  })
-
-  it('計算値と違うセルだけ書く。かなが空なら rankey も空にする', () => {
-    const updates = planRankeys({ rows: [row()], rankeyOf })
-    expect(updates.map((u) => [u.field, u.value, u.expected])).toEqual([
-      ['wm1k:rankey', '001:ひ', ''],
-      ['wm3k:rankey', '', '古い'],
-    ])
-  })
-
-  it('この回で書いたかなで計算する', () => {
-    const written = [{ num: '001', field: 'wh1k', value: 'あい' }]
-    const updates = planRankeys({ rows: [row()], written, rankeyOf })
-    expect(updates[0]).toMatchObject({
-      field: 'wh1k:rankey',
-      value: '001:あい',
-    })
-  })
-
-  it('読めないかなは ERR を書く', () => {
-    const updates = planRankeys({
-      rows: [row({ cells: cells({ wh1k: 'だめ' }) })],
-      rankeyOf,
-    })
-    expect(updates[0]).toMatchObject({ field: 'wh1k:rankey', value: 'ERR' })
-  })
-
-  it('本物の rankey で計算できる', () => {
-    const updates = planRankeys({
-      rows: [
-        row({
-          num: '330',
-          cells: cells({ wh1k: 'みかみ' }),
-          rankeys: { wh1k: '' },
-        }),
-      ],
-      rankeyOf: rankey,
-    })
-    expect(updates[0].value).toBe(rankey('みかみ', '330', ''))
   })
 })
 
@@ -491,56 +427,6 @@ describe('runBisync', () => {
     })
     expect(w.world.state.pending).toEqual(['002'])
     expect(w.world.state.cursor).toBe(NOW)
-  })
-})
-
-describe('runBisync の rankey', () => {
-  const rankeyOf = (kana, num) => `${num}:${kana}`
-  const withRankeys = (w) => {
-    const readRows = w.sheetIo.readRows
-    w.sheetIo.readRows = async () => {
-      const { rows } = await readRows()
-      return {
-        rows: rows.map((r) => ({
-          ...r,
-          rankeys: { wh1k: w.sheet.cells[r.num]['wh1k:rankey'] ?? '' },
-          words: {},
-        })),
-      }
-    }
-    return w
-  }
-
-  it('定期の回で rankey 列を揃え、番号指定の回では書かない', async () => {
-    const w = withRankeys(
-      fakeWorld({
-        sheetCells: { '001': cells({ 'wh1k:rankey': '' }) },
-        docs: { '001': doc({ updatedAt: '2026-10-19T00:00:00.000Z' }) },
-      })
-    )
-    const only = await runBisync({
-      sheet: w.sheetIo,
-      store: w.store,
-      now: NOW,
-      only: ['001'],
-      rankeyOf,
-    })
-    expect(only.counts.rankeyWritten).toBe(0)
-    const first = await runBisync({
-      sheet: w.sheetIo,
-      store: w.store,
-      now: NOW,
-      rankeyOf,
-    })
-    expect(first.counts.rankeyWritten).toBe(1)
-    expect(w.sheet.cells['001']['wh1k:rankey']).toBe('001:まい')
-    const second = await runBisync({
-      sheet: w.sheetIo,
-      store: w.store,
-      now: LATER,
-      rankeyOf,
-    })
-    expect(second.counts.rankeyWritten).toBe(0)
   })
 })
 
