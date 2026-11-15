@@ -101,7 +101,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
       {bmNums.length > 0 ? (
         <section class="stack-up" style={{ '--stack-gap': '8px' }}>
           <div class="section-label">数字 ({bmNums.length})</div>
-          <div class="grid-up" style={{ '--cols': 3, '--gap': '6px' }}>
+          <div class="grid-up md-grid" style={{ '--gap': '6px' }}>
             {bmNums.map((d) => (
               <BmNumCard
                 key={d.num}

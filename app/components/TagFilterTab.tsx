@@ -102,7 +102,7 @@ function TagFilterTab({ numbers }: Props) {
 
   const main = current ? (
     // md カードで、そのタグの語の画像を出す (人・物の先頭ではない)
-    <div class="grid-up" style={{ '--cols': 3, '--gap': '6px' }}>
+    <div class="grid-up md-grid" style={{ '--gap': '6px' }}>
       {matched.map((d) => (
         <NumMdCard
           key={d.num}
