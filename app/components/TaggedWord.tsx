@@ -6,6 +6,7 @@
 // (概念 #g と 馴染みがない -n) は語そのものの見た目でも分かるようにする。
 import { h } from 'preact'
 import { parseWord } from '../lib/wordTags'
+import { tagNameOf, useTagNames } from '../lib/tagNames'
 
 /** 語の見た目を変えるタグ・ラベル。ほかは右肩の文字だけ */
 const STYLE_OF_TAG: Record<string, string> = { g: 'tw-concept' }
@@ -16,8 +17,20 @@ export function hasMarks(word: string): boolean {
   return tags.length > 0 || labels.length > 0
 }
 
-function TaggedWord({ word }: { word: string }) {
+/**
+ * showNames: 右肩に id ではなく表示名 (ipra → アイドリープライド) を出す。
+ * 余白のある詳細パネル用。一覧などの狭い場所は id のまま。
+ * 表示名はシートの short_title (省略表示用)、無ければ title が配信データで届く
+ */
+function TaggedWord({
+  word,
+  showNames = false,
+}: {
+  word: string
+  showNames?: boolean
+}) {
   const { base, tags, labels } = parseWord(word)
+  const names = useTagNames()
   const cls = [
     'tw-base',
     ...tags.map((t) => STYLE_OF_TAG[t]),
@@ -29,10 +42,14 @@ function TaggedWord({ word }: { word: string }) {
     <span class="tw">
       <span class={cls}>{base}</span>
       {tags.length || labels.length ? (
-        <span class="tw-marks" aria-hidden="true">
+        // 略号 (ipra 等) は読み上げると雑音なので隠すが、表示名は語の説明なので読ませる
+        <span class="tw-marks" aria-hidden={showNames ? undefined : 'true'}>
           {tags.map((t) => (
-            <span key={'t' + t} class="tw-tag">
-              {t}
+            <span
+              key={'t' + t}
+              class={'tw-tag' + (showNames ? ' tw-tag--name' : '')}
+            >
+              {showNames ? tagNameOf(t, names) : t}
             </span>
           ))}
           {labels.map((l) => (
