@@ -6698,3 +6698,13 @@ img[data-concept] {
   font-size: 30px;
   text-shadow: 0 0 6px var(--bg);
 }
+
+/* よみの 1 桁読み [す] (QA-0043 A-4): 字の右肩に読む数字を小さく添える */
+.yomi-half-digit {
+  font-size: 0.62em;
+  color: var(--warn);
+  margin-left: 1px;
+  vertical-align: 0.55em;
+  line-height: 0;
+  font-variant-numeric: tabular-nums;
+}

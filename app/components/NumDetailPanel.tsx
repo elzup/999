@@ -5,6 +5,7 @@
 // 閉じる・前へ / 次へ は DetailSheet (パネルの枠) の最下段に 1 つだけ置く。
 
 import { useEffect, useState } from 'preact/hooks'
+import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
 import { IconEdit } from './Icons'
@@ -220,7 +221,7 @@ function NumDetailPanel(props: Props) {
               <span class={'detail-main-word' + (row.dim ? ' dim' : '')}>
                 <span class="yomi-host">
                   <TaggedWord word={row.word} showNames />
-                  <span class="yomi">{row.kana ?? ''}</span>
+                  <Yomi class="yomi" kana={row.kana ?? ''} />
                 </span>
               </span>
               {repRankOf(rep, row.word) ? (
