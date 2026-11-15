@@ -237,7 +237,20 @@ const tagNames = {
   ...readJsonIfExists(join(baseDir, 'data', 'tags-short.json')),
 }
 
-const out = { numbers, cards, rules, yomiUse, ff, kuku, dates, tagNames }
+// 正式名 (title) だけの表。グループ画面のタグのカードは略称ではなく正式名で出す
+const tagTitles = readJsonIfExists(join(baseDir, 'data', 'tags.json'))
+
+const out = {
+  numbers,
+  cards,
+  rules,
+  yomiUse,
+  ff,
+  kuku,
+  dates,
+  tagNames,
+  tagTitles,
+}
 mkdirSync(privateDir, { recursive: true })
 writeFileSync(join(privateDir, 'data.json'), JSON.stringify(out))
 console.log(

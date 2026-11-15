@@ -6708,3 +6708,18 @@ img[data-concept] {
   line-height: 0;
   font-variant-numeric: tabular-nums;
 }
+
+/* グループ画面のタグの md カード。<button> なので既定の枠・文字の並びを md カードに揃える */
+.tag-md-card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+/* 正式名の下に小さく #タグ (id でしか呼ばないタグもあるので消さない) */
+.tag-md-card-id {
+  display: block;
+  font: 500 11px var(--font-mono);
+  opacity: 0.8;
+}

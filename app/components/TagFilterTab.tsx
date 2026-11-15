@@ -1,15 +1,15 @@
 // 番号 > グループ: タグ (出典・作品) ごとに語を見る。
 //
-// 1. タグ一覧: 作品名 + #タグ + 語の数。よく使うタグほど下 (親指側) に置く。
+// 1. タグ一覧: md カードに正式名・#タグ・語の数と画像 1 枚。よく使うタグほど下 (親指側) に置く。
 //    dock の検索欄で作品名でも #タグでも絞れる (タグは id だけでは何の作品か分からない)
 // 2. タグを選ぶと、その語を持つ番号を md カードで並べる。画像はそのタグの語のもの
 import { h } from 'preact'
 import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
-import { candidatesOf } from '../lib/choice'
+import { candidatesOf, type Candidate } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { parseWord, suggestTags, type TagSuggestion } from '../lib/wordTags'
-import { NumMdCard } from './Cells'
+import { NumMdCard, TagMdCard } from './Cells'
 import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockBar } from './Screen'
 import DetailSheet from './DetailSheet'
@@ -21,7 +21,13 @@ type Props = {
   numbers: NumberEntry[]
 }
 
-type TagRow = TagSuggestion & { count: number }
+type TagRow = TagSuggestion & {
+  count: number
+  /** 正式名 (title)。無ければ略称、それも無ければ #タグ */
+  title: string
+  /** カードに出す画像の語 */
+  cand: Candidate | undefined
+}
 
 /** その番号の、そのタグが付いた語 (複数あれば先頭) */
 const taggedCand = (d: NumberEntry, tag: string) =>
@@ -32,47 +38,65 @@ function numbersWithTag(numbers: NumberEntry[], tag: string): NumberEntry[] {
   return numbers.filter((d) => taggedCand(d, tag) !== undefined)
 }
 
-/** 語に付いたタグごとの語の数 (一覧の件数と、選んだあとに並ぶ語の数を揃える) */
-function countTags(numbers: NumberEntry[]): Map<string, number> {
-  const counts = new Map<string, number>()
+type TagStat = { count: number; cand: Candidate | undefined }
+
+/**
+ * 語に付いたタグごとの語の数 (一覧の件数と、選んだあとに並ぶ語の数を揃える) と、
+ * カードに出す画像の語 (画像のある語のうち番号がいちばん若いもの)
+ */
+function tagStats(numbers: NumberEntry[]): Map<string, TagStat> {
+  const stats = new Map<string, TagStat>()
   for (const d of numbers)
     for (const cand of candidatesOf(d))
-      for (const t of parseWord(cand.word).tags)
-        counts.set(t, (counts.get(t) ?? 0) + 1)
-  return counts
+      for (const t of parseWord(cand.word).tags) {
+        const prev = stats.get(t)
+        stats.set(t, {
+          count: (prev?.count ?? 0) + 1,
+          cand: prev?.cand ?? (cand.img ? cand : undefined),
+        })
+      }
+  return stats
 }
 
 type TagListProps = { rows: TagRow[]; onPick: (tag: string) => void }
 
+// 番号の md カードと同じ並べ方。語の多いタグほど下 (親指側)
 function TagList({ rows, onPick }: TagListProps) {
   if (rows.length === 0)
     return <div class="screen-empty">該当するタグがありません</div>
   return (
-    <div class="stack-up tag-list">
+    <div class="grid-up md-grid" style={{ '--gap': '6px' }}>
       {rows.map((row) => (
-        <button key={row.tag} class="tag-row" onClick={() => onPick(row.tag)}>
-          <span class="tag-row-name">{row.name ?? `#${row.tag}`}</span>
-          {row.name ? <span class="tag-row-id">#{row.tag}</span> : null}
-          <span class="tag-row-count">{row.count}</span>
-        </button>
+        <TagMdCard
+          key={row.tag}
+          tag={row.tag}
+          title={row.title}
+          count={row.count}
+          cand={row.cand}
+          onSelect={() => onPick(row.tag)}
+        />
       ))}
     </div>
   )
 }
 
 function TagFilterTab({ numbers }: Props) {
-  const tagNames = useNumberContext()?.tagNames
+  const ctx = useNumberContext()
+  const tagNames = ctx?.tagNames
+  const tagTitles = ctx?.tagTitles
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState<string | null>(null)
 
   const allRows = useMemo<TagRow[]>(
     () =>
-      [...countTags(numbers)].map(([t, count]) => ({
+      [...tagStats(numbers)].map(([t, stat]) => ({
         tag: t,
         name: tagNames?.[t],
-        count,
+        title: tagTitles?.[t] ?? tagNames?.[t] ?? `#${t}`,
+        count: stat.count,
+        cand: stat.cand,
       })),
-    [numbers, tagNames]
+    [numbers, tagNames, tagTitles]
   )
   const rows = useMemo(() => {
     const sorted = [...allRows].sort((a, b) => b.count - a.count)
@@ -130,7 +154,7 @@ function TagFilterTab({ numbers }: Props) {
     <>
       <MdRevealToggle mode={reveal.mode} onChange={reveal.setMode} />
       <DockBar
-        title={current.name ?? `#${current.tag}`}
+        title={current.title}
         sub={`#${current.tag} ・ ${matched.length} 番号`}
       >
         <button class="filter-btn" onClick={() => pickTag(null)}>
