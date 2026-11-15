@@ -13,6 +13,8 @@ import {
   toHiragana,
 } from './words.js'
 import { buildYomiUse } from './yomi.js'
+import { parseCardsTsv } from './cards-tsv.js'
+import { cardId, imageFieldsOf } from './images/targets.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 // data.json は辞書本体 (私的連想) を含むため、公開 hosting (public/→dist) には出さず
@@ -67,6 +69,9 @@ const CardSchema = z.object({
   objectScore: z.number().nullable().default(null),
   action: z.string().default(''),
   actionScore: z.number().nullable().default(null),
+  personImg: z.string().optional(),
+  actionImg: z.string().optional(),
+  objectImg: z.string().optional(),
 })
 
 // Numbers data
@@ -85,67 +90,22 @@ const numbers = vizData.data
   .filter(Boolean)
 
 // Cards data
-const MARK_SUIT = {
-  '♠️': 'S',
-  '♠': 'S',
-  '♥️': 'H',
-  '♥': 'H',
-  '♣️': 'C',
-  '♣': 'C',
-  '♦️': 'D',
-  '♦': 'D',
-}
-
-function parseMark(mark) {
-  for (const [sym, suit] of Object.entries(MARK_SUIT)) {
-    if (mark.startsWith(sym)) return { suit, rank: mark.slice(sym.length) }
-    if (mark.endsWith(sym)) return { suit, rank: mark.slice(0, -sym.length) }
-  }
-  return null
-}
-
-const cardsTsv = readFileSync(join(baseDir, 'data', 'cards.tsv'), 'utf8')
-const cardLines = cardsTsv.split('\n').filter((l) => l.trim())
-const cardHeaders = cardLines[0].split('\t').map((h) => h.trim())
-const cards = cardLines
-  .slice(1)
-  .map((line) => {
-    const cols = line.split('\t').map((c) => c.trim())
-    const colIdx = (name) => cardHeaders.indexOf(name)
-    const mark = cols[colIdx('mark')] ?? ''
-    const parsed = parseMark(mark)
-    if (!parsed) {
-      console.warn(`Skip card mark: ${mark}`)
-      return null
-    }
-    const raw = {
-      suit: parsed.suit,
-      rank: parsed.rank,
-      person: cols[colIdx('person')] ?? '',
-      actionP: cols[colIdx('action_p')] ?? '',
-      personScore: parseScore(cols[colIdx('score_p')] ?? ''),
-      object: cols[colIdx('object')] ?? '',
-      actionO: cols[colIdx('action_o')] ?? '',
-      objectScore: parseScore(cols[colIdx('score_o')] ?? ''),
-      action: cols[colIdx('action')] ?? '',
-      actionScore: parseScore(cols[colIdx('score_a')] ?? ''),
-    }
+const cards = parseCardsTsv(
+  readFileSync(join(baseDir, 'data', 'cards.tsv'), 'utf8'),
+  (mark) => console.warn(`Skip card mark: ${mark}`)
+)
+  .map((raw) => {
     const result = CardSchema.safeParse(raw)
     if (!result.success) {
-      console.warn(`Skip card: ${mark}`, result.error.issues[0]?.message)
+      console.warn(
+        `Skip card: ${raw.rank}${raw.suit}`,
+        result.error.issues[0]?.message
+      )
       return null
     }
     return result.data
   })
   .filter(Boolean)
-
-function parseScore(raw) {
-  const trimmed = String(raw || '').trim()
-  if (!trimmed) return null
-  const value = Number(trimmed)
-  if (!Number.isFinite(value)) return null
-  return Math.max(0, Math.min(3, value))
-}
 
 // --- Rules data -----------------------------------------------------------
 
@@ -196,23 +156,21 @@ if (existsSync(wordsPath)) {
 }
 
 // 画像 manifest (word-images.json) があれば各スロットの画像URLを merge
+// (日付・カードの画像は、それぞれ読み込んだ後に同じ manifest から merge する)
 const imagesPath = join(baseDir, 'data', 'word-images.json')
-if (existsSync(imagesPath)) {
-  const { images } = JSON.parse(readFileSync(imagesPath, 'utf8'))
-  for (const n of numbers) {
-    const slots = images?.[n.num]
-    const s = sub[n.num]
-    if (s) {
-      if (s.w1_2) n.w1_2 = s.w1_2
-      if (s.w2_2) n.w2_2 = s.w2_2
-    }
-    if (!slots) continue
-    if (slots.w1?.url) n.w1Img = slots.w1.url
-    if (slots.w2?.url) n.w2Img = slots.w2.url
-    if (slots.w1_2?.url) n.w1_2Img = slots.w1_2.url
-    if (slots.w2_2?.url) n.w2_2Img = slots.w2_2.url
+const images = existsSync(imagesPath)
+  ? JSON.parse(readFileSync(imagesPath, 'utf8')).images || {}
+  : {}
+for (const n of numbers) {
+  const s = sub[n.num]
+  if (s) {
+    if (s.w1_2) n.w1_2 = s.w1_2
+    if (s.w2_2) n.w2_2 = s.w2_2
   }
+  Object.assign(n, imageFieldsOf('num', images[n.num]))
 }
+for (const c of cards)
+  Object.assign(c, imageFieldsOf('card', images[cardId(c)]))
 
 // 各番号のゴロ分類を事前計算（割り当てグラフ用）。
 // t=下2桁[1,2] / h=上2桁[0,1]、1=w1k 2=w2k 3=w1_2。{ k, d } か null。
@@ -265,16 +223,19 @@ const dates = existsSync(datesPath)
           )
           return null
         }
-        return result.data
+        return { ...result.data, ...imageFieldsOf('date', images[entry.num]) }
       })
       .filter(Boolean)
   : []
 
-// タグの表示名。sync:tags を回していない手元では無いので、無ければ載せない
-const tagsPath = join(baseDir, 'data', 'tags.json')
-const tagNames = existsSync(tagsPath)
-  ? JSON.parse(readFileSync(tagsPath, 'utf8'))
-  : undefined
+// タグ id → 表示名 (nr sync:tags がシートの tags タブから落とす)。詳細パネルで id ではなく名前を出すため。
+// 省略表示用の short_title があればそちらを優先する (title は画像検索のクエリにも使う正式名)
+const readJsonIfExists = (path) =>
+  existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {}
+const tagNames = {
+  ...readJsonIfExists(join(baseDir, 'data', 'tags.json')),
+  ...readJsonIfExists(join(baseDir, 'data', 'tags-short.json')),
+}
 
 const out = { numbers, cards, rules, yomiUse, ff, kuku, dates, tagNames }
 mkdirSync(privateDir, { recursive: true })

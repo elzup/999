@@ -11,7 +11,7 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import sharp from 'sharp'
 import { uploadWebp, publicUrl } from './images/upload.js'
 import {
@@ -109,6 +109,35 @@ function hashKey(webp) {
   return { hash: hex, key: `words/${hex}.webp` }
 }
 
+/** 1 枠ぶんのアバターを作って GCS に上げ、manifest に入れる画像エントリを返す (console からも使う) */
+export async function buildAvatarImage(
+  seed,
+  nowIso = new Date().toISOString()
+) {
+  const url = avatarUrl(seed)
+  const svg = await fetchSvg(url)
+  const webp = await toAvatarWebp(svg, seed)
+  const { hash, key } = hashKey(webp)
+  const { skipped } = await uploadWebp(webp, key)
+  const image = {
+    url: publicUrl(key),
+    hash,
+    sourcePage: `dicebear:${STYLE}`,
+    sourceImageUrl: url,
+    uploadedAt: nowIso,
+  }
+  return { image, skipped }
+}
+
+/** アバターの元になった名前 (sourceImageUrl の seed)。名前が変わったら作り直しが要る */
+export function avatarSeedOf(image) {
+  try {
+    return new URL(image?.sourceImageUrl || '').searchParams.get('seed') || ''
+  } catch {
+    return ''
+  }
+}
+
 async function main() {
   const targets = collectTargets()
   const manifest = loadManifest()
@@ -119,31 +148,20 @@ async function main() {
   let failed = 0
 
   for (const { num, slot, seed } of targets) {
-    const url = avatarUrl(seed)
     try {
-      const svg = await fetchSvg(url)
-      const webp = await toAvatarWebp(svg, seed)
-      const { hash, key } = hashKey(webp)
-      const { skipped } = await uploadWebp(webp, key)
-
+      const { image, skipped } = await buildAvatarImage(seed, nowIso)
       if (!manifest.images[num]) manifest.images[num] = {}
-      manifest.images[num][slot] = {
-        url: publicUrl(key),
-        hash,
-        sourcePage: `dicebear:${STYLE}`,
-        sourceImageUrl: url,
-        uploadedAt: nowIso,
-      }
+      manifest.images[num][slot] = image
       keep.keep[slotKey(num, slot)] = true
       done++
       console.log(
-        `  ${slotKey(num, slot)} "${seed}" -> ${hash}${
+        `  ${slotKey(num, slot)} '${seed}' -> ${image.hash}${
           skipped ? ' (upload skip)' : ''
         }`
       )
     } catch (err) {
       failed++
-      console.error(`  ${slotKey(num, slot)} "${seed}" FAILED: ${err.message}`)
+      console.error(`  ${slotKey(num, slot)} '${seed}' FAILED: ${err.message}`)
     }
   }
 
@@ -153,7 +171,10 @@ async function main() {
   console.log(`\ndone=${done} failed=${failed} (targets=${targets.length})`)
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+// console/server.js から import されたときは一括処理を走らせない
+if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}

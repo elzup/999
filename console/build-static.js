@@ -1,5 +1,5 @@
 // bayalhost 用の閲覧専用 gallery を dist-gallery/ に生成する。
-// state を state.json に焼き込み、index.html/app.js をコピー。
+// state を state.json に焼き込み、index.html/app.js/icons.js をコピー。
 // app.js は /api/state が無いと ./state.json にフォールバックして read-only になる。
 
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -15,7 +15,8 @@ mkdirSync(outDir, { recursive: true })
 // 閲覧専用なので redo/candidates の生データは出さず、表示に要る分だけ焼く
 const state = buildState()
 const baked = {
-  words: state.words,
+  kinds: state.kinds,
+  targets: state.targets,
   images: state.images,
   candidates: {},
   redo: {},
@@ -24,6 +25,7 @@ const baked = {
 
 writeFileSync(join(outDir, 'state.json'), JSON.stringify(baked) + '\n')
 copyFileSync(join(here, 'app.js'), join(outDir, 'app.js'))
+copyFileSync(join(here, 'icons.js'), join(outDir, 'icons.js'))
 
 // app.js をキャッシュバスティング (デプロイ毎に ?v が変わる)
 const ver = Date.now()
@@ -38,5 +40,5 @@ const withImg = Object.values(state.images).reduce(
   0
 )
 console.log(
-  `dist-gallery/ generated: ${state.words.length} words, ${withImg} images`
+  `dist-gallery/ generated: ${state.targets.length} targets, ${withImg} images`
 )

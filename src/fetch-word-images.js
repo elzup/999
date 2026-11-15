@@ -18,6 +18,10 @@ import {
 } from './images/store.js'
 
 const REDO_ONLY = process.argv.includes('--redo-only')
+// console の «取り直し» は 1 枠だけ処理する。--redo-only だけだと redo の印が付いた全枠
+// (ロック中の枠も含む) を一緒に取り直してしまう
+const onlyAt = process.argv.indexOf('--only')
+const ONLY_KEY = onlyAt >= 0 ? process.argv[onlyAt + 1] : null
 
 function nowIso() {
   return new Date().toISOString()
@@ -57,6 +61,7 @@ async function main() {
     const flaggedRedo = Boolean(redo.redo?.[key])
 
     if (REDO_ONLY && !flaggedRedo) continue
+    if (ONLY_KEY && key !== ONLY_KEY) continue
     if (item.status !== 'found' || !item.imageUrl) continue
 
     // ロックされた画像は (明示 redo でない限り) 絶対に上書きしない
