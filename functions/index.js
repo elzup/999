@@ -264,18 +264,21 @@ async function loadSheetSync() {
       { createSheetIo, writeStatusTab },
       { runBisync },
       status,
+      { rankey },
     ] = await Promise.all([
       loadFirestoreLib(),
       import('./lib/firestore/bisync-store.js'),
       import('./lib/firestore/sheet-io.js'),
       import('./lib/firestore/sheet-bisync-run.js'),
       import('./lib/firestore/sync-status.js'),
+      import('./lib/rankey.js'),
     ])
     sheetSyncLib = {
       store: createBisyncStore(db),
       createSheetIo,
       writeStatusTab,
       runBisync,
+      rankeyOf: rankey,
       ...status,
     }
   }
@@ -292,7 +295,13 @@ async function runSheetSync({ only } = {}) {
   try {
     const title = await getSheetTitleByGid(spreadsheetId, gid)
     const sheet = lib.createSheetIo({ sheetsApi, spreadsheetId, title })
-    return await lib.runBisync({ sheet, store, now, only })
+    return await lib.runBisync({
+      sheet,
+      store,
+      now,
+      only,
+      rankeyOf: lib.rankeyOf,
+    })
   } catch (error) {
     // 定期の失敗はログにしか出ず気づけないので、状態に残してアプリとシートに見せる
     const state = await store.readState()

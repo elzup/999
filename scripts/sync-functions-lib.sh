@@ -8,6 +8,7 @@
 # functions/package.json が type:module なので、写した ESM はそのまま読める。
 #
 # 写す範囲は writeNumber の依存閉包と、シート双方向同期 (sheet-bisync*) の一式。
+# 同期は rankey 列も揃えるので (sheet-rankey)、rankey 一式はどちらからも使う。
 # 前者について:derived が rankey/scorer を、
 # scorer が encoder/table を、table が data/*.tsv を読むのでそこまで含める。
 set -euo pipefail
@@ -19,7 +20,8 @@ rm -rf "$lib"
 mkdir -p "$lib/firestore" "$lib/data"
 
 for name in number-doc write derived console-writes db \
-  sheet-bisync sheet-bisync-run sheet-io bisync-store sync-status fingerprint; do
+  sheet-bisync sheet-bisync-run sheet-io sheet-rankey bisync-store sync-status \
+  fingerprint; do
   cp "$root/src/firestore/$name.js" "$lib/firestore/$name.js"
 done
 
