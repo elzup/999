@@ -73,8 +73,8 @@ export function CardCell({ c, selected, stat, onSelect }: CardCellProps) {
 
 // ブックマークは数が少ないので、番号だけのマスより語と画像が見えるカードにする
 // (並べて眺めて思い出す面なので、開かなくても何の語か分かるほうがよい)
-// md カードは 3 列で画面幅の 1/3 ほど (スマホで 120px 前後)
-const MD_CARD_PX = 140
+// md カードはスマホで 3 列 (120px 前後)、広い画面では 1 枚 170px で止まって列が増える (.md-grid)
+const MD_CARD_PX = 170
 
 /** 人 / 物 の先頭の候補を 1 つずつ (人 → 物 の順) */
 function leadCandidates(d: NumberEntry): Candidate[] {
