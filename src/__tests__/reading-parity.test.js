@@ -104,6 +104,26 @@ describe('reading.ts と encoder.js の一致', () => {
     expect(diffs.slice(0, 20)).toEqual([])
   })
 
+  it('記法 [す] (1 桁読み) の読みも encoder.js と同じになる', () => {
+    const halves = Object.entries({ ...DOUBLE_DIGIT, ...LONG_DIGIT })
+      .filter(([, v]) => String(v).length === 2)
+      .map(([kana]) => kana)
+    const plain = Object.keys(SINGLE_DIGIT).slice(0, 12)
+    const diffs = []
+    for (const h of halves) {
+      for (const p of plain) {
+        for (const kana of [`[${h}]${p}`, `${p}[${h}]`, `${p}[${h}]${p}`]) {
+          const want = reference(kana)
+          const got = encodeDigits(tables, kana)
+          if (want !== got) diffs.push({ kana, want, got })
+        }
+      }
+    }
+    expect(diffs.slice(0, 20)).toEqual([])
+    expect(encodeDigits(tables, '[い]う')).toBe(null)
+    expect(encodeDigits(tables, '[すう')).toBe(null)
+  })
+
   it('中間省略の候補は rankey.js#findOmission と同じ判定になる', () => {
     for (const [kana, num] of [
       ['りんご', '615'],

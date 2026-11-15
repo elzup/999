@@ -15,8 +15,8 @@ function showHelp() {
 src/data/words.tsv から BCD 列 (hito / mono / gainen) の #tag を集計し、
 スプレッドシート内の "${TAG_SHEET_TITLE}" シートへ一覧を書き込みます。
 
-B 列 (title) は複数人が手で編集する列なので、既存シートの値を
-tag ごとに読み取って引き継ぎます (新規 tag は空欄)。
+B 列 (title) と C 列 (short_title = 省略表示用) は手で編集する列なので、
+既存シートの値を tag ごとに読み取って引き継ぎます (新規 tag は空欄)。
 
 認証:
   - 推奨: gcloud auth application-default login
@@ -75,7 +75,8 @@ function collectTags(entries) {
   })
 }
 
-// B 列 (title) は手動メンテ列。既存シートから tag -> title を読み取り引き継ぐ。
+// title / short_title は手動メンテ列。既存シートから tag -> { title, shortTitle } を読み取り引き継ぐ。
+// 列は見出しで探す (列を足し引きしても位置ずれで別の列を引き継がないため)
 function buildTitleMap(existingValues) {
   const map = new Map()
   if (!existingValues || existingValues.length === 0) return map
@@ -83,12 +84,15 @@ function buildTitleMap(existingValues) {
   const header = existingValues[0].map((cell) => String(cell).trim())
   const tagIndex = header.indexOf('tag')
   const titleIndex = header.indexOf('title')
+  const shortIndex = header.indexOf('short_title')
   if (tagIndex === -1 || titleIndex === -1) return map
 
   for (const row of existingValues.slice(1)) {
     const tag = String(row[tagIndex] ?? '').trim()
     const title = String(row[titleIndex] ?? '').trim()
-    if (tag) map.set(tag, title)
+    const shortTitle =
+      shortIndex === -1 ? '' : String(row[shortIndex] ?? '').trim()
+    if (tag) map.set(tag, { title, shortTitle })
   }
   return map
 }
@@ -97,6 +101,7 @@ function buildValues(rows, titleMap) {
   const header = [
     'tag',
     'title',
+    'short_title',
     'count',
     'hito',
     'mono',
@@ -108,7 +113,8 @@ function buildValues(rows, titleMap) {
     header,
     ...rows.map((row) => [
       row.tag,
-      titleMap.get(row.tag) || '',
+      titleMap.get(row.tag)?.title || '',
+      titleMap.get(row.tag)?.shortTitle || '',
       String(row.count),
       String(row.hito),
       String(row.mono),

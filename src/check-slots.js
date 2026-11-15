@@ -6,7 +6,20 @@ import {
   normalizeForCompare,
 } from './words.js'
 
-const SLOTS = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3']
+import { SLOT_KEYS } from './sheet-layout.js'
+import { findOmission } from './rankey.js'
+import { hasNotation, stripNotation } from './kana-notation.js'
+
+/**
+ * よみが番号に合うか。rankey と同じ規則で許す:
+ *   3 桁を超えた分は余り (ひるま = 160|0) / 先頭 0 の省略 (れい = 01) / 中間 1 文字の省略 (りんご)
+ * 記法 [す] の 1 桁読みは encode が digits に反映済み
+ */
+function readingMatchesNum(kana, digits, num) {
+  if (digits.startsWith(num)) return true
+  if (!hasNotation(kana) && findOmission(kana, num) >= 0) return true
+  return digitsMatchNum(digits, num)
+}
 
 /** num の末尾と digits が桁省略 (leading-zero omission) も含めて一致するか */
 function digitsMatchNum(digits, num) {
@@ -24,7 +37,7 @@ function kanaDefinitelyWrong(word, wk) {
   if (!name || !wk) return null
   if (!isKanaOnly(name)) return null // 漢字混じりは読み照合できないのでスキップ
   const normName = normalizeForCompare(name)
-  const normWk = normalizeForCompare(wk)
+  const normWk = normalizeForCompare(stripNotation(wk))
   if (!normName || !normWk) return null
   if (normName[0] === normWk[0]) return null
   return { name, normName, normWk }
@@ -37,7 +50,7 @@ const kanaErrors = [] // wk が w の読みになっていない (先頭不一�
 const missingKana = [] // 語句はあるが かな が空
 
 for (const entry of entries) {
-  for (const slot of SLOTS) {
+  for (const slot of SLOT_KEYS) {
     const word = entry[slot]
     const wk = entry[`${slot}k`]
     if (!word) continue // 語句が無いスロットは対象外
@@ -51,7 +64,7 @@ for (const entry of entries) {
     // --- Check B: かな ⇄ 数字 の対応 ---
     try {
       const { digits } = encode(wk)
-      if (!digitsMatchNum(digits, entry.num)) {
+      if (!readingMatchesNum(wk, digits, entry.num)) {
         digitErrors.push({
           num: entry.num,
           slot,

@@ -6,7 +6,10 @@
 // 変換の手順は src/encoder.js#encode と同じ。食い違いは
 // src/__tests__/reading-parity.test.js が全組み合わせで検出する。
 
+import { createContext } from 'preact'
+import { useContext } from 'preact/hooks'
 import type { RulesData } from '../data/schema'
+import { hasNotation, parseNotation } from './kanaNotation'
 
 export type ReadingTables = {
   single: Record<string, string>
@@ -138,8 +141,38 @@ function peekNextValue(t: ReadingTables, input: string, pos: number) {
   return lookup(t, input[pos])
 }
 
-/** かな → 数字列。読めないかなを含むときは null (encode は throw する) */
+/**
+ * かな → 数字列。読めないかなを含むときは null (encode は throw する)。
+ * 記法 [す] は区間ごとに読み、[ ] の中は 2 桁の 1 桁目だけを採る (src/encoder.js#encode と同じ)
+ */
 export function encodeDigits(t: ReadingTables, input: string): string | null {
+  if (!hasNotation(input)) return encodePlainDigits(t, input)
+  const segments = parseNotation(input)
+  if (!segments) return null
+  let digits = ''
+  for (const { text, half } of segments) {
+    const d = encodePlainDigits(t, text)
+    if (d === null) return null
+    if (half && (d.length !== 2 || lookup(t, text) === undefined)) return null
+    digits += half ? d[0] : d
+  }
+  return digits
+}
+
+/** 記法 [す] の中のかなが読む 1 桁 (す=33 → 3)。囲めないかななら null */
+export function halfDigit(t: ReadingTables, text: string): string | null {
+  const d = encodePlainDigits(t, text)
+  return d !== null && d.length === 2 && lookup(t, text) !== undefined
+    ? d[0]
+    : null
+}
+
+/** 読みの表。配信データの rules から App で作って流し込む (表示部品が 1 桁読みの数字を引く) */
+export const ReadingTablesContext = createContext<ReadingTables | null>(null)
+
+export const useReadingTables = () => useContext(ReadingTablesContext)
+
+function encodePlainDigits(t: ReadingTables, input: string): string | null {
   const y4 = youon4Digits(t, input)
   if (y4) return y4
 
@@ -191,8 +224,8 @@ export function readingOf(t: ReadingTables, kana: string): Reading {
   const digits = encodeDigits(t, input)
   const num = digits === null ? null : toNum(digits)
 
-  // rankey.js#findOmission と同じ範囲 (先頭と末尾は飛ばさない)
-  const chars = [...input]
+  // rankey.js#findOmission と同じ範囲 (先頭と末尾は飛ばさない)。記法付きは読み方が決まっているので探さない
+  const chars = hasNotation(input) ? [] : [...input]
   const omitted: string[] = []
   for (let i = 1; i < chars.length - 1; i++) {
     const trimmed = [...chars.slice(0, i), ...chars.slice(i + 1)].join('')

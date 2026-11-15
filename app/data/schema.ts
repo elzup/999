@@ -66,11 +66,8 @@ export const NumberEntrySchema = z.object({
   w1Score: z.number().nullable().default(null),
   w1Pattern: z.string().optional(),
   w1Error: z.union([z.boolean(), z.string()]).optional(),
-  // rankey: 3桁の内訳記法。編集画面でだけ出す (学習中は邪魔なので)
-  w1Rk: z.string().optional(),
   w2Score: z.number().nullable().default(null),
   w2Error: z.union([z.boolean(), z.string()]).optional(),
-  w2Rk: z.string().optional(),
   w1Img: z.string().optional(),
   w2Img: z.string().optional(),
   w1_2: z.string().optional(),
@@ -95,6 +92,9 @@ export const CardEntrySchema = z.object({
   objectScore: z.number().nullable().default(null),
   action: z.string().default(''),
   actionScore: z.number().nullable().default(null),
+  personImg: z.string().optional(),
+  actionImg: z.string().optional(),
+  objectImg: z.string().optional(),
 })
 
 export type CardEntry = z.infer<typeof CardEntrySchema>
@@ -138,6 +138,10 @@ export const AppDataSchema = z.object({
   cards: z.array(CardEntrySchema),
   rules: RulesDataSchema.optional(),
   yomiUse: YomiUseSchema.optional(),
+  /** タグの表示名 (res → アトリエ)。short_title、無ければ title (src/data/tags*.json = シートの tags タブ) */
+  tagNames: z.record(z.string(), z.string()).optional(),
+  /** タグの正式名 (シートの tags タブの title)。グループ画面のタグのカードで使う */
+  tagTitles: z.record(z.string(), z.string()).optional(),
   // 私的データ。公開バンドルではなくこの payload で届く
   ff: z.array(z.record(z.string(), z.unknown())).optional(),
   kuku: z.array(z.record(z.string(), z.unknown())).optional(),

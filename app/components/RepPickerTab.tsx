@@ -4,6 +4,7 @@
 // 行は人 / 物の 2 段に候補チップを並べ、チップの左に画像を出す (D-0030)。
 // dock は 絞り込み / 百の位 / 十の位ジャンプ (D-0029)。
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import { loadSubTab, saveSubTab } from '../data/storage'
 import { fetchHundred, type NumberDoc } from '../lib/numberApi'
@@ -55,12 +56,17 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       onClick={onPick}
     >
       {row.imageUrl ? (
-        <img class="rp-thumb" {...wordImage(row.imageUrl, 28)} alt="" loading="lazy" />
+        <img
+          class="rp-thumb"
+          {...wordImage(row.imageUrl, 28, row.word)}
+          alt=""
+          loading="lazy"
+        />
       ) : (
         <span class="rp-thumb is-empty" />
       )}
       <span class="rp-word">
-        <span class="rp-kana">{row.kana}</span>
+        <Yomi class="rp-kana" kana={row.kana} />
         {row.word}
       </span>
       {row.repRank ? <span class="rp-mark">{MARK[row.repRank]}</span> : null}
@@ -133,8 +139,6 @@ function RepPickerTab({ token, numbers }: Props) {
   const [view, setView] = useState<View>(() =>
     loadSubTab(VIEW_KEY, VIEWS, 'rows')
   )
-  // まとめて確定は 2 回押しで実行する (1 回目で件数を見せて構える)
-  const [bulkArmed, setBulkArmed] = useState(false)
 
   // 書き込みはアプリで 1 本の保存キューに積む (編集画面と同じ)。押した瞬間に黄、
   // 保存できたら緑。通信できなくても捨てずに送り直す。どのボタンもロックしない
@@ -229,30 +233,11 @@ function RepPickerTab({ token, numbers }: Props) {
   const chooseHundred = (next: string) => {
     saveSubTab(HUNDRED_KEY, next)
     setHundred(next)
-    setBulkArmed(false)
   }
 
   const chooseView = (next: View) => {
     saveSubTab(VIEW_KEY, next)
     setView(next)
-  }
-
-  // 表示中で «確定» できるもの (確定済み・要再確認は除く)
-  const confirmable = visible.filter((doc) => confirmOp(doc) !== null)
-  const staleCount = visible.filter((doc) => isStale(doc)).length
-
-  // 表示中の未確定をまとめてキューに入れる。保存は裏でまとめて送る
-  const confirmAll = () => {
-    if (!bulkArmed) {
-      setBulkArmed(true)
-      window.setTimeout(() => setBulkArmed(false), 4000)
-      return
-    }
-    setBulkArmed(false)
-    for (const doc of confirmable) {
-      const op = confirmOp(doc)
-      if (op) change(doc, { picks: op.picks, confirmed: true })
-    }
   }
 
   const marks = Object.fromEntries(
@@ -337,18 +322,8 @@ function RepPickerTab({ token, numbers }: Props) {
           ))}
         </div>
       </DockBar>
-      {/* 表示中 (絞り込み後) の未確定をまとめて確定。代表が空の番号は既定 (①人1 ②物1) */}
-      <DockRow>
-        <button
-          class={'filter-btn rp-bulk' + (bulkArmed ? ' armed' : '')}
-          disabled={confirmable.length === 0}
-          onClick={confirmAll}
-        >
-          {bulkArmed
-            ? `もう一度押すと ${confirmable.length} 件を確定`
-            : `表示中の未確定 ${confirmable.length} 件をまとめて確定`}
-        </button>
-        {pendingCount || errorCount ? (
+      {pendingCount || errorCount ? (
+        <DockRow>
           <span class="dock-row-label rp-save-count">
             {pendingCount ? (
               <span class="rp-save pending">
@@ -360,13 +335,8 @@ function RepPickerTab({ token, numbers }: Props) {
               <span class="rp-save error">失敗 {errorCount}</span>
             ) : null}
           </span>
-        ) : null}
-        {staleCount ? (
-          <span class="dock-row-label rp-bulk-note">
-            要再確認 {staleCount} 件は除く
-          </span>
-        ) : null}
-      </DockRow>
+        </DockRow>
+      ) : null}
       <div class="rp-filters">
         {REP_FILTERS.map(([id, label]) => (
           <button

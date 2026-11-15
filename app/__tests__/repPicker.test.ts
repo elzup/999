@@ -119,6 +119,21 @@ describe('matchesFilter', () => {
     expect(matchesFilter(picked(['こい', '鯉太郎']), 'mono1')).toBe(false)
   })
 
+  it('②未定は ② を選べるのに ① だけ (確定済みも含む)', () => {
+    expect(matchesFilter(picked(['こい', '鯉太郎']), 'second')).toBe(true)
+    expect(matchesFilter(doc(), 'second')).toBe(true)
+    expect(
+      matchesFilter(picked(['こい', '鯉太郎'], ['こい', '鯉']), 'second')
+    ).toBe(false)
+    // 候補が 1 つしか無ければ ② は選べないので出さない
+    expect(
+      matchesFilter(
+        doc({ slots: { wh1: { word: '鯉太郎', kana: 'こい' } } }),
+        'second'
+      )
+    ).toBe(false)
+  })
+
   it('2択+ は候補が 2 つ以上', () => {
     expect(matchesFilter(doc(), 'multi')).toBe(true)
     expect(
@@ -145,7 +160,7 @@ describe('decadeProgress', () => {
   })
 })
 
-describe('confirmOp (まとめて / 次々と確定)', () => {
+describe('confirmOp (次々と確定)', () => {
   it('代表があって未確定なら、その代表のまま確定する', () => {
     const picks = [pick('こい', '鯉')]
     expect(confirmOp(doc({ rep: { picks, confirmed: false } }))).toEqual({

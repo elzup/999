@@ -22,6 +22,7 @@ import {
   type YomiItem,
   type YomiScope,
 } from '../lib/yomiDrill'
+import { layoutYomi, VOWEL_LABELS } from '../lib/yomiLayout'
 
 type Props = {
   numbers: NumberEntry[]
@@ -155,25 +156,30 @@ function YomiTab({ numbers, rules, yomiUse }: Props) {
   const assigned = scoped.filter((i) => i.nums.length > 0).length
   const totalAssign = scoped.reduce((sum, i) => sum + i.nums.length, 0)
 
-  // 読みの一覧は参照用なので main (下から上へ)。範囲・出題数と開始は dock
+  const toggle = (kana: string) =>
+    setOpened((prev) => (prev === kana ? null : kana))
+
+  // 読みの一覧は参照用なので main (下から上へ)。範囲・出題数と開始は dock。
+  // 拗音と長音は行の立て方が違う (頭のかな / 行) ので表を分ける
   const main = (
     <div class="stack-up" style={{ '--stack-gap': '8px' }}>
       <div class="section-label">
         {scoped.length} 個中 {assigned} 個が使用中 (割当 {totalAssign} 番号)。
         タップで割当先の番号を表示。
       </div>
-      <div class="grid-up" style={{ '--cols': 4, '--gap': '8px' }}>
-        {scoped.map((item) => (
-          <YomiCell
-            key={item.kana}
-            item={item}
-            open={opened === item.kana}
-            onToggle={() =>
-              setOpened((prev) => (prev === item.kana ? null : item.kana))
-            }
+      {YOMI_KINDS.map((kind) => {
+        const ofKind = scoped.filter((i) => i.kind === kind)
+        if (ofKind.length === 0) return null
+        return (
+          <YomiTable
+            key={kind}
+            title={YOMI_SCOPE_LABEL[kind]}
+            items={ofKind}
+            opened={opened}
+            onToggle={toggle}
           />
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 
@@ -260,6 +266,101 @@ function ChipRow({ label, options }: { label: string; options: ChipOption[] }) {
   )
 }
 
+/** 表の並び (拗音 → 長音)。1 列目が行の名前、残り 5 列が あいうえお の段 */
+const YOMI_KINDS = ['youon', 'long'] as const
+const TABLE_COLS = 1 + VOWEL_LABELS.length
+
+/**
+ * 五十音表のように並べた 2文字読み。grid-up は下から積むので、
+ * 段の見出しを先頭 (= 親指側の一番下) に置き、行は五十音順に上へ伸びる。
+ * 開いた読みの詳細はセルを広げず行の直後に 1 行で出す (段の位置を崩さないため)
+ */
+function YomiTable({
+  title,
+  items,
+  opened,
+  onToggle,
+}: {
+  title: string
+  items: YomiItem[]
+  opened: string | null
+  onToggle: (kana: string) => void
+}) {
+  const { rows, unplaced } = layoutYomi(items)
+  const openedItem = items.find((i) => i.kana === opened)
+  return (
+    <div class="stack-up" style={{ '--stack-gap': '4px' }}>
+      <div class="section-label">{title}</div>
+      <div class="grid-up" style={{ '--cols': TABLE_COLS, '--gap': '6px' }}>
+        <div />
+        {VOWEL_LABELS.map((v) => (
+          <div key={v} class="section-label" style={{ textAlign: 'center' }}>
+            {v}
+          </div>
+        ))}
+        {rows.flatMap((row) => [
+          <div
+            key={row.key}
+            class="section-label"
+            style={{ alignSelf: 'center', textAlign: 'center' }}
+          >
+            {row.label}
+          </div>,
+          ...row.cells.map((cell, i) =>
+            cell ? (
+              <YomiCell
+                key={cell.kana}
+                item={cell}
+                open={opened === cell.kana}
+                onToggle={() => onToggle(cell.kana)}
+              />
+            ) : (
+              <div key={`${row.key}-${i}`} />
+            )
+          ),
+          openedItem && row.cells.includes(openedItem) ? (
+            <YomiDetail key={`${row.key}-detail`} item={openedItem} />
+          ) : null,
+        ])}
+      </div>
+      {/* 表に置けない並び (将来の表追加など) も落とさず見せる */}
+      {unplaced.length > 0 && (
+        <div class="grid-up" style={{ '--cols': TABLE_COLS, '--gap': '6px' }}>
+          {unplaced.map((item) => (
+            <YomiCell
+              key={item.kana}
+              item={item}
+              open={opened === item.kana}
+              onToggle={() => onToggle(item.kana)}
+            />
+          ))}
+          {openedItem && unplaced.includes(openedItem) ? (
+            <YomiDetail item={openedItem} />
+          ) : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function YomiDetail({ item }: { item: YomiItem }) {
+  return (
+    <div
+      class="grid-full"
+      style={{
+        fontSize: 12,
+        color: 'var(--text2)',
+        fontFamily: 'var(--font-mono)',
+        wordBreak: 'break-all',
+        padding: '4px 6px',
+      }}
+    >
+      {item.kana} {item.digits}:{' '}
+      {item.nums.length > 0 ? item.nums.join(' ') : usageNote(item)}
+    </div>
+  )
+}
+
 function YomiCell({
   item,
   open,
@@ -270,19 +371,22 @@ function YomiCell({
   onToggle: () => void
 }) {
   const used = item.nums.length > 0
+  // 割当 0 は «まだ使っていない読み»。一覧で使用中と見分けられるよう沈める。
+  // 開いたときは選択中と分かるよう濃さを戻す
+  const isInactive = !used && !open
   return (
     <div
-      class={open ? 'grid-full' : undefined}
       onClick={onToggle}
       style={{
-        border: `1px solid ${
+        border: `1px ${isInactive ? 'dashed' : 'solid'} ${
           open ? 'var(--accent)' : 'var(--line, rgba(255,255,255,.12))'
         }`,
         borderRadius: 10,
         padding: '8px 6px',
         textAlign: 'center',
         cursor: 'pointer',
-        background: 'var(--surface2, transparent)',
+        background: isInactive ? 'transparent' : 'var(--surface2, transparent)',
+        opacity: isInactive ? 0.4 : 1,
       }}
     >
       <div style={{ fontSize: 20, fontWeight: 700 }}>{item.kana}</div>
@@ -290,7 +394,7 @@ function YomiCell({
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 14,
-          color: 'var(--accent)',
+          color: used ? 'var(--accent)' : 'var(--text2)',
         }}
       >
         {item.digits}
@@ -303,19 +407,6 @@ function YomiCell({
       >
         割当 {item.nums.length}
       </div>
-      {open && (
-        <div
-          style={{
-            fontSize: 12,
-            color: 'var(--text2)',
-            marginTop: 6,
-            fontFamily: 'var(--font-mono)',
-            wordBreak: 'break-all',
-          }}
-        >
-          {used ? item.nums.join(' ') : usageNote(item)}
-        </div>
-      )}
     </div>
   )
 }

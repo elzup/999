@@ -110,6 +110,15 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    // 規則表を fs ではなくバンドルから読む版に差し替える (src/rule-tsv.js の先頭)
+    alias: [
+      {
+        find: /^\.\/rule-tsv\.js$/,
+        replacement: resolve(process.cwd(), 'src/rule-tsv.browser.js'),
+      },
+    ],
+  },
   root: '.',
   build: {
     outDir: 'dist',

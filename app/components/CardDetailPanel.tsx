@@ -8,7 +8,12 @@ type Props = {
   onToggleBm: (key: string) => void
 }
 
-type CardValueItem = [label: string, val: string, score: number]
+type CardValueItem = [
+  label: string,
+  val: string,
+  score: number,
+  img: string | undefined
+]
 
 function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {
   const bmKey = 'c:' + c.suit + c.rank
@@ -25,7 +30,7 @@ function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {
         </span>
       </div>
       <div class="card-detail-body">
-        {items.map(([label, val, score]) => {
+        {items.map(([label, val, score, img]) => {
           const isBest = score === maxScore
           const scoreWidth = `${(Math.max(0, Math.min(3, score)) / 3) * 100}%`
           return (
@@ -34,6 +39,9 @@ function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {
               key={label}
               style={{ opacity: isBest ? 1 : 0.55 }}
             >
+              {img ? (
+                <img class="cd-img" loading="lazy" src={img} alt={val} />
+              ) : null}
               <div class="cd-label">{label}</div>
               <div
                 class="cd-val"

@@ -23,7 +23,6 @@ export type NumberDoc = {
   ratings?: Rating[]
   derived?: {
     ptBySlot?: Record<string, number | null>
-    rankeyBySlot?: Record<string, string>
   }
   updatedAt?: string | null
   source?: string

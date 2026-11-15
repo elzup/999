@@ -14,6 +14,7 @@ import type {
 import { parseWord } from './wordTags'
 import type { NumberEntry } from '../data/schema'
 import { candidatesOf, slotCandidates } from './choice'
+import { rankeyOf } from './rankey'
 import { splitVariants, variantTag } from './tagVariants'
 
 /** 候補スロットの並び。rep-store の SLOT_ORDER と同じ */
@@ -100,10 +101,10 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
       imageUrl: value.imageUrl,
       imageStale: Boolean(
         value.imageUrl &&
-        value.confirmedFor &&
-        nameOf(value.confirmedFor) !== nameOf(value.word)
+          value.confirmedFor &&
+          nameOf(value.confirmedFor) !== nameOf(value.word)
       ),
-      rankey: doc.derived?.rankeyBySlot?.[slot],
+      rankey: rankeyOf(value.kana, doc.num, value.word),
       pt: doc.derived?.ptBySlot?.[slot],
       rating: ratingOf(doc, slot),
       repRank: repRankOf(doc, slot),
@@ -147,6 +148,11 @@ export function candidateRows(doc: NumberDoc): SlotRow[] {
  *
  * 枠の位置ではなく語で当てる。並べ替えや書き換えの後に、位置で当てると
  * 別の語の画像が付いてしまう。
+ *
+ * 語は全文 (タグ込み) で当てる。本体 (nameOf) だけで当てると «ハブ#ｳｼｼﾞﾏ» と
+ * «ハブ» が同じ語扱いになり、別の画像の片方が両方に付いた (082)。
+ * 全文で当たらないとき (タグを付け替えた等) だけ本体で当て、その本体の画像が
+ * 1 つに決まらなければ付けない (違う画像を付けるより、無いほうがまし)。
  */
 export function withDeliveredImages(
   rows: SlotRow[],

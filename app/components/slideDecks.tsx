@@ -1,4 +1,5 @@
 import { h } from 'preact'
+import Yomi from './Yomi'
 import type { ComponentChildren } from 'preact'
 import type { CardEntry, NumberEntry } from '../data/schema'
 import { D3_LIST, PI_1000_DIGITS, YEAR_DATA } from '../data/constants'
@@ -40,11 +41,16 @@ function WordRow({
   return (
     <div class={'slide-word-row' + (isSub ? ' sub' : '')}>
       {img ? (
-        <img class="slide-word-img" loading="lazy" {...wordImage(img, 72)} alt={word} />
+        <img
+          class="slide-word-img"
+          loading="lazy"
+          {...wordImage(img, 72, word)}
+          alt={word}
+        />
       ) : null}
       <div class="slide-word-text">
         <span class="slide-word-main">{word}</span>
-        {kana ? <span class="slide-word-kana">{kana}</span> : null}
+        {kana ? <Yomi class="slide-word-kana" kana={kana} /> : null}
       </div>
     </div>
   )

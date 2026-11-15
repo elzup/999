@@ -27,7 +27,7 @@ coherence:
 - `slots` — `{ wh1..wh3, wm1..wm3 }`。各 `{ word, kana, imageUrl }`
 - `rep` — `{ picks: [{k,w}], confirmed }`。最大 2 件 (design:representative-store と同形)
 - `ratings` — `[{ k, w, v }]`。`v` は `-1 | 0 | 1 | 2`
-- `derived` — `{ ptBySlot, rankeyBySlot }` (design:derived-on-write が書く)
+- `derived` — `{ ptBySlot }` (rankey は保存しない。D-0045) (design:derived-on-write が書く)
 - `updatedAt` — サーバータイムスタンプ
 - `source` — `'sheet' | 'app' | 'console'`。最後に書いた面
 

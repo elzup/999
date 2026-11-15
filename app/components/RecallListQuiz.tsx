@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'preact/hooks'
+import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import { candidatesOf } from '../lib/choice'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
@@ -110,7 +111,7 @@ function RecallListQuiz({
               {isRevealed ? (
                 <>
                   {row.word}
-                  {row.kana ? <span class="rl-kana">{row.kana}</span> : null}
+                  {row.kana ? <Yomi class="rl-kana" kana={row.kana} /> : null}
                 </>
               ) : (
                 <span class="rl-hidden">タップで答え</span>

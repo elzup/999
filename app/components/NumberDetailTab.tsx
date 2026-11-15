@@ -50,6 +50,7 @@ import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { wordImage } from '../lib/wordImage'
+import { useNumberContext } from '../lib/numberContext'
 
 const REP_RANKS = [1, 2] as const
 const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
@@ -120,12 +121,17 @@ export default function NumberDetailTab({
   const [moving, setMoving] = useState<string | null>(null)
   const tables = useMemo(() => (rules ? tablesFromRules(rules) : null), [rules])
   // タグ追加の候補。配信データの人・物の一覧で使われているタグを回数順に
+  const tagNames = useNumberContext()?.tagNames
   const knownTags = useMemo<TagSuggestion[]>(
     () =>
       numbers
-        ? collectNumberTags(numbers).map(({ tag, count }) => ({ tag, count }))
+        ? collectNumberTags(numbers).map(({ tag, count }) => ({
+            tag,
+            count,
+            name: tagNames?.[tag],
+          }))
         : [],
-    [numbers]
+    [numbers, tagNames]
   )
 
   /**
@@ -606,7 +612,7 @@ function SlotCard({
           <img
             class={'nd-img' + (row.imageStale ? ' stale' : '')}
             loading="lazy"
-            {...wordImage(row.imageUrl, 40)}
+            {...wordImage(row.imageUrl, 40, row.word)}
             alt={row.word}
             title={row.imageStale ? '確定時点の語と違う画像' : undefined}
           />
@@ -851,7 +857,7 @@ function TagRow({
         <div class="nd-tag-picker">
           <input
             class="nd-tag-input"
-            placeholder="タグを入力 (Enter で追加)"
+            placeholder="タグか作品名で検索 (Enter で追加)"
             value={query}
             onInput={(event) => setQuery(event.currentTarget.value)}
             onKeyDown={(event) => {
@@ -869,6 +875,9 @@ function TagRow({
                 onClick={() => commit(item.tag)}
               >
                 #{item.tag}
+                {item.name && item.name !== item.tag ? (
+                  <span class="nd-tag-name">{item.name}</span>
+                ) : null}
                 <small>{item.count}</small>
               </button>
             ))}

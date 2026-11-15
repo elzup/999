@@ -5,6 +5,7 @@
 // 代表がまだ無い番号は、«確定» で入る既定 (① 人の 1 番手 ② 物の 1 番手) を
 // 薄い ①② で先に見せる。押す前に何が確定されるか分かるように。
 import { h } from 'preact'
+import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import type { NumberDoc } from '../lib/numberApi'
 import {
@@ -69,22 +70,27 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
                 aria-pressed={row.repRank > 0}
                 onClick={() => onPick(row.key)}
               >
-                <span class="wl-kind">{kind === 'kind-m' ? '物' : '人'}</span>
-                {row.imageUrl ? (
-                  <img
-                    class="wl-img"
-                    {...wordImage(row.imageUrl, 34)}
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : (
-                  <span class="wl-img empty" />
-                )}
+                {/* 人 / 物 は詳細パネルの語の行と同じく、画像の形と左上の色丸で示す */}
+                <span class="wl-img-wrap">
+                  {row.imageUrl ? (
+                    <img
+                      class="wl-img"
+                      {...wordImage(row.imageUrl, 34, row.word)}
+                      alt=""
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span class="wl-img empty" />
+                  )}
+                  <span class="wl-kind-badge">
+                    {kind === 'kind-m' ? '物' : '人'}
+                  </span>
+                </span>
                 {/* 代表を選ぶ場面なので、ヨミは最初から見せる */}
                 <span class="detail-main-word">
                   <span class="yomi-host">
                     <TaggedWord word={row.word} />
-                    <span class="yomi">{row.kana}</span>
+                    <Yomi class="yomi" kana={row.kana} />
                   </span>
                 </span>
                 {row.repRank ? (
@@ -119,8 +125,8 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
               {status === 'confirmed'
                 ? '確定済み'
                 : hasPicks
-                  ? 'この代表で確定'
-                  : '既定 (①②) で確定'}
+                ? 'この代表で確定'
+                : '既定 (①②) で確定'}
             </span>
           </button>
         )}

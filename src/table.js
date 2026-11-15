@@ -1,12 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
-
-function loadTsv(filename) {
-  return readFileSync(join(dataDir, filename), 'utf-8').trimEnd()
-}
+import {
+  DOUBLE_DIGIT_TSV,
+  LONG_DIGIT_TSV,
+  SINGLE_DIGIT_TSV,
+} from './rule-tsv.js'
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -111,14 +107,12 @@ function parseDoubleDigitTsv(tsv) {
 // Load data
 // ---------------------------------------------------------------------------
 
-const { singleDigit, singleTier } = parseSingleDigitTsv(
-  loadTsv('single_digit.tsv')
-)
+const { singleDigit, singleTier } = parseSingleDigitTsv(SINGLE_DIGIT_TSV)
 
 export const SINGLE_DIGIT = singleDigit
 export const SINGLE_TIER = singleTier
-export const DOUBLE_DIGIT = parseDoubleDigitTsv(loadTsv('double_digit.tsv'))
-export const LONG_DIGIT = parseDoubleDigitTsv(loadTsv('long_digit.tsv'))
+export const DOUBLE_DIGIT = parseDoubleDigitTsv(DOUBLE_DIGIT_TSV)
+export const LONG_DIGIT = parseDoubleDigitTsv(LONG_DIGIT_TSV)
 
 // ---------------------------------------------------------------------------
 // Dakuten normalization (code-defined, not data)

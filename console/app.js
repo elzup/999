@@ -4,20 +4,39 @@
 let state = null
 let readOnly = false
 let filter = 'all'
-// Triple toggle: all(全部) | draft(下書き=未確定+今回ロック) | unconf(未確定のみ)
-// クリックで切れるのは all / unconf のみ。draft は unconf でロックすると自動遷移。
-let lockView = 'all'
-const sessionLocks = new Set() // 今回のレビューでロックしたキー (下書き表示用)
+// タグ (#res など) での絞り込み。空なら絞らない。状態のフィルタと掛け合わせて枠ごとに効かせる
+let tagFilter = ''
+// 語に埋め込まれたタグ。app/lib/tags.ts の TAG_RE と同じ (区切りは空白・#・カンマ)
+const TAG_RE = /#([^\s#,]+)/g
+const tagsOfWord = (word) =>
+  [...String(word || '').matchAll(TAG_RE)].map((m) => m[1])
+// この画面で操作した枠。確定・取得した瞬間にフィルタから外れて消えると、
+// 押し間違いに気付けないので、対象か状態を切り替えるまでは出したままにする
+const touched = new Set()
+// タグの縦一覧 (アプリのグループタブと同じ形) を出しているか。選ぶとそのタグの画像だけに絞る
+let isTagListOpen = false
+// 枠が 人 (h) か 物 (m) か。アプリの詳細パネルの語の行と同じ色丸で示す。カードの A (動作) はどちらでもない
+const SLOT_SIDE = { w1: 'h', w1_2: 'h', w2: 'm', w2_2: 'm', P: 'h', O: 'm' }
+const SIDE_LABEL = { h: '人', m: '物' }
+const tagNameOf = (tag) => state.tagNames?.[tag] || tag
 
-// 優先順位順。w1_2/w2_2 は片方が空のときだけ値が入る (2枠目の穴埋め)
-const SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
+// 表示中の対象の種類 (番号 / 日付 / カード)。枠の並びは種類ごとにサーバが返す
+// (src/images/targets.js の IMAGE_KINDS)。番号の w1_2/w2_2 は片方が空のときだけ値が入る
+let kind = 'num'
+const slotsOf = (k) => state.kinds[k].slots
+const kindTargets = () => state.targets.filter((t) => t.kind === kind)
+
+const SUIT_MARK = { S: '♠', H: '♥', C: '♣', D: '♦' }
+const targetLabel = (t) =>
+  t.kind === 'card' ? t.id.slice(0, -1) + SUIT_MARK[t.id.at(-1)] : t.id
+// [キー, 表示名, アイコン]
 const FILTERS = [
-  ['all', 'すべて'],
-  ['unconfirmed', '未確定'],
-  ['kept', '🔒確定'],
-  ['missing', '未取得'],
-  ['changed', '⚠️語変更'],
-  ['flagged', 'redo'],
+  ['all', 'すべて', null],
+  ['unconfirmed', '未確定', 'circle'],
+  ['kept', '確定', 'lock'],
+  ['missing', '未取得', 'imageOff'],
+  ['changed', '語変更', 'alert'],
+  ['flagged', 'redo', 'flag'],
 ]
 
 async function loadState() {
@@ -35,9 +54,9 @@ async function loadState() {
   }
 }
 
-function slotStatus(num, slot) {
-  const key = `${num}:${slot}`
-  const hasImg = Boolean(state.images?.[num]?.[slot])
+function slotStatus(id, slot) {
+  const key = `${id}:${slot}`
+  const hasImg = Boolean(state.images?.[id]?.[slot])
   const flagged = Boolean(state.redo?.[key])
   const cand = state.candidates?.[key]
   if (flagged) return 'flagged'
@@ -46,118 +65,176 @@ function slotStatus(num, slot) {
   return 'missing'
 }
 
-function cardMatchesFilter(w) {
-  if (filter === 'all') return true
-  return SLOTS.some((slot) => {
-    if (!w[slot]) return false
-    const st = slotStatus(w.num, slot)
-    if (filter === 'has') return st === 'has'
-    if (filter === 'missing') return st === 'missing' || st === 'error'
-    if (filter === 'flagged') return st === 'flagged'
-    if (filter === 'kept') return Boolean(state.keep?.[`${w.num}:${slot}`])
-    if (filter === 'unconfirmed')
-      return st === 'has' && !state.keep?.[`${w.num}:${slot}`]
-    if (filter === 'changed')
-      return st === 'has' && wordChanged(w.num, slot, w[slot])
-    return true
-  })
+// フィルタは枠ごとに効かせる。対象 (カード等) 単位にすると、未確定で絞っても
+// 同じ対象の確定済みの枠まで並んでしまう
+function slotMatches(t, slot, f = filter) {
+  if (!t[slot]) return false
+  if (tagFilter && !tagsOfWord(t[slot]).includes(tagFilter)) return false
+  const key = `${t.id}:${slot}`
+  const st = slotStatus(t.id, slot)
+  const kept = Boolean(state.keep?.[key])
+  if (f === 'all') return true
+  if (f === 'unconfirmed') return st === 'has' && !kept
+  if (f === 'kept') return kept
+  if (f === 'missing') return st === 'missing' || st === 'error'
+  if (f === 'changed') return st === 'has' && wordChanged(t.id, slot, t[slot])
+  if (f === 'flagged') return st === 'flagged'
+  return true
 }
 
-async function toggleRedo(num, slot) {
-  if (readOnly) return
-  const key = `${num}:${slot}`
-  const on = !state.redo?.[key]
-  const res = await fetch('/api/redo', {
+const countMatches = (f) =>
+  kindTargets().reduce(
+    (n, t) =>
+      n + slotsOf(kind).filter((slot) => slotMatches(t, slot, f)).length,
+    0
+  )
+
+// 失敗を画面に出す。黙って state を空にすると «確定» が消え、ロックが外れたように見える
+function showError(message) {
+  let box = document.getElementById('console-error')
+  if (!box) {
+    box = document.createElement('div')
+    box.id = 'console-error'
+    box.setAttribute('role', 'alert')
+    box.onclick = () => box.remove()
+    document.body.appendChild(box)
+  }
+  box.textContent = message
+}
+
+/** POST して JSON を返す。HTTP エラーはサーバの error 文で投げる */
+async function postJson(path, body) {
+  const res = await fetch(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ num, slot, on }),
+    body: JSON.stringify(body),
   })
-  const data = await res.json()
-  state.redo = data.redo
-  render()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok)
+    throw new Error(data.error || `HTTP ${res.status} (サーバを再起動?)`)
+  return data
+}
+
+async function toggleRedo(id, slot) {
+  if (readOnly) return
+  const key = `${id}:${slot}`
+  try {
+    const data = await postJson('/api/redo', {
+      id,
+      slot,
+      on: !state.redo?.[key],
+    })
+    state.redo = data.redo
+    refreshSlot(id, slot)
+  } catch (e) {
+    console.error('redo', key, e)
+    showError(`${key} の印を変えられなかった: ${e.message}`)
+  }
 }
 
 // 画像をロック/解除 (ロック中は一括処理で上書きされない)
-async function toggleKeep(num, slot) {
+async function toggleKeep(id, slot) {
   if (readOnly) return
-  const key = `${num}:${slot}`
-  const on = !state.keep?.[key]
-  const res = await fetch('/api/keep', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ num, slot, on }),
-  })
-  const data = await res.json()
-  state.keep = data.keep
-  if (on) {
-    sessionLocks.add(key)
-    // 未確定のみ表示中にロック → 自動で下書きへ (ロックした画像は残す)
-    if (lockView === 'unconf') lockView = 'draft'
-  } else {
-    sessionLocks.delete(key)
+  const key = `${id}:${slot}`
+  try {
+    const data = await postJson('/api/keep', {
+      id,
+      slot,
+      on: !state.keep?.[key],
+    })
+    state.keep = data.keep
+    refreshSlot(id, slot)
+  } catch (e) {
+    console.error('keep', key, e)
+    showError(`${key} のロックを変えられなかった: ${e.message}`)
   }
-  // 即時には消さない: そのスロットの見た目だけ更新 (再フィルタは次の render で)
-  refreshSlot(num, slot)
-  renderLockView()
-  renderStats()
 }
 
 // 1スロットだけ DOM を作り直す (グリッドのフィルタは再適用しない)
-function refreshSlot(num, slot) {
-  const old = document.querySelector(`.slot[data-key="${num}:${slot}"]`)
+function refreshSlot(id, slot) {
+  touched.add(`${id}:${slot}`)
+  renderFilters()
+  renderStats()
+  const old = document.querySelector(`.slot[data-key="${id}:${slot}"]`)
   if (!old) return
-  const w = state.words.find((x) => x.num === num)
+  const w = state.targets.find((x) => x.id === id)
   if (w) old.replaceWith(slotEl(w, slot))
 }
 
 // その場で再検索→再取得し、今の画像と2択で選ばせる
-async function redoNow(num, slot, btn) {
+async function redoNow(id, slot, btn) {
   if (readOnly) return
-  const oldImg = state.images?.[num]?.[slot] || null
-  btn.textContent = '⌛'
+  const oldImg = state.images?.[id]?.[slot] || null
+  setIconLabel(btn, 'spinner')
   btn.disabled = true
   try {
     const res = await fetch('/api/redo-now', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ num, slot }),
+      body: JSON.stringify({ id, slot }),
     })
     if (!res.ok) throw new Error('HTTP ' + res.status + ' (サーバを再起動?)')
     const data = await res.json()
     if (!data.ok || !data.image) throw new Error(data.error || '画像取得に失敗')
-    if (!state.images[num]) state.images[num] = {}
-    state.images[num][slot] = data.image // 新を一旦採用
-    delete state.redo[`${num}:${slot}`]
+    if (!state.images[id]) state.images[id] = {}
+    state.images[id][slot] = data.image // 新を一旦採用
+    delete state.redo[`${id}:${slot}`]
     if (oldImg && oldImg.url !== data.image.url) {
-      showChooser(num, slot, oldImg, data.image) // 今の画像と2択
+      showChooser(id, slot, oldImg, data.image) // 今の画像と2択
     } else {
-      refreshSlot(num, slot)
+      refreshSlot(id, slot)
     }
   } catch (e) {
-    btn.textContent = '⚠️'
+    setIconLabel(btn, 'alert')
     btn.title = String(e.message || e) // 失敗理由をツールチップに
     btn.disabled = false
   }
 }
 
-// 元画像から上寄せでクロップし直す (固定アクション)
-async function recropTop(num, slot, btn) {
+// #i 枠のアバターをいまの名前で作り直す (名前を直したのに名札が古いままの枠の救済)
+async function remakeAvatar(id, slot, btn) {
   if (readOnly) return
-  btn.textContent = '⌛'
+  setIconLabel(btn, 'spinner', '作成中')
+  btn.disabled = true
+  try {
+    const res = await fetch('/api/avatar', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, slot }),
+    })
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' (サーバを再起動?)')
+    const data = await res.json()
+    if (!data.ok || !data.image)
+      throw new Error(data.error || 'アバター作成に失敗')
+    if (!state.images[id]) state.images[id] = {}
+    state.images[id][slot] = data.image
+    state.keep = data.keep
+    refreshSlot(id, slot)
+  } catch (e) {
+    setIconLabel(btn, 'alert', '失敗')
+    btn.title = String(e.message || e)
+    btn.disabled = false
+  }
+}
+
+// 元画像から上寄せでクロップし直す (固定アクション)
+async function recropTop(id, slot, btn) {
+  if (readOnly) return
+  setIconLabel(btn, 'spinner')
   btn.disabled = true
   try {
     const res = await fetch('/api/recrop', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ num, slot }),
+      body: JSON.stringify({ id, slot }),
     })
     const data = await res.json()
     if (!data.ok || !data.image) throw new Error(data.error || '失敗')
-    if (!state.images[num]) state.images[num] = {}
-    state.images[num][slot] = data.image
-    refreshSlot(num, slot)
+    if (!state.images[id]) state.images[id] = {}
+    state.images[id][slot] = data.image
+    refreshSlot(id, slot)
   } catch (e) {
-    btn.textContent = '⚠️'
+    setIconLabel(btn, 'alert')
     btn.title = String(e.message || e)
     btn.disabled = false
   }
@@ -186,10 +263,23 @@ function nameOf(w) {
 
 // sync でシートの語が差し替わった枠。タグが付いただけ (嫌 -> 嫌#g) は無視し、
 // 本体が別語になったもの (鶴 -> 振る) だけを「画像が合っていない」として拾う。
-function wordChanged(num, slot, word) {
-  const searched = state.candidates?.[`${num}:${slot}`]?.word
+function wordChanged(id, slot, word) {
+  const searched = searchedWord(id, slot, state.images?.[id]?.[slot])
   if (!searched || !word) return false
   return nameOf(searched) !== nameOf(word)
+}
+
+// 画像を取ったときの語。アバターは検索しないので candidates に残らず、名札にした名前
+// (DiceBear URL の seed) と比べる。これが無いと #i の語を直しても «語変更» が消えなかった
+function searchedWord(id, slot, img) {
+  if (isDicebear(img)) {
+    try {
+      return new URL(img.sourceImageUrl).searchParams.get('seed') || ''
+    } catch {
+      return ''
+    }
+  }
+  return state.candidates?.[`${id}:${slot}`]?.word || ''
 }
 
 // 手入力した検索ワードはタブを閉じるまで保持する。試行錯誤で何度も打ち直す枠が
@@ -204,13 +294,13 @@ function readCustomQueries() {
   }
 }
 
-function loadCustomQuery(num, slot) {
-  return readCustomQueries()[`${num}:${slot}`] || ''
+function loadCustomQuery(id, slot) {
+  return readCustomQueries()[`${id}:${slot}`] || ''
 }
 
-function saveCustomQuery(num, slot, query) {
+function saveCustomQuery(id, slot, query) {
   const all = readCustomQueries()
-  const key = `${num}:${slot}`
+  const key = `${id}:${slot}`
   const next = query.trim()
     ? { ...all, [key]: query.trim() }
     : Object.fromEntries(Object.entries(all).filter(([k]) => k !== key))
@@ -222,55 +312,57 @@ function saveCustomQuery(num, slot, query) {
 }
 
 // 検索ワードを指定して取得 (未取得スロットの救済 / 任意の語で取り直し)
-async function customSearch(num, slot, btn) {
+async function customSearch(id, slot, btn) {
   if (readOnly) return
-  const w = state.words.find((x) => x.num === num)
+  const w = state.targets.find((x) => x.id === id)
   // 前回この枠に入れた検索ワード > 保存済みクエリ > 語そのもの の順で初期値にする
   const def =
-    loadCustomQuery(num, slot) ||
-    state.candidates?.[`${num}:${slot}`]?.query ||
+    loadCustomQuery(id, slot) ||
+    state.candidates?.[`${id}:${slot}`]?.query ||
     (w && w[slot]) ||
     ''
   const q = window.prompt('検索ワードを指定', def)
   if (q == null) return // キャンセル
-  saveCustomQuery(num, slot, q)
-  const oldImg = state.images?.[num]?.[slot] || null
-  btn.textContent = '⌛'
+  saveCustomQuery(id, slot, q)
+  const oldImg = state.images?.[id]?.[slot] || null
+  setIconLabel(btn, 'spinner')
   btn.disabled = true
   try {
     const res = await fetch('/api/search-custom', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ num, slot, query: q }),
+      body: JSON.stringify({ id, slot, query: q }),
     })
     const data = await res.json()
     if (!data.ok || !data.image) throw new Error(data.error || '失敗')
-    if (!state.images[num]) state.images[num] = {}
-    state.images[num][slot] = data.image
+    if (!state.images[id]) state.images[id] = {}
+    state.images[id][slot] = data.image
     if (oldImg && oldImg.url !== data.image.url) {
-      showChooser(num, slot, oldImg, data.image)
+      showChooser(id, slot, oldImg, data.image)
     } else {
-      refreshSlot(num, slot)
+      refreshSlot(id, slot)
     }
   } catch (e) {
-    btn.textContent = '⚠️'
+    setIconLabel(btn, 'alert')
     btn.title = String(e.message || e)
     btn.disabled = false
   }
 }
 
 // 「新しい方 / 今までの方」を選ぶ UI (そのスロットだけ差し替え)
-function showChooser(num, slot, oldImg, newImg) {
-  const el = document.querySelector(`.slot[data-key="${num}:${slot}"]`)
+function showChooser(id, slot, oldImg, newImg) {
+  const el = document.querySelector(`.slot[data-key="${id}:${slot}"]`)
   if (!el) return
   const box = document.createElement('div')
-  box.className = 'slot'
-  box.dataset.key = `${num}:${slot}`
+  box.className = 'slot is-choosing'
+  box.dataset.key = `${id}:${slot}`
+  const w = state.targets.find((x) => x.id === id)
+  if (w) box.appendChild(slotHead(w, slot))
   const title = document.createElement('div')
   title.className = 'choose-title'
-  title.textContent = 'どっちにする?'
+  title.textContent = 'どちらにしますか'
   box.appendChild(title)
-  const opt = (label, img, onPick) => {
+  const opt = (iconName, label, img, onPick) => {
     const o = document.createElement('div')
     o.className = 'choose-opt'
     const im = document.createElement('img')
@@ -279,179 +371,285 @@ function showChooser(num, slot, oldImg, newImg) {
     im.src = img.url
     const b = document.createElement('button')
     b.className = 'act-btn'
-    b.textContent = label
+    setIconLabel(b, iconName, label)
     b.onclick = onPick
-    o.appendChild(im)
-    o.appendChild(b)
+    o.append(im, b)
     return o
   }
   // 今までの方を上、新しい方を下に
   box.appendChild(
-    opt('↩ 今までの方', oldImg, async () => {
-      await fetch('/api/set-image', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ num, slot, image: oldImg }),
-      })
-      state.images[num][slot] = oldImg
-      refreshSlot(num, slot)
+    opt('undo', '今までの方', oldImg, async () => {
+      try {
+        await postJson('/api/set-image', { id, slot, image: oldImg })
+        state.images[id][slot] = oldImg
+        refreshSlot(id, slot)
+      } catch (e) {
+        console.error('set-image', id, slot, e)
+        showError(`${id}:${slot} を今までの画像に戻せなかった: ${e.message}`)
+      }
     })
   )
   // 新は既に採用済み → 確定するだけ
-  box.appendChild(opt('✓ 新しい方', newImg, () => refreshSlot(num, slot)))
+  box.appendChild(opt('check', '新しい方', newImg, () => refreshSlot(id, slot)))
   el.replaceWith(box)
 }
 
-function slotEl(w, slot) {
-  const num = w.num
+/** 枠の見た目を決める状態をまとめて求める (表示とボタンで同じ判定を使う) */
+function slotView(w, slot) {
+  const id = w.id
   const word = w[slot]
-  const img = state.images?.[num]?.[slot]
-  const st = slotStatus(num, slot)
-
-  const wrap = document.createElement('div')
-  wrap.className = 'slot'
-  wrap.dataset.key = `${num}:${slot}`
-
+  const img = state.images?.[id]?.[slot]
+  const st = slotStatus(id, slot)
   // #i (プライベートな友人) は DiceBear アバターで固定。実写に差し替わると困るので
-  // コンソールからは触れないようにする。images:avatar-i が keep も立てている。
+  // 検索系の操作は出さない。images:avatar-i が keep も立てている。
   const isAvatarI = hasITag(word)
   // タグだけ見て確定扱いにすると、後から #i を付けた枠 (実写のまま・keep 無し) が
-  // 「🔒アバター」表示なのに未確定フィルタに出る。表示もフィルタと同じ keep を正にする。
-  const kept = Boolean(state.keep?.[`${num}:${slot}`])
+  // 「確定」表示なのに未確定フィルタに出る。表示もフィルタと同じ keep を正にする。
+  const kept = Boolean(state.keep?.[`${id}:${slot}`])
   const isAvatarPending = isAvatarI && !(kept && isDicebear(img))
-  const unconfirmed = Boolean(img) && !kept
+  const changed = Boolean(img) && wordChanged(id, slot, word)
+  return { id, slot, word, img, st, isAvatarI, kept, isAvatarPending, changed }
+}
 
-  const thumb = document.createElement('div')
-  thumb.className = 'thumb' + (st === 'flagged' ? ' flagged' : '')
-  if (kept) thumb.classList.add('kept')
-  if (unconfirmed) thumb.classList.add('unconfirmed')
-  if (img) {
-    const i = document.createElement('img')
-    i.loading = 'lazy'
-    i.decoding = 'async'
-    i.src = img.url
-    thumb.appendChild(i)
-  } else {
-    thumb.textContent = st === 'error' ? '取得失敗' : '未取得'
-  }
-  if (isAvatarI) {
-    thumb.title = isAvatarPending
-      ? '#i だがアバター未生成。nr images:avatar-i を実行する'
-      : '#i は DiceBear アバター固定 (操作不可)'
-  } else {
-    thumb.title = readOnly ? '' : 'クリックで redo トグル'
-    thumb.onclick = () => toggleRedo(num, slot)
-  }
-  wrap.appendChild(thumb)
-
-  // 画像の下: 語 + 状態ラベル (画像には被せない)
-  const label = document.createElement('div')
-  label.className = 'slot-label'
-  const wspan = document.createElement('span')
-  wspanText(wspan, slot, word)
-  label.appendChild(wspan)
-  if (img) {
-    const stat = document.createElement('span')
-    stat.className =
-      'slot-stat ' +
-      (isAvatarPending ? 'is-changed' : kept ? 'is-kept' : 'is-unconf')
-    stat.textContent = isAvatarPending
-      ? '⚠️アバター未生成'
-      : isAvatarI
-      ? '🔒アバター'
-      : kept
-      ? '🔒確定'
-      : '未確定'
-    label.appendChild(stat)
-    // 画像は前の語で取ったもの。確定済みでも当ては外れているので目立たせる
-    if (!isAvatarI && wordChanged(num, slot, word)) {
-      const warn = document.createElement('span')
-      warn.className = 'slot-stat is-changed'
-      warn.textContent = '⚠️語変更'
-      warn.title = `検索時: ${
-        state.candidates[`${num}:${slot}`].word
-      } → 現在: ${word}`
-      label.appendChild(warn)
-    }
-  }
-  wrap.appendChild(label)
-
-  // 操作ボタン (#i は固定枠なので出さない)
-  if (!readOnly && !isAvatarI) {
-    const actions = document.createElement('div')
-    actions.className = 'slot-actions'
-    const mk = (cls, text, title, fn) => {
-      const b = document.createElement('button')
-      b.className = cls
-      b.textContent = text
-      if (title) b.title = title
-      b.onclick = (e) => {
-        e.stopPropagation()
-        fn(b)
-      }
-      actions.appendChild(b)
-    }
-    if (img) {
-      mk('act-btn primary', kept ? '🔒 解除' : '👍 確定', '', () =>
-        toggleKeep(num, slot)
-      )
-      if (!kept) {
-        mk('act-btn', '✂️上', '元画像を上寄せでクロップ', (b) =>
-          recropTop(num, slot, b)
-        )
-        mk('act-btn', '🔄', '別の画像で取り直す (今のと2択)', (b) =>
-          redoNow(num, slot, b)
-        )
-        mk('act-btn', '✏️', '検索ワードを指定して取得', (b) =>
-          customSearch(num, slot, b)
-        )
-      }
-    } else {
-      // 未取得スロットでも操作できるように
-      mk('act-btn primary', '🔍 取得', '自動で画像を探す', (b) =>
-        redoNow(num, slot, b)
-      )
-      mk('act-btn', '✏️ 指定', '検索ワードを指定して取得', (b) =>
-        customSearch(num, slot, b)
-      )
-    }
-    wrap.appendChild(actions)
-  }
+function slotEl(w, slot) {
+  const v = slotView(w, slot)
+  const wrap = document.createElement('div')
+  wrap.className = 'slot'
+  wrap.dataset.key = `${v.id}:${slot}`
+  wrap.append(slotHead(w, slot), thumbEl(v, slot), wordRow(v.word), statRow(v))
+  if (!readOnly) wrap.appendChild(actionsEl(v, slot))
   return wrap
 }
 
-function wspanText(span, slot, word) {
-  span.className = 'word'
-  span.textContent = `${slot}: ${word}`
+function thumbEl(v, slot) {
+  const thumb = document.createElement('div')
+  thumb.className = 'thumb'
+  if (v.st === 'flagged') thumb.classList.add('flagged')
+  else if (v.changed || v.isAvatarPending) thumb.classList.add('changed')
+  else if (v.kept) thumb.classList.add('kept')
+  else if (v.img) thumb.classList.add('unconfirmed')
+  if (v.img) {
+    const i = document.createElement('img')
+    i.loading = 'lazy'
+    i.decoding = 'async'
+    i.src = v.img.url
+    i.alt = v.word
+    // 概念 (#g) は実物の写真ではないので、アプリと同じく二重の枠で見分ける
+    if (tagsOfWord(v.word).includes('g')) i.dataset.concept = ''
+    thumb.appendChild(i)
+  } else {
+    const empty = document.createElement('div')
+    empty.className = 'thumb-empty'
+    setIconLabel(empty, 'imageOff', v.st === 'error' ? '取得失敗' : '未取得')
+    thumb.appendChild(empty)
+  }
+  const side = SLOT_SIDE[slot]
+  if (side) {
+    const badge = document.createElement('span')
+    badge.className = `side-badge side-${side}`
+    badge.textContent = SIDE_LABEL[side]
+    thumb.appendChild(badge)
+  }
+  if (v.isAvatarI) {
+    thumb.title = '#i はアバター固定 (検索した画像には差し替えない)'
+  } else if (
+    state.keep?.[`${v.id}:${slot}`] &&
+    !state.redo?.[`${v.id}:${slot}`]
+  ) {
+    // ロック中の枠に印を付けると一括の取り直しで上書きされる (サーバも断る)
+    thumb.title = 'ロック中 (印を付けるならロックを外してから)'
+  } else if (!readOnly) {
+    thumb.title = 'クリックで redo の印を付け外し'
+    thumb.onclick = () => toggleRedo(v.id, slot)
+  }
+  return thumb
 }
 
-// Triple toggle: ロック状態でスロットを表示するか
-function slotVisible(num, slot) {
-  if (lockView === 'all') return true
-  const key = `${num}:${slot}`
-  const kept = Boolean(state.keep?.[key])
-  // unconf: 未確定のみ (ロック全部非表示) / draft: 未確定 + 今回ロック分
-  if (lockView === 'draft') return !kept || sessionLocks.has(key)
-  return !kept
+// カードの見出し: 番号を大きく、枠名 (w1 など) を添える
+function slotHead(w, slot) {
+  const head = document.createElement('div')
+  head.className = 'slot-head'
+  const num = document.createElement('span')
+  num.className = 'slot-num'
+  num.textContent = targetLabel(w)
+  const key = document.createElement('span')
+  key.className = 'slot-key'
+  key.textContent = slot
+  head.append(num, key)
+  return head
 }
 
+// 語は省略しない (読めないまま確定・解除すると危ない)。長い語は折り返す
+// タグは略号ではなく表示名で出す (#ipra → アイドリープライド)。押すとそのタグで絞る
+function wordRow(word) {
+  const el = document.createElement('div')
+  el.className = 'word'
+  if (!word) {
+    el.textContent = '(空)'
+    return el
+  }
+  el.title = word
+  const base = document.createElement('span')
+  base.textContent = String(word).replace(TAG_RE, '').trim()
+  el.appendChild(base)
+  for (const tag of new Set(tagsOfWord(word))) {
+    const b = document.createElement('button')
+    b.className = 'word-tag'
+    b.textContent = tagNameOf(tag)
+    b.title = `#${tag} で絞る`
+    b.onclick = () => setTagFilter(tag)
+    el.appendChild(b)
+  }
+  return el
+}
+
+function chip(cls, iconName, text) {
+  const el = document.createElement('span')
+  el.className = `slot-stat ${cls}`
+  setIconLabel(el, iconName, text)
+  return el
+}
+
+// 2 行目 = 状態。高さを揃えるため、画像が無い枠でも行は必ず置く
+function statRow(v) {
+  const row = document.createElement('div')
+  row.className = 'slot-stats'
+  if (v.st === 'flagged') row.appendChild(chip('is-flagged', 'flag', 'redo'))
+  if (!v.img) {
+    row.appendChild(
+      chip(
+        v.st === 'error' ? 'is-changed' : 'is-none',
+        'imageOff',
+        v.st === 'error' ? '取得失敗' : '未取得'
+      )
+    )
+  } else if (v.isAvatarI) {
+    row.appendChild(
+      v.isAvatarPending
+        ? chip('is-changed', 'alert', 'アバター未作成')
+        : chip('is-kept', 'user', 'アバター')
+    )
+  } else {
+    row.appendChild(
+      v.kept
+        ? chip('is-kept', 'lock', '確定')
+        : chip('is-unconf', 'circle', '未確定')
+    )
+  }
+  // 画像は前の語で取ったもの。確定済みでも当ては外れているので目立たせる。
+  // スマホでは title が見えないので、取ったときの語を本文に出す
+  if (v.changed) {
+    row.appendChild(chip('is-changed', 'alert', '語変更'))
+    const was = document.createElement('div')
+    was.className = 'slot-was'
+    was.textContent = `取得時: ${searchedWord(v.id, v.slot, v.img)}`
+    row.appendChild(was)
+  }
+  return row
+}
+
+// 操作は 1 行に収める (段数が枠ごとに変わると高さがガタつく)。
+// 主ボタン (確定 / 解除 / 取得) + アイコンだけの補助ボタン
+function actionsEl(v, slot) {
+  const actions = document.createElement('div')
+  actions.className = 'slot-actions'
+  const mk = (cls, iconName, text, title, fn) => {
+    const b = document.createElement('button')
+    b.className = cls
+    setIconLabel(b, iconName, text)
+    if (title) b.title = title
+    b.onclick = (e) => {
+      e.stopPropagation()
+      fn(b)
+    }
+    actions.appendChild(b)
+  }
+  const { id } = v
+  if (v.isAvatarI) {
+    // 名前が変わった (または実写のまま) 枠だけ作り直せる。他は押す物が無い
+    if (v.isAvatarPending || v.changed) {
+      mk(
+        'act-btn primary',
+        'user',
+        'アバターを作る',
+        'いまの名前でアバターを作り直して確定',
+        (b) => remakeAvatar(id, slot, b)
+      )
+    } else {
+      const note = document.createElement('div')
+      note.className = 'act-note'
+      note.textContent = 'アバター固定'
+      actions.appendChild(note)
+    }
+    return actions
+  }
+  if (v.img) {
+    mk(
+      'act-btn primary' + (v.kept ? ' is-kept' : ''),
+      v.kept ? 'unlock' : 'check',
+      v.kept ? '解除' : '確定',
+      '',
+      () => toggleKeep(id, slot)
+    )
+    if (!v.kept) {
+      mk('act-btn icon-only', 'cropTop', '', '元画像を上寄せでクロップ', (b) =>
+        recropTop(id, slot, b)
+      )
+      mk(
+        'act-btn icon-only',
+        'refresh',
+        '',
+        '別の画像で取り直す (今のと 2 択)',
+        (b) => redoNow(id, slot, b)
+      )
+      mk('act-btn icon-only', 'pencil', '', '検索ワードを指定して取得', (b) =>
+        customSearch(id, slot, b)
+      )
+    }
+  } else {
+    mk('act-btn primary', 'search', '取得', '自動で画像を探す', (b) =>
+      redoNow(id, slot, b)
+    )
+    mk('act-btn icon-only', 'pencil', '', '検索ワードを指定して取得', (b) =>
+      customSearch(id, slot, b)
+    )
+  }
+  return actions
+}
+
+// 1 枠 = 1 カード。番号ごとにまとめると枠の数でカードの高さが揃わず余白が出る
 function render() {
   const grid = document.getElementById('grid')
   grid.innerHTML = ''
-  const cards = state.words.filter(cardMatchesFilter)
-  for (const w of cards) {
-    const slots = SLOTS.filter((slot) => w[slot] && slotVisible(w.num, slot))
-    if (slots.length === 0) continue // 表示するスロットが無いカードは省く
-    const card = document.createElement('div')
-    card.className = 'card'
-    const num = document.createElement('div')
-    num.className = 'card-num'
-    num.textContent = w.num
-    card.appendChild(num)
-    for (const slot of slots) card.appendChild(slotEl(w, slot))
-    grid.appendChild(card)
+  const list = document.getElementById('tag-list')
+  grid.hidden = isTagListOpen
+  list.hidden = !isTagListOpen
+  document
+    .getElementById('tag-list-toggle')
+    .classList.toggle('active', isTagListOpen)
+  if (isTagListOpen) {
+    renderTagList(list)
+    renderStats()
+    return
+  }
+  for (const w of kindTargets()) {
+    for (const slot of slotsOf(kind)) {
+      if (slotMatches(w, slot) || touched.has(`${w.id}:${slot}`))
+        grid.appendChild(slotEl(w, slot))
+    }
   }
   renderStats()
+  requestAnimationFrame(rememberCellHeight)
+}
+
+// 画面外のカードは描画を省く (content-visibility)。その間の仮の高さを実物に合わせ、
+// スクロールで描画されたときに位置が跳ねないようにする
+function rememberCellHeight() {
+  const first = document.querySelector('#grid .slot')
+  if (!first) return
+  document
+    .getElementById('grid')
+    .style.setProperty('--cell-h', `${first.offsetHeight}px`)
 }
 
 function renderStats() {
@@ -459,77 +657,162 @@ function renderStats() {
   let total = 0
   let flagged = 0
   let kept = 0
-  for (const w of state.words) {
-    for (const slot of SLOTS) {
+  for (const w of kindTargets()) {
+    for (const slot of slotsOf(kind)) {
       if (!w[slot]) continue
       total++
-      const st = slotStatus(w.num, slot)
+      const st = slotStatus(w.id, slot)
       if (st === 'has') has++
       if (st === 'flagged') flagged++
-      if (state.keep?.[`${w.num}:${slot}`]) kept++
+      if (state.keep?.[`${w.id}:${slot}`]) kept++
     }
   }
   const unconfirmed = has - kept
   const note = readOnly ? ' <span class="readonly-note">(閲覧専用)</span>' : ''
   document.getElementById(
     'stats'
-  ).innerHTML = `画像 ${has}/${total} ・ 🔒確定 ${kept} ・ 未確定 ${unconfirmed} ・ redo ${flagged}${note}`
+  ).innerHTML = `画像 ${has}/${total} ・ 確定 ${kept} ・ 未確定 ${unconfirmed} ・ redo ${flagged}${note}`
 }
 
-function renderFilters() {
-  const box = document.getElementById('filters')
+function renderKinds() {
+  const box = document.getElementById('kinds')
   box.innerHTML = ''
-  for (const [key, label] of FILTERS) {
+  for (const [key, { label }] of Object.entries(state.kinds)) {
+    const count = state.targets.filter((t) => t.kind === key).length
     const b = document.createElement('button')
-    b.textContent = label
-    b.className = key === filter ? 'active' : ''
+    const text = document.createElement('span')
+    text.textContent = label
+    const num = document.createElement('span')
+    num.className = 'count'
+    num.textContent = count
+    b.append(text, num)
+    b.className = key === kind ? 'active' : ''
     b.onclick = () => {
-      filter = key
+      kind = key
+      touched.clear()
+      renderKinds()
+      renderTagFilter()
       renderFilters()
       render()
     }
     box.appendChild(b)
   }
 }
-// Triple toggle switch。② 下書き はクリック不可 (自動遷移専用)
-function renderLockView() {
-  const box = document.getElementById('lockview')
-  if (!box) return
+
+function renderFilters() {
+  const box = document.getElementById('filters')
   box.innerHTML = ''
-  const sw = document.createElement('div')
-  sw.className = 'tri-switch'
-  const draftLabel = sessionLocks.size
-    ? `下書き(${sessionLocks.size})`
-    : '下書き'
-  const views = [
-    ['all', '全部', true],
-    ['draft', draftLabel, false],
-    ['unconf', '未確定のみ', true],
-  ]
-  for (const [key, label, clickable] of views) {
-    const seg = document.createElement('button')
-    seg.className =
-      'tri-seg' +
-      (key === lockView ? ' active' : '') +
-      (clickable ? '' : ' auto')
-    seg.textContent = label
-    if (clickable) {
-      seg.onclick = () => {
-        lockView = key
-        sessionLocks.clear() // 全部/未確定のみ へ移ると下書きは確定 (非表示)
-        renderLockView()
-        render()
+  for (const [key, label, iconName] of FILTERS) {
+    const b = document.createElement('button')
+    if (iconName) b.appendChild(icon(iconName))
+    const text = document.createElement('span')
+    text.textContent = label
+    const count = document.createElement('span')
+    count.className = 'count'
+    count.textContent = countMatches(key)
+    b.append(text, count)
+    b.className = key === filter ? 'active' : ''
+    b.onclick = () => {
+      filter = key
+      touched.clear()
+      renderFilters()
+      render()
+    }
+    box.appendChild(b)
+  }
+}
+/** 表示中の種類の語に出てくるタグを、使われている枠の数の多い順に */
+function tagCounts() {
+  const counts = new Map()
+  for (const t of kindTargets()) {
+    for (const slot of slotsOf(kind)) {
+      for (const tag of new Set(tagsOfWord(t[slot]))) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1)
       }
     }
-    sw.appendChild(seg)
   }
-  box.appendChild(sw)
+  return [...counts].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja')
+  )
+}
+
+// タグは 150 種以上あるのでボタンを並べず、候補付きの入力欄 (datalist) で選ぶ
+function renderTagFilter() {
+  const list = document.getElementById('tag-options')
+  list.innerHTML = ''
+  for (const [tag, n] of tagCounts()) {
+    const opt = document.createElement('option')
+    opt.value = tag
+    const name = state.tagNames?.[tag]
+    // datalist はブラウザが value と label の両方で絞るので、表示名を label に入れておけば
+    // «アトリエ» と打っても #res が候補に出る
+    opt.label =
+      name && name !== tag ? `#${tag} ${name} (${n})` : `#${tag} (${n})`
+    list.appendChild(opt)
+  }
+  const input = document.getElementById('tag-filter')
+  input.value = tagFilter
+  document.getElementById('tag-clear').hidden = !tagFilter
+}
+
+// 表示名 (アトリエ) をそのまま打って確定したときも、そのタグ (res) で絞る。
+// datalist が label で絞らないブラウザ (Safari) でも名前で選べるように
+function tagFromInput(value) {
+  const text = value.trim().replace(/^#+/, '')
+  if (!text) return ''
+  const fold = (t) => t.normalize('NFKC').toLowerCase()
+  const known = tagCounts().map(([tag]) => tag)
+  if (known.includes(text)) return text
+  const byName = known.find(
+    (tag) => fold(state.tagNames?.[tag] ?? '') === fold(text)
+  )
+  return byName ?? text
+}
+
+/** タグの縦一覧。作品名を主に、#id と枠の数を添える (id だけでは何の作品か分からない) */
+function renderTagList(list) {
+  list.innerHTML = ''
+  for (const [tag, n] of tagCounts()) {
+    const row = document.createElement('button')
+    row.className = 'tag-row' + (tag === tagFilter ? ' active' : '')
+    const name = document.createElement('span')
+    name.className = 'tag-row-name'
+    name.textContent = tagNameOf(tag)
+    const id = document.createElement('span')
+    id.className = 'tag-row-id'
+    id.textContent = `#${tag}`
+    const count = document.createElement('span')
+    count.className = 'tag-row-count'
+    count.textContent = n
+    row.append(name, id, count)
+    row.onclick = () => setTagFilter(tag)
+    list.appendChild(row)
+  }
+}
+
+function setTagFilter(value) {
+  tagFilter = tagFromInput(value)
+  isTagListOpen = false
+  touched.clear()
+  renderTagFilter()
+  renderFilters()
+  render()
 }
 
 async function main() {
   state = await loadState()
+  document.getElementById('tag-filter').onchange = (e) =>
+    setTagFilter(e.target.value)
+  const clear = document.getElementById('tag-clear')
+  setIconLabel(clear, 'x')
+  clear.onclick = () => setTagFilter('')
+  document.getElementById('tag-list-toggle').onclick = () => {
+    isTagListOpen = !isTagListOpen
+    render()
+  }
+  renderKinds()
+  renderTagFilter()
   renderFilters()
-  renderLockView()
   render()
 }
 main()

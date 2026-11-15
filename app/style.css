@@ -3,9 +3,7 @@
    local() で済みダウンロードしない */
 @font-face {
   font-family: 'Droid Sans Mono';
-  src:
-    local('Droid Sans Mono'),
-    local('DroidSansMono'),
+  src: local('Droid Sans Mono'), local('DroidSansMono'),
     url('./fonts/DroidSansMono.ttf') format('truetype');
   font-display: swap;
 }
@@ -48,8 +46,7 @@ body {
   color: var(--text);
   /* Windows では -apple-system / Helvetica Neue が無く、既定の日本語フォントに
      落ちて英数字の字形が崩れる。英数字は Segoe UI、かなは Yu Gothic UI / Meiryo */
-  font-family:
-    -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
+  font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
     'Yu Gothic UI', Meiryo, sans-serif;
   font-size: 14px;
   height: 100%;
@@ -241,9 +238,7 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition:
-    background 0.12s,
-    color 0.12s;
+  transition: background 0.12s, color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -318,6 +313,42 @@ body {
 }
 .wl-img.empty {
   background: var(--surface2);
+}
+/* 人 / 物 は画像の形と細い色枠で分ける (色が見分けにくくても形で分かる) */
+.wl-img-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.word-line.kind-h .wl-img {
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--kind-h);
+}
+.word-line.kind-m .wl-img {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1.5px var(--kind-m);
+}
+/* 左上の色丸。外周をパネル地の色で抜いて画像から浮かせる */
+.wl-kind-badge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--bg);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.word-line.kind-h .wl-kind-badge {
+  background: var(--kind-h);
+}
+.word-line.kind-m .wl-kind-badge {
+  background: var(--kind-m);
 }
 .wl-meta {
   margin-left: auto;
@@ -508,6 +539,15 @@ body {
 .tw-tag {
   color: var(--accent);
 }
+/* 表示名は日本語が混じるので等幅をやめ、複数並んだら間を空ける */
+.tw-tag--name {
+  font-family: inherit;
+  font-weight: 500;
+}
+.tw-tag--name + .tw-tag--name,
+.tw-tag--name + .tw-label {
+  margin-left: 0.4em;
+}
 .tw-label {
   color: var(--label);
   font-style: italic;
@@ -559,12 +599,10 @@ body {
   cursor: pointer;
 }
 /* 人 / 物 / 念 の色 (語の行の «人» «物» と同じ) */
-.detail-chip.kind-h .dc-label,
-.word-line.kind-h .wl-kind {
+.detail-chip.kind-h .dc-label {
   color: var(--kind-h);
 }
-.detail-chip.kind-m .dc-label,
-.word-line.kind-m .wl-kind {
+.detail-chip.kind-m .dc-label {
   color: var(--kind-m);
 }
 .detail-chip.kind-g .dc-label {
@@ -578,13 +616,6 @@ body {
 }
 .detail-chip.kind-g {
   border-color: color-mix(in srgb, var(--kind-g) 30%, var(--border));
-}
-.wl-kind {
-  flex-shrink: 0;
-  width: 1em;
-  font-size: 11px;
-  font-weight: bold;
-  text-align: center;
 }
 .detail-chip.error .dc-val {
   color: #f87171;
@@ -703,6 +734,16 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 10px;
+}
+/* 番号の語の画像 (.wl-img) と同じ寸法・地色。項目の右上に寄せて文字を押し下げない */
+.card-detail-item .cd-img {
+  float: right;
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-left: 6px;
+  background: var(--img-bg);
 }
 .card-detail-item .cd-label {
   font-size: 10px;
@@ -5515,6 +5556,25 @@ button.activate-link {
   color: var(--accent);
   border-color: var(--accent);
 }
+/* 押したボタン自体の色で結果を返す: 保存中は黄、確定は緑、失敗は赤。
+   保存中は他のボタンと同じく disabled になるので、薄くせずに塗る */
+button.is-saving,
+button.is-saving:disabled {
+  color: var(--bg);
+  background: var(--warn);
+  border-color: var(--warn);
+  opacity: 1;
+}
+button.is-done {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+button.is-failed {
+  color: var(--bg);
+  background: var(--bad);
+  border-color: var(--bad);
+}
 
 /* ---- テストの入力パッド (TestPad / 全テスト共通) ----
    グリッド + 角丸キー。キー高さは 48px 下限 (タップ標準) を保ちつつ
@@ -6333,20 +6393,6 @@ button.activate-link {
   display: flex;
   gap: 4px;
 }
-.rp-bulk {
-  flex: 1;
-}
-.rp-bulk.armed {
-  color: var(--bg);
-  background: var(--warn);
-  border-color: var(--warn);
-  font-weight: bold;
-}
-.rp-bulk-note {
-  flex-shrink: 0;
-  color: var(--warn);
-}
-
 /* 代表の保存状態 (RepSaveQueue)。押した瞬間に黄、保存できたら緑、失敗は赤。
    どの状態でも押せなくはしない (待機を作らない) */
 .rep-card.save-pending,
@@ -6358,9 +6404,7 @@ button.activate-link {
 .rp-row.save-saved {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
-  transition:
-    box-shadow 0.4s,
-    border-color 0.4s;
+  transition: box-shadow 0.4s, border-color 0.4s;
 }
 .rep-card.save-error,
 .rp-row.save-error {
@@ -6433,4 +6477,249 @@ button.activate-link {
 .build-stamp code {
   font-family: var(--font-mono);
   color: var(--text);
+}
+
+/* ブックマークのカード (BmNumCard / BmCardCard)。語の画像と語を並べて見せる */
+.bm-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 96px;
+}
+.bm-card.selected {
+  border-color: var(--accent);
+  background: var(--accent2);
+}
+.bm-card.empty {
+  opacity: 0.5;
+}
+.bm-thumbs {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  min-height: 48px;
+}
+.bm-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--img-bg);
+}
+.bm-thumb.empty {
+  background: var(--surface2);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+}
+.bm-num {
+  font-family: var(--font-mono);
+  font-weight: bold;
+  font-size: 15px;
+  color: var(--accent);
+  line-height: 1;
+}
+.bm-suit {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 48px;
+}
+.bm-suit.S {
+  color: #94a3b8;
+}
+.bm-suit.H {
+  color: #f87171;
+}
+.bm-suit.C {
+  color: #4ade80;
+}
+.bm-suit.D {
+  color: #60a5fa;
+}
+.bm-words {
+  font-size: 11px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.3;
+  width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-all;
+}
+
+/* グループ > タグ一覧。100 種以上あるので dock に並べず、content に縦の一覧で出す。
+   作品名を主に、#タグ (id) は添えるだけ (id だけでは何の作品か分からない) */
+.tag-list {
+  --stack-gap: 0px;
+}
+.tag-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.tag-row:active {
+  background: var(--surface2);
+}
+.tag-row-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.tag-row-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+}
+.tag-row-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+/* タグ候補の表示名 (res → アトリエ)。id だけでは何のタグか分からないので添える */
+.nd-tag-name {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+/* 概念 (#g) の語の画像。実物の写真と取り違えないよう、額縁のように二重の枠で囲む。
+   <img> には内側の box-shadow が描けない (画像の下に隠れる) ので、
+   画像の上に描かれる outline を内側へずらして内枠、box-shadow で外枠にする */
+img[data-concept] {
+  outline: 1.5px solid var(--kind-g);
+  outline-offset: -4px;
+  box-shadow: 0 0 0 1.5px var(--kind-g);
+}
+
+/* 番号の md カード (UI 候補 A-2)。画像を枠いっぱいに、番号と語は画像の上に重ねて余白を作らない */
+.md-card {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+/* md カードの並べ方 (UI 候補 B-1)。スマホでは 3 列で幅いっぱい、広い画面では 1 枚 170px で
+   止めて列を増やす。3 列固定だと PC で窓を広げたときにカードが窓幅の 1/3 まで膨らむため */
+.grid-up.md-grid {
+  justify-content: center;
+}
+.grid-up.md-grid > * {
+  flex-basis: min(170px, calc((100% - 2 * var(--gap)) / 3));
+}
+.md-card.selected {
+  border-color: var(--accent);
+}
+.md-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--img-bg);
+}
+.md-card-img.is-empty {
+  display: grid;
+  place-items: center;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 28px;
+  font-weight: 700;
+}
+.md-card-num {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  /* 数字と名前は UI 候補 C-2 (24px / 16px)。14px / 12px では一覧で読みにくかった */
+  font: 800 24px/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.md-card-word {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 5px 4px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+/* 概念 (#g) の枠は画像ではなくカードに付ける (画像が枠いっぱいなので outline が隠れない位置へ) */
+.md-card:has(img[data-concept]) {
+  border-color: var(--kind-g);
+}
+
+/* 閉じた md カード (UI 候補 A-4)。斜線の «伏せた札» に番号だけを中央へ大きく出す。
+   画像も名前も描かないので、押すまで自分で思い出せる */
+.md-card.is-closed {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--surface2) 0 8px,
+    var(--surface) 8px 16px
+  );
+}
+.md-card.is-closed .md-card-num {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font-size: 30px;
+  text-shadow: 0 0 6px var(--bg);
+}
+
+/* よみの 1 桁読み [す] (QA-0043 A-4): 字の右肩に読む数字を小さく添える */
+.yomi-half-digit {
+  font-size: 0.62em;
+  color: var(--warn);
+  margin-left: 1px;
+  vertical-align: 0.55em;
+  line-height: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* グループ画面のタグの md カード。<button> なので既定の枠・文字の並びを md カードに揃える */
+.tag-md-card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+/* 正式名の下に小さく #タグ (id でしか呼ばないタグもあるので消さない) */
+.tag-md-card-id {
+  display: block;
+  font: 500 11px var(--font-mono);
+  opacity: 0.8;
 }

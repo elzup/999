@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>語呂 999 — 画像コンソール</title>
+    <title>999 画像コンソール</title>
     <style>
       :root {
         --bg: #0b0c10;
@@ -11,7 +11,7 @@
         --surface2: #1e212a;
         --hover: #272b36;
         --line: rgba(255, 255, 255, 0.08);
-        --line2: rgba(255, 255, 255, 0.14);
+        --line2: rgba(255, 255, 255, 0.16);
         --text: #eceef2;
         --text2: #9aa1ad;
         --muted: #6b7280;
@@ -20,7 +20,18 @@
         --amber: #fbbf24;
         --amber-dim: rgba(251, 191, 36, 0.16);
         --red: #f87171;
+        --red-dim: rgba(248, 113, 113, 0.16);
+        --violet: #a78bfa;
+        --violet-dim: rgba(167, 139, 250, 0.16);
+        /* 人 / 物 / 概念 の色。アプリ (app/style.css) と揃える */
+        --kind-h: #7cc4ff;
+        --kind-m: #f5b65b;
+        --kind-g: #c4b5fd;
         --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+        --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+        /* ボタン・札の高さ。行の高さを枠ごとに揃えるため固定する */
+        --btn-h: 36px;
+        --chip-h: 22px;
       }
       * {
         box-sizing: border-box;
@@ -33,43 +44,79 @@
           'Hiragino Sans', system-ui, sans-serif;
         -webkit-font-smoothing: antialiased;
       }
+      .icon {
+        display: inline-flex;
+        width: 1.1em;
+        height: 1.1em;
+        flex: none;
+      }
+      .icon svg {
+        width: 100%;
+        height: 100%;
+      }
+      .icon.spin svg {
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── ヘッダ (絞り込み) ── */
       header {
         position: sticky;
         top: 0;
         z-index: 100;
-        background: rgba(11, 12, 16, 0.85);
+        background: rgba(11, 12, 16, 0.9);
         backdrop-filter: blur(12px);
-        padding: 12px 18px;
+        padding: 10px 16px;
         border-bottom: 1px solid var(--line);
         display: flex;
-        gap: 14px;
+        gap: 8px 12px;
         align-items: center;
         flex-wrap: wrap;
       }
       h1 {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 700;
-        letter-spacing: 0.3px;
         margin: 0;
+        white-space: nowrap;
+      }
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .filter-label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
       }
       .filters {
         display: flex;
-        gap: 6px;
+        gap: 4px;
         flex-wrap: wrap;
       }
       .filters button {
-        background: transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 30px;
+        background: var(--surface2);
         color: var(--text2);
         border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 5px 13px;
+        border-radius: 8px;
+        padding: 0 10px;
         cursor: pointer;
         font-size: 12.5px;
         font-weight: 600;
-        transition: all 0.15s;
+        transition: background 0.15s, color 0.15s;
       }
       .filters button:hover {
-        background: var(--surface2);
+        background: var(--hover);
         color: var(--text);
       }
       .filters button.active {
@@ -77,98 +124,168 @@
         border-color: var(--text);
         color: var(--bg);
       }
-      .stats {
-        color: var(--text2);
-        font-size: 12.5px;
+      .filters .count {
+        font-family: var(--mono);
+        font-size: 11px;
+        opacity: 0.7;
         font-variant-numeric: tabular-nums;
-        margin-left: auto;
       }
-      /* Triple toggle = segmented control */
-      .tri-switch {
-        display: inline-flex;
+      .tag-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+      .tag-filter {
+        height: 30px;
         background: var(--surface2);
+        color: var(--text);
         border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 3px;
-        gap: 2px;
+        border-radius: 8px;
+        padding: 0 28px 0 10px;
+        font-size: 12.5px;
+        width: 180px;
       }
-      .tri-seg {
+      .tag-clear {
+        position: absolute;
+        right: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
         background: transparent;
         color: var(--text2);
         border: none;
-        border-radius: 999px;
-        padding: 5px 13px;
-        font-size: 12.5px;
-        font-weight: 600;
+        border-radius: 6px;
         cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.15s;
+        font-size: 14px;
       }
-      .tri-seg:not(.auto):hover {
+      /* display を指定すると hidden 属性が効かなくなる */
+      .tag-clear[hidden] {
+        display: none;
+      }
+      .tag-clear:hover {
+        background: var(--hover);
+      }
+      .tag-list-toggle {
+        height: 30px;
+        padding: 0 12px;
+        background: var(--surface2);
         color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 12.5px;
+        cursor: pointer;
       }
-      .tri-seg.active {
-        background: var(--green);
-        color: #07140e;
-        font-weight: 700;
+      .tag-list-toggle.active {
+        border-color: var(--text);
       }
-      .tri-seg.auto {
-        cursor: default;
+      /* タグの縦一覧 (アプリのグループタブと同じ形)。作品名を主に、#id は添えるだけ */
+      .tag-list {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 0 12px 24px;
       }
-      .tri-seg.auto.active {
-        background: var(--amber);
-        color: #1a1304;
+      .tag-list[hidden],
+      .grid[hidden] {
+        display: none;
+      }
+      .tag-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 14px;
+        background: none;
+        border: none;
+        border-bottom: 1px solid var(--line);
+        color: var(--text);
+        text-align: left;
+        cursor: pointer;
+      }
+      .tag-row:hover,
+      .tag-row.active {
+        background: var(--surface2);
+      }
+      .tag-row-name {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .tag-row-id {
+        font: 11px var(--mono);
+        color: var(--text2);
+      }
+      .tag-row-count {
+        margin-left: auto;
+        font: 13px var(--mono);
+        color: var(--text2);
+        font-variant-numeric: tabular-nums;
+      }
+      .stats {
+        color: var(--text2);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        margin-left: auto;
       }
       .readonly-note {
         color: var(--amber);
-        font-size: 12px;
       }
+
+      /* ── 一覧: 1 枠 = 1 カード ── */
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-        gap: 14px;
-        padding: 18px;
+        grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+        gap: 12px;
+        padding: 16px;
+        align-items: start;
       }
-      .card {
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 10px;
-        box-shadow: var(--shadow);
-        transition: border-color 0.15s;
-        /* 画面外のカードは描画・レイアウトを丸ごとスキップ (大量グリッドの高速化) */
-        content-visibility: auto;
-        contain-intrinsic-size: auto 320px;
-      }
-      .card:hover {
-        border-color: var(--line2);
-      }
-      .card-num {
-        font: 700 12px ui-monospace, 'SF Mono', Menlo, monospace;
-        letter-spacing: 1px;
-        color: var(--text2);
-        padding: 2px 2px 8px;
+      @media (max-width: 420px) {
+        .grid {
+          gap: 8px;
+          padding: 8px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
       .slot {
-        margin-bottom: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 8px;
+        box-shadow: var(--shadow);
+        /* 画面外のカードは描画を省く (件数が数千あるため)。仮の高さは app.js が実測で入れる */
+        content-visibility: auto;
+        contain-intrinsic-size: auto var(--cell-h, 320px);
       }
-      .slot:last-child {
-        margin-bottom: 2px;
+      .slot-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 0 2px;
+      }
+      .slot-num {
+        font: 800 22px/1.1 var(--mono);
+        letter-spacing: 0.5px;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+      .slot-key {
+        font: 600 11px var(--mono);
+        color: var(--muted);
       }
       .thumb {
         position: relative;
         width: 100%;
         aspect-ratio: 1;
-        border-radius: 12px;
+        border-radius: 10px;
         background: #0d0f14;
-        border: 2px solid transparent;
+        border: 2px solid var(--line);
         cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 600;
         overflow: hidden;
         transition: transform 0.12s;
       }
@@ -176,9 +293,52 @@
         transform: scale(0.985);
       }
       .thumb img {
+        display: block;
         width: 100%;
         height: 100%;
         object-fit: cover;
+      }
+      /* 概念 (#g) の画像は二重の枠 (アプリの img[data-concept] と同じ) */
+      .thumb img[data-concept] {
+        outline: 2px solid var(--kind-g);
+        outline-offset: -6px;
+      }
+      /* 左上の 人 / 物 の色丸 (アプリの詳細パネルの語の行と同じ) */
+      .side-badge {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--bg);
+        box-shadow: 0 0 0 2px var(--bg);
+      }
+      .side-badge.side-h {
+        background: var(--kind-h);
+      }
+      .side-badge.side-m {
+        background: var(--kind-m);
+      }
+      .thumb-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .thumb-empty .icon {
+        width: 28px;
+        height: 28px;
       }
       .thumb.kept {
         border-color: var(--green);
@@ -186,35 +346,56 @@
       .thumb.unconfirmed {
         border-color: var(--amber);
       }
-      .thumb.flagged {
+      .thumb.changed {
         border-color: var(--red);
+      }
+      .thumb.flagged {
+        border-color: var(--violet);
         border-style: dashed;
       }
-      .slot-label {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        margin-top: 7px;
-      }
-      .badge {
-        display: none;
-      }
+      /* 語は省略しない (読めないまま確定・解除すると危ない)。2 行ぶんは常に取り、
+         カード最小幅でも 13px の語が 1 行に 10 文字前後入る (6 文字は必ず見える) */
       .word {
+        min-height: calc(2 * 1.35em);
         color: var(--text);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+        padding: 0 2px;
+      }
+      /* 語のタグは表示名で。押すとそのタグで絞る */
+      .word-tag {
+        margin-left: 4px;
+        padding: 0 5px;
+        background: var(--surface2);
+        color: var(--text2);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        font-size: 11px;
         font-weight: 500;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        cursor: pointer;
+        vertical-align: 1px;
+      }
+      .word-tag:hover {
+        color: var(--text);
+      }
+      .slot-stats {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        min-height: var(--chip-h);
       }
       .slot-stat {
-        font-size: 10.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        height: var(--chip-h);
+        font-size: 11px;
         font-weight: 700;
-        letter-spacing: 0.3px;
-        padding: 2px 8px;
+        padding: 0 8px;
         border-radius: 999px;
-        flex: none;
         white-space: nowrap;
       }
       .slot-stat.is-unconf {
@@ -225,65 +406,129 @@
         background: var(--green-dim);
         color: var(--green);
       }
+      .slot-stat.is-none {
+        background: var(--surface2);
+        color: var(--text2);
+      }
+      .slot-stat.is-flagged {
+        background: var(--violet-dim);
+        color: var(--violet);
+      }
       /* sync で語の本体が変わった枠。確定済みでも画像が当たっていない */
       .slot-stat.is-changed {
-        background: rgba(248, 113, 113, 0.16);
-        color: #f87171;
+        background: var(--red-dim);
+        color: var(--red);
       }
-      /* 操作ボタン */
+      /* API の失敗 (app.js の showError)。押すと消える */
+      #console-error {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        z-index: 50;
+        padding: 10px 12px;
+        border: 1px solid var(--red);
+        border-radius: 8px;
+        /* 下の一覧の文字が透けないよう地は不透明にする */
+        background: color-mix(in srgb, var(--red) 16%, var(--bg));
+        color: var(--red);
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .slot-was {
+        flex-basis: 100%;
+        font-size: 11px;
+        color: var(--red);
+        overflow-wrap: anywhere;
+      }
+
+      /* ── 操作: 常に 1 行 (段数が変わると高さがガタつく) ── */
       .slot-actions {
         display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
+        gap: 4px;
+        height: var(--btn-h);
       }
       .act-btn {
-        flex: 1 1 0;
-        min-width: 40px;
-        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        flex: none;
+        width: var(--btn-h);
+        height: var(--btn-h);
+        padding: 0;
         background: var(--surface2);
-        color: var(--text);
+        color: var(--text2);
         border: 1px solid var(--line);
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 700;
         cursor: pointer;
-        transition: all 0.13s;
+        transition: background 0.13s, color 0.13s;
+      }
+      .act-btn.icon-only {
+        width: 30px;
+      }
+      .act-btn .icon {
+        width: 16px;
+        height: 16px;
       }
       .act-btn:hover {
         background: var(--hover);
-        border-color: var(--line2);
+        color: var(--text);
       }
       .act-btn:active {
         transform: scale(0.97);
       }
+      .act-btn:disabled {
+        cursor: progress;
+        opacity: 0.7;
+      }
       .act-btn.primary {
-        flex-basis: 100%;
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        padding: 0 4px;
         background: var(--green-dim);
         border-color: rgba(52, 211, 153, 0.4);
         color: var(--green);
       }
       .act-btn.primary:hover {
-        background: rgba(52, 211, 153, 0.24);
+        background: rgba(52, 211, 153, 0.26);
       }
-      /* 2択チューザー */
+      /* 確定済みの «解除» は押しても戻せるが、うっかり押さないよう控えめに */
+      .act-btn.primary.is-kept {
+        background: var(--surface2);
+        border-color: var(--line);
+        color: var(--text2);
+      }
+      .act-note {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 11.5px;
+      }
+
+      /* ── 2 択 ── */
       .choose-title {
         font-size: 12px;
         font-weight: 700;
         text-align: center;
-        margin: 2px 0 8px;
         color: var(--amber);
       }
       .choose-opt {
-        margin-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
       }
       .choose-opt img {
         width: 100%;
         aspect-ratio: 1;
         object-fit: cover;
-        border-radius: 12px;
+        border-radius: 10px;
         display: block;
-        margin-bottom: 5px;
       }
       .choose-opt .act-btn {
         width: 100%;
@@ -292,12 +537,48 @@
   </head>
   <body>
     <header>
-      <h1>語呂 999 画像コンソール</h1>
-      <div class="filters" id="filters"></div>
-      <div class="lockview" id="lockview"></div>
+      <h1>999 画像</h1>
+      <div class="filter-group">
+        <span class="filter-label">対象</span>
+        <div class="filters" id="kinds"></div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">タグ</span>
+        <div class="tag-box">
+          <input
+            id="tag-filter"
+            class="tag-filter"
+            list="tag-options"
+            placeholder="res, splatoon …"
+            autocomplete="off"
+          />
+          <datalist id="tag-options"></datalist>
+          <button
+            id="tag-clear"
+            class="tag-clear"
+            title="タグの絞り込みを外す"
+            hidden
+          >
+            ×
+          </button>
+        </div>
+        <button
+          id="tag-list-toggle"
+          class="tag-list-toggle"
+          title="タグを作品名の一覧から選ぶ"
+        >
+          一覧
+        </button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">状態</span>
+        <div class="filters" id="filters"></div>
+      </div>
       <div class="stats" id="stats"></div>
     </header>
+    <div class="tag-list" id="tag-list" hidden></div>
     <div class="grid" id="grid"></div>
+    <script src="./icons.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

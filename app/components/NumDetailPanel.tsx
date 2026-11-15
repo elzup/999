@@ -5,6 +5,7 @@
 // 閉じる・前へ / 次へ は DetailSheet (パネルの枠) の最下段に 1 つだけ置く。
 
 import { useEffect, useState } from 'preact/hooks'
+import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import Rankey from './Rankey'
 import { IconEdit } from './Icons'
@@ -17,6 +18,7 @@ import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
+import { rankeyOf } from '../lib/rankey'
 
 type Props = {
   d: NumberEntry
@@ -59,7 +61,7 @@ function wordRows(d: NumberEntry): WordRow[] {
       word: wh1.word,
       kana: wh1.kana,
       img: wh1.img,
-      rk: d.w1Rk,
+      rk: rankeyOf(wh1.kana, d.num, wh1.word),
     })
   }
   if (wm1) {
@@ -68,7 +70,7 @@ function wordRows(d: NumberEntry): WordRow[] {
       word: wm1.word,
       kana: wm1.kana,
       img: wm1.img,
-      rk: d.w2Rk,
+      rk: rankeyOf(wm1.kana, d.num, wm1.word),
       dim: true,
     })
   }
@@ -197,24 +199,29 @@ function NumDetailPanel(props: Props) {
               }
               onClick={() => toggle(row.slot)}
             >
-              {/* 人 (wh) か 物 (wm) か。チップの 人 / 物 と同じ色 */}
-              <span class="wl-kind">{KIND_LABEL[kindOf(row.slot)]}</span>
-              {row.img ? (
-                <img
-                  class="wl-img"
-                  loading="lazy"
-                  {...wordImage(row.img, 34)}
-                  alt={row.word}
-                />
-              ) : (
-                <span class="wl-img empty" />
-              )}
+              {/* 人 (wh) か 物 (wm) かは画像の形 (人 = 丸 / 物 = 角丸) と左上の色丸で示す。
+                  色はチップの 人 / 物 と同じ。札の列を無くして語の幅を取る */}
+              <span class="wl-img-wrap">
+                {row.img ? (
+                  <img
+                    class="wl-img"
+                    loading="lazy"
+                    {...wordImage(row.img, 34, row.word)}
+                    alt={row.word}
+                  />
+                ) : (
+                  <span class="wl-img empty" />
+                )}
+                <span class="wl-kind-badge">
+                  {KIND_LABEL[kindOf(row.slot)]}
+                </span>
+              </span>
               {/* ヨミはフリガナの位置。普段は見せずに場所だけ取っておき、
                   タップで出す (出し入れで行の高さ・幅が変わらない) */}
               <span class={'detail-main-word' + (row.dim ? ' dim' : '')}>
                 <span class="yomi-host">
-                  <TaggedWord word={row.word} />
-                  <span class="yomi">{row.kana ?? ''}</span>
+                  <TaggedWord word={row.word} showNames />
+                  <Yomi class="yomi" kana={row.kana ?? ''} />
                 </span>
               </span>
               {repRankOf(rep, row.word) ? (
@@ -251,7 +258,7 @@ function NumDetailPanel(props: Props) {
                     class={'dc-val' + (hasMarks(word) ? ' tappable' : '')}
                     onClick={hasMarks(word) ? () => toggle(key) : undefined}
                   >
-                    <TaggedWord word={word} />
+                    <TaggedWord word={word} showNames />
                   </span>
                 )
               })}

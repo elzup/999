@@ -158,7 +158,7 @@ word-images.json → 画像                → 画像コンソール
   "slots": { "wh1": { "word": "鯉", "kana": "こい", "imageUrl": "..." } },
   "rep": { "picks": [...], "confirmed": true },
   "ratings": [{ "k": "こい", "w": "鯉", "v": 2 }],
-  "derived": { "ptBySlot": {...}, "rankeyBySlot": {...} }
+  "derived": { "ptBySlot": {...} }
 }
 ```
 

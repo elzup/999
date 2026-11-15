@@ -12,14 +12,15 @@ const doc = {
 }
 
 describe('derived values', () => {
-  it('REQ-DRV-001: computes pt and rankey for every filled slot', () => {
+  it('REQ-DRV-001: computes pt for every filled slot', () => {
     const derived = computeDerived(doc)
 
     expect(Object.keys(derived.ptBySlot).sort()).toEqual(['wh1', 'wm1'])
-    // こい = こ(5)+い(1) の2桁。051 に対しては先頭0が省略されるので _AA|
-    expect(derived.rankeyBySlot.wh1).toBe('_AA|')
-    expect(derived.rankeyBySlot.wm1).toBe('AAA|')
     expect(typeof derived.ptBySlot.wh1).toBe('number')
+  })
+
+  it('rankey は保存しない (D-0045: 見る場所で計算する)', () => {
+    expect(Object.keys(computeDerived(doc))).toEqual(['ptBySlot'])
   })
 
   it('is a pure function of slots — same input, same output', () => {
@@ -36,7 +37,6 @@ describe('derived values', () => {
     const derived = computeDerived(empty)
 
     expect('wm1' in derived.ptBySlot).toBe(false)
-    expect('wm1' in derived.rankeyBySlot).toBe(false)
   })
 
   it('REQ-DRV-005: records null for unencodable kana but still succeeds', () => {
@@ -47,7 +47,6 @@ describe('derived values', () => {
     const derived = computeDerived(broken)
 
     expect(derived.ptBySlot.wh1).toBe(null)
-    expect(derived.rankeyBySlot.wh1).toBe(null)
   })
 
   it('withDerived attaches derived without touching the rest', () => {
@@ -64,25 +63,7 @@ describe('derived values', () => {
     expect(next.derived.ptBySlot.wh1).not.toBe(999)
   })
 
-  it('rankey reflects the number, not just the kana', () => {
-    // 同じかな «ひっち» でも num によって結果が変わる。num を無視する実装なら
-    // どちらか一方が必ず外れる (以前のテストは num を消しても通る無意味なものだった)
-    const at122 = {
-      num: '122',
-      slots: { wh1: { word: 'X', kana: 'ひっち', imageUrl: '' } },
-    }
-    const at221 = {
-      num: '221',
-      slots: { wh1: { word: 'X', kana: 'ひっち', imageUrl: '' } },
-    }
-
-    expect(computeDerived(at122).rankeyBySlot.wh1).not.toBe(
-      computeDerived(at221).rankeyBySlot.wh1
-    )
-  })
-
   it('REQ-DRV-006: refuses to compute without a three-digit num', () => {
-    // num 無しで計算させると ~1% の語で «もっともらしいが誤った» rankey が入る
     expect(() => computeDerived({ slots: {} })).toThrow(/3-digit num/)
     expect(() => computeDerived({ num: '12', slots: {} })).toThrow(
       /3-digit num/

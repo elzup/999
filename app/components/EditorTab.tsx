@@ -3,6 +3,7 @@ import type { NumberEntry } from '../data/schema'
 import { saveWordPatch, type EditableWordPatch } from '../lib/editorApi'
 import { clearEditorToken } from '../lib/editorAuth'
 import Rankey from './Rankey'
+import { rankeyOf } from '../lib/rankey'
 
 type SlotPrefix = 'wh' | 'wm'
 
@@ -417,7 +418,13 @@ function SlotListEditor({
               <div class="editor-rule-summary">
                 {index === 0 && (
                   <Rankey
-                    value={(prefix === 'wh' ? entry.w1Rk : entry.w2Rk) ?? ''}
+                    value={
+                      rankeyOf(
+                        prefix === 'wh' ? entry.w1k : entry.w2k,
+                        entry.num,
+                        prefix === 'wh' ? entry.w1 : entry.w2
+                      ) ?? ''
+                    }
                   />
                 )}
                 <span class={scoreClass(metrics.score)}>

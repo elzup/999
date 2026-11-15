@@ -15,7 +15,7 @@ fi
 
 mkdir -p "$DEST/data"
 for f in word-images.json word-images-keep.json word-images.candidates.json \
-  word-images-redo.json tags.json words.tsv; do
+  word-images-redo.json tags.json tags-short.json words.tsv; do
   [ -f "$SRC/$f" ] && cp "$SRC/$f" "$DEST/data/$f"
 done
 

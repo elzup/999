@@ -1,12 +1,14 @@
 import { h } from 'preact'
 import { useMemo } from 'preact/hooks'
 import type { NumberEntry, CardEntry } from '../data/schema'
-import { CardCell, NumCell } from './Cells'
+import { BmCardCard, BmNumCard } from './Cells'
 import NumDetailPanel from './NumDetailPanel'
 import CardDetailPanel from './CardDetailPanel'
 import Screen from './Screen'
 import { navAround, useSelection } from '../lib/useSelection'
 import DetailSheet from './DetailSheet'
+import { useMdReveal } from '../lib/useMdReveal'
+import { MdRevealToggle } from './MdRevealToggle'
 
 type Props = {
   numbers: NumberEntry[]
@@ -41,6 +43,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
   }, [cards, bookmarks])
 
   const { selected, select: setSelected } = useSelection<string>()
+  const reveal = useMdReveal()
 
   // 前へ / 次へ は 数字 → カード の順。送った先も «見た» として記録する
   // (タップで開いたときと同じく、ブックマーク復習の既読に数える)
@@ -101,13 +104,17 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
       {bmNums.length > 0 ? (
         <section class="stack-up" style={{ '--stack-gap': '8px' }}>
           <div class="section-label">数字 ({bmNums.length})</div>
-          <div class="num-grid grid-up">
+          <div class="grid-up md-grid" style={{ '--gap': '6px' }}>
             {bmNums.map((d) => (
-              <NumCell
+              <BmNumCard
                 key={d.num}
                 d={d}
+                open={reveal.isOpen(d.num) || selected === 'n:' + d.num}
                 selected={selected === 'n:' + d.num}
-                onSelect={() => openDetail('n:' + d.num)}
+                onSelect={() => {
+                  reveal.reveal(d.num)
+                  openDetail('n:' + d.num)
+                }}
               />
             ))}
           </div>
@@ -116,14 +123,11 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
       {bmCards.length > 0 ? (
         <section class="stack-up" style={{ '--stack-gap': '8px' }}>
           <div class="section-label">カード ({bmCards.length})</div>
-          <div
-            class="card-grid grid-up"
-            style={{ '--cols': 4, '--gap': '6px' }}
-          >
+          <div class="grid-up" style={{ '--cols': 3, '--gap': '6px' }}>
             {bmCards.map((c) => {
               const key = c.suit + c.rank
               return (
-                <CardCell
+                <BmCardCard
                   key={key}
                   c={c}
                   selected={selected === 'c:' + key}
@@ -137,7 +141,13 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
     </div>
   )
 
-  return <Screen main={main} panel={panel} />
+  // 数字のブックマークがあるときだけ «数字 | 全部» を出す (カードの札は伏せない)
+  const dock =
+    bmNums.length > 0 ? (
+      <MdRevealToggle mode={reveal.mode} onChange={reveal.setMode} />
+    ) : null
+
+  return <Screen main={main} panel={panel} dock={dock} />
 }
 
 export default BookmarkTab
