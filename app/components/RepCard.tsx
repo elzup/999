@@ -5,6 +5,7 @@
 // 代表がまだ無い番号は、«確定» で入る既定 (① 人の 1 番手 ② 物の 1 番手) を
 // 薄い ①② で先に見せる。押す前に何が確定されるか分かるように。
 import { h } from 'preact'
+import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import type { NumberDoc } from '../lib/numberApi'
 import {
@@ -89,7 +90,7 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
                 <span class="detail-main-word">
                   <span class="yomi-host">
                     <TaggedWord word={row.word} />
-                    <span class="yomi">{row.kana}</span>
+                    <Yomi class="yomi" kana={row.kana} />
                   </span>
                 </span>
                 {row.repRank ? (

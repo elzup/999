@@ -4,6 +4,7 @@
 // 行は人 / 物の 2 段に候補チップを並べ、チップの左に画像を出す (D-0030)。
 // dock は 絞り込み / 百の位 / 十の位ジャンプ (D-0029)。
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import { loadSubTab, saveSubTab } from '../data/storage'
 import { fetchHundred, type NumberDoc } from '../lib/numberApi'
@@ -55,12 +56,17 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       onClick={onPick}
     >
       {row.imageUrl ? (
-        <img class="rp-thumb" {...wordImage(row.imageUrl, 28, row.word)} alt="" loading="lazy" />
+        <img
+          class="rp-thumb"
+          {...wordImage(row.imageUrl, 28, row.word)}
+          alt=""
+          loading="lazy"
+        />
       ) : (
         <span class="rp-thumb is-empty" />
       )}
       <span class="rp-word">
-        <span class="rp-kana">{row.kana}</span>
+        <Yomi class="rp-kana" kana={row.kana} />
         {row.word}
       </span>
       {row.repRank ? <span class="rp-mark">{MARK[row.repRank]}</span> : null}

@@ -6,6 +6,7 @@ import {
   kataToHira,
   normalizeSmallVowel,
 } from './table.js'
+import { hasNotation, parseNotation } from './kana-notation.js'
 
 function isSokuon(ch) {
   return ch === 'っ' || ch === 'ッ'
@@ -72,8 +73,27 @@ function lookup(token) {
   return undefined
 }
 
-/** かな文字列 → { digits, tokens, youon4 } */
+/**
+ * かな文字列 → { digits, tokens, youon4 }
+ * 記法 [す] (1 桁読み) を含むときは区間ごとに読み、[ ] の中は 2 桁の 1 桁目だけを採る。
+ * その場合のトークンには half: true が付く。
+ */
 export function encode(input) {
+  if (!hasNotation(input)) return encodePlain(input)
+  const tokens = parseNotation(input).flatMap(({ text, half }) => {
+    const { tokens: inner } = encodePlain(text)
+    if (!half) return inner
+    if (inner.length !== 1 || String(inner[0].value).length !== 2) {
+      throw new Error(
+        `[${text}] は 2 桁を読むかな 1 つだけを囲める: "${input}"`
+      )
+    }
+    return [{ kana: text, value: String(inner[0].value)[0], half: true }]
+  })
+  return { digits: tokens.map((t) => t.value).join(''), tokens, youon4: false }
+}
+
+function encodePlain(input) {
   const y4 = detectYouon4(input)
   if (y4) return { ...y4, youon4: true }
 

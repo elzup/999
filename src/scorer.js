@@ -13,6 +13,8 @@ export const WEIGHTS = {
   double: 3,
   sokuon: 2,
   halfOverflow: 0.4,
+  // [す] の 1 桁読み。ルールの例外なので、どの 1 文字 1 桁 (bad=0.6) より低く置く
+  half: 0.4,
   overflowPerChar: -1,
   youon4Omission: -0.5,
   leadingZeroOmission: 1.5,
@@ -92,6 +94,9 @@ export function score(input, targetDigits = 3) {
         tier: null,
         score: WEIGHTS.overflowPerChar,
       }
+    }
+    if (t.half) {
+      return { ...t, type: 'half', tier: null, score: WEIGHTS.half }
     }
     if (isSokuon(t.kana)) {
       return { ...t, type: 'sokuon', tier: null, score: WEIGHTS.sokuon }
