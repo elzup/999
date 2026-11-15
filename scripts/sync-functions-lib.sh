@@ -23,7 +23,8 @@ for name in number-doc write derived console-writes db \
   cp "$root/src/firestore/$name.js" "$lib/firestore/$name.js"
 done
 
-for name in rankey scorer encoder table rule-tsv; do
+# sheet-layout は sheet-bisync がスロットの並びを引く。kana-notation は encoder が記法 [す] を読む
+for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation; do
   cp "$root/src/$name.js" "$lib/$name.js"
 done
 

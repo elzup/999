@@ -10,6 +10,7 @@
 //   _      先頭0の省略 (2桁しか無い)         れい   = _CA|
 //   !      中間の省略                        りんご = ww!A|   (ん を飛ばす)
 //   v      2桁トークンが3桁境界を跨ぐ        たま   = wwv|v
+//   h      記法 [す] の 1 桁読み (す=33→3)     [す]うる = hBB|
 //
 //   接尾 (パイプの後ろ)
 //   v      境界を跨いだ2桁の外側
@@ -24,6 +25,7 @@
 
 import { getTier, score } from './scorer.js'
 import { kataToHira, normalizeDakuten, normalizeSmallVowel } from './table.js'
+import { hasNotation, stripNotation } from './kana-notation.js'
 
 const TIER_MARK = { core: 'A', sub: 'B', bad: 'C' }
 const TARGET = 3
@@ -48,7 +50,7 @@ export function leftoverOf(word, kana) {
   const w = cleanWord(word)
   if (!w || !/^[ぁ-んァ-ヶーゝゞ]+$/.test(w)) return null
   const hw = toHira(w)
-  const hk = toHira(kana)
+  const hk = toHira(stripNotation(kana))
   return hw.startsWith(hk) ? hw.slice(hk.length) : null
 }
 
@@ -78,6 +80,7 @@ function charMark(ch) {
 function tokenMarks(token) {
   const width = token.value.length
   if (token.type === 'sokuon') return ['t']
+  if (token.type === 'half') return ['h']
   if (token.type === 'single')
     return [TIER_MARK[token.tier ?? tierOf(token.kana)] ?? '?']
   if (token.type === 'halfOverflow') return Array(width).fill('v')
@@ -126,7 +129,8 @@ export function rankey(kana, num, word = '') {
     return null
   }
 
-  if (detail.digits !== num) {
+  // 記法付きのよみは書いた人が読み方を決めているので、中間省略は探さない
+  if (detail.digits !== num && !hasNotation(kana)) {
     const at = findOmission(kana, num)
     if (at >= 0) {
       omitAt = at

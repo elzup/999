@@ -8,13 +8,11 @@
 // このモジュールは Function からも読み込む。fs 依存を持ち込まないこと。
 
 import { canonicalJson } from './number-doc.js'
+import { SIDE_SLOTS, SLOT_KEYS } from '../sheet-layout.js'
 
 /** スロットの並び。人 (wh) と 物 (wm) がそれぞれ一覧の 1〜3 番目に対応する */
-const GROUPS = {
-  hito: ['wh1', 'wh2', 'wh3'],
-  mono: ['wm1', 'wm2', 'wm3'],
-}
-const KANA_FIELDS = [...GROUPS.hito, ...GROUPS.mono].map((slot) => `${slot}k`)
+const GROUPS = SIDE_SLOTS
+const KANA_FIELDS = SLOT_KEYS.map((slot) => `${slot}k`)
 export const SHEET_FIELDS = ['hito', 'mono', ...KANA_FIELDS]
 
 const text = (value) =>
