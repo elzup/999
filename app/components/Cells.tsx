@@ -167,3 +167,42 @@ export function BmCardCard({
     </div>
   )
 }
+
+/**
+ * グループ画面のタグの md カード。番号の md カードと同じ枠で、左上に語の数、
+ * 下の帯に正式名と小さく #タグ。画像はそのタグの語の 1 枚 (無ければ正式名の頭文字)
+ */
+export function TagMdCard({
+  tag,
+  title,
+  count,
+  cand,
+  onSelect,
+}: {
+  tag: string
+  title: string
+  count: number
+  /** 画像を出す語。語も渡すのは概念 (#g) の額縁を付けるため */
+  cand: Candidate | undefined
+  onSelect: () => void
+}) {
+  return (
+    <button type="button" class="md-card tag-md-card" onClick={onSelect}>
+      {cand?.img ? (
+        <img
+          class="md-card-img"
+          {...wordImage(cand.img, MD_CARD_PX, cand.word)}
+          alt=""
+          loading="lazy"
+        />
+      ) : (
+        <span class="md-card-img is-empty">{title.slice(0, 1)}</span>
+      )}
+      <span class="md-card-num">{count}</span>
+      <span class="md-card-word">
+        {title}
+        <span class="tag-md-card-id">#{tag}</span>
+      </span>
+    </button>
+  )
+}
