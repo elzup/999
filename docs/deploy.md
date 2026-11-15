@@ -8,9 +8,12 @@
 | 出すもの                                                          | どうやって                                                                                                                                                                               | どこで動くか        |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | 画面 (Firebase Hosting)                                           | main に入れば GitHub Actions が自動で出す ([`.github/workflows/deploy-hosting.yml`](../.github/workflows/deploy-hosting.yml))。手で出すときは Actions の «Deploy hosting» → Run workflow | GitHub              |
-| Function (`api` / `sheetSync`) と辞書データ (`private/data.json`) | `nr deploy` (画面も一緒に出す)                                                                                                                                                           | **手元の Mac だけ** |
+| Function `sheetSync` (シートと Firestore の同期) | main に入れば GitHub Actions が自動で出す ([`.github/workflows/deploy-sheet-sync.yml`](../.github/workflows/deploy-sheet-sync.yml))。中身が同じなら飛ばす | GitHub |
+| Function `api` と辞書データ (`private/data.json`) | `nr deploy` (`sheetSync` と画面も一緒に出す) | **手元の Mac だけ** |
 
-**マージしただけでは本番は変わらない** (画面の CI を入れるまでは、どちらも `nr deploy` だけだった)。
+**マージで変わるのは画面と `sheetSync` だけ。** `api` と辞書データは手元の `nr deploy` が要る。
+`sheetSync` はリポジトリの `src/` から写す `functions/lib` だけで動くので CI で出せるが、
+`api` は手元にしか無いデータを同梱するので、CI で出すと辞書の無い版で上書きしてしまう (D-0056)。
 
 ### 手元の古い版で上書きしないためのガード
 
@@ -65,6 +68,35 @@ Secret Manager にあるので、デプロイする側には要らない。
 CI がやること: `npm ci` → テスト (私的データ `private/ff.json` を読む ffQuiz は除く) →
 統計ページの画面ファイルを `src/` から `public/` へコピー (データは本番の `/api/app/stats`
 から読むので CI でも欠けない) → `vite build` → Hosting の live に出す。
+
+## sheetSync の CI の準備 (最初の 1 回)
+
+画面の CI と同じサービスアカウント (Secrets の `FIREBASE_SERVICE_ACCOUNT_ANOZ_MEMOSUPO`) を使う。
+Function を出すロールを足す。`SA` はそのサービスアカウントのメールアドレス
+(Google Cloud コンソール → IAM と管理 → サービスアカウント で見られる)。
+
+```bash
+SA=github-hosting-deploy@anoz-memosupo.iam.gserviceaccount.com
+for role in cloudfunctions.developer iam.serviceAccountUser cloudscheduler.admin \
+  secretmanager.viewer serviceusage.serviceUsageConsumer artifactregistry.reader; do
+  gcloud projects add-iam-policy-binding anoz-memosupo \
+    --member="serviceAccount:$SA" --role="roles/$role" --condition=None
+done
+```
+
+| ロール | なぜ要るか |
+| --- | --- |
+| Cloud Functions 開発者 | Function を作り直す |
+| サービス アカウント ユーザー | Function を実行用のサービスアカウントとして動かす |
+| Cloud Scheduler 管理者 | `sheetSync` の «5 分おき» のジョブを更新する |
+| Secret Manager 閲覧者 | `GOOGLE_SERVICE_ACCOUNT_JSON` の版を確かめる (値は読まない) |
+| Service Usage ユーザー | 必要な API が有効か確かめる |
+| Artifact Registry 読み取り | 前の版のイメージを確かめる |
+
+足したら Actions → «Deploy sheetSync» → Run workflow で 1 回動かして確かめる。
+
+CI がやること: `npm ci` → 同期のテスト (`src/__tests__/sheet-bisync.test.js`) →
+`functions/` の `npm ci` → `scripts/sync-functions-lib.sh` → `firebase deploy --only functions:sheetSync`。
 
 ## 出した版がアプリに届くまで
 

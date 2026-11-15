@@ -1,7 +1,7 @@
 # main に入ったら画面 (Firebase Hosting) だけをデプロイする。
 #
-# Function (api / sheetSync) と辞書データ (private/data.json) は手元にしか無いデータを
-# 使うので、今までどおり手元の `nr deploy` で出す。ここでは出さない。
+# Function api と辞書データ (private/data.json) は手元にしか無いデータを
+# 使うので、今までどおり手元の `nr deploy` で出す。sheetSync は deploy-sheet-sync.yml。
 # 統計ページ (stats.html) の画面ファイルはリポジトリの src/ からコピーするだけで作れ、
 # データは本番の /api/app/stats から読むので、CI でも欠けない。
 #
