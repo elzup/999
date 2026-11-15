@@ -19,6 +19,11 @@ import { connect } from './firestore/db.js'
 import { connectRest } from './firestore/rest.js'
 import { createSheetIo, writeStatusTab } from './firestore/sheet-io.js'
 import { runBisync } from './firestore/sheet-bisync-run.js'
+import {
+  TAG_NAMES_RANGE,
+  createTagNamesStore,
+  syncTagNames,
+} from './firestore/tag-names.js'
 import { fingerprintLines } from './firestore/fingerprint.js'
 import {
   STATUS_TAB,
@@ -372,7 +377,31 @@ async function main() {
       (s) => `${s.num} ${s.field} (${s.reason})`
     )
   }
+  if (!only) await runTagNames(spreadsheetId)
   if (!APPLY) log('\n書き込んでいない。--apply で実行する')
+}
+
+/** tags タブの名前を DB の sync/tagNames へ (Function sheetSync の定期の回と同じ処理) */
+async function runTagNames(spreadsheetId) {
+  // 読み取り専用トークンの口は Admin SDK の db を持たないので、名前の差分は見られない
+  if (process.env.FIRESTORE_ACCESS_TOKEN) return
+  const { count, changed } = await syncTagNames({
+    readValues: async () =>
+      (
+        await sheetsApi(
+          `/${spreadsheetId}/values/${encodeURIComponent(TAG_NAMES_RANGE)}`
+        )
+      ).values ?? [],
+    store: createTagNamesStore(connect()),
+    now: new Date().toISOString(),
+    apply: APPLY,
+  })
+  log(
+    `\nタグ名: ${count} 件中 ${changed.length} 件が DB と違う${
+      changed.length ? (APPLY ? ' → 書いた' : '') : ''
+    }`
+  )
+  showList('違うタグ', changed, (t) => t)
 }
 
 main().catch((error) => {

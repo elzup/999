@@ -123,13 +123,13 @@ sequenceDiagram
 
 ### 0.2 正本の一覧
 
-| 正本                       | 中身                                                      | 編集手段                                 |
-| -------------------------- | --------------------------------------------------------- | ---------------------------------------- |
-| Google Sheet               | 語・かな・タグ・カード                                    | シート / アプリ (Firestore 経由で双方向) |
-| Firestore `numbers/{num}`  | 語・かな (シートと同期) + 代表語 `rep` + 主観評価 `ratings` | アプリ (`/api/numbers`) / `sheetSync`     |
-| `src/data/*_digit.tsv`     | かな → 数字の規則表。encode / score / rankey の全ての土台 | 手編集                                   |
-| `src/data/word-rep.json`   | 代表語(①②)と主観評価 (DB へ移す途中の旧正本)              | 代表語コンソール (`nr console:rep`)      |
-| `word-images.json` + GCS   | 確定画像                                                  | 画像パイプライン / 画像コンソール        |
+| 正本                      | 中身                                                        | 編集手段                                 |
+| ------------------------- | ----------------------------------------------------------- | ---------------------------------------- |
+| Google Sheet              | 語・かな・タグ・カード                                      | シート / アプリ (Firestore 経由で双方向) |
+| Firestore `numbers/{num}` | 語・かな (シートと同期) + 代表語 `rep` + 主観評価 `ratings` | アプリ (`/api/numbers`) / `sheetSync`    |
+| `src/data/*_digit.tsv`    | かな → 数字の規則表。encode / score / rankey の全ての土台   | 手編集                                   |
+| `src/data/word-rep.json`  | 代表語(①②)と主観評価 (DB へ移す途中の旧正本)                | 代表語コンソール (`nr console:rep`)      |
+| `word-images.json` + GCS  | 確定画像                                                    | 画像パイプライン / 画像コンソール        |
 
 `rankey` / `pt` / シートの `check` 列は **かな・語から計算できる派生値**で、正本ではない (§9)。
 
@@ -139,11 +139,11 @@ sequenceDiagram
 
 ### タブ一覧
 
-| タブ / gid                  | 主な列                                                                                                             | 用途                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| **999** (gid `0`)           | `num`, `hito`, `mono`, 各スロット `wh1/wh1k/wh1Img … wh3`・`wm1 … wm3`、各 `k` 列の**左隣 `check`・右隣 `rankey`** | 語呂本体。人(wh)/物(wm) × 語(word)/かな(k)/画像(Img) |
-| **card** (gid `1530780723`) | `mark`, `person`, `action_p`, `score_p`, `object`, `action_o`, `score_o`, `action`, `score_a`                      | トランプ PAO。`score_*` は 0〜3                      |
-| **tags** (gid 参照は title) | `tag`, `title`, `count`, `hito`, `mono`, `gainen`, `nums`, `labels`                                                | `#tag` 集計。`title` 列だけ手動メンテ                |
+| タブ / gid                  | 主な列                                                                                                             | 用途                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| **999** (gid `0`)           | `num`, `hito`, `mono`, 各スロット `wh1/wh1k/wh1Img … wh3`・`wm1 … wm3`、各 `k` 列の**左隣 `check`・右隣 `rankey`** | 語呂本体。人(wh)/物(wm) × 語(word)/かな(k)/画像(Img)                                                 |
+| **card** (gid `1530780723`) | `mark`, `person`, `action_p`, `score_p`, `object`, `action_o`, `score_o`, `action`, `score_a`                      | トランプ PAO。`score_*` は 0〜3                                                                      |
+| **tags** (gid 参照は title) | `tag`, `title`, `short_title`, `count`, `hito`, `mono`, `gainen`, `nums`, `labels`                                 | `#tag` 集計。`title` / `short_title` を手動メンテ。名前は sheetSync で `sync/tagNames` (DB) にも写る |
 
 ### 999 タブの列の意味
 
@@ -152,11 +152,11 @@ sequenceDiagram
 | `num`               | 3 桁数字（`/^\d{3}$/`）。データ行判定キー                                             | 人手                                   |
 | `hito`              | 人物の語（`#tag` 記法可）                                                             | 人手 / アプリ (sheetSync 経由)         |
 | `mono`              | 物・概念の語。**`gainen`(概念) は独立列を持たず `mono` に `#g` タグ付きで集約**される | 人手 / アプリ (sheetSync 経由)         |
-| `whN` / `wmN`       | スロットの暗記語（word 本体）。`人`/`物` 一覧から式 `=PICK_FIRST(…)` で取り出す        | 式（書かない）                         |
+| `whN` / `wmN`       | スロットの暗記語（word 本体）。`人`/`物` 一覧から式 `=PICK_FIRST(…)` で取り出す       | 式（書かない）                         |
 | `whNk` / `wmNk`     | その語のかな読み。**エンコード・スコアの入力**                                        | 人手 / アプリ (sheetSync 経由)         |
 | `whNImg` / `wmNImg` | 画像 URL                                                                              | 画像パイプライン経由（後述）           |
 | `check`             | 監査フラグ（`[x]` 等）。各 `k` 列の**左隣**                                           | `sheet-audit.mjs` / `sheet-remark.mjs` |
-| `rankey`            | 3 桁の内訳記法（`src/rankey.js`。旧 `pt` 列を置き換え）。各 `k` 列の**右隣**          | 使っていない (更新されない。D-0060)   |
+| `rankey`            | 3 桁の内訳記法（`src/rankey.js`。旧 `pt` 列を置き換え）。各 `k` 列の**右隣**          | 使っていない (更新されない。D-0060)    |
 
 > スロット列は `sheet-audit.mjs` が正規表現 `^(w[hm]\d)k$` で動的検出し、その左=`check`・右=`rankey`(旧 `pt`) を前提にする。**ヘッダ名やスロットの並びを変えると audit が例外で止まる**。
 
@@ -182,18 +182,18 @@ sequenceDiagram
 
 読み取りは 2 系統: **無認証 export**（公開シート前提の `export?format=tsv` / `gviz csv`）と **認証 values API**（`src/google-sheets.js` 経由、ADC / service account / `GOOGLE_OAUTH_ACCESS_TOKEN`）。書き込み系は全て後者。
 
-| スクリプト           | 読む                          | 書く                                                                   | 変換                                           | npm           |
-| -------------------- | ----------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- | ------------- |
-| `sync-sheet.js`      | 999/gid0（無認証 TSV）        | `src/data/words.tsv`                                                   | 別名ヘッダ吸収、`splitConceptFields`、num 検証 | `sync`        |
-| `push-sheet.js`      | `words.tsv`                   | 999/gid0（**clear→ 全上書き**）                                        | 行列化して `overwriteSheetValues`              | `push`        |
-| `sync-tags.js`       | tags（無認証 CSV）            | `src/data/tags.json`                                                   | `tag→title` マップ                             | `sync:tags`   |
-| `push-tags-sheet.js` | `words.tsv` + tags 既存 title | tags（全上書き）                                                       | `#tag` 集計、title 引き継ぎ                    | `push:tags`   |
-| `sync-card-sheet.js` | card/gid（無認証 TSV）        | `src/data/cards.tsv`                                                   | `score_*` を 0〜3 正規化                       | `sync:card`   |
-| `sheet-audit.mjs`    | 999/gid0（認証）              | 既定 dry-run→`sheet-audit.out.json`／`--write-rankey` で **rankey 列** | かな採点＋`missing/digit/read/sokuon3` 判定    | （直接 node） |
-| `sheet-remark.mjs`   | `sheet-audit.out.json`        | 既定 dry-run／`--write` で **かな(k)セル末尾にマーカー**               | audit 結果を再鑑定・長音救済                   | （直接 node） |
-| `sheet-bisync-cli.js` | 999/gid0 + Firestore          | 既定 dry-run／シート ⇄ Firestore の 3-way merge (Function `sheetSync` と同じ処理) | `--status` で同期の状態だけ表示                | `sheet:bisync` / `sheet:status` |
-| `db-sync.js`         | シート / `word-rep.json`     | Firestore (`--apply`)。代表語の移行・チャンク再構築                    | 片方向の `sync` 段は既定で回さない (双方向に置き換え済み) | `db:plan` / `db:push` |
-| `score-words.js`     | `words.tsv` のみ              | 標準出力のみ                                                           | 完成度・スコア集計表示                         | `score`       |
+| スクリプト            | 読む                          | 書く                                                                              | 変換                                                      | npm                             |
+| --------------------- | ----------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------- |
+| `sync-sheet.js`       | 999/gid0（無認証 TSV）        | `src/data/words.tsv`                                                              | 別名ヘッダ吸収、`splitConceptFields`、num 検証            | `sync`                          |
+| `push-sheet.js`       | `words.tsv`                   | 999/gid0（**clear→ 全上書き**）                                                   | 行列化して `overwriteSheetValues`                         | `push`                          |
+| `sync-tags.js`        | tags（無認証 CSV）            | `src/data/tags.json`                                                              | `tag→title` マップ                                        | `sync:tags`                     |
+| `push-tags-sheet.js`  | `words.tsv` + tags 既存 title | tags（全上書き）                                                                  | `#tag` 集計、title 引き継ぎ                               | `push:tags`                     |
+| `sync-card-sheet.js`  | card/gid（無認証 TSV）        | `src/data/cards.tsv`                                                              | `score_*` を 0〜3 正規化                                  | `sync:card`                     |
+| `sheet-audit.mjs`     | 999/gid0（認証）              | 既定 dry-run→`sheet-audit.out.json`／`--write-rankey` で **rankey 列**            | かな採点＋`missing/digit/read/sokuon3` 判定               | （直接 node）                   |
+| `sheet-remark.mjs`    | `sheet-audit.out.json`        | 既定 dry-run／`--write` で **かな(k)セル末尾にマーカー**                          | audit 結果を再鑑定・長音救済                              | （直接 node）                   |
+| `sheet-bisync-cli.js` | 999/gid0 + Firestore          | 既定 dry-run／シート ⇄ Firestore の 3-way merge (Function `sheetSync` と同じ処理) | `--status` で同期の状態だけ表示                           | `sheet:bisync` / `sheet:status` |
+| `db-sync.js`          | シート / `word-rep.json`      | Firestore (`--apply`)。代表語の移行・チャンク再構築                               | 片方向の `sync` 段は既定で回さない (双方向に置き換え済み) | `db:plan` / `db:push`           |
+| `score-words.js`      | `words.tsv` のみ              | 標準出力のみ                                                                      | 完成度・スコア集計表示                                    | `score`                         |
 
 ### ⚠️ 運用上の gotcha
 
@@ -207,20 +207,20 @@ sequenceDiagram
 
 ## 4. 中間データファイル（`src/data/`。★=source of truth、他は派生）
 
-| パス                                                       | 主要フィールド                                                  | 生成元                  | 消費者                                             | 種別                |
-| ---------------------------------------------------------- | --------------------------------------------------------------- | ----------------------- | -------------------------------------------------- | ------------------- |
-| `words.tsv`                                                | num, hito, mono, wh1-3/wm1-3 × 語/よみ/画像                     | `sync-sheet.js`         | `words.js#loadWords` → 各生成、`app/data/parse.ts` | ★ 語彙              |
-| `cards.tsv`                                                | mark, person, action*\*, score*\*, object                       | `sync-card-sheet.js`    | generate-preview-data, parse.ts                    | ★ カード            |
-| `single_digit.tsv` / `double_digit.tsv` / `long_digit.tsv` | 数字 → かな割当表                                               | 手書き                  | `src/table.js`                                     | ★ ルール表          |
-| `tags.json`                                                | 略語 → 正式名（`pr→プリコネ` 等）                               | `sync:tags`/`push:tags` | 画像検索クエリ生成, UI                             | ★ 辞書              |
-| `word-images.json`（manifest）                             | num→slot ごと `{url,hash,sourcePage,sourceImageUrl,uploadedAt}` | `fetch-word-images.js`  | generate-preview-data が `*Img` に merge           | ★ **最終画像 SoT**  |
-| `word-images.candidates.json`                              | 画像候補 URL/query/status                                       | `search-word-images.js` | fetch の入力                                       | 中間                |
-| `word-images-keep.json`                                    | ロック集合 `"num:slot": true`                                   | `keep-all.js` / console | search/fetch の上書き保護                          | 制御 state          |
-| `word-images-redo.json`                                    | やり直しフラグ                                                  | console / CLI           | fetch `--redo-only`                                | 制御 state          |
-| `word-rep.json`                                            | `rep`(代表語 picks + confirmed) / `scores`(主観評価 -1/0/+1/+2) | 代表語コンソール        | `gen-words-lyrics.js`                              | ★ **選択の SoT**    |
-| `visualize-words.data.json`                                | `{ data:[row…], ruleStats }`                                    | **`generate-viz.js`**   | generate-preview-data, stats HTML                  | 生成物（gitignore） |
-| `visualize-words.data.sample.json`                         | 同構造（sample 由来）                                           | generate-viz            | 公開デモ                                           | 生成物（commit 済） |
-| `words.json`                                               | num, w1, w1k, w2, w2k                                           | 旧エクスポート          | **未使用（レガシー・未追跡）**                     | 旧派生物            |
+| パス                                                       | 主要フィールド                                                                                                                                                    | 生成元                  | 消費者                                             | 種別                |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------------------------------------------------- | ------------------- |
+| `words.tsv`                                                | num, hito, mono, wh1-3/wm1-3 × 語/よみ/画像                                                                                                                       | `sync-sheet.js`         | `words.js#loadWords` → 各生成、`app/data/parse.ts` | ★ 語彙              |
+| `cards.tsv`                                                | mark, person, action*\*, score*\*, object                                                                                                                         | `sync-card-sheet.js`    | generate-preview-data, parse.ts                    | ★ カード            |
+| `single_digit.tsv` / `double_digit.tsv` / `long_digit.tsv` | 数字 → かな割当表                                                                                                                                                 | 手書き                  | `src/table.js`                                     | ★ ルール表          |
+| `tags.json`                                                | 略語 → 正式名（`pr→プリコネ` 等）                                                                                                                                 | `sync:tags`/`push:tags` | 画像検索クエリ生成, UI                             | ★ 辞書              |
+| `word-images.json`（manifest）                             | 対象 ID→slot ごと `{url,hash,sourcePage,sourceImageUrl,uploadedAt}`。ID は 3 桁=番号 / 4 桁=日付 / `AS` `10H` 等=カード (ランク+スート) (`src/images/targets.js`) | `fetch-word-images.js`  | generate-preview-data が `*Img` に merge           | ★ **最終画像 SoT**  |
+| `word-images.candidates.json`                              | 画像候補 URL/query/status                                                                                                                                         | `search-word-images.js` | fetch の入力                                       | 中間                |
+| `word-images-keep.json`                                    | ロック集合 `"num:slot": true`                                                                                                                                     | `keep-all.js` / console | search/fetch の上書き保護                          | 制御 state          |
+| `word-images-redo.json`                                    | やり直しフラグ                                                                                                                                                    | console / CLI           | fetch `--redo-only`                                | 制御 state          |
+| `word-rep.json`                                            | `rep`(代表語 picks + confirmed) / `scores`(主観評価 -1/0/+1/+2)                                                                                                   | 代表語コンソール        | `gen-words-lyrics.js`                              | ★ **選択の SoT**    |
+| `visualize-words.data.json`                                | `{ data:[row…], ruleStats }`                                                                                                                                      | **`generate-viz.js`**   | generate-preview-data, stats HTML                  | 生成物（gitignore） |
+| `visualize-words.data.sample.json`                         | 同構造（sample 由来）                                                                                                                                             | generate-viz            | 公開デモ                                           | 生成物（commit 済） |
+| `words.json`                                               | num, w1, w1k, w2, w2k                                                                                                                                             | 旧エクスポート          | **未使用（レガシー・未追跡）**                     | 旧派生物            |
 
 > `words.json` は git 未追跡・現行チェーン未使用・旧スキーマの残骸。source of truth は `words.tsv`。
 
@@ -369,17 +369,17 @@ rep console: already running at http://127.0.0.1:6001 (pid 75699)
 
 すべて `data.numbers` / `data.cards` / `data.rules` を読む。
 
-| タブ                         | 表示                                            | ソース                    |
-| ---------------------------- | ----------------------------------------------- | ------------------------- |
-| NumberTab（全体）            | 000〜999 を桁フィルタ                           | numbers                   |
-| DigitTab（2 桁）             | upper/lower/mid/digit 抽出                      | numbers                   |
-| NumMapTab                    | 100 帯マップ                                    | numbers                   |
-| CardTab                      | トランプ 52 枚 閲覧/連想/選択                   | cards                     |
-| PiTab / YearTab / WeekdayTab | π/年号/曜日トレーニング                         | numbers                   |
-| BookmarkTab                  | ブックマーク（`n:`番号 / `c:`カード）           | numbers/cards + bookmarks |
-| NumDetailPanel               | 番号 1 件詳細（語・かな・画像・タグ）共有パネル | numbers                   |
-| NumberDetailTab / RepPickerTab | 番号詳細の編集 / 代表語の選択                 | `/api/numbers` (Firestore) |
-| RecordPanel                  | テスト記録オーバーレイ（共有）                  | 呼び出し元の Record[]     |
+| タブ                           | 表示                                            | ソース                     |
+| ------------------------------ | ----------------------------------------------- | -------------------------- |
+| NumberTab（全体）              | 000〜999 を桁フィルタ                           | numbers                    |
+| DigitTab（2 桁）               | upper/lower/mid/digit 抽出                      | numbers                    |
+| NumMapTab                      | 100 帯マップ                                    | numbers                    |
+| CardTab                        | トランプ 52 枚 閲覧/連想/選択                   | cards                      |
+| PiTab / YearTab / WeekdayTab   | π/年号/曜日トレーニング                         | numbers                    |
+| BookmarkTab                    | ブックマーク（`n:`番号 / `c:`カード）           | numbers/cards + bookmarks  |
+| NumDetailPanel                 | 番号 1 件詳細（語・かな・画像・タグ）共有パネル | numbers                    |
+| NumberDetailTab / RepPickerTab | 番号詳細の編集 / 代表語の選択                   | `/api/numbers` (Firestore) |
+| RecordPanel                    | テスト記録オーバーレイ（共有）                  | 呼び出し元の Record[]      |
 
 ### ローカル永続状態（localStorage、`app/data/storage.ts`）
 
@@ -410,14 +410,14 @@ flowchart LR
   Route -->|"保存後の文書を返す"| Tab
 ```
 
-| メソッド/パス                    | 処理                                                | 対象                    |
-| -------------------------------- | --------------------------------------------------- | ----------------------- |
-| `GET /api/numbers/{num}`         | 番号 1 件の文書                                     | Firestore read          |
+| メソッド/パス                    | 処理                                                | 対象                     |
+| -------------------------------- | --------------------------------------------------- | ------------------------ |
+| `GET /api/numbers/{num}`         | 番号 1 件の文書                                     | Firestore read           |
 | `PATCH /api/numbers/{num}`       | 1 番号の 1 操作。衝突は 409                         | Firestore write → シート |
-| `GET /api/numbers?hundred=N`     | 百の位 1 つぶん (代表語ピッカーの一覧)              | Firestore read          |
-| `GET /api/sync/status`           | 同期の状態 (最終実行・衝突・未反映)                 | `sync/sheetState`       |
-| `POST /api/sync/sheet`           | 同期を今すぐ回す (設定 > 同期)                      | シート ⇄ Firestore      |
-| `GET` `PATCH /api/editor/words…` | 旧経路。シートを直接読み書き (`EditorTab` は未使用) | シート                  |
+| `GET /api/numbers?hundred=N`     | 百の位 1 つぶん (代表語ピッカーの一覧)              | Firestore read           |
+| `GET /api/sync/status`           | 同期の状態 (最終実行・衝突・未反映)                 | `sync/sheetState`        |
+| `POST /api/sync/sheet`           | 同期を今すぐ回す (設定 > 同期)                      | シート ⇄ Firestore       |
+| `GET` `PATCH /api/editor/words…` | 旧経路。シートを直接読み書き (`EditorTab` は未使用) | シート                   |
 
 - 書き込みは必ず `console-writes` を通す。文書を組み立てて上書きすると `rep` / `ratings` を消せてしまうため。
 - `derived` (`ptBySlot`) は書き込み口が計算する。rankey は保存しない (D-0045)。クライアントからは書けない (REQ-FS-005)。
@@ -430,11 +430,11 @@ flowchart LR
 
 かなに対する「評価」は 3 つある。**別物なので混同しない**。
 
-|                | 実体       | 誰が決める                     | どこに出る                                                       | 用途                   |
-| -------------- | ---------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------- |
-| **pt (score)** | 数値       | `src/scorer.js` の重み付き総和 | `data.json` の `w1Score`/`w2Score`                               | 候補の**並び替え**基準 |
+|                | 実体       | 誰が決める                     | どこに出る                                        | 用途                   |
+| -------------- | ---------- | ------------------------------ | ------------------------------------------------- | ---------------------- |
+| **pt (score)** | 数値       | `src/scorer.js` の重み付き総和 | `data.json` の `w1Score`/`w2Score`                | 候補の**並び替え**基準 |
 | **rankey**     | 文字列     | `src/rankey.js`                | 見る場所ごとに計算 (下の «rankey を計算する場所») | 3 桁の**内訳**を読む   |
-| **主観評価**   | -1/0/+1/+2 | **人間**                       | `word-rep.json` の `scores`                                      | 「この語呂はアリか」   |
+| **主観評価**   | -1/0/+1/+2 | **人間**                       | `word-rep.json` の `scores`                       | 「この語呂はアリか」   |
 
 pt と rankey はどちらも **かな + 語からの純粋な派生値**で、入力には戻らない（循環しない）。保存せず、見る場所で計算する (D-0045)。
 主観評価だけは人間が入れるので、どこからも再生成できない。
@@ -472,10 +472,10 @@ flowchart TB
   RK -->|"表示のたび"| Con["両コンソール"]
 ```
 
-| 表示先                   | いつ計算し直すか                    | 規則表を変えたら                         |
-| ------------------------ | ----------------------------------- | ---------------------------------------- |
-| アプリ                   | 表示のたび                          | 画面を出し直す (main に入れば CI)        |
-| コンソール               | 表示のたび                          | 再起動                                   |
+| 表示先     | いつ計算し直すか | 規則表を変えたら                  |
+| ---------- | ---------------- | --------------------------------- |
+| アプリ     | 表示のたび       | 画面を出し直す (main に入れば CI) |
+| コンソール | 表示のたび       | 再起動                            |
 
 > 以前は Firestore の `derived.rankeyBySlot` と `data.json` の `w1Rk`/`w2Rk` に保存していた。どちらもやめた (D-0058)。
 
@@ -509,15 +509,15 @@ flowchart TB
 
 ## 付録: npm scripts 早見表
 
-| 分類         | script                                                                                                    | 役割                                                                                              |
-| ------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 分類         | script                                                                                                    | 役割                                                                               |
+| ------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | **一括**     | **`sync:all`**                                                                                            | **sync → sync:tags → sync:card → lyrics → build:data を順に実行。通常はこれ 1 本** |
-| 同期         | `sync` / `sync:card` / `sync:tags` / `push` / `push:tags`                                                 | シート ⇔ ローカル TSV/JSON                                                                        |
-| シート書戻し | `sheet:audit` (dry-run) / `sheet:rankey`                                                                  | 監査プラン出力 / rankey 列を書き戻す (使っていない)                        |
-| DB 同期      | `sheet:bisync` / `sheet:status` / `db:plan` / `db:push` / `db:rules`                                  | シート ⇄ Firestore を手で回す / 状態 / 移行 / rules                                              |
-| 歌詞         | `lyrics`                                                                                                  | `lyrics/` を再生成（確定が増えたら都度）                                                          |
-| 画像         | `images:search` / `images:retag` / `images:fetch` / `images:redo` / `images:keep-all` / `images:avatar-i` | 画像 探索 → 取得 → ロック                                                                         |
-| ギャラリー   | `console` / `gallery:build`                                                                               | ローカルレビュー UI / 静的ギャラリー生成                                                          |
-| 生成         | `viz` / `build:data` / `build:preview` / `sync:private`                                                   | 中間 → `private/data.json` → `functions/private/`                                                 |
-| 検証         | `score` / `check:kana` / `check:digits` / `check:errors` / `test`                                         | ローカル集計・検証                                                                                |
-| 開発/配信    | `dev` / `dev:api` / `build` / `deploy` / `deploy:api`                                                     | Vite / Functions エミュ / デプロイ                                                                |
+| 同期         | `sync` / `sync:card` / `sync:tags` / `push` / `push:tags`                                                 | シート ⇔ ローカル TSV/JSON                                                         |
+| シート書戻し | `sheet:audit` (dry-run) / `sheet:rankey`                                                                  | 監査プラン出力 / rankey 列を書き戻す (使っていない)                                |
+| DB 同期      | `sheet:bisync` / `sheet:status` / `db:plan` / `db:push` / `db:rules`                                      | シート ⇄ Firestore を手で回す / 状態 / 移行 / rules                                |
+| 歌詞         | `lyrics`                                                                                                  | `lyrics/` を再生成（確定が増えたら都度）                                           |
+| 画像         | `images:search` / `images:retag` / `images:fetch` / `images:redo` / `images:keep-all` / `images:avatar-i` | 画像 探索 → 取得 → ロック                                                          |
+| ギャラリー   | `console` / `gallery:build`                                                                               | ローカルレビュー UI / 静的ギャラリー生成                                           |
+| 生成         | `viz` / `build:data` / `build:preview` / `sync:private`                                                   | 中間 → `private/data.json` → `functions/private/`                                  |
+| 検証         | `score` / `check:kana` / `check:digits` / `check:errors` / `test`                                         | ローカル集計・検証                                                                 |
+| 開発/配信    | `dev` / `dev:api` / `build` / `deploy` / `deploy:api`                                                     | Vite / Functions エミュ / デプロイ                                                 |

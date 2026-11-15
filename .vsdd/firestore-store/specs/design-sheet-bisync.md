@@ -140,3 +140,5 @@ sequenceDiagram
 - REQ-BI-009: IF base が無い THEN THE SYSTEM SHALL DB の source が app なら DB を、それ以外はシートを採る
 - REQ-BI-010: WHEN 同期が終わる THE SYSTEM SHALL 反映数・衝突・未反映を状態として残し、アプリから見られるようにする
 - REQ-BI-011: WHEN 片側の編集を相手へ流す THE SYSTEM SHALL 百の位ごとに、どちら側の何時の版を流したか (シートは流した回の時刻、DB は保存時刻) を状態に残す
+- REQ-BI-012: WHEN 定期の回 (only 無し) が走る THE SYSTEM SHALL tags タブの tag / title / short_title を `sync/tagNames` に写し、変わっていなければ書かない (src/firestore/tag-names.js)
+- REQ-BI-013: WHEN `/api/app/data` を返す THE SYSTEM SHALL 配信データの tagNames に `sync/tagNames` の表示名 (short_title → title) を重ね、DB が読めなければ配信データのまま返す

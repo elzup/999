@@ -138,7 +138,7 @@ export const api = onRequest(
 
       // 辞書本体 (私的連想 + 画像URL)。認証済みブラウザだけが取得できる。
       if (req.method === 'GET' && path === '/app/data') {
-        res.json(readPrivateJson('data.json'))
+        res.json(await withLiveTagNames(readPrivateJson('data.json')))
         return
       }
 
@@ -264,15 +264,19 @@ async function loadSheetSync() {
       { createSheetIo, writeStatusTab },
       { runBisync },
       status,
+      tagNames,
     ] = await Promise.all([
       loadFirestoreLib(),
       import('./lib/firestore/bisync-store.js'),
       import('./lib/firestore/sheet-io.js'),
       import('./lib/firestore/sheet-bisync-run.js'),
       import('./lib/firestore/sync-status.js'),
+      import('./lib/firestore/tag-names.js'),
     ])
     sheetSyncLib = {
       store: createBisyncStore(db),
+      tagNamesStore: tagNames.createTagNamesStore(db),
+      tagNames,
       createSheetIo,
       writeStatusTab,
       runBisync,
@@ -292,7 +296,10 @@ async function runSheetSync({ only } = {}) {
   try {
     const title = await getSheetTitleByGid(spreadsheetId, gid)
     const sheet = lib.createSheetIo({ sheetsApi, spreadsheetId, title })
-    return await lib.runBisync({ sheet, store, now, only })
+    const result = await lib.runBisync({ sheet, store, now, only })
+    // 即時反映の回 (only) は保存した番号だけが目的なので、タグ名は定期の回に任せる
+    if (!only) await syncTagNamesSafely(lib, spreadsheetId, now)
+    return result
   } catch (error) {
     // 定期の失敗はログにしか出ず気づけないので、状態に残してアプリとシートに見せる
     const state = await store.readState()
@@ -301,6 +308,47 @@ async function runSheetSync({ only } = {}) {
   } finally {
     // 即時反映の回は保存の応答を待たせないよう書かない (5 分以内に定期が書く)
     if (!only) await writeSheetStatus(lib, spreadsheetId)
+  }
+}
+
+async function syncTagNamesSafely(lib, spreadsheetId, now) {
+  try {
+    const { changed } = await lib.tagNames.syncTagNames({
+      readValues: async () =>
+        (
+          await sheetsApi(
+            `/${spreadsheetId}/values/${encodeURIComponent(
+              lib.tagNames.TAG_NAMES_RANGE
+            )}`
+          )
+        ).values ?? [],
+      store: lib.tagNamesStore,
+      now,
+    })
+    if (changed.length) console.log('sheetSync(tagNames)', changed.length)
+  } catch (error) {
+    // タグ名は表示名だけ。読めなくても語の同期の結果は変わらず、配信データの名前で出る
+    console.error('sheetSync(tagNames)', error)
+  }
+}
+
+/** 配信データのタグ名に、シート同期で DB に置いた最新の名前を重ねる (deploy 無しで直せるように) */
+async function withLiveTagNames(data) {
+  try {
+    const lib = await loadSheetSync()
+    const doc = await lib.tagNamesStore.read()
+    if (!doc) return data
+    return {
+      ...data,
+      tagNames: {
+        ...(data.tagNames ?? {}),
+        ...lib.tagNames.displayNamesOf(doc.names),
+      },
+    }
+  } catch (error) {
+    // DB が読めなくても辞書は出す。名前が deploy 時点のものになるだけ
+    console.error('app/data(tagNames)', error)
+    return data
   }
 }
 

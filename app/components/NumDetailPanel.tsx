@@ -198,23 +198,28 @@ function NumDetailPanel(props: Props) {
               }
               onClick={() => toggle(row.slot)}
             >
-              {/* 人 (wh) か 物 (wm) か。チップの 人 / 物 と同じ色 */}
-              <span class="wl-kind">{KIND_LABEL[kindOf(row.slot)]}</span>
-              {row.img ? (
-                <img
-                  class="wl-img"
-                  loading="lazy"
-                  {...wordImage(row.img, 34, row.word)}
-                  alt={row.word}
-                />
-              ) : (
-                <span class="wl-img empty" />
-              )}
+              {/* 人 (wh) か 物 (wm) かは画像の形 (人 = 丸 / 物 = 角丸) と左上の色丸で示す。
+                  色はチップの 人 / 物 と同じ。札の列を無くして語の幅を取る */}
+              <span class="wl-img-wrap">
+                {row.img ? (
+                  <img
+                    class="wl-img"
+                    loading="lazy"
+                    {...wordImage(row.img, 34, row.word)}
+                    alt={row.word}
+                  />
+                ) : (
+                  <span class="wl-img empty" />
+                )}
+                <span class="wl-kind-badge">
+                  {KIND_LABEL[kindOf(row.slot)]}
+                </span>
+              </span>
               {/* ヨミはフリガナの位置。普段は見せずに場所だけ取っておき、
                   タップで出す (出し入れで行の高さ・幅が変わらない) */}
               <span class={'detail-main-word' + (row.dim ? ' dim' : '')}>
                 <span class="yomi-host">
-                  <TaggedWord word={row.word} />
+                  <TaggedWord word={row.word} showNames />
                   <span class="yomi">{row.kana ?? ''}</span>
                 </span>
               </span>
@@ -252,7 +257,7 @@ function NumDetailPanel(props: Props) {
                     class={'dc-val' + (hasMarks(word) ? ' tappable' : '')}
                     onClick={hasMarks(word) ? () => toggle(key) : undefined}
                   >
-                    <TaggedWord word={word} />
+                    <TaggedWord word={word} showNames />
                   </span>
                 )
               })}

@@ -23,6 +23,8 @@ const FIELD_LABELS: Record<string, string> = {
 // 指紋の 1 グループ = 10 番号 = 2 文字 (src/firestore/fingerprint.js と揃える)
 const GROUP_CHARS = 2
 const GROUP_COUNT = 100
+// 緑の «同期しました» を出しておく時間 (詳細タブの知らせと揃える)
+const DONE_MS = 2000
 
 function formatTime(iso?: string | null) {
   if (!iso) return '未実行'
@@ -141,6 +143,8 @@ function SheetSyncPanel() {
   const [status, setStatus] = useState<SyncStatus | null>(null)
   const [error, setError] = useState('')
   const [isBusy, setIsBusy] = useState(false)
+  // 押した結果をボタンの色で返す (同期中は黄 → 済んだら緑 / 失敗は赤)
+  const [result, setResult] = useState<'done' | 'failed' | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -155,13 +159,23 @@ function SheetSyncPanel() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (result !== 'done') return
+    const timer = setTimeout(() => setResult(null), DONE_MS)
+    return () => clearTimeout(timer)
+  }, [result])
+
   const syncNow = useCallback(async () => {
     setIsBusy(true)
+    setResult(null)
+    setError('')
     try {
       await runSyncNow(loadEditorToken())
       await load()
+      setResult('done')
     } catch (e) {
       setError((e as Error).message)
+      setResult('failed')
     } finally {
       setIsBusy(false)
     }
@@ -244,8 +258,15 @@ function SheetSyncPanel() {
         </p>
       ) : null}
       {error ? <p class="locked-error">{error}</p> : null}
-      <button class="activate-link" onClick={syncNow} disabled={isBusy}>
-        {isBusy ? '同期中…' : '今すぐ同期'}
+      <button
+        class={
+          'activate-link' +
+          (isBusy ? ' is-saving' : result ? ` is-${result}` : '')
+        }
+        onClick={syncNow}
+        disabled={isBusy}
+      >
+        {isBusy ? '同期中…' : result === 'done' ? '同期しました' : '今すぐ同期'}
       </button>
     </div>
   )

@@ -3,9 +3,7 @@
    local() で済みダウンロードしない */
 @font-face {
   font-family: 'Droid Sans Mono';
-  src:
-    local('Droid Sans Mono'),
-    local('DroidSansMono'),
+  src: local('Droid Sans Mono'), local('DroidSansMono'),
     url('./fonts/DroidSansMono.ttf') format('truetype');
   font-display: swap;
 }
@@ -48,8 +46,7 @@ body {
   color: var(--text);
   /* Windows では -apple-system / Helvetica Neue が無く、既定の日本語フォントに
      落ちて英数字の字形が崩れる。英数字は Segoe UI、かなは Yu Gothic UI / Meiryo */
-  font-family:
-    -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
+  font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
     'Yu Gothic UI', Meiryo, sans-serif;
   font-size: 14px;
   height: 100%;
@@ -241,9 +238,7 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition:
-    background 0.12s,
-    color 0.12s;
+  transition: background 0.12s, color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -318,6 +313,42 @@ body {
 }
 .wl-img.empty {
   background: var(--surface2);
+}
+/* 人 / 物 は画像の形と細い色枠で分ける (色が見分けにくくても形で分かる) */
+.wl-img-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.word-line.kind-h .wl-img {
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--kind-h);
+}
+.word-line.kind-m .wl-img {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1.5px var(--kind-m);
+}
+/* 左上の色丸。外周をパネル地の色で抜いて画像から浮かせる */
+.wl-kind-badge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--bg);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.word-line.kind-h .wl-kind-badge {
+  background: var(--kind-h);
+}
+.word-line.kind-m .wl-kind-badge {
+  background: var(--kind-m);
 }
 .wl-meta {
   margin-left: auto;
@@ -508,6 +539,15 @@ body {
 .tw-tag {
   color: var(--accent);
 }
+/* 表示名は日本語が混じるので等幅をやめ、複数並んだら間を空ける */
+.tw-tag--name {
+  font-family: inherit;
+  font-weight: 500;
+}
+.tw-tag--name + .tw-tag--name,
+.tw-tag--name + .tw-label {
+  margin-left: 0.4em;
+}
 .tw-label {
   color: var(--label);
   font-style: italic;
@@ -559,12 +599,10 @@ body {
   cursor: pointer;
 }
 /* 人 / 物 / 念 の色 (語の行の «人» «物» と同じ) */
-.detail-chip.kind-h .dc-label,
-.word-line.kind-h .wl-kind {
+.detail-chip.kind-h .dc-label {
   color: var(--kind-h);
 }
-.detail-chip.kind-m .dc-label,
-.word-line.kind-m .wl-kind {
+.detail-chip.kind-m .dc-label {
   color: var(--kind-m);
 }
 .detail-chip.kind-g .dc-label {
@@ -578,13 +616,6 @@ body {
 }
 .detail-chip.kind-g {
   border-color: color-mix(in srgb, var(--kind-g) 30%, var(--border));
-}
-.wl-kind {
-  flex-shrink: 0;
-  width: 1em;
-  font-size: 11px;
-  font-weight: bold;
-  text-align: center;
 }
 .detail-chip.error .dc-val {
   color: #f87171;
@@ -703,6 +734,16 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 10px;
+}
+/* 番号の語の画像 (.wl-img) と同じ寸法・地色。項目の右上に寄せて文字を押し下げない */
+.card-detail-item .cd-img {
+  float: right;
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-left: 6px;
+  background: var(--img-bg);
 }
 .card-detail-item .cd-label {
   font-size: 10px;
@@ -5515,6 +5556,25 @@ button.activate-link {
   color: var(--accent);
   border-color: var(--accent);
 }
+/* 押したボタン自体の色で結果を返す: 保存中は黄、確定は緑、失敗は赤。
+   保存中は他のボタンと同じく disabled になるので、薄くせずに塗る */
+button.is-saving,
+button.is-saving:disabled {
+  color: var(--bg);
+  background: var(--warn);
+  border-color: var(--warn);
+  opacity: 1;
+}
+button.is-done {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+button.is-failed {
+  color: var(--bg);
+  background: var(--bad);
+  border-color: var(--bad);
+}
 
 /* ---- テストの入力パッド (TestPad / 全テスト共通) ----
    グリッド + 角丸キー。キー高さは 48px 下限 (タップ標準) を保ちつつ
@@ -6344,9 +6404,7 @@ button.activate-link {
 .rp-row.save-saved {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
-  transition:
-    box-shadow 0.4s,
-    border-color 0.4s;
+  transition: box-shadow 0.4s, border-color 0.4s;
 }
 .rep-card.save-error,
 .rp-row.save-error {

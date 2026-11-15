@@ -18,6 +18,7 @@ type PaoItem = {
   word: string
   sub: string
   score: number
+  img?: string
 }
 
 export function cardPao(card: CardEntry): PaoItem[] {
@@ -28,6 +29,7 @@ export function cardPao(card: CardEntry): PaoItem[] {
       word: card.person,
       sub: card.actionP,
       score: card.personScore ?? 0,
+      img: card.personImg,
     })
   if (card.action)
     items.push({
@@ -35,6 +37,7 @@ export function cardPao(card: CardEntry): PaoItem[] {
       word: card.action,
       sub: '',
       score: (card.actionScore ?? 0) / 2,
+      img: card.actionImg,
     })
   if (card.object)
     items.push({
@@ -42,6 +45,7 @@ export function cardPao(card: CardEntry): PaoItem[] {
       word: card.object,
       sub: card.actionO,
       score: card.objectScore ?? 0,
+      img: card.objectImg,
     })
   return items
 }
@@ -73,8 +77,13 @@ const PAO_LABEL: Record<string, string> = {
 
 export function cardValues(
   card: CardEntry
-): [label: string, val: string, score: number][] {
+): [label: string, val: string, score: number, img: string | undefined][] {
   return cardPao(card)
     .sort((a, b) => b.score - a.score)
-    .map((item) => [PAO_LABEL[item.type], formatPaoWord(item), item.score])
+    .map((item) => [
+      PAO_LABEL[item.type],
+      formatPaoWord(item),
+      item.score,
+      item.img,
+    ])
 }

@@ -69,17 +69,22 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
                 aria-pressed={row.repRank > 0}
                 onClick={() => onPick(row.slot)}
               >
-                <span class="wl-kind">{kind === 'kind-m' ? '物' : '人'}</span>
-                {row.imageUrl ? (
-                  <img
-                    class="wl-img"
-                    {...wordImage(row.imageUrl, 34, row.word)}
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : (
-                  <span class="wl-img empty" />
-                )}
+                {/* 人 / 物 は詳細パネルの語の行と同じく、画像の形と左上の色丸で示す */}
+                <span class="wl-img-wrap">
+                  {row.imageUrl ? (
+                    <img
+                      class="wl-img"
+                      {...wordImage(row.imageUrl, 34, row.word)}
+                      alt=""
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span class="wl-img empty" />
+                  )}
+                  <span class="wl-kind-badge">
+                    {kind === 'kind-m' ? '物' : '人'}
+                  </span>
+                </span>
                 {/* 代表を選ぶ場面なので、ヨミは最初から見せる */}
                 <span class="detail-main-word">
                   <span class="yomi-host">
@@ -119,8 +124,8 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
               {status === 'confirmed'
                 ? '確定済み'
                 : hasPicks
-                  ? 'この代表で確定'
-                  : '既定 (①②) で確定'}
+                ? 'この代表で確定'
+                : '既定 (①②) で確定'}
             </span>
           </button>
         )}
