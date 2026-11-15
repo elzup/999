@@ -23,6 +23,10 @@
         --red-dim: rgba(248, 113, 113, 0.16);
         --violet: #a78bfa;
         --violet-dim: rgba(167, 139, 250, 0.16);
+        /* 人 / 物 / 概念 の色。アプリ (app/style.css) と揃える */
+        --kind-h: #7cc4ff;
+        --kind-m: #f5b65b;
+        --kind-g: #c4b5fd;
         --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
         --mono: ui-monospace, 'SF Mono', Menlo, monospace;
         /* ボタン・札の高さ。行の高さを枠ごとに揃えるため固定する */
@@ -163,6 +167,61 @@
       .tag-clear:hover {
         background: var(--hover);
       }
+      .tag-list-toggle {
+        height: 30px;
+        padding: 0 12px;
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 12.5px;
+        cursor: pointer;
+      }
+      .tag-list-toggle.active {
+        border-color: var(--text);
+      }
+      /* タグの縦一覧 (アプリのグループタブと同じ形)。作品名を主に、#id は添えるだけ */
+      .tag-list {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 0 12px 24px;
+      }
+      .tag-list[hidden],
+      .grid[hidden] {
+        display: none;
+      }
+      .tag-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 14px;
+        background: none;
+        border: none;
+        border-bottom: 1px solid var(--line);
+        color: var(--text);
+        text-align: left;
+        cursor: pointer;
+      }
+      .tag-row:hover,
+      .tag-row.active {
+        background: var(--surface2);
+      }
+      .tag-row-name {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .tag-row-id {
+        font: 11px var(--mono);
+        color: var(--text2);
+      }
+      .tag-row-count {
+        margin-left: auto;
+        font: 13px var(--mono);
+        color: var(--text2);
+        font-variant-numeric: tabular-nums;
+      }
       .stats {
         color: var(--text2);
         font-size: 12px;
@@ -239,6 +298,32 @@
         height: 100%;
         object-fit: cover;
       }
+      /* 概念 (#g) の画像は二重の枠 (アプリの img[data-concept] と同じ) */
+      .thumb img[data-concept] {
+        outline: 2px solid var(--kind-g);
+        outline-offset: -6px;
+      }
+      /* 左上の 人 / 物 の色丸 (アプリの詳細パネルの語の行と同じ) */
+      .side-badge {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--bg);
+        box-shadow: 0 0 0 2px var(--bg);
+      }
+      .side-badge.side-h {
+        background: var(--kind-h);
+      }
+      .side-badge.side-m {
+        background: var(--kind-m);
+      }
       .thumb-empty {
         position: absolute;
         inset: 0;
@@ -278,6 +363,22 @@
         line-height: 1.35;
         overflow-wrap: anywhere;
         padding: 0 2px;
+      }
+      /* 語のタグは表示名で。押すとそのタグで絞る */
+      .word-tag {
+        margin-left: 4px;
+        padding: 0 5px;
+        background: var(--surface2);
+        color: var(--text2);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        vertical-align: 1px;
+      }
+      .word-tag:hover {
+        color: var(--text);
       }
       .slot-stats {
         display: flex;
@@ -461,6 +562,13 @@
             ×
           </button>
         </div>
+        <button
+          id="tag-list-toggle"
+          class="tag-list-toggle"
+          title="タグを作品名の一覧から選ぶ"
+        >
+          一覧
+        </button>
       </div>
       <div class="filter-group">
         <span class="filter-label">状態</span>
@@ -468,6 +576,7 @@
       </div>
       <div class="stats" id="stats"></div>
     </header>
+    <div class="tag-list" id="tag-list" hidden></div>
     <div class="grid" id="grid"></div>
     <script src="./icons.js"></script>
     <script src="./app.js"></script>

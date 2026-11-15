@@ -13,6 +13,12 @@ const tagsOfWord = (word) =>
 // この画面で操作した枠。確定・取得した瞬間にフィルタから外れて消えると、
 // 押し間違いに気付けないので、対象か状態を切り替えるまでは出したままにする
 const touched = new Set()
+// タグの縦一覧 (アプリのグループタブと同じ形) を出しているか。選ぶとそのタグの画像だけに絞る
+let isTagListOpen = false
+// 枠が 人 (h) か 物 (m) か。アプリの詳細パネルの語の行と同じ色丸で示す。カードの A (動作) はどちらでもない
+const SLOT_SIDE = { w1: 'h', w1_2: 'h', w2: 'm', w2_2: 'm', P: 'h', O: 'm' }
+const SIDE_LABEL = { h: '人', m: '物' }
+const tagNameOf = (tag) => state.tagNames?.[tag] || tag
 
 // 表示中の対象の種類 (番号 / 日付 / カード)。枠の並びは種類ごとにサーバが返す
 // (src/images/targets.js の IMAGE_KINDS)。番号の w1_2/w2_2 は片方が空のときだけ値が入る
@@ -428,12 +434,21 @@ function thumbEl(v, slot) {
     i.decoding = 'async'
     i.src = v.img.url
     i.alt = v.word
+    // 概念 (#g) は実物の写真ではないので、アプリと同じく二重の枠で見分ける
+    if (tagsOfWord(v.word).includes('g')) i.dataset.concept = ''
     thumb.appendChild(i)
   } else {
     const empty = document.createElement('div')
     empty.className = 'thumb-empty'
     setIconLabel(empty, 'imageOff', v.st === 'error' ? '取得失敗' : '未取得')
     thumb.appendChild(empty)
+  }
+  const side = SLOT_SIDE[slot]
+  if (side) {
+    const badge = document.createElement('span')
+    badge.className = `side-badge side-${side}`
+    badge.textContent = SIDE_LABEL[side]
+    thumb.appendChild(badge)
   }
   if (v.isAvatarI) {
     thumb.title = '#i はアバター固定 (検索した画像には差し替えない)'
@@ -465,10 +480,26 @@ function slotHead(w, slot) {
 }
 
 // 語は省略しない (読めないまま確定・解除すると危ない)。長い語は折り返す
+// タグは略号ではなく表示名で出す (#ipra → アイドリープライド)。押すとそのタグで絞る
 function wordRow(word) {
   const el = document.createElement('div')
   el.className = 'word'
-  el.textContent = word || '(空)'
+  if (!word) {
+    el.textContent = '(空)'
+    return el
+  }
+  el.title = word
+  const base = document.createElement('span')
+  base.textContent = String(word).replace(TAG_RE, '').trim()
+  el.appendChild(base)
+  for (const tag of new Set(tagsOfWord(word))) {
+    const b = document.createElement('button')
+    b.className = 'word-tag'
+    b.textContent = tagNameOf(tag)
+    b.title = `#${tag} で絞る`
+    b.onclick = () => setTagFilter(tag)
+    el.appendChild(b)
+  }
   return el
 }
 
@@ -590,6 +621,17 @@ function actionsEl(v, slot) {
 function render() {
   const grid = document.getElementById('grid')
   grid.innerHTML = ''
+  const list = document.getElementById('tag-list')
+  grid.hidden = isTagListOpen
+  list.hidden = !isTagListOpen
+  document
+    .getElementById('tag-list-toggle')
+    .classList.toggle('active', isTagListOpen)
+  if (isTagListOpen) {
+    renderTagList(list)
+    renderStats()
+    return
+  }
   for (const w of kindTargets()) {
     for (const slot of slotsOf(kind)) {
       if (slotMatches(w, slot) || touched.has(`${w.id}:${slot}`))
@@ -727,8 +769,30 @@ function tagFromInput(value) {
   return byName ?? text
 }
 
+/** タグの縦一覧。作品名を主に、#id と枠の数を添える (id だけでは何の作品か分からない) */
+function renderTagList(list) {
+  list.innerHTML = ''
+  for (const [tag, n] of tagCounts()) {
+    const row = document.createElement('button')
+    row.className = 'tag-row' + (tag === tagFilter ? ' active' : '')
+    const name = document.createElement('span')
+    name.className = 'tag-row-name'
+    name.textContent = tagNameOf(tag)
+    const id = document.createElement('span')
+    id.className = 'tag-row-id'
+    id.textContent = `#${tag}`
+    const count = document.createElement('span')
+    count.className = 'tag-row-count'
+    count.textContent = n
+    row.append(name, id, count)
+    row.onclick = () => setTagFilter(tag)
+    list.appendChild(row)
+  }
+}
+
 function setTagFilter(value) {
   tagFilter = tagFromInput(value)
+  isTagListOpen = false
   touched.clear()
   renderTagFilter()
   renderFilters()
@@ -742,6 +806,10 @@ async function main() {
   const clear = document.getElementById('tag-clear')
   setIconLabel(clear, 'x')
   clear.onclick = () => setTagFilter('')
+  document.getElementById('tag-list-toggle').onclick = () => {
+    isTagListOpen = !isTagListOpen
+    render()
+  }
   renderKinds()
   renderTagFilter()
   renderFilters()
