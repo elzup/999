@@ -8,9 +8,10 @@
 | 出すもの                                                          | どうやって                                                                                                                                                                               | どこで動くか        |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | 画面 (Firebase Hosting)                                           | main に入れば GitHub Actions が自動で出す ([`.github/workflows/deploy-hosting.yml`](../.github/workflows/deploy-hosting.yml))。手で出すときは Actions の «Deploy hosting» → Run workflow | GitHub              |
-| Function (`api` / `sheetSync`) と辞書データ (`private/data.json`) | `nr deploy` (画面も一緒に出す)                                                                                                                                                           | **手元の Mac だけ** |
+| Function (`api` / `sheetSync`) と辞書データ (`private/data.json`) | `nr deploy` (画面は出さない。画面は CI だけ)                                                                                                                                             | **手元の Mac だけ** |
 
-**マージしただけでは本番は変わらない** (画面の CI を入れるまでは、どちらも `nr deploy` だけだった)。
+**マージで変わるのは画面だけ。** Function と辞書データは手元の `nr deploy` が要る。
+以前は `nr deploy` も画面を出していて、CI が出した画面を手元の版で上書きしうる 2 経路になっていたので外した (2026-11-15)。
 
 ### 手元の古い版で上書きしないためのガード
 
@@ -22,8 +23,8 @@
 
 ### `nr deploy` が手元でしか動かない理由
 
-`nr deploy` = `build:preview` → `build` → `sync:private` → `sync:functions` →
-`firebase deploy --only functions:api,functions:sheetSync,hosting`。
+`nr deploy` = `build:data` → `sync:private` → `sync:functions` →
+`firebase deploy --only functions:api,functions:sheetSync`。
 次のものを使い、どれもリポジトリには入っていない (gitignore 済み)。
 
 | もの                               | 中身             | 作り方                                             |

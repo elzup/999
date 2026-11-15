@@ -16,6 +16,7 @@
     "images:redo": "node src/fetch-word-images.js --redo-only",
     "images:keep-all": "node src/keep-all.js",
     "images:avatar-i": "node src/avatar-i-images.js",
+    "images:fetch-targets": "node src/fetch-target-images.js",
     "console": "npm run sync && node console/server.js",
     "console:rep": "node console/rep-server.js",
     "console:ps": "pgrep -fl 'console/(rep-)?server\\.js' || echo 'no console server running'",
@@ -52,8 +53,8 @@
     "sync:private": "mkdir -p functions/private && cp private/data.json functions/private/data.json && cp src/visualize-words.data.json functions/private/visualize-words.data.json",
     "sync:functions": "bash scripts/sync-functions-lib.sh",
     "deploy:legacy": "node scripts/deploy-guard.ts && npm run build:preview && firebase deploy --only hosting",
-    "deploy": "node scripts/deploy-guard.ts && npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
-    "deploy:api": "node scripts/deploy-guard.ts && npm run build:preview && npm run build && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,hosting",
+    "deploy": "node scripts/deploy-guard.ts && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
+    "deploy:api": "node scripts/deploy-guard.ts && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
