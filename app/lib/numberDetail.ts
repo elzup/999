@@ -14,6 +14,7 @@ import type {
 import { parseWord } from './wordTags'
 import type { NumberEntry } from '../data/schema'
 import { candidatesOf } from './choice'
+import { rankeyOf } from './rankey'
 
 /** 候補スロットの並び。rep-store の SLOT_ORDER と同じ */
 export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3'] as const
@@ -89,7 +90,7 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
         value.confirmedFor &&
         nameOf(value.confirmedFor) !== nameOf(value.word)
       ),
-      rankey: doc.derived?.rankeyBySlot?.[slot],
+      rankey: rankeyOf(value.kana, doc.num, value.word),
       pt: doc.derived?.ptBySlot?.[slot],
       rating: ratingOf(doc, slot),
       repRank: repRankOf(doc, slot),
