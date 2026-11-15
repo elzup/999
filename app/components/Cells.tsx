@@ -87,18 +87,32 @@ function leadCandidates(d: NumberEntry): Candidate[] {
 /**
  * 番号の md カード (UI 候補 A-2): 画像 1 枚を枠いっぱいに出し、番号を左上、語を下の帯に重ねる。
  * どの語を出すかは画面が決めて渡す (ブックマークは人の先頭、タグ一覧はそのタグの語)
+ * open が false の間は番号だけを伏せた札の上に出す (UI 候補 A-4)。画像も名前も描かないので、
+ * 押すまで自分で思い出せる
  */
 export function NumMdCard({
   num,
   cand,
+  open = true,
   selected,
   onSelect,
 }: {
   num: string
   cand: Candidate | undefined
+  open?: boolean
   selected: boolean
   onSelect: () => void
 }) {
+  if (!open) {
+    return (
+      <div
+        class={'md-card is-closed' + (selected ? ' selected' : '')}
+        onClick={onSelect}
+      >
+        <span class="md-card-num">{num}</span>
+      </div>
+    )
+  }
   return (
     <div
       class={'md-card' + (selected ? ' selected' : '')}
@@ -123,11 +137,17 @@ export function NumMdCard({
 }
 
 /** ブックマークの md カード。画像は人の先頭 (無ければ物の先頭) */
-export function BmNumCard({ d, selected, onSelect }: NumCellProps) {
+export function BmNumCard({
+  d,
+  open,
+  selected,
+  onSelect,
+}: NumCellProps & { open?: boolean }) {
   return (
     <NumMdCard
       num={d.num}
       cand={leadCandidates(d)[0]}
+      open={open}
       selected={selected}
       onSelect={onSelect}
     />
