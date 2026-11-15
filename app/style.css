@@ -6620,3 +6620,23 @@ img[data-concept] {
 .md-card:has(img[data-concept]) {
   border-color: var(--kind-g);
 }
+
+/* 閉じた md カード (UI 候補 A-4)。斜線の «伏せた札» に番号だけを中央へ大きく出す。
+   画像も名前も描かないので、押すまで自分で思い出せる */
+.md-card.is-closed {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--surface2) 0 8px,
+    var(--surface) 8px 16px
+  );
+}
+.md-card.is-closed .md-card-num {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font-size: 30px;
+  text-shadow: 0 0 6px var(--bg);
+}

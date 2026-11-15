@@ -7,6 +7,8 @@ import CardDetailPanel from './CardDetailPanel'
 import Screen from './Screen'
 import { navAround, useSelection } from '../lib/useSelection'
 import DetailSheet from './DetailSheet'
+import { useMdReveal } from '../lib/useMdReveal'
+import { MdRevealToggle } from './MdRevealToggle'
 
 type Props = {
   numbers: NumberEntry[]
@@ -41,6 +43,7 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
   }, [cards, bookmarks])
 
   const { selected, select: setSelected } = useSelection<string>()
+  const reveal = useMdReveal()
 
   // 前へ / 次へ は 数字 → カード の順。送った先も «見た» として記録する
   // (タップで開いたときと同じく、ブックマーク復習の既読に数える)
@@ -106,8 +109,12 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
               <BmNumCard
                 key={d.num}
                 d={d}
+                open={reveal.isOpen(d.num) || selected === 'n:' + d.num}
                 selected={selected === 'n:' + d.num}
-                onSelect={() => openDetail('n:' + d.num)}
+                onSelect={() => {
+                  reveal.reveal(d.num)
+                  openDetail('n:' + d.num)
+                }}
               />
             ))}
           </div>
@@ -134,7 +141,13 @@ function BookmarkTab({ numbers, cards, bookmarks, onToggleBm, onView }: Props) {
     </div>
   )
 
-  return <Screen main={main} panel={panel} />
+  // 数字のブックマークがあるときだけ «数字 | 全部» を出す (カードの札は伏せない)
+  const dock =
+    bmNums.length > 0 ? (
+      <MdRevealToggle mode={reveal.mode} onChange={reveal.setMode} />
+    ) : null
+
+  return <Screen main={main} panel={panel} dock={dock} />
 }
 
 export default BookmarkTab

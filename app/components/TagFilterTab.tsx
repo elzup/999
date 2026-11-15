@@ -14,6 +14,8 @@ import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockBar } from './Screen'
 import DetailSheet from './DetailSheet'
 import { useSelection } from '../lib/useSelection'
+import { useMdReveal } from '../lib/useMdReveal'
+import { MdRevealToggle } from './MdRevealToggle'
 
 type Props = {
   numbers: NumberEntry[]
@@ -88,9 +90,11 @@ function TagFilterTab({ numbers }: Props) {
   const order = useMemo(() => matched.map((d) => d.num), [matched])
   const { selected, toggle, clear, nav } = useSelection(order)
   const selectedEntry = matched.find((d) => d.num === selected) ?? null
+  const reveal = useMdReveal()
 
   const pickTag = (next: string | null) => {
     clear()
+    reveal.setMode('num')
     setTag(next)
   }
 
@@ -108,8 +112,13 @@ function TagFilterTab({ numbers }: Props) {
           key={d.num}
           num={d.num}
           cand={taggedCand(d, current.tag)}
+          // 詳細パネルで前へ / 次へ送った先も開く (パネルに語が出ているので伏せる意味が無い)
+          open={reveal.isOpen(d.num) || selected === d.num}
           selected={selected === d.num}
-          onSelect={() => toggle(d.num)}
+          onSelect={() => {
+            reveal.reveal(d.num)
+            toggle(d.num)
+          }}
         />
       ))}
     </div>
@@ -118,14 +127,17 @@ function TagFilterTab({ numbers }: Props) {
   )
 
   const dock = current ? (
-    <DockBar
-      title={current.name ?? `#${current.tag}`}
-      sub={`#${current.tag} ・ ${matched.length} 番号`}
-    >
-      <button class="filter-btn" onClick={() => pickTag(null)}>
-        タグ一覧へ
-      </button>
-    </DockBar>
+    <>
+      <MdRevealToggle mode={reveal.mode} onChange={reveal.setMode} />
+      <DockBar
+        title={current.name ?? `#${current.tag}`}
+        sub={`#${current.tag} ・ ${matched.length} 番号`}
+      >
+        <button class="filter-btn" onClick={() => pickTag(null)}>
+          タグ一覧へ
+        </button>
+      </DockBar>
+    </>
   ) : (
     <>
       <DockBar title="タグ" sub={`${rows.length} / ${allRows.length}`} />
