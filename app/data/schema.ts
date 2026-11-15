@@ -133,6 +133,8 @@ export const AppDataSchema = z.object({
   yomiUse: YomiUseSchema.optional(),
   /** タグの表示名 (res → アトリエ)。short_title、無ければ title (src/data/tags*.json = シートの tags タブ) */
   tagNames: z.record(z.string(), z.string()).optional(),
+  /** タグの正式名 (シートの tags タブの title)。グループ画面のタグのカードで使う */
+  tagTitles: z.record(z.string(), z.string()).optional(),
   // 私的データ。公開バンドルではなくこの payload で届く
   ff: z.array(z.record(z.string(), z.unknown())).optional(),
   kuku: z.array(z.record(z.string(), z.unknown())).optional(),

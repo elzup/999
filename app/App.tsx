@@ -245,6 +245,7 @@ export function App() {
       openEditor: setOverlayEditNum,
       editVersion,
       tagNames: data?.tagNames,
+      tagTitles: data?.tagTitles,
     }),
     [data, bookmarks, toggleBm, editVersion]
   )
