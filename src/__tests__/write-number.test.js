@@ -74,7 +74,7 @@ describe('writeNumber — the single write gate', () => {
     const db = fakeDb()
     await writeNumber(db, { num: '051', doc: base })
 
-    expect(db.docs['051'].derived.rankeyBySlot.wh1).toBe('_AA|')
+    expect(typeof db.docs['051'].derived.ptBySlot.wh1).toBe('number')
   })
 
   it('REQ-FS-005: throws away any derived the caller supplied', async () => {

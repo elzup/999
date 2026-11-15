@@ -43,7 +43,6 @@ const doc: NumberDoc = {
   ],
   derived: {
     ptBySlot: { wh1: 8.2, wh2: 7.0 },
-    rankeyBySlot: { wh1: 'AB', wh2: 'Aw' },
   },
   updatedAt: '2026-08-29T00:00:00.000Z',
 }
@@ -55,7 +54,8 @@ describe('slotRows', () => {
 
   it('rankey と pt を候補ごとに載せる (REQ-NDV-001)', () => {
     const [first] = slotRows(doc)
-    expect(first.rankey).toBe('AB')
+    // rankey は保存値ではなく、かな・番号・語からその場で計算する (D-0045)
+    expect(first.rankey).toBe('_AA|')
     expect(first.pt).toBe(8.2)
   })
 

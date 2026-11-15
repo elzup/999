@@ -272,7 +272,7 @@ deploy        = build:preview → build → sync:private → sync:functions → 
 - 入力: `words.tsv`（+ sample）を `loadWords`
 - 計算: `categoryScore`→`catScore`、`scoreWithLabel(w1k,w1)/(w2k,w2)`→`w1Score`/`w2Score`/`w1Pattern`（トークン記号列）・エラー時 `w1Error`/`w2Error`、集計 `ruleStats`（patterns / tokenTypes / kanaUsage / digitKanaAlloc / violations 等）
 - 出力: `visualize-words.data.json`（本番, gitignore）と `.sample.json`（commit）
-- **pt と rankey はここで計算される派生値**（`w1Score`/`w2Score` と `w1Rk`/`w2Rk`）。ルール表を変えたら、この経路を作り直す（→ `nr sync:all`）。シートの rankey 列は使っていない。
+- **pt はここで計算される派生値**（`w1Score`/`w2Score`）。ルール表を変えたら、この経路を作り直す（→ `nr sync:all`）。rankey は配信データに入れず、アプリが計算する。
 
 ### generate-preview-data.js（配信データの組み立て）
 
@@ -420,7 +420,7 @@ flowchart LR
 | `GET` `PATCH /api/editor/words…` | 旧経路。シートを直接読み書き (`EditorTab` は未使用) | シート                  |
 
 - 書き込みは必ず `console-writes` を通す。文書を組み立てて上書きすると `rep` / `ratings` を消せてしまうため。
-- `derived` (`rankeyBySlot` / `ptBySlot`) は書き込み口が計算する。クライアントからは書けない (REQ-FS-005)。
+- `derived` (`ptBySlot`) は書き込み口が計算する。rankey は保存しない (D-0045)。クライアントからは書けない (REQ-FS-005)。
 - 保存直後の即時同期が失敗しても保存は巻き戻さない。5 分おきの定期の回が拾い直す。
 - 同期の仕組みは `.vsdd/firestore-store/specs/design-sheet-bisync.md`、API は `spec-number-api.md`。
 
@@ -462,30 +462,30 @@ m      mix (同じ数字を別のかなで)
 シートの `rankey` 列は使っていない。アプリが計算するので、シートに表示する必要が無くなった (D-0060)。
 
 rankey は **保存して配る値ではなく、見る場所ごとに `src/rankey.js` で計算する値**。
-計算の実体は 1 か所 (`rankey.js` + 規則表) で、各所はそれを呼ぶだけ。
+計算の実体は 1 か所 (`rankey.js` + 規則表) で、各所はそれを呼ぶだけ。DB にも配信データにも入れない。
+アプリは規則表をバンドルに埋め込んで持つ (`src/rule-tsv.browser.js`。vite の alias で `rule-tsv.js` と差し替え)。
 
 ```mermaid
 flowchart TB
   RK["src/rankey.js<br/>+ *_digit.tsv"]
-  RK -->|"書き込みのたび"| Der["Firestore derived.rankeyBySlot<br/>(番号詳細が表示)"]
-  RK -->|"nr build:data"| Viz["data.json の w1Rk / w2Rk<br/>(一覧 · NumDetailPanel)"]
+  RK -->|"表示のたび"| App["アプリ<br/>(番号詳細 · NumDetailPanel)"]
   RK -->|"表示のたび"| Con["両コンソール"]
 ```
 
 | 表示先                   | いつ計算し直すか                    | 規則表を変えたら                         |
 | ------------------------ | ----------------------------------- | ---------------------------------------- |
-| Firestore `derived`      | その番号が書かれたとき              | 書かれるまで古い (全件の再計算は未整備)  |
-| `data.json` `w1Rk/w2Rk`  | `nr build:data`                     | `nr sync:all` → `nr deploy`              |
+| アプリ                   | 表示のたび                          | 画面を出し直す (main に入れば CI)        |
 | コンソール               | 表示のたび                          | 再起動                                   |
 
-> `derived` と `w1Rk/w2Rk` は、アプリが自前で計算するようになったら外す予定 (D-0045)。
+> 以前は Firestore の `derived.rankeyBySlot` と `data.json` の `w1Rk`/`w2Rk` に保存していた。どちらもやめた (D-0058)。
 
 ### ルールを変えたら作り直す
 
 `*_digit.tsv` や `scorer.js` を触ると pt と rankey の両方が変わる。かな → 値の
 **一方向**なので、古い値は自動更新されない。
 
-- 配信データ … `nr build:data`（`nr sync:all` にも入っている）
+- 配信データの pt … `nr build:data`（`nr sync:all` にも入っている）
+- rankey … 規則表が `src/data/*_digit.tsv` にあるので、main に入れば CI が出す画面に入る。Function とコンソールは出し直す
 
 ---
 

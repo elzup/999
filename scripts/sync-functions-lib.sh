@@ -23,7 +23,7 @@ for name in number-doc write derived console-writes db \
   cp "$root/src/firestore/$name.js" "$lib/firestore/$name.js"
 done
 
-for name in rankey scorer encoder table; do
+for name in rankey scorer encoder table rule-tsv; do
   cp "$root/src/$name.js" "$lib/$name.js"
 done
 

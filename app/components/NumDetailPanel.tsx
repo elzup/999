@@ -17,6 +17,7 @@ import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
+import { rankeyOf } from '../lib/rankey'
 
 type Props = {
   d: NumberEntry
@@ -59,7 +60,7 @@ function wordRows(d: NumberEntry): WordRow[] {
       word: wh1.word,
       kana: wh1.kana,
       img: wh1.img,
-      rk: d.w1Rk,
+      rk: rankeyOf(wh1.kana, d.num, wh1.word),
     })
   }
   if (wm1) {
@@ -68,7 +69,7 @@ function wordRows(d: NumberEntry): WordRow[] {
       word: wm1.word,
       kana: wm1.kana,
       img: wm1.img,
-      rk: d.w2Rk,
+      rk: rankeyOf(wm1.kana, d.num, wm1.word),
       dim: true,
     })
   }

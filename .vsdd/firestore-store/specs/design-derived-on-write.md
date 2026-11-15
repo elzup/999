@@ -8,8 +8,12 @@ coherence:
 
 # design:derived-on-write
 
-`pt` (scorer.js) と `rankey` (rankey.js) は、かな + 語 + 規則表からの純粋な派生値。
+`pt` (scorer.js) は、かな + 語 + 規則表からの純粋な派生値。
 現状は生成スクリプトを人が叩く必要があり、実行漏れで古い値が残る事故が繰り返し起きた。
+
+`rankey` (rankey.js) は `derived` に入れない。保存すると古くなるので、見る場所 (アプリ・コンソール) が
+かな・番号・語からその場で計算する (D-0045)。以前は `rankeyBySlot` を持っていた。既存の文書に残っている
+`rankeyBySlot` は、その番号が次に書かれたときに消える (`withDerived` が `derived` を作り直すため)。
 
 **別の onWrite トリガにはせず、書き込み経路の中で計算する。**
 REQ-FS-006 により全ての書き込みが Function 1 箇所を通るため、そこで
@@ -22,8 +26,6 @@ REQ-FS-006 により全ての書き込みが Function 1 箇所を通るため、
 ## Invariants
 
 - `derived` は `num` と `slots` と `rules/*` のみから決まる。他の入力を持たない。
-  (`rankey` は先頭0省略と中間省略の判定に `num` を要する。実データ 1940 件のうち
-  20 件で `num` の有無により結果が変わる)
 - 同じ入力からは常に同じ `derived` が出る (純粋関数)。
 - 呼び出し元が渡した `derived` は必ず捨てる (信用しない)。
 
@@ -33,5 +35,5 @@ REQ-FS-006 により全ての書き込みが Function 1 箇所を通るため、
 - REQ-DRV-002: WHEN `rules/{table}` が変更される THE SYSTEM SHALL 全 `numbers/*` の `derived` を再計算する一括処理を提供する
 - REQ-DRV-003: WHEN 呼び出し元が `derived` を含む文書を渡す THE SYSTEM SHALL その値を捨てて計算し直す
 - REQ-DRV-004: IF かなが空 THEN THE SYSTEM SHALL 当該スロットの `derived` を空にする
-- REQ-DRV-005: IF かながエンコード不能 THEN THE SYSTEM SHALL `pt` を `null`・`rankey` を `null` とし、書き込み自体は成功させる
+- REQ-DRV-005: IF かながエンコード不能 THEN THE SYSTEM SHALL `pt` を `null` とし、書き込み自体は成功させる
 - REQ-DRV-006: IF `num` が 3 桁でない THEN THE SYSTEM SHALL 計算せず例外を投げる (誤った値を黙って書かない)
