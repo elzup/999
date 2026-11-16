@@ -484,8 +484,10 @@
         cursor: progress;
         opacity: 0.7;
       }
+      /* 伸びるボタン同士 (web 版の 確定 と 撮り直す) は 6:4 で分ける。basis を 0 にして
+         文字の長さで比が崩れないようにする */
       .act-btn.primary {
-        flex: 1 1 auto;
+        flex: 3 1 0;
         width: auto;
         min-width: 0;
         padding: 0 4px;
@@ -501,6 +503,24 @@
         background: var(--surface2);
         border-color: var(--line);
         color: var(--text2);
+      }
+      /* 文字の付いた中立のボタン (web 版の «撮り直す»)。アイコン用の固定幅のままだと
+         文字が 1 字ずつ折り返して縦に並ぶ */
+      .act-btn.wide {
+        flex: 2 1 0;
+        width: auto;
+        /* 2 列に詰めたスマホ幅では 4 割に «撮り直す» が収まらない。文字を切らずに
+           そのときだけ 確定 側を縮める */
+        min-width: max-content;
+        padding: 0 4px;
+        white-space: nowrap;
+      }
+      /* 撮り直しの印が付いている。印を外すボタンだと分かるよう印の色 (amber) にする */
+      .act-btn.is-flagged,
+      .act-btn.is-flagged:hover {
+        background: var(--amber-dim);
+        border-color: var(--amber);
+        color: var(--amber);
       }
       .act-note {
         flex: 1;
