@@ -62,6 +62,9 @@ Secret Manager にあるので、デプロイする側には要らない。
   語を含むので、認証付きの `/api/console/state` からだけ返す。一覧が古いときは `nr deploy`
 - 印: Firestore の `imageMarks` に貯める。Mac が起きたら `nr images:pull-marks --redo` で手元の
   `word-images-keep.json` / `word-images-redo.json` へ取り込み、撮り直しの印の付いた枠を取り直す
+- 手元の `nr console` は起動前に `scripts/console-start.ts` を通す。main が遅れていて fast-forward できれば
+  `git pull` し、続けて `pull-marks` (撮り直しはしない) で web の印を取り込む。どちらも失敗しても警告だけで起動する。
+  印の取り込みは本体の checkout でだけ行う (worktree では取り込まない)
 - ログイン: 999 アプリと同じ通行証 (localStorage の `editToken999`)。先にアプリでログインしておく
 
 ## 画面の CI の準備 (最初の 1 回)

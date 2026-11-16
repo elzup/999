@@ -19,7 +19,7 @@
     "images:avatar-i": "node src/avatar-i-images.js",
     "images:pull-marks": "node src/images/pull-marks.js",
     "images:fetch-targets": "node src/fetch-target-images.js",
-    "console": "npm run sync && node console/server.js",
+    "console": "node scripts/console-start.ts && npm run sync && node console/server.js",
     "console:rep": "node console/rep-server.js",
     "console:ps": "pgrep -fl 'console/(rep-)?server\\.js' || echo 'no console server running'",
     "console:kill": "pkill -f 'console/(rep-)?server\\.js' && echo killed || echo 'no console server running'",
