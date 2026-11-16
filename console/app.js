@@ -35,12 +35,21 @@ const touched = new Set()
 // タグの縦一覧 (アプリのグループタブと同じ形) を出しているか。選ぶとそのタグの画像だけに絞る
 let isTagListOpen = false
 // 枠が 人 (h) か 物 (m) か。アプリの詳細パネルの語の行と同じ色丸で示す。カードの A (動作) はどちらでもない
-const SLOT_SIDE = { w1: 'h', w1_2: 'h', w2: 'm', w2_2: 'm', P: 'h', O: 'm' }
+const SLOT_SIDE = {
+  w1: 'h',
+  w1_2: 'h',
+  wh3: 'h',
+  w2: 'm',
+  w2_2: 'm',
+  wm3: 'm',
+  P: 'h',
+  O: 'm',
+}
 const SIDE_LABEL = { h: '人', m: '物' }
 const tagNameOf = (tag) => state.tagNames?.[tag] || tag
 
 // 表示中の対象の種類 (番号 / 日付 / カード)。枠の並びは種類ごとにサーバが返す
-// (src/images/targets.js の IMAGE_KINDS)。番号の w1_2/w2_2 は片方が空のときだけ値が入る
+// (src/images/targets.js の IMAGE_KINDS)。番号・日付は 人 1〜3 → 物 1〜3 の 6 枠
 let kind = 'num'
 const slotsOf = (k) => state.kinds[k].slots
 // 対象ごとの枠。タグ違いの語は «旧スロット#タグ» の枠に分けてサーバが返す (D-0041)。
@@ -506,7 +515,9 @@ function slotHead(w, slot) {
   num.textContent = targetLabel(w)
   const key = document.createElement('span')
   key.className = 'slot-key'
-  key.textContent = slot
+  // 枠はシート・アプリと同じ名前 (wh1〜wm3) で出す。保存のキーは旧名 (w1 など) のまま
+  const base = baseSlot(slot)
+  key.textContent = (state.slotNames?.[base] || base) + slot.slice(base.length)
   head.append(num, key)
   return head
 }

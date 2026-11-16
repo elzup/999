@@ -22,7 +22,12 @@ import {
 import { downloadImage } from '../src/images/download.js'
 import { toWebpTop, hashKey } from '../src/images/process.js'
 import { uploadWebp } from '../src/images/upload.js'
-import { IMAGE_KINDS, kindOf } from '../src/images/targets.js'
+import {
+  CANONICAL_SLOT,
+  IMAGE_KINDS,
+  PIPELINE_SLOTS,
+  kindOf,
+} from '../src/images/targets.js'
 import {
   loadTargets,
   redoDirect,
@@ -57,6 +62,7 @@ export function buildState() {
   const keep = loadKeep()
   return {
     kinds: IMAGE_KINDS,
+    slotNames: CANONICAL_SLOT,
     targets: loadTargets(),
     images: manifest.images || {},
     candidates: candidates.items || {},
@@ -135,8 +141,9 @@ function runScript(script, args) {
  * words.tsv しか読まないため、ここで語から検索ワードを作って直接取りに行く。
  */
 async function redoNow({ id, slot }) {
-  // タグ違いの枠 (w1_2#res) は一括パイプラインが知らないので、日付・カードと同じく直接取る
-  if (kindOf(id) !== 'num' || parseSlot(slot).tag) {
+  // 3 番目 (wh3 / wm3) とタグ違いの枠 (w1_2#res) は一括パイプラインが知らないので、
+  // 日付・カードと同じく直接取る
+  if (kindOf(id) !== 'num' || !PIPELINE_SLOTS.includes(slot)) {
     const result = await redoDirect({ id, slot })
     // 番号は fetch スクリプトが成功時に印を消す。日付・カードはここで消す
     if (result.ok) setRedo({ id, slot, on: false })
