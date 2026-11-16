@@ -180,47 +180,101 @@
       .tag-list-toggle.active {
         border-color: var(--text);
       }
-      /* タグの縦一覧 (アプリのグループタブと同じ形)。作品名を主に、#id は添えるだけ */
+      /* タグの一覧 (2 列)。作品名・未取得の数・取得済みのバー。代表画像は右端に背景として敷き、
+         上から内側に影を落として、画像に文字が重なっても読めるようにする */
       .tag-list {
-        max-width: 640px;
+        max-width: 720px;
         margin: 0 auto;
-        padding: 0 12px 24px;
+        padding: 8px 12px 24px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
       }
       .tag-list[hidden],
       .grid[hidden] {
         display: none;
       }
       .tag-row {
+        position: relative;
+        overflow: hidden;
         display: flex;
-        align-items: baseline;
-        gap: 8px;
-        width: 100%;
-        min-height: 44px;
-        padding: 10px 14px;
-        background: none;
-        border: none;
-        border-bottom: 1px solid var(--line);
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        min-height: 64px;
+        padding: 8px 10px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
         color: var(--text);
         text-align: left;
         cursor: pointer;
       }
-      .tag-row:hover,
-      .tag-row.active {
+      .tag-row::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 30px 22px -14px rgba(0, 0, 0, 0.75);
+        border-radius: inherit;
+      }
+      .tag-row:hover {
         background: var(--surface2);
+        border-color: var(--line2);
+      }
+      .tag-row.active {
+        border-color: var(--amber);
+      }
+      .tag-row-img {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 60%;
+        height: 100%;
+        object-fit: cover;
+        /* 左へ溶かして文字の地を残す */
+        -webkit-mask-image: linear-gradient(to left, #000 35%, transparent);
+        mask-image: linear-gradient(to left, #000 35%, transparent);
+        opacity: 0.85;
+      }
+      .tag-row > span {
+        position: relative;
+        z-index: 1;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
       }
       .tag-row-name {
-        font-size: 15px;
-        font-weight: 600;
-      }
-      .tag-row-id {
-        font: 11px var(--mono);
-        color: var(--text2);
+        font-size: 13.5px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .tag-row-count {
-        margin-left: auto;
-        font: 13px var(--mono);
+        font: 12px var(--mono);
         color: var(--text2);
         font-variant-numeric: tabular-nums;
+      }
+      .tag-row-miss {
+        color: var(--red);
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .tag-row-done {
+        color: var(--green);
+        font-weight: 700;
+      }
+      .tag-row-bar {
+        margin-top: auto;
+        height: 3px;
+        max-width: 55%;
+        border-radius: 2px;
+        background: var(--red-dim);
+        overflow: hidden;
+      }
+      .tag-row-bar i {
+        display: block;
+        height: 100%;
+        background: var(--green);
       }
       .stats {
         color: var(--text2);

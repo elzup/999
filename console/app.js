@@ -839,23 +839,88 @@ function tagFromInput(value) {
   return byName ?? text
 }
 
-/** タグの縦一覧。作品名を主に、#id と枠の数を添える (id だけでは何の作品か分からない) */
+// バケットの画像は縮小版 (@240) を読む。カードの右 6 割 (100px 前後) に敷くので、2 倍密度でも @240 で足りる (app/lib/wordImage.ts と同じ規則)
+const BUCKET_IMAGE =
+  /^(https:\/\/storage\.googleapis\.com\/[^/]+\/words\/[0-9a-f]+)\.webp$/
+const smallImageUrl = (url) => {
+  const match = BUCKET_IMAGE.exec(url)
+  return match ? `${match[1]}@240.webp` : url
+}
+
+/**
+ * タグごとの枠の数・未取得の数・代表画像。代表は確定済みの画像を優先し、無ければ未確定の画像。
+ * 並びは未取得の多い順 (埋める作業で上から片付けるため)、同数なら枠の多い順
+ */
+function tagSummaries() {
+  const byTag = new Map()
+  for (const t of kindTargets()) {
+    for (const slot of slotsFor(t)) {
+      for (const tag of new Set(tagsOfWord(t[slot]))) {
+        const prev = byTag.get(tag) ?? {
+          tag,
+          total: 0,
+          missing: 0,
+          kept: null,
+          any: null,
+        }
+        const st = slotStatus(t.id, slot)
+        const img = state.images?.[t.id]?.[slot]
+        const isKept = Boolean(state.keep?.[`${t.id}:${slot}`])
+        byTag.set(tag, {
+          ...prev,
+          total: prev.total + 1,
+          missing: prev.missing + (st === 'missing' || st === 'error' ? 1 : 0),
+          kept: prev.kept ?? (img && isKept ? img : null),
+          any: prev.any ?? img ?? null,
+        })
+      }
+    }
+  }
+  return [...byTag.values()].sort(
+    (a, b) =>
+      b.missing - a.missing ||
+      b.total - a.total ||
+      a.tag.localeCompare(b.tag, 'ja')
+  )
+}
+
+/** タグの一覧 (2 列)。作品名・未取得の数・取得済みの割合のバー。代表画像は右端に背景として敷く */
 function renderTagList(list) {
   list.innerHTML = ''
-  for (const [tag, n] of tagCounts()) {
+  for (const s of tagSummaries()) {
     const row = document.createElement('button')
-    row.className = 'tag-row' + (tag === tagFilter ? ' active' : '')
+    row.className = 'tag-row' + (s.tag === tagFilter ? ' active' : '')
+    row.title = `#${s.tag}`
+    const img = s.kept ?? s.any
+    if (img) {
+      const bg = document.createElement('img')
+      bg.className = 'tag-row-img'
+      bg.loading = 'lazy'
+      bg.decoding = 'async'
+      bg.src = smallImageUrl(img.url)
+      bg.alt = ''
+      row.appendChild(bg)
+    }
     const name = document.createElement('span')
     name.className = 'tag-row-name'
-    name.textContent = tagNameOf(tag)
-    const id = document.createElement('span')
-    id.className = 'tag-row-id'
-    id.textContent = `#${tag}`
+    name.textContent = tagNameOf(s.tag)
     const count = document.createElement('span')
     count.className = 'tag-row-count'
-    count.textContent = n
-    row.append(name, id, count)
-    row.onclick = () => setTagFilter(tag)
+    const miss = document.createElement('span')
+    miss.className = s.missing ? 'tag-row-miss' : 'tag-row-done'
+    miss.textContent = s.missing ? `未 ${s.missing}` : '済'
+    count.append(miss, ` / ${s.total}`)
+    const bar = document.createElement('span')
+    bar.className = 'tag-row-bar'
+    const fill = document.createElement('i')
+    fill.style.width = `${((s.total - s.missing) / s.total) * 100}%`
+    bar.appendChild(fill)
+    row.append(name, count, bar)
+    // 未取得が残っていれば «そのタグ × 未取得» で開く。埋め終わったタグは状態のフィルタを変えない
+    row.onclick = () => {
+      if (s.missing) filter = 'missing'
+      setTagFilter(s.tag)
+    }
     list.appendChild(row)
   }
 }
