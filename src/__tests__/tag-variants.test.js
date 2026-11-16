@@ -5,7 +5,8 @@ import {
   splitVariants,
 } from '../images/tag-variants.js'
 import { splitVariants as appSplitVariants } from '../../app/lib/tagVariants.ts'
-import { buildTargets } from '../images/targets.js'
+import { buildTargets, imageFieldsOf } from '../images/targets.js'
+import { tagImagesOf } from '../images/tag-images.js'
 import {
   renameTagInKeys,
   renameTagInManifest,
@@ -55,10 +56,24 @@ describe('expandVariants', () => {
       'w1#ｺｰﾄﾞｷﾞｱｽ',
       'w1#res',
       'w1#meme',
-      'w2',
       'w1_2',
+      'wh3',
+      'w2',
       'w2_2',
+      'wm3',
     ])
+  })
+
+  it('人・物の 3 番目も枠に入り、画像は wh3Img / wm3Img に写る', () => {
+    const [t] = buildTargets({
+      words: [{ num: '129', wh1: 'a', wh3: 'ティグ', wm3: 'b#x#y' }],
+    })
+    expect(t.wh3).toBe('ティグ')
+    expect(t.slots).toContain('wm3#x')
+    expect(imageFieldsOf('num', { wh3: { url: 'u' } })).toEqual({ wh3Img: 'u' })
+    expect(tagImagesOf({ 'wm3#x': { url: 'v' } })).toEqual({
+      wm3TagImg: { x: 'v' },
+    })
   })
 
   it('parseSlot', () => {

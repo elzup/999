@@ -7,8 +7,24 @@
 import { isDateKey4 } from '../date-keys.js'
 import { expandVariants } from './tag-variants.js'
 
-// 番号・日付の枠は console 旧スロット名。keep/manifest が旧キーで保存済みのため維持する
-const WORD_SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
+// 番号・日付の枠。人 1〜3 → 物 1〜3 の順 (シートの wh1〜wm3)。
+// 1・2 番目は keep/manifest が旧キー (w1 = wh1, w1_2 = wh2, w2 = wm1, w2_2 = wm2) で
+// 保存済みのため旧名のまま持ち、3 番目は wh3 / wm3 の名前で持つ
+const WORD_SLOTS = ['w1', 'w1_2', 'wh3', 'w2', 'w2_2', 'wm3']
+
+// 番号の一括パイプライン (search/fetch スクリプト、words.tsv の旧 4 列) が受け持つ枠。
+// それ以外 (3 番目・タグ違いの枠) は語から直接検索する
+export const PIPELINE_SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
+
+/** 枠の正式名 (シート・DB の名前)。console の見出しに出す */
+export const CANONICAL_SLOT = {
+  w1: 'wh1',
+  w1_2: 'wh2',
+  wh3: 'wh3',
+  w2: 'wm1',
+  w2_2: 'wm2',
+  wm3: 'wm3',
+}
 
 export const IMAGE_KINDS = {
   num: { label: '番号', slots: WORD_SLOTS },
@@ -28,8 +44,7 @@ const isDateId = (id) => isDateKey4(id)
 
 export const cardId = (card) => `${card.rank}${card.suit}`
 
-// 多候補スキーマ (wh1-3=人 / wm1-3=物) を旧スロット (w1/w2/w1_2/w2_2) に寄せる。
-// wh3/wm3 (3 候補目) は旧 4 枠模型に載らないため対象外。
+// 多候補スキーマ (wh1-3=人 / wm1-3=物) を console の枠に寄せる (1・2 番目は旧スロット名)
 export function wordTarget(kind, w) {
   return {
     id: w.num,
@@ -40,6 +55,8 @@ export function wordTarget(kind, w) {
     w2k: w.w2k || w.wm1k,
     w1_2: w.w1_2 || w.wh2,
     w2_2: w.w2_2 || w.wm2,
+    wh3: w.wh3,
+    wm3: w.wm3,
   }
 }
 
@@ -75,7 +92,14 @@ export function imageFieldsOf(kind, slots) {
   const fields =
     kind === 'card'
       ? { P: 'personImg', A: 'actionImg', O: 'objectImg' }
-      : { w1: 'w1Img', w2: 'w2Img', w1_2: 'w1_2Img', w2_2: 'w2_2Img' }
+      : {
+          w1: 'w1Img',
+          w2: 'w2Img',
+          w1_2: 'w1_2Img',
+          w2_2: 'w2_2Img',
+          wh3: 'wh3Img',
+          wm3: 'wm3Img',
+        }
   return Object.fromEntries(
     Object.entries(fields)
       .filter(([slot]) => slots[slot]?.url)

@@ -4,7 +4,7 @@
 
 import { parseArgs } from 'node:util'
 import { loadManifest } from './images/store.js'
-import { IMAGE_KINDS } from './images/targets.js'
+import { IMAGE_KINDS, PIPELINE_SLOTS } from './images/targets.js'
 import { loadTargets, redoDirect } from './images/direct.js'
 
 const { values } = parseArgs({
@@ -19,8 +19,8 @@ if (!IMAGE_KINDS[kind]) {
   throw new Error(`--kind は num / date / card のどれか: ${kind}`)
 }
 // 番号の旧スロットは一括パイプライン (search/fetch スクリプト) が受け持つ。
-// ここで取るのは、そのパイプラインが知らないタグ違いの枠 (w1_2#res など) だけ
-const isOurs = (slot) => kind !== 'num' || slot.includes('#')
+// ここで取るのは、そのパイプラインが知らない 3 番目 (wh3 / wm3) とタグ違いの枠 (w1_2#res など)
+const isOurs = (slot) => kind !== 'num' || !PIPELINE_SLOTS.includes(slot)
 
 const images = loadManifest().images || {}
 const jobs = loadTargets()

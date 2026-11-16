@@ -35,8 +35,15 @@ export const REP_PATH = join(privateDir, 'word-rep.json')
 // 表示順(人→物でグループ) / 既定の代表優先順(人トップ→物トップ→2番手…)
 export const SLOT_ORDER = ['wh1', 'wh2', 'wh3', 'wm1', 'wm2', 'wm3']
 export const DEFAULT_PRIORITY = ['wh1', 'wm1', 'wh2', 'wm2', 'wh3', 'wm3']
-// 画像 manifest は旧スロットで保存(w1=人1, w1_2=人2, w2=物1, w2_2=物2)。人物3番手は無し。
-const SLOT_IMG = { wh1: 'w1', wh2: 'w1_2', wm1: 'w2', wm2: 'w2_2' }
+// 画像 manifest は 1・2 番手を旧スロットで保存(w1=人1, w1_2=人2, w2=物1, w2_2=物2)。3 番手は wh3 / wm3
+const SLOT_IMG = {
+  wh1: 'w1',
+  wh2: 'w1_2',
+  wh3: 'wh3',
+  wm1: 'w2',
+  wm2: 'w2_2',
+  wm3: 'wm3',
+}
 const MAX_REP = 2
 
 // 主観評価の許容値。未評価は null(キー自体を持たない)で、0(普通)とは区別する。
