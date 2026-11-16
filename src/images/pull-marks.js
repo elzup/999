@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { connect } from '../firestore/db.js'
 import { MARKS_COLLECTION, overlayMarks } from './marks.js'
 import { PATHS, loadKeep, loadRedo, writeJson } from './store.js'
-import { kindOf } from './targets.js'
+import { PIPELINE_SLOTS, kindOf } from './targets.js'
 import { redoDirect } from './direct.js'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -45,13 +45,17 @@ function run(script, args) {
   if (r.status !== 0) throw new Error(`${script} が exit ${r.status}`)
 }
 
-/** 番号は一括の検索 → 取得に通す。日付・カードはスクリプトが拾わないので 1 枠ずつ */
+/**
+ * 番号の旧 4 枠は一括の検索 → 取得に通す。日付・カード、番号の 3 番目 (wh3 / wm3)、
+ * タグ違いの枠 (w1_2#res) は一括スクリプトが知らないので 1 枠ずつ直接取る (server.js の redoNow と同じ)
+ */
 async function redoFlagged() {
   run('search-word-images.js', ['--redo'])
   run('fetch-word-images.js', ['--redo-only'])
-  const others = Object.keys(loadRedo().redo).filter(
-    (key) => kindOf(key.split(':')[0]) !== 'num'
-  )
+  const others = Object.keys(loadRedo().redo).filter((key) => {
+    const [id, slot] = key.split(':')
+    return kindOf(id) !== 'num' || !PIPELINE_SLOTS.includes(slot)
+  })
   for (const key of others) {
     const [id, slot] = key.split(':')
     const result = await redoDirect({ id, slot })
