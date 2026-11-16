@@ -50,6 +50,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // 画像コンソールの印 (ロック / 撮り直し)。書くのは Function、取り込むのは CLI だけ
+    match /imageMarks/{key} {
+      allow read, write: if false;
+    }
+
     // パスキーの公開鍵。ログイン判定は Function だけが行う
     match /passkeys/{credentialId} {
       allow read, write: if false;

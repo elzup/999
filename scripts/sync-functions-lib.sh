@@ -16,7 +16,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 lib="$root/functions/lib"
 
 rm -rf "$lib"
-mkdir -p "$lib/firestore" "$lib/data"
+mkdir -p "$lib/firestore" "$lib/data" "$lib/images"
 
 for name in number-doc write derived console-writes db \
   sheet-bisync sheet-bisync-run sheet-io bisync-store sync-status fingerprint tag-names; do
@@ -27,6 +27,9 @@ done
 for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation; do
   cp "$root/src/$name.js" "$lib/$name.js"
 done
+
+# web 版の画像コンソールの印 (console-route.js が読む)
+cp "$root/src/images/marks.js" "$lib/images/marks.js"
 
 # table.js が実行時に読む TSV だけ。words.tsv は配信データ側の経路なので含めない
 for name in single_digit double_digit long_digit; do

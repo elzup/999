@@ -1,5 +1,24 @@
 // 画像コンソール gallery。/api/state があればサーバ運用(redo 書込可)、
 // 無ければ ./state.json を読む静的(閲覧専用)モードにフォールバックする。
+// 本番 hosting の /console/ で開いたときは web 版 (D-0073): 認証付きの /api/console/* を読み、
+// 付けられるのはロックと撮り直しの印だけ (取り直しそのものは Mac が起きたときに流す)。
+
+const IS_WEB = location.pathname.startsWith('/console/')
+const API = IS_WEB ? '/api/console' : '/api'
+// 999 アプリがログイン時に保存する通行証 (app/lib/editorAuth.ts の EDIT_TOKEN_KEY)
+const TOKEN_KEY = 'editToken999'
+
+function authHeaders() {
+  if (!IS_WEB) return {}
+  let token = ''
+  try {
+    token = localStorage.getItem(TOKEN_KEY) || ''
+  } catch (e) {
+    // 保存領域が使えない (プライベートモード等)。未ログインと同じ扱いで 401 になる
+    console.error('token', e)
+  }
+  return token ? { authorization: `Bearer ${token}` } : {}
+}
 
 let state = null
 let readOnly = false
@@ -43,7 +62,17 @@ const FILTERS = [
   ['flagged', 'redo', 'flag'],
 ]
 
+async function loadWebState() {
+  const res = await fetch(`${API}/state`, { headers: authHeaders() })
+  if (res.status === 401)
+    throw new Error('999 アプリでログインしてから開き直してください')
+  if (!res.ok) throw new Error(`state を読めなかった (HTTP ${res.status})`)
+  readOnly = false
+  return await res.json()
+}
+
 async function loadState() {
+  if (IS_WEB) return loadWebState()
   try {
     const res = await fetch('/api/state')
     const ct = res.headers.get('content-type') || ''
@@ -109,7 +138,7 @@ function showError(message) {
 async function postJson(path, body) {
   const res = await fetch(path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body),
   })
   const data = await res.json().catch(() => ({}))
@@ -122,7 +151,7 @@ async function toggleRedo(id, slot) {
   if (readOnly) return
   const key = `${id}:${slot}`
   try {
-    const data = await postJson('/api/redo', {
+    const data = await postJson(`${API}/redo`, {
       id,
       slot,
       on: !state.redo?.[key],
@@ -140,7 +169,7 @@ async function toggleKeep(id, slot) {
   if (readOnly) return
   const key = `${id}:${slot}`
   try {
-    const data = await postJson('/api/keep', {
+    const data = await postJson(`${API}/keep`, {
       id,
       slot,
       on: !state.keep?.[key],
@@ -568,6 +597,7 @@ function actionsEl(v, slot) {
     actions.appendChild(b)
   }
   const { id } = v
+  if (IS_WEB) return webActionsEl(v, slot, actions, mk)
   if (v.isAvatarI) {
     // 名前が変わった (または実写のまま) 枠だけ作り直せる。他は押す物が無い
     if (v.isAvatarPending || v.changed) {
@@ -615,6 +645,32 @@ function actionsEl(v, slot) {
     )
     mk('act-btn icon-only', 'pencil', '', '検索ワードを指定して取得', (b) =>
       customSearch(id, slot, b)
+    )
+  }
+  return actions
+}
+
+// web 版の操作。取り直し・切り抜き・自由検索は Mac の中でしか動かないので出さず、
+// 代わりに撮り直しの印を付ける (サムネイルを押すのと同じ)
+function webActionsEl(v, slot, actions, mk) {
+  const { id } = v
+  if (v.isAvatarI) return actions
+  if (v.img)
+    mk(
+      'act-btn primary' + (v.kept ? ' is-kept' : ''),
+      v.kept ? 'unlock' : 'check',
+      v.kept ? '解除' : '確定',
+      '',
+      () => toggleKeep(id, slot)
+    )
+  if (!v.kept) {
+    const flagged = Boolean(state.redo?.[`${id}:${slot}`])
+    mk(
+      'act-btn' + (flagged ? ' is-kept' : ''),
+      'flag',
+      flagged ? '印を外す' : v.img ? '撮り直す' : '取得する',
+      'Mac が起きたときにまとめて取り直す',
+      () => toggleRedo(id, slot)
     )
   }
   return actions
@@ -818,4 +874,8 @@ async function main() {
   renderFilters()
   render()
 }
-main()
+// 未ログインや state が読めないときは、白い画面のままにせず理由を出す
+main().catch((e) => {
+  console.error('main', e)
+  showError(e.message)
+})

@@ -12,6 +12,7 @@ import {
   handlePasskeyRequest,
   resolveAuth,
 } from './passkey-route.js'
+import { handleConsoleRequest } from './console-route.js'
 
 const EDIT_TOKEN = defineSecret('EDIT_TOKEN')
 const GOOGLE_SERVICE_ACCOUNT_JSON = defineSecret('GOOGLE_SERVICE_ACCOUNT_JSON')
@@ -131,6 +132,22 @@ export const api = onRequest(
 
       requireAuth(auth)
 
+      // web 版の画像コンソール (/console/)。印だけ Firestore に置く (D-0073)
+      if (path.startsWith('/console/')) {
+        const result = await handleConsoleRequest({
+          method: req.method,
+          path,
+          body: req.body || {},
+          state: readPrivateJson('console-state.json'),
+          ...(await loadImageMarks()),
+          now: new Date().toISOString(),
+        })
+        if (result) {
+          res.status(result.status).json(result.payload)
+          return
+        }
+      }
+
       if (req.method === 'GET' && path === '/editor/session') {
         res.json({ ok: true })
         return
@@ -239,6 +256,27 @@ export const api = onRequest(
 // functions/lib は scripts/sync-functions-lib.sh が作る src/ の写し (ESM)。
 // 初回に触ったリクエストでだけ読む。Sheets しか使わない経路に Firestore の
 // 初期化コストを負わせないため、モジュールごと遅延させる
+let imageMarks = null
+
+// 画像コンソールの印 (imageMarks)。numbers と違い不変条件の無い差分なので、
+// writeNumber を通さず 1 文書ずつ merge で書く (keep だけの印で redo を消さない)
+async function loadImageMarks() {
+  if (!imageMarks) {
+    const [{ db }, marks] = await Promise.all([
+      loadFirestoreLib(),
+      import('./lib/images/marks.js'),
+    ])
+    const col = db.raw.collection(marks.MARKS_COLLECTION)
+    const marksDb = {
+      listMarks: async () => (await col.get()).docs.map((d) => d.data()),
+      setMark: (mark) =>
+        col.doc(marks.markKey(mark.id, mark.slot)).set(mark, { merge: true }),
+    }
+    imageMarks = { db: marksDb, marks }
+  }
+  return imageMarks
+}
+
 let firestoreLib = null
 async function loadFirestoreLib() {
   if (!firestoreLib) {

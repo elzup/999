@@ -52,6 +52,18 @@ Secret Manager にあるので、デプロイする側には要らない。
 
 どちらで動いているか分からないときは、作業フォルダ (`/home/user/...` か `/Users/...`) で見分けられる。
 
+## web 版の画像コンソール (`/console/`)
+
+手元の画像コンソール (`nr console`) を、Mac が落ちていても開けるように本番にも置いている (D-0073)。
+付けられるのは «確定 (ロック)» と «撮り直し» の印だけで、取り直しそのものは Mac でしかできない。
+
+- 画面: `console/` の index.html / app.js / icons.js を vite の build が `dist/console/` に写す。CI が画面と一緒に出す
+- 語と画像の一覧: `nr deploy` の `sync:private` が手元の `buildState()` を `functions/private/console-state.json` に焼く。
+  語を含むので、認証付きの `/api/console/state` からだけ返す。一覧が古いときは `nr deploy`
+- 印: Firestore の `imageMarks` に貯める。Mac が起きたら `nr images:pull-marks --redo` で手元の
+  `word-images-keep.json` / `word-images-redo.json` へ取り込み、撮り直しの印の付いた枠を取り直す
+- ログイン: 999 アプリと同じ通行証 (localStorage の `editToken999`)。先にアプリでログインしておく
+
 ## 画面の CI の準備 (最初の 1 回)
 
 1. Google Cloud コンソール (プロジェクト `anoz-memosupo`) → IAM と管理 → サービスアカウント → 作成
