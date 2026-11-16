@@ -50,6 +50,33 @@ function devPrivateApi(): PluginOption {
   }
 }
 
+// web 版の画像コンソール (D-0073)。手元の console/ をそのまま /console/ に載せる。
+// 通信先は app.js が場所で切り替える (/console/ なら認証付きの /api/console/*)
+function consolePages(): PluginOption {
+  return {
+    name: 'console-pages',
+    apply: 'build',
+    generateBundle() {
+      const read = (name: string) =>
+        readFileSync(resolve(process.cwd(), 'console', name), 'utf8')
+      // app.js を版ごとに読み直させる (console/build-static.js と同じ)
+      const ver = Date.now()
+      const html = read('index.html').replace('./app.js', `./app.js?v=${ver}`)
+      this.emitFile({
+        type: 'asset',
+        fileName: 'console/index.html',
+        source: html,
+      })
+      for (const name of ['app.js', 'icons.js'])
+        this.emitFile({
+          type: 'asset',
+          fileName: `console/${name}`,
+          source: read(name),
+        })
+    },
+  }
+}
+
 export default defineConfig({
   logLevel: 'warn',
   define: {
@@ -66,6 +93,7 @@ export default defineConfig({
   },
   plugins: [
     devPrivateApi(),
+    consolePages(),
     preact(),
     VitePWA({
       // 更新の当て方は main.tsx が決める (保存待ちを送り終えてから入れ替える)
@@ -104,9 +132,12 @@ export default defineConfig({
       workbox: {
         // ttf は同梱の等幅フォント (オフラインでも数字の字形を揃える)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,ttf}'],
+        // /console/ はアプリの SW に抱えさせない。抱えると版が上がっても古い画面が出続ける
+        globIgnores: ['console/**'],
         // 辞書は静的配信しない (認証付き /api/app/data)。
         // /api/** は SW でキャッシュせず、常にネットワーク (no-store) に委ねる。
-        navigateFallbackDenylist: [/^\/api\//],
+        // /console/ はアプリの index.html に落とさず、別ページとして開く
+        navigateFallbackDenylist: [/^\/api\//, /^\/console\//],
       },
     }),
   ],
