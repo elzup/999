@@ -95,14 +95,9 @@ describe('numbers API を実物の書き込み経路で通す', () => {
 
     const saved = db.store.get('051')
     // 入力に derived を入れていないのに、書き込み経路が付ける
-    expect(Object.keys(saved.derived ?? {})).toEqual([
-      'ptBySlot',
-      'rankeyBySlot',
-    ])
-    expect(saved.derived.rankeyBySlot.wh1).toBeTypeOf('string')
-    expect(res.payload.number.derived.rankeyBySlot.wh1).toBe(
-      saved.derived.rankeyBySlot.wh1
-    )
+    // rankey はアプリがその場で計算するので derived には持たない (PR #32)
+    expect(Object.keys(saved.derived ?? {})).toEqual(['ptBySlot'])
+    expect(res.payload.number.derived).toEqual(saved.derived)
   })
 
   it('アプリからの書き込みは source=app として残る', async () => {
