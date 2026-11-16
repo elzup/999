@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { columnsOf } from '../firestore/sheet-io.js'
 import { validateNumberDoc } from '../firestore/number-doc.js'
 import {
   hasLabelN,
@@ -28,10 +27,9 @@ describe('stripLabelN', () => {
 })
 
 describe('stripLabelNInList', () => {
-  it('移せる位置の項目だけ外す', () => {
-    const canMove = (i) => i < 2
-    expect(stripLabelNInList('信長 -n,空海#a -n,道元 -n', canMove)).toBe(
-      '信長,空海#a,道元 -n'
+  it('一覧の全項目から外す', () => {
+    expect(stripLabelNInList('信長 -n,空海#a -n,道元 -n')).toBe(
+      '信長,空海#a,道元'
     )
   })
 })
@@ -55,13 +53,16 @@ describe('migrateLabelNInDoc', () => {
       wm1: { word: '鯉 -n', kana: '', imageUrl: '' },
     },
     rep: { picks: [{ k: 'こい', w: 'コイ -n' }], confirmed: true },
-    ratings: [{ k: 'かれん', w: 'カレン#res -n', v: 2 }],
+    ratings: [
+      { k: 'かれん', w: 'カレン#res -n', v: 2 },
+      { k: 'ひみこ', w: 'ヒミコ', v: 1 },
+    ],
     updatedAt: 't0',
     source: 'sheet',
   }
 
-  it('語から -n を外し、評価の無い語に -1 を付ける', () => {
-    const { next, moves, remaining } = migrateLabelNInDoc(doc)
+  it('語から -n を外し、かなのある語で評価の無いものに -1 を付ける', () => {
+    const { next, moves } = migrateLabelNInDoc(doc)
     expect(next.slots.wh1).toEqual({
       word: 'コイ',
       kana: 'こい',
@@ -73,6 +74,7 @@ describe('migrateLabelNInDoc', () => {
     expect(next.ratings).toEqual([
       // 既にあった評価は付け替えるだけで値は残す
       { k: 'かれん', w: 'カレン#res', v: 2 },
+      { k: 'ひみこ', w: 'ヒミコ', v: 1 },
       { k: 'こい', w: 'コイ', v: -1 },
     ])
     expect(moves.map((m) => [m.slot, m.rating, m.kept])).toEqual([
@@ -82,12 +84,53 @@ describe('migrateLabelNInDoc', () => {
     expect(validateNumberDoc('051', next)).toEqual({ ok: true })
   })
 
-  it('移し先の無い語 (かな無し・4 番目以降) は -n を残して報告する', () => {
-    const { next, remaining } = migrateLabelNInDoc(doc)
-    expect(next.hito).toBe('コイ,カレン#res,ヒミコ,オマケ -n')
-    expect(next.mono).toBe('鯉 -n')
-    expect(next.slots.wm1.word).toBe('鯉 -n')
-    expect(remaining).toEqual(['オマケ -n', '鯉 -n', 'wm1:鯉 -n'])
+  it('かなの無い枠・4 番目以降の語も -n を外す (評価は付けない)', () => {
+    const { next, unrated } = migrateLabelNInDoc(doc)
+    expect(next.hito).toBe('コイ,カレン#res,ヒミコ,オマケ')
+    expect(next.mono).toBe('鯉')
+    expect(next.slots.wm1.word).toBe('鯉')
+    expect(unrated).toEqual([
+      { side: 'hito', word: 'オマケ' },
+      { side: 'mono', word: '鯉' },
+    ])
+  })
+
+  it('同じ番号に有力な別の語がある -1 / 評価なしの語を削除検討候補にする', () => {
+    const { candidates } = migrateLabelNInDoc(doc)
+    expect(candidates).toEqual([
+      // コイ は代表だが自分自身なので、ほかの +1 以上の語が有力な別の語
+      {
+        word: 'コイ',
+        k: 'こい',
+        rating: -1,
+        rivals: ['カレン#res (評価 +2)', 'ヒミコ (評価 +1)'],
+      },
+      {
+        word: 'オマケ',
+        k: '',
+        rating: null,
+        rivals: ['カレン#res (評価 +2)', 'ヒミコ (評価 +1)', 'コイ (代表)'],
+      },
+      {
+        word: '鯉',
+        k: '',
+        rating: null,
+        rivals: ['カレン#res (評価 +2)', 'ヒミコ (評価 +1)', 'コイ (代表)'],
+      },
+    ])
+  })
+
+  it('有力な別の語が無ければ候補にしない', () => {
+    const { candidates } = migrateLabelNInDoc({
+      num: '053',
+      hito: 'コイ -n,ネコ',
+      slots: {
+        wh1: { word: 'コイ -n', kana: 'こい', imageUrl: '' },
+        wh2: { word: 'ネコ', kana: 'ねこ', imageUrl: '' },
+      },
+      ratings: [{ k: 'ねこ', w: 'ネコ', v: 0 }],
+    })
+    expect(candidates).toEqual([])
   })
 
   it('-n が無ければ null', () => {
@@ -115,59 +158,20 @@ describe('migrateLabelNInDoc', () => {
 
   it('2 回かけても変わらない', () => {
     const once = migrateLabelNInDoc(doc).next
-    const twice = migrateLabelNInDoc(once)
-    expect(twice?.next ?? null).toBeNull()
+    expect(migrateLabelNInDoc(once)).toBeNull()
   })
 })
 
 describe('migrateLabelNInSheet', () => {
-  const header = [
-    'num',
-    '人',
-    '物',
-    'wh1',
-    'wh1k',
-    'wh2',
-    'wh2k',
-    'wh3',
-    'wh3k',
-    'wm1',
-    'wm1k',
-    'wm2',
-    'wm2k',
-    'wm3',
-    'wm3k',
-  ]
-  const row = (num, hito, mono, kana) => {
-    const r = Array(header.length).fill('')
-    r[0] = num
-    r[1] = hito
-    r[2] = mono
-    for (const [slot, k] of Object.entries(kana)) r[header.indexOf(slot)] = k
-    return r
-  }
-
-  it('かな列が埋まっている位置の項目だけ書き換える', () => {
+  it('人 / 物 セルの全項目から外す', () => {
     const values = [
-      header,
-      row('051', 'コイ -n,カレン -n', '鯉 -n', { wh1k: 'こい' }),
-      row('052', 'アリス', '', { wh1k: 'ありす' }),
+      ['num', '人', '物', 'wh1'],
+      ['051', 'コイ -n,カレン -n', '鯉 -n', '=PICK_FIRST(B2,1)'],
+      ['052', 'アリス', '', ''],
     ]
-    const { changes, remaining } = migrateLabelNInSheet(
-      values,
-      columnsOf(header)
-    )
-    expect(changes).toEqual([
-      {
-        cell: 'B2',
-        num: '051',
-        before: 'コイ -n,カレン -n',
-        after: 'コイ,カレン -n',
-      },
-    ])
-    expect(remaining).toEqual([
-      { num: '051', word: 'カレン -n' },
-      { num: '051', word: '鯉 -n' },
+    expect(migrateLabelNInSheet(values)).toEqual([
+      { cell: 'B2', before: 'コイ -n,カレン -n', after: 'コイ,カレン' },
+      { cell: 'C2', before: '鯉 -n', after: '鯉' },
     ])
   })
 })

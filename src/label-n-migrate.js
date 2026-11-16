@@ -5,13 +5,18 @@
 // 指している。語の文字列に埋め込んだままだと、語 (タイトル) そのものが変わったとして
 // 代表・評価・画像の対応 ({k, w}) を割ってしまうので、評価側に寄せて語からは外す。
 //
-// 評価は «読み + 語» の組で持つので、読み (かな) の入ったスロットの語だけが移せる。
-// 一覧の 4 番目以降や、かなの無い枠の語は移し先が無いので -n を残す (情報を消さない)。
+// - -n はかなの有無・一覧の位置に関係なくすべて外す
+// - 評価は «読み + 語» の組で持つので、-1 を付けられるのはかなの入ったスロットの語だけ。
+//   それ以外 (かなの無い枠・一覧の 4 番目以降) は外すだけ
+// - -n の語は «同じ番号に有力な別の語があれば語そのものを消してよい» もの。
+//   有力な別の語 (評価 +1 以上 / 代表) がある語は削除検討候補として返す (自動では消さない)
 
 import { SIDE_SLOTS } from './sheet-layout.js'
 
 /** 移す評価の値 */
 export const LABEL_N_RATING = -1
+/** この評価以上の別の語があれば «有力な別の語» とみなす */
+export const STRONG_RATING = 1
 
 // scorer.js#getLabelPenalty と同じく、«#» «,» の直前にある -n も拾う (茶湯 -n#g)
 const LABEL_N = /(^|\s)-n(?=[\s#,]|$)/g
@@ -32,29 +37,16 @@ export function stripLabelN(word) {
     .trim()
 }
 
-/**
- * 一覧セル («信長,空海#a -n,…») のうち、移せる位置の項目からだけ -n を外す。
- * canMove(i) が真の位置 (0 始まり) が対象。項目の前後の空白は触らない
- */
-export function stripLabelNInList(list, canMove) {
+/** 一覧セル («信長,空海#a -n,…») の各項目から -n を外す。項目の前の空白は触らない */
+export function stripLabelNInList(list) {
   const value = text(list)
   if (!hasLabelN(value)) return value
   return value
     .split(',')
-    .map((item, i) => {
-      if (!canMove(i) || !hasLabelN(item)) return item
-      const lead = item.match(/^\s*/)[0]
-      return lead + stripLabelN(item)
-    })
+    .map((item) =>
+      hasLabelN(item) ? item.match(/^\s*/)[0] + stripLabelN(item) : item
+    )
     .join(',')
-}
-
-/** 一覧のうち -n が残る項目 (移せなかった語) */
-export function remainingLabelN(list, canMove) {
-  return text(list)
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item, i) => !canMove(i) && hasLabelN(item))
 }
 
 const sameEntry = (entry, k, w) =>
@@ -77,25 +69,67 @@ function renameEntries(list, moves) {
   return out
 }
 
+/** 一覧のうち、スロット (かなのある 1〜3 番目) に当たらない位置の -n の語 */
+function listOnlyLabelN(doc) {
+  const out = []
+  for (const [side, keys] of Object.entries(SIDE_SLOTS)) {
+    text(doc[side])
+      .split(',')
+      .map((item) => item.trim())
+      .forEach((item, i) => {
+        if (!hasLabelN(item)) return
+        const slot = keys[i]
+        if (slot && text(doc.slots?.[slot]?.kana).trim()) return
+        out.push({ side, word: stripLabelN(item) })
+      })
+  }
+  return out
+}
+
+/**
+ * 同じ番号の «有力な別の語»。評価 +1 以上か、代表に選ばれている語。
+ * 自分自身 (同じ語) は除く
+ */
+function strongRivals(next, word) {
+  const rivals = new Map()
+  for (const entry of next.ratings ?? []) {
+    if (entry.v >= STRONG_RATING && text(entry.w) !== word) {
+      rivals.set(entry.w, `評価 +${entry.v}`)
+    }
+  }
+  for (const pick of next.rep?.picks ?? []) {
+    if (text(pick.w) !== word && !rivals.has(pick.w)) {
+      rivals.set(pick.w, '代表')
+    }
+  }
+  return [...rivals].map(([w, why]) => `${w} (${why})`)
+}
+
 /**
  * numbers/{num} 1 件の移行結果。変わらなければ null。
  *
- * - かなの入ったスロットの語から -n を外す (確定時の語 confirmedFor も)
- * - 一覧 (hito / mono) の同じ位置の項目からも外す
+ * - スロットの語・確定時の語・一覧 (hito / mono) の全項目から -n を外す
  * - 代表 (rep.picks) と評価 (ratings) の語を付け替える
- * - その語に評価がまだ無ければ -1 を付ける。既に評価があればそちらを優先する
- *   (-n より後に人が付けた評価のほうが新しい判断なので上書きしない)
+ * - かなのあるスロットの語に評価がまだ無ければ -1 を付ける。既に評価があればそちらを
+ *   優先する (-n より後に人が付けた評価のほうが新しい判断なので上書きしない)
+ * - 評価が -1 (または付けられない) で、同じ番号に有力な別の語がある語は削除検討候補
  *
- * @returns {{ next, moves: {slot, k, from, to, rating, kept}[], remaining: string[] } | null}
+ * @returns {{ next, moves, unrated, candidates } | null}
+ *   moves:      評価に移した語 {slot, k, from, to, rating, kept}
+ *   unrated:    外しただけの語 (評価の移し先が無い) {side, word}
+ *   candidates: 削除検討候補 {word, k, rating, rivals}
  */
 export function migrateLabelNInDoc(doc) {
   const moves = []
   const slots = Object.fromEntries(
     Object.entries(doc.slots ?? {}).map(([slot, value]) => {
-      const kana = text(value?.kana).trim()
-      if (!kana || !hasLabelN(value?.word)) return [slot, value]
+      const touched = hasLabelN(value?.word) || hasLabelN(value?.confirmedFor)
+      if (!touched) return [slot, value]
       const to = stripLabelN(value.word)
-      moves.push({ slot, k: kana, from: value.word, to })
+      const kana = text(value?.kana).trim()
+      if (kana && hasLabelN(value.word)) {
+        moves.push({ slot, k: kana, from: value.word, to })
+      }
       const next = { ...value, word: to }
       if (value.confirmedFor !== undefined) {
         next.confirmedFor = stripLabelN(value.confirmedFor)
@@ -104,18 +138,10 @@ export function migrateLabelNInDoc(doc) {
     })
   )
 
-  // 一覧は «かなが入っているスロットに当たる位置» だけ外す。
-  // シート側 (planSheetRow) と同じ規則にしておかないと、片方だけ -n が残る
-  const movable = (side) => (i) => {
-    const slot = SIDE_SLOTS[side][i]
-    return Boolean(slot && text(doc.slots?.[slot]?.kana).trim())
-  }
-
+  const unrated = listOnlyLabelN(doc)
   const next = { ...doc, slots }
   for (const side of ['hito', 'mono']) {
-    if (doc[side] !== undefined) {
-      next[side] = stripLabelNInList(doc[side], movable(side))
-    }
+    if (doc[side] !== undefined) next[side] = stripLabelNInList(doc[side])
   }
 
   if (doc.rep) {
@@ -136,18 +162,17 @@ export function migrateLabelNInDoc(doc) {
   }
   if (doc.ratings !== undefined || moves.length > 0) next.ratings = ratings
 
-  const remaining = [
-    ...remainingLabelN(next.hito, movable('hito')),
-    ...remainingLabelN(next.mono, movable('mono')),
-    ...Object.entries(next.slots)
-      .filter(([, value]) => hasLabelN(value?.word))
-      .map(([slot, value]) => `${slot}:${value.word}`),
+  const candidates = [
+    ...moves
+      .filter((m) => m.rating <= LABEL_N_RATING)
+      .map((m) => ({ word: m.to, k: m.k, rating: m.rating })),
+    ...unrated.map((u) => ({ word: u.word, k: '', rating: null })),
   ]
+    .map((c) => ({ ...c, rivals: strongRivals(next, c.word) }))
+    .filter((c) => c.rivals.length > 0)
 
-  if (JSON.stringify(next) === JSON.stringify(doc)) {
-    return remaining.length ? { next: null, moves, remaining } : null
-  }
-  return { next, moves, remaining }
+  if (JSON.stringify(next) === JSON.stringify(doc)) return null
+  return { next, moves, unrated, candidates }
 }
 
 /** 0 始まりの列番号 → A1 表記の列名 (0 → A, 27 → AB) */
@@ -162,34 +187,28 @@ function columnName(index) {
   return name
 }
 
+/** シートのセルに書く人 / 物の列 (語の列は一覧から式で取り出している) */
+const SHEET_WORD_HEADERS = ['人', '物']
+
 /**
- * シート 1 タブ分の置き換え。values は 1 行目が見出しの 2 次元配列、
- * columns は sheet-io#columnsOf の {field: 列番号}。
- * 人 / 物 セルのうち、かな列が埋まっている位置の項目だけ -n を外す。
- * 語の列 (wh1 など) は一覧から式で取り出しているので書かない
- * @returns {{ changes: {cell, num, before, after}[], remaining: {num, word}[] }}
+ * シート 1 タブ分の置き換え。values は 1 行目が見出しの 2 次元配列。
+ * 人 / 物 セルの全項目から -n を外す。返すのは変わるセルだけ
+ * @returns {{cell, before, after}[]}
  */
-export function migrateLabelNInSheet(values, columns) {
+export function migrateLabelNInSheet(values) {
+  const header = values[0] ?? []
+  const columns = SHEET_WORD_HEADERS.map((name) => header.indexOf(name)).filter(
+    (index) => index >= 0
+  )
   const changes = []
-  const remaining = []
   values.slice(1).forEach((row, i) => {
-    const num = text(row[columns.num]).trim()
-    if (!/^\d{3}$/.test(num)) return
-    for (const side of ['hito', 'mono']) {
-      const col = columns[side]
-      const movable = (index) => {
-        const slot = SIDE_SLOTS[side][index]
-        return Boolean(slot && text(row[columns[`${slot}k`]]).trim())
-      }
+    for (const col of columns) {
       const before = text(row[col])
-      const after = stripLabelNInList(before, movable)
+      const after = stripLabelNInList(before)
       if (after !== before) {
-        changes.push({ cell: `${columnName(col)}${i + 2}`, num, before, after })
-      }
-      for (const word of remainingLabelN(after, movable)) {
-        remaining.push({ num, word })
+        changes.push({ cell: `${columnName(col)}${i + 2}`, before, after })
       }
     }
   })
-  return { changes, remaining }
+  return changes
 }
