@@ -869,7 +869,23 @@ function setTagFilter(value) {
   render()
 }
 
+// web 版はアプリの設定から同じ画面のまま来るので (D-0076)、ホーム画面のアプリでは
+// ブラウザの戻るが無い。見出しの前にアプリへの戻り道を置く
+function addBackToApp() {
+  const link = document.createElement('a')
+  link.href = '/'
+  link.textContent = '← アプリへ戻る'
+  Object.assign(link.style, {
+    color: 'var(--text2)',
+    fontSize: '13px',
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+  })
+  document.querySelector('header')?.prepend(link)
+}
+
 async function main() {
+  if (IS_WEB) addBackToApp()
   state = await loadState()
   document.getElementById('tag-filter').onchange = (e) =>
     setTagFilter(e.target.value)
