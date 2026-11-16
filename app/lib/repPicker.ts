@@ -85,16 +85,39 @@ export function matchesFilter(doc: NumberDoc, filter: RepFilter): boolean {
   }
 }
 
-/** 十の位ごとの確定率 (0〜1)。百の位の中の 10 区切りを、ジャンプ用のボタンの下線に出す */
-export function decadeProgress(docs: NumberDoc[]): number[] {
-  const done = Array.from({ length: DECADES }, () => 0)
-  const total = Array.from({ length: DECADES }, () => 0)
+/**
+ * 番号 1 つの代表の決まり具合。確定済みの代表の数 (0 = 未確定か代表なし / 1 = ① だけ /
+ * 2 = ①② まで)。今の候補に当たらなくなった代表 (stale) は数えない
+ */
+export type RepLevel = 0 | 1 | 2
+
+export function repLevel(doc: NumberDoc): RepLevel {
+  if (!doc.rep?.confirmed) return 0
+  return Math.min(pickedSlots(doc).length, MAX_PICKS) as RepLevel
+}
+
+/** 十の位 1 つの内訳。counts[level] がその段階の番号の数 */
+export type DecadeBreakdown = {
+  total: number
+  counts: [number, number, number]
+}
+
+/**
+ * 十の位ごとの内訳。百の位の中の 10 区切りを、ジャンプ用のボタンの割合バーに出す
+ * (未確定 = 赤 / ① だけ = 緑 / ①② = 青)
+ */
+export function decadeBreakdown(docs: NumberDoc[]): DecadeBreakdown[] {
+  const out: DecadeBreakdown[] = Array.from({ length: DECADES }, () => ({
+    total: 0,
+    counts: [0, 0, 0],
+  }))
   for (const doc of docs) {
-    const decade = Number(doc.num[1])
-    total[decade] += 1
-    if (doc.rep?.confirmed) done[decade] += 1
+    const decade = out[Number(doc.num[1])]
+    if (!decade) continue
+    decade.total += 1
+    decade.counts[repLevel(doc)] += 1
   }
-  return done.map((count, i) => (total[i] ? count / total[i] : 0))
+  return out
 }
 
 /** 代表を選んでいない番号を «そのまま確定» するときの並び (rep-store の DEFAULT_PRIORITY と同じ) */

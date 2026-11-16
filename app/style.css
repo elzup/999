@@ -3,7 +3,9 @@
    local() で済みダウンロードしない */
 @font-face {
   font-family: 'Droid Sans Mono';
-  src: local('Droid Sans Mono'), local('DroidSansMono'),
+  src:
+    local('Droid Sans Mono'),
+    local('DroidSansMono'),
     url('./fonts/DroidSansMono.ttf') format('truetype');
   font-display: swap;
 }
@@ -46,7 +48,8 @@ body {
   color: var(--text);
   /* Windows では -apple-system / Helvetica Neue が無く、既定の日本語フォントに
      落ちて英数字の字形が崩れる。英数字は Segoe UI、かなは Yu Gothic UI / Meiryo */
-  font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
+  font-family:
+    -apple-system, 'Helvetica Neue', 'Segoe UI', 'Hiragino Sans',
     'Yu Gothic UI', Meiryo, sans-serif;
   font-size: 14px;
   height: 100%;
@@ -238,7 +241,9 @@ body {
   color: var(--text2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 .ico:hover {
@@ -6235,15 +6240,45 @@ button.is-failed {
   border-color: var(--accent);
   color: var(--accent);
 }
-/* 十の位の確定率。下線の長さで «どこが残っているか» を見せる */
-.rp-decade i {
+/* 十の位の内訳。割合バーで «どこが残っているか» を見せる
+   (①② まで = 青 / ① だけ = 緑 / 未確定 = 赤) */
+.rp-decade {
+  --rep-lv0: var(--bad);
+  --rep-lv1: var(--accent);
+  --rep-lv2: var(--sync-sheet);
+}
+.rp-decade-bar {
   position: absolute;
-  left: 2px;
+  left: 3px;
+  right: 3px;
   bottom: 2px;
-  height: 3px;
-  max-width: calc(100% - 4px);
+  height: 4px;
+  display: flex;
   border-radius: 2px;
-  background: var(--accent);
+  overflow: hidden;
+  background: var(--border);
+}
+.rp-decade-bar i {
+  display: block;
+  height: 100%;
+}
+.rp-decade-bar .lv0 {
+  background: var(--rep-lv0);
+}
+.rp-decade-bar .lv1 {
+  background: var(--rep-lv1);
+}
+.rp-decade-bar .lv2 {
+  background: var(--rep-lv2);
+}
+/* 全部確定した十の位は枠と文字も色を変える */
+.rp-decade.is-done1 {
+  border-color: var(--rep-lv1);
+  color: var(--rep-lv1);
+}
+.rp-decade.is-done2 {
+  border-color: var(--rep-lv2);
+  color: var(--rep-lv2);
 }
 
 /* ---- 番号詳細: 読みの目印と別番号への移動 ---- */
@@ -6407,7 +6442,9 @@ button.is-failed {
 .rp-row.save-saved {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
-  transition: box-shadow 0.4s, border-color 0.4s;
+  transition:
+    box-shadow 0.4s,
+    border-color 0.4s;
 }
 .rep-card.save-error,
 .rp-row.save-error {
