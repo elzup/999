@@ -41,7 +41,7 @@ nr lyrics      # 代表語/FF の歌詞テキスト (lyrics/) を再生成
 nr sheet:audit # シート監査 (dry-run。書込プランを sheet-audit.out.json に出す)
 nr sheet:rankey # 各スロットの rankey 列をシートへ書き戻す (使っていない。rankey はアプリが計算する)
 nr images:pull-marks # web 版の画像コンソール (/console/) で付けた印を手元へ取り込む (--redo で撮り直しまで)
-nr label:n     # ラベル -n を評価 -1 へ移して語から外し、削除検討候補を出す (dry-run。--apply で書く)
+nr label:n     # ラベル -n / -x に評価 -1 を付け (-n は語から外す)、削除検討候補を出す (dry-run。--apply で書く)
 nr test        # テスト実行
 ```
 

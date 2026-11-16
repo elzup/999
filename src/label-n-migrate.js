@@ -10,6 +10,12 @@
 //   それ以外 (かなの無い枠・一覧の 4 番目以降) は外すだけ
 // - -n の語は «同じ番号に有力な別の語があれば語そのものを消してよい» もの。
 //   有力な別の語 (評価 +1 以上 / 代表) がある語は削除検討候補として返す (自動では消さない)
+//
+// -x (語呂強引) も同じく評価 -1 に当たるが、-n より強く外したい語。
+// - -x はラベルを語に残したまま (外さない)、かなのある語に評価 -1 を付ける
+// - 同じ番号に «別の語» が 1 つでもあれば削除検討候補にする (有力かどうかを問わない。
+//   別の語 = -x が無く、評価 -1 でもない語)。その語に自分で付けた評価があっても候補にする
+// - 評価が 0 以上の -x の語は «ラベルと評価が食い違う» として別に返す
 
 import { SIDE_SLOTS } from './sheet-layout.js'
 
@@ -23,6 +29,13 @@ const LABEL_N = /(^|\s)-n(?=[\s#,]|$)/g
 
 const text = (value) =>
   value === null || value === undefined ? '' : String(value)
+
+const LABEL_X = /(^|\s)-x(?=[\s#,]|$)/
+
+/** -x (語呂強引) が付いているか */
+export function hasLabelX(word) {
+  return LABEL_X.test(text(word))
+}
 
 export function hasLabelN(word) {
   return new RegExp(LABEL_N.source).test(text(word))
@@ -69,15 +82,15 @@ function renameEntries(list, moves) {
   return out
 }
 
-/** 一覧のうち、スロット (かなのある 1〜3 番目) に当たらない位置の -n の語 */
-function listOnlyLabelN(doc) {
+/** 一覧のうち、スロット (かなのある 1〜3 番目) に当たらない位置で has に当たる語 */
+function listOnly(doc, has) {
   const out = []
   for (const [side, keys] of Object.entries(SIDE_SLOTS)) {
     text(doc[side])
       .split(',')
       .map((item) => item.trim())
       .forEach((item, i) => {
-        if (!hasLabelN(item)) return
+        if (!has(item)) return
         const slot = keys[i]
         if (slot && text(doc.slots?.[slot]?.kana).trim()) return
         out.push({ side, word: stripLabelN(item) })
@@ -86,19 +99,53 @@ function listOnlyLabelN(doc) {
   return out
 }
 
+/** 番号の全ての語 (スロットの語と 一覧の全項目)。重なりは 1 つにする */
+function allWords(next) {
+  const words = new Set()
+  for (const value of Object.values(next.slots ?? {})) {
+    if (text(value?.word).trim()) words.add(text(value.word).trim())
+  }
+  for (const side of ['hito', 'mono']) {
+    for (const item of text(next[side]).split(',')) {
+      if (item.trim()) words.add(item.trim())
+    }
+  }
+  return [...words]
+}
+
+/**
+ * 同じ番号の «別の語» (-x の候補判定用)。-x が無く、評価 -1 でもない語。
+ * 自分自身は除く。評価 +1 以上や代表の語には理由を添える
+ */
+function anyRivals(next, word) {
+  const ratingOf = (w) =>
+    (next.ratings ?? []).find((entry) => text(entry.w) === w)?.v
+  const strong = new Map(
+    strongRivals(next, word).map((line) => [line.replace(/ \(.*\)$/, ''), line])
+  )
+  return allWords(next)
+    .filter((w) => w !== word && !hasLabelX(w))
+    .filter((w) => !(ratingOf(w) <= LABEL_N_RATING))
+    .map((w) => strong.get(w) ?? w)
+}
+
 /**
  * 同じ番号の «有力な別の語»。評価 +1 以上か、代表に選ばれている語。
- * 自分自身 (同じ語) は除く
+ * 自分自身 (同じ語) と -x の語 (評価に関わらず外したい語) は除く
  */
 function strongRivals(next, word) {
   const rivals = new Map()
   for (const entry of next.ratings ?? []) {
-    if (entry.v >= STRONG_RATING && text(entry.w) !== word) {
+    if (
+      entry.v >= STRONG_RATING &&
+      text(entry.w) !== word &&
+      !hasLabelX(entry.w)
+    ) {
       rivals.set(entry.w, `評価 +${entry.v}`)
     }
   }
   for (const pick of next.rep?.picks ?? []) {
-    if (text(pick.w) !== word && !rivals.has(pick.w)) {
+    if (text(pick.w) !== word && !hasLabelX(pick.w) && !rivals.has(pick.w)) {
       rivals.set(pick.w, '代表')
     }
   }
@@ -106,31 +153,42 @@ function strongRivals(next, word) {
 }
 
 /**
- * numbers/{num} 1 件の移行結果。変わらなければ null。
+ * numbers/{num} 1 件の移行結果。-n / -x のどちらも無ければ null。
  *
- * - スロットの語・確定時の語・一覧 (hito / mono) の全項目から -n を外す
+ * - スロットの語・確定時の語・一覧 (hito / mono) の全項目から -n を外す (-x は残す)
  * - 代表 (rep.picks) と評価 (ratings) の語を付け替える
- * - かなのあるスロットの語に評価がまだ無ければ -1 を付ける。既に評価があればそちらを
- *   優先する (-n より後に人が付けた評価のほうが新しい判断なので上書きしない)
- * - 評価が -1 (または付けられない) で、同じ番号に有力な別の語がある語は削除検討候補
+ * - かなのあるスロットの -n / -x の語に評価がまだ無ければ -1 を付ける。既に評価があれば
+ *   そちらを優先する (ラベルより後に人が付けた評価のほうが新しい判断なので上書きしない)
+ * - 削除検討候補
+ *     -n: 評価が -1 (または付けられない) で、同じ番号に有力な別の語がある
+ *     -x: 同じ番号に別の語が 1 つでもある (自分の評価は問わない)
  *
- * @returns {{ next, moves, unrated, candidates } | null}
- *   moves:      評価に移した語 {slot, k, from, to, rating, kept}
- *   unrated:    外しただけの語 (評価の移し先が無い) {side, word}
- *   candidates: 削除検討候補 {word, k, rating, rivals}
+ * @returns {{ next, moves, unrated, candidates, conflicts } | null}
+ *   next:       書き込む文書。書き換えが要らなければ null (候補だけ出るとき)
+ *   moves:      評価に移した語 {slot, label, k, from, to, rating, kept}
+ *   unrated:    評価の移し先が無い語 (かな無し・4 番目以降) {side, label, word}
+ *   candidates: 削除検討候補 {label, word, k, rating, rivals}
+ *   conflicts:  評価が 0 以上の -x の語 {word, k, rating}
  */
 export function migrateLabelNInDoc(doc) {
   const moves = []
   const slots = Object.fromEntries(
     Object.entries(doc.slots ?? {}).map(([slot, value]) => {
-      const touched = hasLabelN(value?.word) || hasLabelN(value?.confirmedFor)
-      if (!touched) return [slot, value]
-      const to = stripLabelN(value.word)
       const kana = text(value?.kana).trim()
-      if (kana && hasLabelN(value.word)) {
-        moves.push({ slot, k: kana, from: value.word, to })
+      const labelX = hasLabelX(value?.word)
+      const labelN = hasLabelN(value?.word)
+      if (kana && (labelX || labelN)) {
+        moves.push({
+          slot,
+          // 両方付いていれば強いほう (-x) として扱う
+          label: labelX ? 'x' : 'n',
+          k: kana,
+          from: value.word,
+          to: stripLabelN(value.word),
+        })
       }
-      const next = { ...value, word: to }
+      if (!labelN && !hasLabelN(value?.confirmedFor)) return [slot, value]
+      const next = { ...value, word: stripLabelN(value.word) }
       if (value.confirmedFor !== undefined) {
         next.confirmedFor = stripLabelN(value.confirmedFor)
       }
@@ -138,7 +196,13 @@ export function migrateLabelNInDoc(doc) {
     })
   )
 
-  const unrated = listOnlyLabelN(doc)
+  const unrated = [
+    ...listOnly(doc, hasLabelX).map((u) => ({ ...u, label: 'x' })),
+    ...listOnly(doc, (w) => hasLabelN(w) && !hasLabelX(w)).map((u) => ({
+      ...u,
+      label: 'n',
+    })),
+  ]
   const next = { ...doc, slots }
   for (const side of ['hito', 'mono']) {
     if (doc[side] !== undefined) next[side] = stripLabelNInList(doc[side])
@@ -162,17 +226,40 @@ export function migrateLabelNInDoc(doc) {
   }
   if (doc.ratings !== undefined || moves.length > 0) next.ratings = ratings
 
-  const candidates = [
-    ...moves
-      .filter((m) => m.rating <= LABEL_N_RATING)
-      .map((m) => ({ word: m.to, k: m.k, rating: m.rating })),
-    ...unrated.map((u) => ({ word: u.word, k: '', rating: null })),
+  const labeled = [
+    ...moves.map((m) => ({
+      label: m.label,
+      word: m.to,
+      k: m.k,
+      rating: m.rating,
+    })),
+    ...unrated.map((u) => ({
+      label: u.label,
+      word: u.word,
+      k: '',
+      rating: null,
+    })),
   ]
-    .map((c) => ({ ...c, rivals: strongRivals(next, c.word) }))
-    .filter((c) => c.rivals.length > 0)
+  const candidates = labeled
+    .map((c) => {
+      if (c.label === 'x') return { ...c, rivals: anyRivals(next, c.word) }
+      if (c.rating !== null && c.rating > LABEL_N_RATING) return null
+      return { ...c, rivals: strongRivals(next, c.word) }
+    })
+    .filter((c) => c && c.rivals.length > 0)
+  const conflicts = moves
+    .filter((m) => m.label === 'x' && m.rating > LABEL_N_RATING)
+    .map((m) => ({ word: m.to, k: m.k, rating: m.rating }))
 
-  if (JSON.stringify(next) === JSON.stringify(doc)) return null
-  return { next, moves, unrated, candidates }
+  const changed = JSON.stringify(next) !== JSON.stringify(doc)
+  if (!changed && labeled.length === 0) return null
+  return {
+    next: changed ? next : null,
+    moves,
+    unrated,
+    candidates,
+    conflicts,
+  }
 }
 
 /** 0 始まりの列番号 → A1 表記の列名 (0 → A, 27 → AB) */

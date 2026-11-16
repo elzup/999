@@ -90,8 +90,8 @@ describe('migrateLabelNInDoc', () => {
     expect(next.mono).toBe('鯉')
     expect(next.slots.wm1.word).toBe('鯉')
     expect(unrated).toEqual([
-      { side: 'hito', word: 'オマケ' },
-      { side: 'mono', word: '鯉' },
+      { side: 'hito', word: 'オマケ', label: 'n' },
+      { side: 'mono', word: '鯉', label: 'n' },
     ])
   })
 
@@ -100,18 +100,21 @@ describe('migrateLabelNInDoc', () => {
     expect(candidates).toEqual([
       // コイ は代表だが自分自身なので、ほかの +1 以上の語が有力な別の語
       {
+        label: 'n',
         word: 'コイ',
         k: 'こい',
         rating: -1,
         rivals: ['カレン#res (評価 +2)', 'ヒミコ (評価 +1)'],
       },
       {
+        label: 'n',
         word: 'オマケ',
         k: '',
         rating: null,
         rivals: ['カレン#res (評価 +2)', 'ヒミコ (評価 +1)', 'コイ (代表)'],
       },
       {
+        label: 'n',
         word: '鯉',
         k: '',
         rating: null,
@@ -159,6 +162,80 @@ describe('migrateLabelNInDoc', () => {
   it('2 回かけても変わらない', () => {
     const once = migrateLabelNInDoc(doc).next
     expect(migrateLabelNInDoc(once)).toBeNull()
+  })
+})
+
+describe('migrateLabelNInDoc (-x)', () => {
+  const doc = {
+    num: '060',
+    hito: 'ロクオ -x,ムツミ,ロッカ -n',
+    mono: 'ロウソク -x',
+    slots: {
+      wh1: { word: 'ロクオ -x', kana: 'ろくお', imageUrl: '' },
+      wh2: { word: 'ムツミ', kana: 'むつみ', imageUrl: '' },
+      wh3: { word: 'ロッカ -n', kana: 'ろっか', imageUrl: '' },
+      wm1: { word: 'ロウソク -x', kana: 'ろうそく', imageUrl: '' },
+    },
+    ratings: [{ k: 'ろうそく', w: 'ロウソク -x', v: 1 }],
+  }
+
+  it('-x は語に残したまま、評価の無い語に -1 を付ける', () => {
+    const { next, moves } = migrateLabelNInDoc(doc)
+    expect(next.slots.wh1.word).toBe('ロクオ -x')
+    expect(next.hito).toBe('ロクオ -x,ムツミ,ロッカ')
+    expect(next.ratings).toEqual([
+      { k: 'ろうそく', w: 'ロウソク -x', v: 1 },
+      { k: 'ろくお', w: 'ロクオ -x', v: -1 },
+      { k: 'ろっか', w: 'ロッカ', v: -1 },
+    ])
+    expect(moves.map((m) => [m.slot, m.label, m.rating, m.kept])).toEqual([
+      ['wh1', 'x', -1, false],
+      ['wh3', 'n', -1, false],
+      ['wm1', 'x', 1, true],
+    ])
+  })
+
+  it('-x は有力でなくても別の語があれば候補。自分の評価も問わない', () => {
+    const { candidates, conflicts } = migrateLabelNInDoc(doc)
+    // 別の語 = -x が無く評価 -1 でもない語 (ムツミ)。ロッカ は -1 なので数えない
+    expect(candidates).toEqual([
+      {
+        label: 'x',
+        word: 'ロクオ -x',
+        k: 'ろくお',
+        rating: -1,
+        rivals: ['ムツミ'],
+      },
+      {
+        label: 'x',
+        word: 'ロウソク -x',
+        k: 'ろうそく',
+        rating: 1,
+        rivals: ['ムツミ'],
+      },
+    ])
+    expect(conflicts).toEqual([
+      { word: 'ロウソク -x', k: 'ろうそく', rating: 1 },
+    ])
+  })
+
+  it('書き換えが要らなくても -x の候補は返す', () => {
+    const once = migrateLabelNInDoc(doc).next
+    const twice = migrateLabelNInDoc(once)
+    expect(twice.next).toBeNull()
+    expect(twice.candidates.map((c) => c.word)).toEqual([
+      'ロクオ -x',
+      'ロウソク -x',
+    ])
+  })
+
+  it('別の語が無ければ候補にしない', () => {
+    const { candidates } = migrateLabelNInDoc({
+      num: '061',
+      hito: 'ロクオ -x',
+      slots: { wh1: { word: 'ロクオ -x', kana: 'ろくお', imageUrl: '' } },
+    })
+    expect(candidates).toEqual([])
   })
 })
 

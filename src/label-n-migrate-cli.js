@@ -1,6 +1,7 @@
 // nr label:n [--apply]
 //
 // ラベル -n (馴染みがない) を主観評価 -1 に移し、語 (タイトル) からはすべて外す。
+// ラベル -x (語呂強引) は語に残したまま評価 -1 を付け、-n より強く削除候補に挙げる。
 // 規則は label-n-migrate.js。シートの 999 / 1231 タブの 人・物 セルと、DB の numbers/*
 // (語・確定時の語・代表・評価) を同じ規則で書き換える。
 // 既定は dry-run (差分を出すだけ)。--apply で DB → シートの順に書く。
@@ -9,6 +10,8 @@
 // - かなの無い枠・一覧の 4 番目以降の語は評価の移し先が無いので、-n を外すだけ
 // - 同じ番号に有力な別の語 (評価 +1 以上 / 代表) がある -n の語は削除検討候補として
 //   一覧に出し、src/label-n.out.json にも書く。語そのものは消さない (人が判断する)
+// - -x の語は、同じ番号に別の語 (-x が無く評価 -1 でもない語) が 1 つでもあれば候補。
+//   評価が 0 以上の -x の語は «ラベルと評価が食い違う» として別に出す
 //
 // DB を先に書くのは tag:rename と同じ理由 (シート → DB の同期は語が変わったスロットの
 // 画像・評価を引き継がない)。書き終えたら nr sync でローカルの words.tsv も取り直すこと。
@@ -77,28 +80,40 @@ function candidatesOf(dbPlan) {
   )
 }
 
+const MAX_RIVALS = 4
+
 function printPlan(dbPlan, sheetPlan) {
-  const moves = dbPlan.flatMap(({ num, moves }) =>
-    moves.map((move) => ({ num, ...move }))
+  const writes = dbPlan.filter((p) => p.next)
+  const moves = writes.flatMap(({ num, moves }) =>
+    moves.filter((m) => !m.kept).map((move) => ({ num, ...move }))
+  )
+  const kept = writes.flatMap(({ num, moves }) =>
+    moves
+      .filter((m) => m.kept && m.from !== m.to)
+      .map((move) => ({ num, ...move }))
   )
   const unrated = dbPlan.flatMap(({ num, unrated }) =>
     unrated.map((u) => ({ num, ...u }))
   )
-  const added = moves.filter((m) => !m.kept).length
-  console.log(`DB: ${dbPlan.length} 件`)
-  console.log(
-    `  評価に移す語 ${moves.length} 個 (-1 を新しく付ける ${added} / 既存の評価を残す ${moves.length - added})`
-  )
+  console.log(`DB: ${writes.length} 件`)
+  console.log(`  評価 -1 を新しく付ける語 ${moves.length} 個`)
   for (const m of moves) {
-    const rating = m.kept
-      ? `評価 ${m.rating} のまま`
-      : `評価 ${m.rating} を付ける`
     console.log(
-      `    ${m.num} ${m.slot} ${m.k}: ${m.from} → ${m.to} (${rating})`
+      `    ${m.num} ${m.slot} -${m.label} ${m.k}: ${m.from} → ${m.to}`
     )
   }
-  console.log(`  -n を外すだけの語 (かな無し・4 番目以降) ${unrated.length} 個`)
-  for (const u of unrated) console.log(`    ${u.num} ${u.side}: ${u.word}`)
+  console.log(`  -n を外し、既存の評価を残す語 ${kept.length} 個`)
+  for (const m of kept) {
+    console.log(
+      `    ${m.num} ${m.slot} ${m.k}: ${m.from} → ${m.to} (評価 ${m.rating})`
+    )
+  }
+  console.log(
+    `  評価を付けられない語 (かな無し・4 番目以降。-n は外す / -x は残す) ${unrated.length} 個`
+  )
+  for (const u of unrated) {
+    console.log(`    ${u.num} ${u.side} -${u.label}: ${u.word}`)
+  }
 
   for (const { title, changes } of sheetPlan) {
     console.log(`\nシート ${title}: ${changes.length} セル`)
@@ -107,13 +122,34 @@ function printPlan(dbPlan, sheetPlan) {
     }
   }
 
-  const candidates = candidatesOf(dbPlan)
-  console.log(
-    `\n削除検討候補 (同じ番号に有力な別の語がある): ${candidates.length} 個`
+  const conflicts = dbPlan.flatMap(({ num, conflicts }) =>
+    conflicts.map((c) => ({ num, ...c }))
   )
-  for (const c of candidates) {
-    const rating = c.rating === null ? '評価なし' : `評価 ${c.rating}`
-    console.log(`  ${c.num} ${c.word} (${rating}) ← ${c.rivals.join(', ')}`)
+  console.log(
+    `\n-x なのに評価が 0 以上の語 (評価は残す): ${conflicts.length} 個`
+  )
+  for (const c of conflicts) {
+    console.log(`  ${c.num} ${c.k}: ${c.word} (評価 ${c.rating})`)
+  }
+
+  const candidates = candidatesOf(dbPlan)
+  console.log(`\n削除検討候補: ${candidates.length} 個`)
+  for (const label of ['x', 'n']) {
+    const list = candidates.filter((c) => c.label === label)
+    console.log(
+      label === 'x'
+        ? `  -x (同じ番号に別の語がある): ${list.length} 個`
+        : `  -n (同じ番号に有力な別の語がある): ${list.length} 個`
+    )
+    for (const c of list) {
+      const rating = c.rating === null ? '評価なし' : `評価 ${c.rating}`
+      const rivals = c.rivals.slice(0, MAX_RIVALS).join(', ')
+      const more =
+        c.rivals.length > MAX_RIVALS
+          ? ` 他 ${c.rivals.length - MAX_RIVALS}`
+          : ''
+      console.log(`    ${c.num} ${c.word} (${rating}) ← ${rivals}${more}`)
+    }
   }
 }
 
@@ -121,6 +157,7 @@ async function applyDb(db, dbPlan) {
   const now = new Date().toISOString()
   const failed = []
   for (const { num, current, next } of dbPlan) {
+    if (!next) continue // 候補を出すだけで書き換えの要らない番号
     const doc = { ...next, updatedAt: now, source: SOURCE }
     delete doc.derived // サーバ所有。writeNumber が付け直す
     const result = await writeNumber(db, {
@@ -152,7 +189,16 @@ async function main() {
   printPlan(dbPlan, sheetPlan)
   writeFileSync(
     REPORT_PATH,
-    JSON.stringify({ candidates: candidatesOf(dbPlan) }, null, 2) + '\n'
+    JSON.stringify(
+      {
+        candidates: candidatesOf(dbPlan),
+        conflicts: dbPlan.flatMap(({ num, conflicts }) =>
+          conflicts.map((c) => ({ num, ...c }))
+        ),
+      },
+      null,
+      2
+    ) + '\n'
   )
   console.log(`\n削除検討候補を ${REPORT_PATH} に書いた`)
 
