@@ -677,7 +677,7 @@ function webActionsEl(v, slot, actions, mk) {
   if (!v.kept) {
     const flagged = Boolean(state.redo?.[`${id}:${slot}`])
     mk(
-      'act-btn' + (flagged ? ' is-kept' : ''),
+      'act-btn wide' + (flagged ? ' is-flagged' : ''),
       'flag',
       flagged ? '印を外す' : v.img ? '撮り直す' : '取得する',
       'Mac が起きたときにまとめて取り直す',
