@@ -4642,6 +4642,9 @@ body {
 .activate-panel {
   padding: 16px;
 }
+.activate-link + .activate-link {
+  margin-top: 8px;
+}
 button.activate-link {
   width: 100%;
   font: inherit;

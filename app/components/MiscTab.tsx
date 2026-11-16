@@ -64,6 +64,10 @@ function MiscTab({
         >
           スプレッドシートを開く
         </a>
+        {/* 同じ画面のまま開く (ホーム画面のアプリでもログインが引き継がれる)。D-0073 / D-0076 */}
+        <a class="activate-link" href="/console/">
+          画像コンソールを開く
+        </a>
       </div>
       <StorageEstimatePanel />
       <BuildStamp />
