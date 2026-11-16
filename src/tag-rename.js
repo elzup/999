@@ -124,3 +124,41 @@ export function renameTagInSheet(values, from, to) {
   })
   return changes
 }
+
+/**
+ * 画像の手元ファイル (manifest / keep / redo / candidates) のキーの «枠#from» を «枠#to» に。
+ * タグ違いの画像は «042:w1_2#res» のキーで持つので、タグを変えたらキーも変えないと
+ * 配信データ (wh2TagImg) から画像が外れる。置き換え先が既にあれば上書きしない
+ */
+export function renameTagInSlotKey(key, from, to) {
+  const suffix = `#${from}`
+  return key.endsWith(suffix) ? `${key.slice(0, -suffix.length)}#${to}` : key
+}
+
+/** {キー: 値} のキーを置き換える。変わったキーの一覧も返す */
+export function renameTagInKeys(obj, from, to) {
+  const next = {}
+  const moved = []
+  for (const [key, value] of Object.entries(obj ?? {})) {
+    const renamed = renameTagInSlotKey(key, from, to)
+    if (renamed !== key && renamed in (obj ?? {})) {
+      next[key] = value
+      continue
+    }
+    if (renamed !== key) moved.push(`${key} → ${renamed}`)
+    next[renamed] = value
+  }
+  return { next, moved }
+}
+
+/** manifest の images ({id: {枠: 画像}}) のキーを置き換える */
+export function renameTagInManifest(images, from, to) {
+  const next = {}
+  const moved = []
+  for (const [id, slots] of Object.entries(images ?? {})) {
+    const result = renameTagInKeys(slots, from, to)
+    next[id] = result.next
+    moved.push(...result.moved.map((m) => `${id}:${m}`))
+  }
+  return { next, moved }
+}

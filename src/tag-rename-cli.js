@@ -2,6 +2,7 @@
 //
 // タグを 1 つの名前に寄せる (#スプラ → #splatoon など)。シートの 999 / 1231 タブの
 // 人・物 セルと、DB の numbers/* (語・タグ別の画像・代表・評価) を同じ規則で置き換える。
+// 手元の画像ファイル (manifest など) のタグ違いの枠のキーも置き換える。
 // 既定は dry-run (差分を出すだけ)。--apply で DB → シートの順に書く。
 //
 // DB を先に書くのは、シートの同期 (sheet → DB) が «語が変わったスロット» の画像を
@@ -19,8 +20,18 @@ import { batchUpdateValues, getSheetValuesByTitle } from './google-sheets.js'
 import {
   isValidTagName,
   renameTagInDoc,
+  renameTagInKeys,
+  renameTagInManifest,
   renameTagInSheet,
 } from './tag-rename.js'
+import {
+  PATHS,
+  loadCandidates,
+  loadKeep,
+  loadManifest,
+  loadRedo,
+  writeJson,
+} from './images/store.js'
 
 const PROJECT_ID = 'anoz-memosupo'
 const SPREADSHEET_ID = '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
@@ -62,6 +73,32 @@ async function planSheet() {
     tabs.push({ title, changes: renameTagInSheet(values, from, to) })
   }
   return tabs
+}
+
+/** 手元の画像ファイルのキー (タグ違いの枠 «042:w1_2#res») の置き換え */
+function planImages() {
+  const manifest = loadManifest()
+  const keep = loadKeep()
+  const redo = loadRedo()
+  const candidates = loadCandidates()
+  const images = renameTagInManifest(manifest.images, from, to)
+  const keepNext = renameTagInKeys(keep.keep, from, to)
+  const redoNext = renameTagInKeys(redo.redo, from, to)
+  const candNext = renameTagInKeys(candidates.items, from, to)
+  return {
+    moved: [
+      ...images.moved,
+      ...keepNext.moved,
+      ...redoNext.moved,
+      ...candNext.moved,
+    ],
+    writes: [
+      [PATHS.manifest, { ...manifest, images: images.next }],
+      [PATHS.keep, { ...keep, keep: keepNext.next }],
+      [PATHS.redo, { ...redo, redo: redoNext.next }],
+      [PATHS.candidates, { ...candidates, items: candNext.next }],
+    ],
+  }
 }
 
 function printPlan(dbPlan, sheetPlan) {
@@ -125,7 +162,10 @@ async function main() {
   const db = connectRest({ projectId: PROJECT_ID, token: firestoreToken() })
   const dbPlan = await planDb(db)
   const sheetPlan = await planSheet()
+  const imagePlan = planImages()
   printPlan(dbPlan, sheetPlan)
+  console.log(`\n画像のキー: ${imagePlan.moved.length} 件`)
+  for (const line of imagePlan.moved) console.log(`  ${line}`)
 
   if (!APPLY) {
     console.log('\n(dry-run。--apply で書き込む)')
@@ -139,6 +179,8 @@ async function main() {
     )
   }
   await applySheet(sheetPlan)
+  // 手元のファイルは最後。DB・シートが失敗したら触らない
+  for (const [path, data] of imagePlan.writes) writeJson(path, data)
   console.log('\n書き込み完了。nr sync でローカルの words.tsv を取り直すこと')
 }
 

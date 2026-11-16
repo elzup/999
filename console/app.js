@@ -24,6 +24,10 @@ const tagNameOf = (tag) => state.tagNames?.[tag] || tag
 // (src/images/targets.js の IMAGE_KINDS)。番号の w1_2/w2_2 は片方が空のときだけ値が入る
 let kind = 'num'
 const slotsOf = (k) => state.kinds[k].slots
+// 対象ごとの枠。タグ違いの語は «旧スロット#タグ» の枠に分けてサーバが返す (D-0041)。
+// 古い state.json (静的モード) には無いので種類の枠に戻す
+const slotsFor = (t) => t.slots || slotsOf(t.kind)
+const baseSlot = (slot) => slot.split('#')[0]
 const kindTargets = () => state.targets.filter((t) => t.kind === kind)
 
 const SUIT_MARK = { S: '♠', H: '♥', C: '♣', D: '♦' }
@@ -84,8 +88,7 @@ function slotMatches(t, slot, f = filter) {
 
 const countMatches = (f) =>
   kindTargets().reduce(
-    (n, t) =>
-      n + slotsOf(kind).filter((slot) => slotMatches(t, slot, f)).length,
+    (n, t) => n + slotsFor(t).filter((slot) => slotMatches(t, slot, f)).length,
     0
   )
 
@@ -443,7 +446,7 @@ function thumbEl(v, slot) {
     setIconLabel(empty, 'imageOff', v.st === 'error' ? '取得失敗' : '未取得')
     thumb.appendChild(empty)
   }
-  const side = SLOT_SIDE[slot]
+  const side = SLOT_SIDE[baseSlot(slot)]
   if (side) {
     const badge = document.createElement('span')
     badge.className = `side-badge side-${side}`
@@ -633,7 +636,7 @@ function render() {
     return
   }
   for (const w of kindTargets()) {
-    for (const slot of slotsOf(kind)) {
+    for (const slot of slotsFor(w)) {
       if (slotMatches(w, slot) || touched.has(`${w.id}:${slot}`))
         grid.appendChild(slotEl(w, slot))
     }
@@ -658,7 +661,7 @@ function renderStats() {
   let flagged = 0
   let kept = 0
   for (const w of kindTargets()) {
-    for (const slot of slotsOf(kind)) {
+    for (const slot of slotsFor(w)) {
       if (!w[slot]) continue
       total++
       const st = slotStatus(w.id, slot)
@@ -725,7 +728,7 @@ function renderFilters() {
 function tagCounts() {
   const counts = new Map()
   for (const t of kindTargets()) {
-    for (const slot of slotsOf(kind)) {
+    for (const slot of slotsFor(t)) {
       for (const tag of new Set(tagsOfWord(t[slot]))) {
         counts.set(tag, (counts.get(tag) ?? 0) + 1)
       }

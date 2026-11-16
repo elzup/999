@@ -15,16 +15,19 @@ const { values } = parseArgs({
 })
 
 const kind = values.kind
-if (!IMAGE_KINDS[kind] || kind === 'num') {
-  throw new Error(`--kind は date / card のどれか: ${kind}`)
+if (!IMAGE_KINDS[kind]) {
+  throw new Error(`--kind は num / date / card のどれか: ${kind}`)
 }
+// 番号の旧スロットは一括パイプライン (search/fetch スクリプト) が受け持つ。
+// ここで取るのは、そのパイプラインが知らないタグ違いの枠 (w1_2#res など) だけ
+const isOurs = (slot) => kind !== 'num' || slot.includes('#')
 
 const images = loadManifest().images || {}
 const jobs = loadTargets()
   .filter((t) => t.kind === kind)
   .flatMap((t) =>
-    IMAGE_KINDS[kind].slots
-      .filter((slot) => t[slot] && !images[t.id]?.[slot])
+    t.slots
+      .filter((slot) => isOurs(slot) && t[slot] && !images[t.id]?.[slot])
       .map((slot) => ({ id: t.id, slot, word: t[slot] }))
   )
 
