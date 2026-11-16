@@ -75,17 +75,22 @@ export function removeLabel(word: string, label: string): string {
 }
 
 /** docs/num-actions.md §6 のラベル一覧 */
-export const LABELS: Array<{ id: string; meaning: string }> = [
-  { id: 'x', meaning: '語呂強引' },
-  { id: 'r', meaning: '連想' },
-  { id: 'n', meaning: '馴染みがない' },
-  { id: 'u', meaning: '愛称・ユニーク' },
-  { id: 'a', meaning: '余りあり' },
-  { id: 'm', meaning: '同数異音混在' },
-  { id: 's', meaning: 'サンド・中抜き' },
-  { id: 'p', meaning: '0xx' },
-  { id: 'j', meaning: '熟語' },
-]
+/**
+ * retired: 新しくは付けないラベル。付いている語では表示と取り外しだけできる。
+ * -n (馴染みがない) は主観評価 -1 と同じものなので評価のほうで付ける (nr label:n で移行済み)
+ */
+export const LABELS: Array<{ id: string; meaning: string; retired?: boolean }> =
+  [
+    { id: 'x', meaning: '語呂強引' },
+    { id: 'r', meaning: '連想' },
+    { id: 'n', meaning: '馴染みがない', retired: true },
+    { id: 'u', meaning: '愛称・ユニーク' },
+    { id: 'a', meaning: '余りあり' },
+    { id: 'm', meaning: '同数異音混在' },
+    { id: 's', meaning: 'サンド・中抜き' },
+    { id: 'p', meaning: '0xx' },
+    { id: 'j', meaning: '熟語' },
+  ]
 
 /** name はシートの tags タブの表示名 (res → アトリエ)。無いタグもある */
 export type TagSuggestion = { tag: string; count: number; name?: string }
