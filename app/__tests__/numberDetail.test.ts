@@ -230,6 +230,7 @@ describe('並べ替え・追加・削除 (REQ-NDV-002 / 010 / 011)', () => {
     const saved = slotRows(doc)
     const draft = {
       wh3: {
+        key: 'wh3',
         slot: 'wh3',
         word: '',
         kana: '',
@@ -349,9 +350,13 @@ describe('未保存の変更', () => {
   })
 
   it('足したばかりの空の枠は、語かかなが入るまで数えない', () => {
-    expect(changedSlots(doc, { wh3: { ...blank, slot: 'wh3' } })).toEqual([])
     expect(
-      changedSlots(doc, { wh3: { ...blank, slot: 'wh3', word: '来い' } })
+      changedSlots(doc, { wh3: { ...blank, key: 'wh3', slot: 'wh3' } })
+    ).toEqual([])
+    expect(
+      changedSlots(doc, {
+        wh3: { ...blank, key: 'wh3', slot: 'wh3', word: '来い' },
+      })
     ).toEqual(['wh3'])
   })
 })

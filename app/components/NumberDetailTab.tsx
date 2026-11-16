@@ -290,6 +290,7 @@ export default function NumberDetailTab({
       setDrafts((prev) => ({
         ...prev,
         [slot]: {
+          key: slot,
           slot,
           word: '',
           kana: '',

@@ -129,8 +129,12 @@ export function alreadyApplied(doc: NumberDoc, op: PatchOp): boolean {
         )
       return pack(doc.slots) === pack(op.slots)
     }
-    case 'image':
-      return doc.slots?.[op.slot]?.imageUrl === op.imageUrl
+    case 'image': {
+      const slot = doc.slots?.[op.slot]
+      return op.tag
+        ? slot?.tagImages?.[op.tag] === op.imageUrl
+        : slot?.imageUrl === op.imageUrl
+    }
   }
 }
 

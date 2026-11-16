@@ -50,6 +50,22 @@ describe('firestore number document', () => {
     })
   })
 
+  it('タグ違いの画像 (tagImages) は任意。持つならタグ → 文字列', () => {
+    const doc = build()
+    const withTags = (tagImages) => ({
+      ...doc,
+      slots: { ...doc.slots, wh1: { ...doc.slots.wh1, tagImages } },
+    })
+
+    expect(validateNumberDoc('051', withTags({ res: 'u' })).ok).toBe(true)
+    expect(validateNumberDoc('051', withTags({ res: 1 }))).toMatchObject({
+      error: 'slot wh1.tagImages must map tag to string',
+    })
+    expect(validateNumberDoc('051', withTags(['u']))).toMatchObject({
+      error: 'slot wh1.tagImages must map tag to string',
+    })
+  })
+
   it('REQ-FS-003: rejects a rating outside -1/0/1/2', () => {
     const doc = build({ ratings: [{ k: 'こい', w: '鯉', v: 3 }] })
 

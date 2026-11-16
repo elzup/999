@@ -14,7 +14,7 @@ import type { RepPick } from '../lib/numberApi'
 
 type RepChange = { picks: RepPick[]; confirmed: boolean }
 import {
-  slotRows,
+  candidateRows,
   withDeliveredImages,
   type SlotRow,
 } from '../lib/numberDetail'
@@ -85,10 +85,10 @@ function RepRow({
   entry: NumberEntry | undefined
   /** 保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
   mark?: SaveMark
-  onPick: (slot: string) => void
+  onPick: (key: string) => void
   onOpen?: () => void
 }) {
-  const rows = withDeliveredImages(slotRows(doc), entry)
+  const rows = withDeliveredImages(candidateRows(doc), entry)
   const kinds = [
     rows.filter((row) => row.slot.startsWith('wh')),
     rows.filter((row) => row.slot.startsWith('wm')),
@@ -112,9 +112,9 @@ function RepRow({
             <div class="rp-chips" key={i}>
               {list.map((row) => (
                 <PickChip
-                  key={row.slot}
+                  key={row.key}
                   row={row}
-                  onPick={() => onPick(row.slot)}
+                  onPick={() => onPick(row.key)}
                 />
               ))}
             </div>

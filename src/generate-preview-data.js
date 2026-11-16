@@ -15,6 +15,7 @@ import {
 import { buildYomiUse } from './yomi.js'
 import { parseCardsTsv } from './cards-tsv.js'
 import { cardId, imageFieldsOf } from './images/targets.js'
+import { tagImagesOf } from './images/tag-images.js'
 
 const baseDir = dirname(fileURLToPath(import.meta.url))
 // data.json は辞書本体 (私的連想) を含むため、公開 hosting (public/→dist) には出さず
@@ -27,6 +28,8 @@ function buildCandidateSlotShape(prefix) {
     shape[`${prefix}${i}`] = z.string().default('')
     shape[`${prefix}${i}k`] = z.string().default('')
     shape[`${prefix}${i}Img`] = z.string().optional()
+    // タグ違いで分けた語の画像 (出典タグ → URL)。D-0039
+    shape[`${prefix}${i}TagImg`] = z.record(z.string(), z.string()).optional()
   }
   return shape
 }
@@ -167,7 +170,11 @@ for (const n of numbers) {
     if (s.w1_2) n.w1_2 = s.w1_2
     if (s.w2_2) n.w2_2 = s.w2_2
   }
-  Object.assign(n, imageFieldsOf('num', images[n.num]))
+  Object.assign(
+    n,
+    imageFieldsOf('num', images[n.num]),
+    tagImagesOf(images[n.num])
+  )
 }
 for (const c of cards)
   Object.assign(c, imageFieldsOf('card', images[cardId(c)]))
