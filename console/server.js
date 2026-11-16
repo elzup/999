@@ -29,6 +29,7 @@ import {
   searchAndStore,
 } from '../src/images/direct.js'
 import { buildAvatarImage } from '../src/avatar-i-images.js'
+import { parseSlot } from '../src/images/tag-variants.js'
 import { extractName } from '../src/words.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -134,7 +135,8 @@ function runScript(script, args) {
  * words.tsv しか読まないため、ここで語から検索ワードを作って直接取りに行く。
  */
 async function redoNow({ id, slot }) {
-  if (kindOf(id) !== 'num') {
+  // タグ違いの枠 (w1_2#res) は一括パイプラインが知らないので、日付・カードと同じく直接取る
+  if (kindOf(id) !== 'num' || parseSlot(slot).tag) {
     const result = await redoDirect({ id, slot })
     // 番号は fetch スクリプトが成功時に印を消す。日付・カードはここで消す
     if (result.ok) setRedo({ id, slot, on: false })
@@ -232,8 +234,19 @@ async function remakeAvatar({ id, slot }) {
 // 新形式 (AS) から見えない記録が残る。種類の分からない ID・枠は受け付けない
 const INVALID_TARGET = 'id/slot が不正です。画面を再読み込みしてください'
 const LOCKED = 'ロック中の枠です。取り直すならロックを外してから'
-const isValidTarget = ({ id, slot }) =>
-  Boolean(kindOf(id) && IMAGE_KINDS[kindOf(id)].slots.includes(slot))
+// タグ違いの枠 (w1_2#res) は、いまの語にそのタグがあるときだけ通す (語を直した後の古い画面から書かせない)
+const isValidTarget = ({ id, slot }) => {
+  if (typeof slot !== 'string') return false
+  const kind = kindOf(id)
+  if (!kind || !IMAGE_KINDS[kind].slots.includes(parseSlot(slot).base))
+    return false
+  if (!parseSlot(slot).tag) return true
+  return Boolean(
+    loadTargets()
+      .find((t) => t.id === id)
+      ?.slots.includes(slot)
+  )
+}
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)

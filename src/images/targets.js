@@ -5,6 +5,7 @@
 // ID 同士が衝突しないので、既存の番号キーを書き換えずに種類を足せる。
 
 import { isDateKey4 } from '../date-keys.js'
+import { expandVariants } from './tag-variants.js'
 
 // 番号・日付の枠は console 旧スロット名。keep/manifest が旧キーで保存済みのため維持する
 const WORD_SLOTS = ['w1', 'w2', 'w1_2', 'w2_2']
@@ -54,13 +55,18 @@ export function cardTarget(card) {
 
 const hasAnyWord = (t) => IMAGE_KINDS[t.kind].slots.some((slot) => t[slot])
 
-/** 語のある対象だけを、番号 → 日付 → カードの順に並べる */
+/**
+ * 語のある対象だけを、番号 → 日付 → カードの順に並べる。
+ * slots はその対象の枠の並びで、タグ違いの語は «旧スロット#タグ» の枠に分けてある (D-0041)
+ */
 export function buildTargets({ words = [], dates = [], cards = [] }) {
   return [
     ...words.map((w) => wordTarget('num', w)),
     ...dates.filter((w) => isDateId(w.num)).map((w) => wordTarget('date', w)),
     ...cards.map(cardTarget),
-  ].filter(hasAnyWord)
+  ]
+    .filter(hasAnyWord)
+    .map((t) => expandVariants(t, IMAGE_KINDS[t.kind].slots))
 }
 
 /** manifest の 1 対象分 ({slot: {url}}) を配信データの画像列に写す */
