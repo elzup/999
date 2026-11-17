@@ -196,6 +196,7 @@ function refreshSlot(id, slot) {
   touched.add(`${id}:${slot}`)
   renderFilters()
   renderStats()
+  renderBulkBar()
   const old = document.querySelector(`.slot[data-key="${id}:${slot}"]`)
   if (!old) return
   const w = state.targets.find((x) => x.id === id)
@@ -687,6 +688,99 @@ function webActionsEl(v, slot, actions, mk) {
   return actions
 }
 
+// ── まとめて取得 ──
+// «未取得» で絞っているとき、表示中の枠を 1 つずつ順に取得する (web 版は取得の印を付けるだけ)。
+// 検索 API を叩きすぎないよう並列にしない。走っている間はボタンが «止める» になる
+let bulk = null
+
+/** まとめて取得する枠。#i はアバター固定、ロック中は上書きしないので外す */
+function bulkTargets() {
+  if (filter !== 'missing') return []
+  return kindTargets().flatMap((t) =>
+    slotsFor(t)
+      .filter(
+        (slot) =>
+          slotMatches(t, slot) &&
+          !hasITag(t[slot]) &&
+          !state.keep?.[`${t.id}:${slot}`]
+      )
+      .map((slot) => [t.id, slot])
+  )
+}
+
+function renderBulkBar() {
+  const bar = document.getElementById('bulk-bar')
+  const targets = bulk ? [] : bulkTargets()
+  bar.hidden = readOnly || isTagListOpen || (!bulk && targets.length === 0)
+  if (bar.hidden) return
+  const btn = document.createElement('button')
+  btn.className = 'act-btn primary bulk-btn'
+  if (bulk) {
+    const n = bulk.done + bulk.failed
+    setIconLabel(btn, 'spinner', `取得中 ${n}/${bulk.total} ・ 止める`)
+    btn.onclick = () => {
+      bulk = { ...bulk, isStopping: true }
+    }
+  } else if (IS_WEB) {
+    setIconLabel(btn, 'flag', `未取得 ${targets.length} 枠に取得の印を付ける`)
+    btn.title = 'Mac が起きたときにまとめて取り直す'
+    btn.onclick = () => runBulk(targets)
+  } else {
+    setIconLabel(btn, 'search', `未取得 ${targets.length} 枠をまとめて取得`)
+    btn.onclick = () => runBulk(targets)
+  }
+  bar.replaceChildren(btn)
+}
+
+async function fetchOneMissing(id, slot) {
+  if (IS_WEB) {
+    const data = await postJson(`${API}/redo`, { id, slot, on: true })
+    state.redo = data.redo
+    return
+  }
+  const res = await fetch('/api/redo-now', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id, slot }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status} (サーバを再起動?)`)
+  const data = await res.json()
+  if (!data.ok || !data.image) throw new Error(data.error || '画像取得に失敗')
+  const key = `${id}:${slot}`
+  const { [key]: _done, ...redo } = state.redo ?? {}
+  state.images = {
+    ...state.images,
+    [id]: { ...state.images?.[id], [slot]: data.image },
+  }
+  state.redo = redo
+}
+
+async function runBulk(targets) {
+  bulk = { done: 0, failed: 0, total: targets.length, isStopping: false }
+  const errors = []
+  renderBulkBar()
+  for (const [id, slot] of targets) {
+    if (bulk.isStopping) break
+    try {
+      await fetchOneMissing(id, slot)
+      bulk = { ...bulk, done: bulk.done + 1 }
+    } catch (e) {
+      console.error('bulk', id, slot, e)
+      errors.push(`${id}:${slot} ${e.message}`)
+      bulk = { ...bulk, failed: bulk.failed + 1 }
+    }
+    refreshSlot(id, slot)
+  }
+  bulk = null
+  renderBulkBar()
+  if (errors.length)
+    showError(
+      `まとめて取得: ${errors.length} 枠が失敗 (${errors
+        .slice(0, 3)
+        .join(' / ')})`
+    )
+}
+
 // 1 枠 = 1 カード。番号ごとにまとめると枠の数でカードの高さが揃わず余白が出る
 function render() {
   const grid = document.getElementById('grid')
@@ -700,6 +794,7 @@ function render() {
   if (isTagListOpen) {
     renderTagList(list)
     renderStats()
+    renderBulkBar()
     return
   }
   for (const w of kindTargets()) {
@@ -709,6 +804,7 @@ function render() {
     }
   }
   renderStats()
+  renderBulkBar()
   requestAnimationFrame(rememberCellHeight)
 }
 
