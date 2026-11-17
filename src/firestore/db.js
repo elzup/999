@@ -10,6 +10,7 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { existsSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
@@ -23,25 +24,43 @@ function credential() {
   if (path && existsSync(path)) {
     return { credential: cert(JSON.parse(readFileSync(path, 'utf8'))) }
   }
-  // gcloud auth print-access-token で取ったトークンを使う。
-  // ADC (application-default) と gcloud のログインは別物で、
-  // ADC だけ別プロジェクトのアカウントを指していることがある
-  // FIRESTORE_ACCESS_TOKEN は Firestore だけに効かせる。GOOGLE_OAUTH_ACCESS_TOKEN は
-  // google-sheets.js も拾うので、シートと別アカウントのときに使えない
-  const token =
-    process.env.FIRESTORE_ACCESS_TOKEN || process.env.GOOGLE_OAUTH_ACCESS_TOKEN
-  if (token) {
-    return {
-      credential: {
-        getAccessToken: async () => ({
-          access_token: token,
-          expires_in: 3600,
-        }),
-      },
-    }
-  }
   // 未指定なら ADC (gcloud auth application-default login)
   return {}
+}
+
+/**
+ * gcloud auth print-access-token で取ったトークン。
+ * ADC (application-default) と gcloud のログインは別物で、ADC だけ別プロジェクトの
+ * アカウントを指していることがある。FIRESTORE_ACCESS_TOKEN は Firestore だけに効かせる。
+ * GOOGLE_OAUTH_ACCESS_TOKEN は google-sheets.js も拾うので、シートと別アカウントのときに使えない
+ */
+const accessToken = () =>
+  process.env.FIRESTORE_ACCESS_TOKEN || process.env.GOOGLE_OAUTH_ACCESS_TOKEN
+
+/**
+ * トークンで繋ぐ Firestore。firebase-admin の Firestore は鍵 (cert) か ADC しか受け付けず、
+ * getAccessToken だけの credential を渡すと invalid-credential で落ちる (firebase-admin 14)。
+ * なので firebase-admin が内部で使う @google-cloud/firestore をトークン付きで直接作る。
+ * require を呼ぶのはこの経路だけ (functions の同梱物にはこの 2 つが入っていないので、
+ * 読み込み時に import すると Function が起動できない)
+ */
+function tokenStore(projectId, token) {
+  const require = createRequire(import.meta.url)
+  const { Firestore } = require('@google-cloud/firestore')
+  const { OAuth2Client } = require('google-auth-library')
+  const authClient = new OAuth2Client()
+  authClient.setCredentials({ access_token: token })
+  return new Firestore({ projectId, authClient })
+}
+
+function openStore(projectId) {
+  const token = accessToken()
+  // 鍵ファイルがあればそちらを優先する (credential() と同じ順)
+  const key = process.env.FIRESTORE_KEY
+  const hasKey = Boolean(key) && existsSync(key)
+  if (token && !hasKey) return tokenStore(projectId, token)
+  const app = getApps()[0] ?? initializeApp({ projectId, ...credential() })
+  return getFirestore(app)
 }
 
 /** .firebaserc の default を既定にする。env 未設定でも別プロジェクトを向かない */
@@ -58,8 +77,7 @@ function defaultProjectId() {
 export function connect({ projectId = defaultProjectId() } = {}) {
   if (!projectId)
     throw new Error('project id が解決できない (.firebaserc を確認)')
-  const app = getApps()[0] ?? initializeApp({ projectId, ...credential() })
-  const store = getFirestore(app)
+  const store = openStore(projectId)
 
   return {
     raw: store,
