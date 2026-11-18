@@ -5171,6 +5171,21 @@ button.activate-link {
 .nd-ghost:active {
   background: var(--surface2);
 }
+.nd-bm {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+.nd-bm svg {
+  width: 20px;
+  height: 20px;
+}
+.nd-bm.on {
+  color: var(--warn);
+}
+.nd-bm + .nd-reload {
+  margin-left: 0;
+}
 .nd-reload {
   margin-left: auto;
   font-size: 18px;
@@ -6943,8 +6958,11 @@ img[data-concept] {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
-.ip-stop {
+.ip-stop,
+.ip-stop:hover {
   flex: none;
+  border-color: var(--bad);
+  color: var(--bad);
 }
 .ip-status-note {
   color: var(--text2);
