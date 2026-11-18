@@ -132,14 +132,14 @@ export const api = onRequest(
 
       requireAuth(auth)
 
-      // web 版の画像コンソール (/console/)。印だけ Firestore に置く (D-0073)
+      // web 版の画像コンソール (/console/)。画像と印は正本 imageSlots を直接読み書きする (spec:image-store)
       if (path.startsWith('/console/')) {
         const result = await handleConsoleRequest({
           method: req.method,
           path,
           body: req.body || {},
           state: readPrivateJson('console-state.json'),
-          ...(await loadImageMarks()),
+          ...(await loadImageSlots()),
           now: new Date().toISOString(),
         })
         if (result) {
@@ -256,25 +256,24 @@ export const api = onRequest(
 // functions/lib は scripts/sync-functions-lib.sh が作る src/ の写し (ESM)。
 // 初回に触ったリクエストでだけ読む。Sheets しか使わない経路に Firestore の
 // 初期化コストを負わせないため、モジュールごと遅延させる
-let imageMarks = null
+let imageSlots = null
 
-// 画像コンソールの印 (imageMarks)。numbers と違い不変条件の無い差分なので、
-// writeNumber を通さず 1 文書ずつ merge で書く (keep だけの印で redo を消さない)
-async function loadImageMarks() {
-  if (!imageMarks) {
-    const [{ db }, marks] = await Promise.all([
+// 画像の正本 (imageSlots)。インスタンスが生きている間は全件をメモリに持ち、更新分だけ読み足す
+// (slot-store.js)。numbers と違い writeNumber の不変条件は無いので、1 枠ずつ transaction で書く
+async function loadImageSlots() {
+  if (!imageSlots) {
+    const [{ db }, store, docs] = await Promise.all([
       loadFirestoreLib(),
-      import('./lib/images/marks.js'),
+      import('./lib/images/slot-store.js'),
+      import('./lib/images/slot-docs.js'),
     ])
-    const col = db.raw.collection(marks.MARKS_COLLECTION)
-    const marksDb = {
-      listMarks: async () => (await col.get()).docs.map((d) => d.data()),
-      setMark: (mark) =>
-        col.doc(marks.markKey(mark.id, mark.slot)).set(mark, { merge: true }),
-    }
-    imageMarks = { db: marksDb, marks }
+    const slots = store.createSlotStore({
+      col: db.raw.collection(docs.IMAGE_SLOTS),
+      runTransaction: (fn) => db.raw.runTransaction(fn),
+    })
+    imageSlots = { slots, view: docs.marksView }
   }
-  return imageMarks
+  return imageSlots
 }
 
 let firestoreLib = null

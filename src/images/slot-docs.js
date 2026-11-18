@@ -95,3 +95,34 @@ export function replaceImage(doc, image) {
       : doc.history ?? []
   return { ...doc, image, history }
 }
+
+/** まだ文書の無い枠 (初めて印を付ける枠) の中身 */
+export const emptySlotDoc = (id, slot) => ({
+  id,
+  slot,
+  image: null,
+  keep: false,
+  redo: null,
+  candidate: null,
+  history: [],
+})
+
+/**
+ * 枠に «確定» / «撮り直し» の印を付けた (外した) 文書を返す。入力は書き換えない。
+ * ロック中の枠に撮り直しの印は付けない (次の一括で上書きされるため)。
+ * @returns {{doc: object} | {error: 'locked'}}
+ */
+export function applyMark(doc, { id, slot, op, on, reason, now }) {
+  const base = doc ?? emptySlotDoc(id, slot)
+  if (op === 'keep')
+    return { doc: { ...base, keep: Boolean(on), updatedAt: now } }
+  if (on && base.keep) return { error: 'locked' }
+  const redo = on ? { flaggedAt: now, reason: reason || '' } : null
+  return { doc: { ...base, redo, updatedAt: now } }
+}
+
+/** 文書の集まりから、画面が使う images / keep / redo を作る */
+export function marksView(docs) {
+  const { manifest, keep, redo } = fromSlotDocs(docs)
+  return { images: manifest.images, keep: keep.keep, redo: redo.redo }
+}

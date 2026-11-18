@@ -58,13 +58,13 @@ Secret Manager にあるので、デプロイする側には要らない。
 付けられるのは «確定 (ロック)» と «撮り直し» の印だけで、取り直しそのものは Mac でしかできない。
 
 - 画面: `console/` の index.html / app.js / icons.js を vite の build が `dist/console/` に写す。CI が画面と一緒に出す
-- 語と画像の一覧: `nr deploy` の `sync:private` が手元の `buildState()` を `functions/private/console-state.json` に焼く。
-  語を含むので、認証付きの `/api/console/state` からだけ返す。一覧が古いときは `nr deploy`
-- 印: Firestore の `imageMarks` に貯める。Mac が起きたら `nr images:pull-marks --redo` で手元の
-  `word-images-keep.json` / `word-images-redo.json` へ取り込み、撮り直しの印の付いた枠を取り直す
+- 対象 (語) の一覧: `nr deploy` の `sync:private` が手元の `buildState()` を `functions/private/console-state.json` に焼く。
+  語を含むので、認証付きの `/api/console/state` からだけ返す。語を足した・直したのに出ないときは `nr deploy`
+- 画像と印: 正本の Firestore `imageSlots` を Function が直接読み書きする (spec:image-store)。Mac の console と同じ文書なので、
+  web で付けた印は Mac の次の同期 (console の起動時・操作のたび、`nr images:pull`) で手元の cache に入る。
+  撮り直しそのものは Mac の `nr images:redo-flagged` (段階 5 で Function へ移す)
 - 手元の `nr console` は起動前に `scripts/console-start.ts` を通す。main が遅れていて fast-forward できれば
-  `git pull` し、続けて `pull-marks` (撮り直しはしない) で web の印を取り込む。どちらも失敗しても警告だけで起動する。
-  印の取り込みは本体の checkout でだけ行う (worktree では取り込まない)
+  `git pull` する。失敗しても警告だけで起動する
 - ログイン: 999 アプリと同じ通行証 (localStorage の `editToken999`)。先にアプリでログインしておく
 
 ## 画面の CI の準備 (最初の 1 回)

@@ -29,7 +29,9 @@ for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation; do
 done
 
 # web 版の画像コンソールの印 (console-route.js が読む)
-cp "$root/src/images/marks.js" "$lib/images/marks.js"
+for name in slot-docs slot-store; do
+  cp "$root/src/images/$name.js" "$lib/images/$name.js"
+done
 
 # table.js が実行時に読む TSV だけ。words.tsv は配信データ側の経路なので含めない
 for name in single_digit double_digit long_digit; do

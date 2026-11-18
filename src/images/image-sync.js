@@ -11,6 +11,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { connect } from '../firestore/db.js'
 import {
   IMAGE_SLOTS,
+  emptySlotDoc,
   fromSlotDocs,
   replaceImage,
   splitSlotKey,
@@ -32,14 +33,10 @@ const PULL_OVERLAP_MS = 5 * 60 * 1000
 const TX_CHUNK = 100
 const FIELDS = ['image', 'keep', 'redo', 'candidate']
 
-const emptyDoc = (key) => ({
-  ...splitSlotKey(key),
-  image: null,
-  keep: false,
-  redo: null,
-  candidate: null,
-  history: [],
-})
+const emptyDoc = (key) => {
+  const { id, slot } = splitSlotKey(key)
+  return emptySlotDoc(id, slot)
+}
 
 /** 文書から updatedAt を除いた «中身» */
 const bodyOf = ({ updatedAt: _u, ...doc }) => doc
