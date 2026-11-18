@@ -1,8 +1,10 @@
 // nr kana:skip [--apply]
 //
-// よみの中間省略を記法 ( ) で書き直す (さばんな → さば(ん)な)。規則は kana-skip-migrate.js。
-// 記法が無かった頃は rankey が «1 文字飛ばせば合う» を自動で探していたので、どのかなを
-// 読まないかがよみに残っていなかった。書き直しても rankey が変わらないものだけを書く。
+// 読まないかなを記法 ( ) で書き直す。規則は kana-skip-migrate.js。3 種類ある。
+//   restore 語と突き合わせて、よみから消してあるかなを戻す   サバンナ / さばな → さば(ん)な
+//   middle  自動で中間省略になっていたよみ                     さばんな → さば(ん)な
+//   tail    3 桁を超えて読まない語尾                           にいさん → にいさ(ん)
+// どれも読み方 (読む数字) を変えない置き換えだけを書く。
 //
 // シートの 999 タブのかなの列と、DB の numbers/* のスロットのかなを同じ規則で書き換える。
 // 日付 (1231 タブ) は 4 桁で rankey の対象外なので触らない。
@@ -62,17 +64,27 @@ async function planSheet() {
   return migrateKanaSkipInSheet(values)
 }
 
+const KIND_LABELS = {
+  restore: 'よみから消してあるかなを戻す (語と突き合わせ)',
+  middle: '自動で中間省略になっていたよみ',
+  tail: '3 桁を超えて読まない語尾',
+}
+
 function printPlan(dbPlan, sheetPlan) {
   const changes = dbPlan.flatMap(({ num, changes }) =>
     changes.map((c) => ({ num, ...c }))
   )
   console.log(`DB: ${dbPlan.length} 番号 / ${changes.length} スロット`)
-  for (const c of changes) {
-    console.log(`  ${c.num} ${c.slot} ${c.word}: ${c.from} → ${c.to}`)
+  for (const [kind, label] of Object.entries(KIND_LABELS)) {
+    const list = changes.filter((c) => c.kind === kind)
+    console.log(`  ${kind} ${label}: ${list.length} 個`)
+    for (const c of list) {
+      console.log(`    ${c.num} ${c.slot} ${c.word}: ${c.from} → ${c.to}`)
+    }
   }
   console.log(`\nシート ${SHEET_TAB}: ${sheetPlan.length} セル`)
-  for (const { cell, num, slot, before, after } of sheetPlan) {
-    console.log(`  ${cell} (${num} ${slot}): ${before} → ${after}`)
+  for (const { cell, num, slot, kind, before, after } of sheetPlan) {
+    console.log(`  ${cell} (${num} ${slot} ${kind}): ${before} → ${after}`)
   }
   // DB とシートが揃っていれば同じ枠が並ぶ。片方にしか無い枠は、同期待ちか手で直した跡
   const dbKeys = new Set(changes.map((c) => `${c.num}:${c.slot}`))

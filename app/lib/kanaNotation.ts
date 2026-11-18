@@ -5,7 +5,7 @@
 
 export type NotationSegment = { text: string; half: boolean; skip: boolean }
 
-const NOTATION = /\[([ぁ-ゖ]{1,2})\]|\(([ぁ-ゖ]{1,2})\)/g
+const NOTATION = /\[([ぁ-ゖ]{1,2})\]|\(([ぁ-ゖー]{1,2})\)/g
 const BRACKETS = /[[\]()]/
 
 export const hasNotation = (kana: string) => BRACKETS.test(kana)

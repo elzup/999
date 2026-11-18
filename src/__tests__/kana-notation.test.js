@@ -95,6 +95,17 @@ describe('記法 ( ) (読まないかな)', () => {
     expect(rankey('り(ん)ご', '615')).toBe('ww!A|')
   })
 
+  it('語尾の ( ) は ! ではなく余りとして表す (3 桁を超えた分と同じ)', () => {
+    expect(rankey('にいさ(ん)', '223')).toBe(rankey('にいさん', '223'))
+    expect(rankey('にいさ(ん)', '223')).toBe('AAA|n')
+    expect(rankey('みっき(ー)', '391')).toBe('BtA|-')
+  })
+
+  it('( ) は語尾の ー も囲める', () => {
+    expect(new RegExp(KANA_CELL_PATTERN).test('みっき(ー)')).toBe(true)
+    expect(stripNotation('みっき(ー)')).toBe('みっきー')
+  })
+
   it('記法があれば自動の探索はしない (書いた読み方を優先する)', () => {
     // さ(ば)んな = 307。番号 387 に合わせて別の 1 文字を飛ばしたりしない
     expect(score('さ(ば)んな').digits).toBe('307')
