@@ -160,7 +160,21 @@ export const api = onRequest(
 
       // 辞書本体 (私的連想 + 画像URL)。認証済みブラウザだけが取得できる。
       if (req.method === 'GET' && path === '/app/data') {
-        res.json(await withLiveTagNames(readPrivateJson('data.json')))
+        // 配信データは deploy のときの写し。アプリ・シートで直した語とタグ名は DB の最新を重ねる
+        const data = await withLiveNumbers(readPrivateJson('data.json'))
+        res.json(await withLiveTagNames(data))
+        return
+      }
+
+      // 番号 1 件を配信データの形で返す。アプリが保存の後に、読み込み済みの一覧を差し替えるのに使う
+      const entryMatch = path.match(/^\/app\/numbers\/(\d{3})$/)
+      if (req.method === 'GET' && entryMatch) {
+        const entry = await liveNumberEntry(entryMatch[1])
+        if (!entry) {
+          res.status(404).json({ ok: false, error: 'not_found' })
+          return
+        }
+        res.json({ ok: true, entry })
         return
       }
 
@@ -434,6 +448,60 @@ async function withLiveSearchTagNames(state) {
     console.error('console(tagNames)', error)
     return state
   }
+}
+
+// 番号文書の写し。インスタンスが生きている間は全件をメモリに持ち、updatedAt が新しい文書だけ読み足す
+// (/app/data を開くたびに約 1000 件を読まないため)。時計のずれを吸収するため少し重ねて読み直す
+const NUMBER_PULL_OVERLAP_MS = 5 * 60 * 1000
+let numberDocs = null
+
+async function readNumberDocs() {
+  const now = new Date().toISOString()
+  const { store } = await loadSheetSync()
+  if (!numberDocs) {
+    numberDocs = { docs: await store.readChangedSince(null), pulledAt: now }
+    return numberDocs.docs
+  }
+  const since = new Date(
+    Date.parse(numberDocs.pulledAt) - NUMBER_PULL_OVERLAP_MS
+  ).toISOString()
+  numberDocs = {
+    docs: { ...numberDocs.docs, ...(await store.readChangedSince(since)) },
+    pulledAt: now,
+  }
+  return numberDocs.docs
+}
+
+let appEntryLib = null
+const loadAppEntryLib = async () =>
+  (appEntryLib ??= await import('./lib/firestore/app-entry.js'))
+
+/** 配信データの番号に、DB の最新の語・かな (とスコア) を重ねる。DB が読めなければ配信データのまま */
+async function withLiveNumbers(data) {
+  try {
+    const [docs, lib] = await Promise.all([readNumberDocs(), loadAppEntryLib()])
+    const { numbers, changed } = lib.numbersWithDocs(data.numbers ?? [], docs)
+    if (changed) console.log('app/data(numbers)', changed)
+    return { ...data, numbers }
+  } catch (error) {
+    console.error('app/data(numbers)', error)
+    return data
+  }
+}
+
+/** 番号 1 件の最新 (保存の直後に読むので写しを使わず DB から読む) */
+async function liveNumberEntry(num) {
+  const delivered = (readPrivateJson('data.json').numbers ?? []).find(
+    (entry) => entry.num === num
+  )
+  if (!delivered) return null
+  const [{ store }, lib] = await Promise.all([
+    loadSheetSync(),
+    loadAppEntryLib(),
+  ])
+  const doc = (await store.readNumbers([num]))[num]
+  if (doc && numberDocs) numberDocs.docs = { ...numberDocs.docs, [num]: doc }
+  return lib.entryWithDoc(delivered, doc)
 }
 
 /** 配信データのタグ名に、シート同期で DB に置いた最新の名前を重ねる (deploy 無しで直せるように) */

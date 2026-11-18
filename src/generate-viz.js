@@ -10,20 +10,9 @@ import {
 } from './words.js'
 import { scoreWithLabel } from './scorer.js'
 import { kataToHira } from './table.js'
+import { tokenLabel } from './firestore/app-entry.js'
 
 const srcDir = dirname(fileURLToPath(import.meta.url))
-
-/** トークン種別を短縮記号に変換 */
-function tokenLabel(t) {
-  const labels = {
-    single: 'D',
-    double: 'DD',
-    sokuon: 'っ',
-    halfOverflow: 'H',
-    overflow: 'X',
-  }
-  return labels[t.type] ?? '?'
-}
 
 /** 先頭0省略・オーバーフロー(後ろ余分)を考慮した数字一致判定 */
 function isDigitMatch(actual, num) {

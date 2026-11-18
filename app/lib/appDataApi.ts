@@ -65,3 +65,20 @@ export async function fetchAppData(
   onProgress?.({ phase: 'parsing' })
   return { text, json: JSON.parse(text) }
 }
+
+/**
+ * 番号 1 件の最新を配信データの形で取る。保存の後に、読み込み済みの一覧を差し替えるのに使う
+ * (配信データは deploy のときの写しなので、サーバが DB の語を重ねて返す)
+ */
+export async function fetchAppNumberEntry(
+  num: string,
+  token: string
+): Promise<unknown> {
+  const res = await fetch(`/api/app/numbers/${num}`, {
+    headers: { authorization: `Bearer ${token}` },
+  })
+  if (res.status === 401) throw new UnauthorizedError()
+  if (!res.ok) throw new Error(`番号の取得に失敗しました (${res.status})`)
+  const data = await res.json()
+  return data.entry
+}
