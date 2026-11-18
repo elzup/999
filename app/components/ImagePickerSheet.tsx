@@ -37,14 +37,8 @@ type Loaded = { query: string; candidates: SlotImage[] }
 /** 走っている検索。auto は開いたときの自動の検索 */
 type Searching = { query: string; isAuto: boolean; startedAt: number }
 
-/** 何で検索しているか・何秒たったか・止めるボタンを出す帯 (開いた瞬間に検索が走っているのが見えるように) */
-function SearchStatus({
-  searching,
-  onStop,
-}: {
-  searching: Searching
-  onStop: () => void
-}) {
+/** 何で検索しているか・何秒たったかを出す帯 (開いた瞬間に検索が走っているのが見えるように) */
+function SearchStatus({ searching }: { searching: Searching }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
@@ -63,9 +57,6 @@ function SearchStatus({
           候補の画像を取り込んでいます · {seconds}秒
         </div>
       </div>
-      <button class="filter-btn ip-stop" type="button" onClick={onStop}>
-        止める
-      </button>
     </div>
   )
 }
@@ -215,15 +206,26 @@ export default function ImagePickerSheet({
               setQuery((e.target as HTMLInputElement).value)
             }}
           />
-          <button class="filter-btn" type="submit" disabled={isLoading}>
-            {isLoading ? '検索中…' : '再検索'}
-          </button>
+          {/* 検索中は同じ場所のボタンを «中断» にする (押せるのに何も起きないボタンを置かない)。
+              key を分けて別の要素にする: 同じ要素を使い回すと、中断で再描画された直後に
+              押した要素が送信ボタンに変わり、クリックの続きで再検索が走ってしまう */}
+          {isLoading ? (
+            <button
+              key="stop"
+              class="filter-btn ip-stop"
+              type="button"
+              onClick={() => stopRef.current?.abort()}
+            >
+              中断
+            </button>
+          ) : (
+            <button key="search" class="filter-btn" type="submit">
+              再検索
+            </button>
+          )}
         </form>
         {searching ? (
-          <SearchStatus
-            searching={searching}
-            onStop={() => stopRef.current?.abort()}
-          />
+          <SearchStatus searching={searching} />
         ) : isStopped ? (
           <div class="ip-status-note">
             検索を止めました。«再検索» で取り直せます

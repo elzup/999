@@ -49,6 +49,7 @@ import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
+import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
 import { useNumberContext } from '../lib/numberContext'
 
@@ -121,7 +122,8 @@ export default function NumberDetailTab({
   const [moving, setMoving] = useState<string | null>(null)
   const tables = useMemo(() => (rules ? tablesFromRules(rules) : null), [rules])
   // タグ追加の候補。配信データの人・物の一覧で使われているタグを回数順に
-  const tagNames = useNumberContext()?.tagNames
+  const ctx = useNumberContext()
+  const tagNames = ctx?.tagNames
   const knownTags = useMemo<TagSuggestion[]>(
     () =>
       numbers
@@ -368,6 +370,9 @@ export default function NumberDetailTab({
     </ul>
   ) : null
 
+  const bmKey = 'n:' + num
+  const isBm = ctx?.bookmarks?.has(bmKey) ?? false
+
   const dock = (
     <div class="nd-dock">
       {/* 編集欄の間に差し込むと出るたびに行がずれるので、dock の真上に重ねて出す */}
@@ -397,6 +402,18 @@ export default function NumberDetailTab({
         <button class="nd-step" onClick={() => step(1)} aria-label="次の番号">
           ＋
         </button>
+        {/* 詳細カードの ★ と同じブックマーク (キーも同じ n:番号) */}
+        {ctx?.onToggleBm ? (
+          <button
+            class={'nd-ghost nd-bm' + (isBm ? ' on' : '')}
+            onClick={() => ctx.onToggleBm?.(bmKey)}
+            aria-pressed={isBm}
+            aria-label={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
+            title={isBm ? 'ブックマークを外す' : 'ブックマークに追加'}
+          >
+            {isBm ? <IconStar /> : <IconStarOutline />}
+          </button>
+        ) : null}
         {/* 番号送り (− ＋) と同じ箱にすると見分けがつかないので、枠なしで置く */}
         <button
           class="nd-ghost nd-reload"
