@@ -6897,6 +6897,59 @@ img[data-concept] {
   color: var(--bad);
   font-size: 12px;
 }
+/* 検索中の帯。開いた瞬間に自動で検索が走っているのが分かるように、何で・何秒を出す */
+.ip-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface2);
+}
+.ip-spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ip-spin 0.9s linear infinite;
+}
+@keyframes ip-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ip-spinner {
+    animation-duration: 2.5s;
+  }
+}
+.ip-status-text {
+  flex: 1;
+  min-width: 0;
+}
+.ip-status-main {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-status-sub {
+  color: var(--text2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ip-stop {
+  flex: none;
+}
+.ip-status-note {
+  color: var(--text2);
+  font-size: 12px;
+}
 .ip-foot {
   display: flex;
   gap: 8px;
