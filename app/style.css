@@ -7129,3 +7129,109 @@ img[data-concept] {
   padding: 16px 4px;
   text-align: center;
 }
+
+/* 代表の統計 (候補タブの 代表 > 統計)。セルの濃さは決めた割合 (アクセント 1 色の濃淡)、
+   数は文字の色 (text トークン) で書く。複合の ①② / ① だけ は数の前の色の印で見分ける */
+.rs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rs-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+.rs-note,
+.rs-legend {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text2);
+}
+.rs-axis {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.rs-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.rs-table th {
+  color: var(--text2);
+  font-weight: 600;
+  text-align: center;
+}
+.rs-corner {
+  font-size: 9px;
+}
+.rs-cell {
+  height: 26px;
+  padding: 0;
+  text-align: center;
+  border-radius: 4px;
+  color: var(--text);
+  background: color-mix(
+    in srgb,
+    var(--accent) calc(var(--rs-ratio, 0) * 65%),
+    var(--surface2)
+  );
+}
+.rs-cell.is-empty {
+  background: none;
+  border: 1px dashed var(--border);
+}
+/* 合計の行・列は枠で区切って、中の 10×10 と見分ける */
+.rs-cell.is-sum {
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.rs-sum-head {
+  color: var(--text);
+}
+.rs-levels {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.05;
+  font-size: 10px;
+}
+
+.rs-lv2::before,
+.rs-lv1::before {
+  content: '';
+}
+.rs-lv2::before,
+.rs-lv1::before {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 2px;
+  border-radius: 1px;
+  vertical-align: middle;
+}
+.rs-lv2::before,
+.rs-key.is-lv2 {
+  background: var(--sync-sheet);
+}
+.rs-lv1::before,
+.rs-key.is-lv1 {
+  background: var(--accent);
+}
+.rs-key {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin: 0 3px 0 8px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+.rs-key:first-child {
+  margin-left: 0;
+}
