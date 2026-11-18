@@ -28,8 +28,8 @@ for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation; do
   cp "$root/src/$name.js" "$lib/$name.js"
 done
 
-# web 版の画像コンソールの印 (console-route.js が読む)
-for name in slot-docs slot-store; do
+# web 版の画像コンソール (console-route.js / index.js が読む)。印と、その場の取り直し (検索 → DL → webp → GCS)
+for name in slot-docs slot-store uploader fetch-one search ddg bing download process query; do
   cp "$root/src/images/$name.js" "$lib/images/$name.js"
 done
 

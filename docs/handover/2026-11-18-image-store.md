@@ -10,28 +10,19 @@ Mac の `.metarc/` (作業ログ・決定) と Claude のメモリはクラウ�
 - Mac の `src/data/word-images*.json` は cache。`src/images/image-sync.js` が前後で同期する
 - web 版 console (`https://anoz-memosupo.web.app/console/`) は `functions/console-route.js` が `imageSlots` を直接読み書き。確定と撮り直しの印は付けられる。本番にデプロイ済み
 
-## このブランチ `web-redo` でやりかけのこと (段階 5)
+## 段階 5: web 版 console から取り直しまで (web-redo ブランチ。済み)
 
-目的: **スマホの web 版 console から撮り直し (画像の取得) まで完結させる**。
+スマホの web 版 console から、取り直し (画像の取得) まで完結させる。
 
-済み (テスト 781 件は通る):
+- `src/images/uploader.js` (バケットを渡すとアップロード) と `src/images/fetch-one.js` (検索 → DL → webp → アップロード) を Mac と Function で共用
+- `slot-docs.js` に `applyImage` (history を残し、redo を消し、updatedAt を付ける。ロック中は断る) と `rejectedUrlsOf`、`slot-store.js` に `update(id, slot, fn)` (transaction)
+- `functions/console-route.js` に `redo-now` / `search-custom` / `recrop` / `set-image`。取得は transaction の外で済ませ、書くときにロックを見直す。`set-image` は今の画像か history にある画像だけに戻せる
+- `functions/index.js`: `firebase-admin/storage` のバケットで uploader を作る。`api` に `memory: '1GiB'`, `timeoutSeconds: 120`。`functions/package.json` に `sharp`
+- `console/app.js`: 取り直しの呼び出しを `postJson` で `${API}/...` に送る (web では認証ヘッダが要る)。web でも Mac と同じボタン (確定・切り抜き・取り直し・自由検索) を出す。Function が `canFetch` を返さない間は今までの印だけの画面
+- テスト: `functions/__tests__/console-route.test.js` (fetcher はモック)
 
-- `src/images/uploader.js`: バケットを渡すとアップロードできる部品 (`createUploader(getBucket)`)。`upload.js` はこれを使う
-- `src/images/fetch-one.js`: 検索 → DL → webp → アップロードを 1 つに (`fetchBySearch` / `recropTop` / `rejectedUrlsOf`)。`direct.js` も使う
-
-残り:
-
-1. `src/images/slot-docs.js` に `applyImage(doc, {id, slot, image, candidate, now})` (replaceImage で history を残し、redo を消し、updatedAt を付ける)
-2. `src/images/slot-store.js` の `setMark` を一般化した `update(id, slot, fn)` を足す (transaction)
-3. `functions/console-route.js` に経路を足す。取得は `fetcher` を引数で受け取る (テストのため)
-   - `POST /console/redo-now {id,slot}`: 語は焼いた state の `target[slot]`。ロック中は 409。避ける URL は `rejectedUrlsOf(doc)`。クエリは `buildSearchWord(word)` (`src/images/query.js`)。応答は `{ok, image}` (Mac の server.js と同じ形)
-   - `POST /console/search-custom {id,slot,query}`
-   - `POST /console/set-image {id,slot,image}`: 2 択で «今までの方» に戻す用。**image.hash が今の画像か history にあるときだけ**受け付ける
-   - `POST /console/recrop {id,slot}`
-4. `functions/index.js`: `firebase-admin/storage` の `getStorage().bucket(BUCKET)` で uploader を作って渡す。`api` に `memory: '1GiB'`, `timeoutSeconds: 120` (sharp と DL 待ちのため)
-5. `scripts/sync-functions-lib.sh` で `functions/lib/images/` に search / ddg / bing / download / process / query / uploader / fetch-one も写す。`functions/package.json` に `sharp` (`^0.35.1`) を足す (`cd functions && npm install`)
-6. `console/app.js`: `redoNow` / `customSearch` / `showChooser` の `fetch('/api/...')` を `postJson(\`${API}/...\`)` に (web では認証ヘッダが要る)。`webActionsEl`に取り直し (refresh) と自由検索 (pencil) のボタンを足す (Mac 版の`actionsEl` と同じ並び)
-7. テスト: `functions/__tests__/console-route.test.js` に redo-now / set-image を足す (fetcher はモック)
+**本番に効かせるには Mac で `nr deploy` が要る** (Function はクラウドから出せない)。あわせて Function の実行用サービスアカウントに、バケット `anoz-memosupo-words` への書き込み権限 (Storage オブジェクト作成者) があるか確かめる。
+Hosting から Function への転送は 60 秒で切れるので、検索と DL が遅い語では失敗しうる (失敗は画面のボタンに理由が出る)。
 
 その後 (段階 6): 1 枠に候補を複数出して選ぶチューザー。**UI は先に ui-option-preview で案を出して選んでもらってから作る** (`showChooser` / `.slot.is-choosing` / `.choose-opt` の拡張)。
 

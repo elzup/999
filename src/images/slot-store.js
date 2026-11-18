@@ -33,26 +33,33 @@ export function createSlotStore({ col, runTransaction }) {
     return docs
   }
 
+  async function update(id, slot, fn) {
+    const key = slotDocId(id, slot)
+    const ref = col.doc(key)
+    const result = await runTransaction(async (tx) => {
+      const snap = await tx.get(ref)
+      const applied = fn(snap.exists ? snap.data() : null)
+      if (applied.doc) tx.set(ref, applied.doc)
+      return applied
+    })
+    if (result.doc && docs) docs = { ...docs, [key]: result.doc }
+    return result
+  }
+
   return {
     /** 全枠の文書 (cache を新しくしてから返す) */
     listSlots: ({ now }) => refresh(now),
 
     /**
-     * 1 枠に印を付ける。読んでから書くまでを transaction にして、
+     * 1 枠の文書を fn で書き換える。読んでから書くまでを transaction にして、
      * 別の面 (Mac の同期) と同時に書いても片方を潰さない
-     * @returns {Promise<{doc: object} | {error: 'locked'}>}
+     * @param {(doc: object|null) => ({doc: object} | {error: string})} fn
+     * @returns {Promise<{doc: object} | {error: string}>}
      */
-    async setMark(mark) {
-      const ref = col.doc(slotDocId(mark.id, mark.slot))
-      const result = await runTransaction(async (tx) => {
-        const snap = await tx.get(ref)
-        const applied = applyMark(snap.exists ? snap.data() : null, mark)
-        if (applied.doc) tx.set(ref, applied.doc)
-        return applied
-      })
-      if (result.doc && docs)
-        docs = { ...docs, [slotDocId(mark.id, mark.slot)]: result.doc }
-      return result
-    },
+    update,
+
+    /** 1 枠に印を付ける */
+    setMark: (mark) =>
+      update(mark.id, mark.slot, (doc) => applyMark(doc, mark)),
   }
 }

@@ -67,13 +67,3 @@ export async function recropTop({ image, uploadWebp }) {
   const next = await store(await toWebpTop(buffer), image, uploadWebp)
   return { ...image, ...next }
 }
-
-/** 撮り直しで避ける画像 (今の画像・前に差し替えた画像・候補で弾いた URL) */
-export function rejectedUrlsOf(doc) {
-  const urls = [
-    doc?.image?.sourceImageUrl,
-    ...(doc?.history ?? []).map((h) => h.sourceImageUrl),
-    ...(doc?.candidate?.rejectedUrls ?? []),
-  ]
-  return [...new Set(urls.filter(Boolean))]
-}

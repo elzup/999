@@ -85,6 +85,9 @@ export const api = onRequest(
   {
     region: REGION,
     secrets: [EDIT_TOKEN, GOOGLE_SERVICE_ACCOUNT_JSON],
+    // web 版 console の取り直し (/console/redo-now など) が画像の DL と sharp の変換を待つため
+    memory: '1GiB',
+    timeoutSeconds: 120,
   },
   async (req, res) => {
     setNoStore(res)
@@ -271,9 +274,43 @@ async function loadImageSlots() {
       col: db.raw.collection(docs.IMAGE_SLOTS),
       runTransaction: (fn) => db.raw.runTransaction(fn),
     })
-    imageSlots = { slots, view: docs.marksView }
+    imageSlots = { slots, docs, fetcher: createImageFetcher() }
   }
   return imageSlots
+}
+
+// 取り直し (検索 → DL → webp → GCS) の口。sharp を読むのは取り直しを叩いたときだけ。
+// バケットはこの関数のサービスアカウント (ADC) で開く。Admin SDK の初期化は loadFirestoreLib が先に済ませている
+function createImageFetcher() {
+  let lib = null
+  const load = async () => {
+    if (!lib) {
+      const [{ getStorage }, uploader, fetchOne, query] = await Promise.all([
+        import('firebase-admin/storage'),
+        import('./lib/images/uploader.js'),
+        import('./lib/images/fetch-one.js'),
+        import('./lib/images/query.js'),
+      ])
+      const { uploadWebp } = uploader.createUploader(() =>
+        getStorage().bucket(uploader.BUCKET)
+      )
+      lib = { uploadWebp, fetchOne, query }
+    }
+    return lib
+  }
+  return {
+    async queryOf(word) {
+      return (await load()).query.buildSearchWord(word)
+    },
+    async bySearch({ query, rejected }) {
+      const { uploadWebp, fetchOne } = await load()
+      return fetchOne.fetchBySearch({ query, rejected, uploadWebp })
+    },
+    async recrop({ image }) {
+      const { uploadWebp, fetchOne } = await load()
+      return fetchOne.recropTop({ image, uploadWebp })
+    },
+  }
 }
 
 let firestoreLib = null
