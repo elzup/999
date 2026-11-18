@@ -5,7 +5,8 @@
 //   POST /console/redo-now {id,slot}         その場で語から検索して取り直す (段階 5)
 //   POST /console/search-custom {id,slot,query}  検索ワードを指定して取り直す
 //   POST /console/recrop {id,slot}           今の画像の元画像を上寄せで切り抜き直す
-//   POST /console/candidates {id,slot,query?} ピッカーに並べる候補を最大 6 枚取る (採用はしない。D-0088)
+//   POST /console/candidates {id,slot,query?,reuse?} ピッカーに並べる候補を最大 6 枚取る (採用はしない。D-0088)
+//                                       reuse なら前に取った候補が残っていれば検索せずに返す
 //   POST /console/set-image {id,slot,image}  画像を採用する。今の画像・history・ピッカーに出した候補だけ
 //
 // 取り直しの応答は Mac の console/server.js と同じ { ok, image } / { ok: false, error }。
@@ -56,6 +57,23 @@ async function handleCandidates({ body, state, slots, docs, fetcher, now }) {
   if (current?.keep) return { status: 409, payload: { error: LOCKED } }
   const word = findTarget(state, body)?.[slot] ?? ''
   const typed = typeof body.query === 'string' ? body.query.trim() : ''
+  // reuse: 前に取った候補が残っていれば検索せずに返す (開き直すたびに取り直さない)
+  if (body.reuse && !typed) {
+    const kept = (current?.choices ?? []).filter(
+      (c) => c?.hash !== current?.image?.hash
+    )
+    if (kept.length > 0)
+      return {
+        status: 200,
+        payload: {
+          ok: true,
+          query: current?.candidate?.query ?? '',
+          current: current?.image ?? null,
+          candidates: kept,
+          reused: true,
+        },
+      }
+  }
   const query =
     typed || (word ? await fetcher.queryOf(word, state.tagNames ?? {}) : '')
   if (!query) return fail('この枠に語が無い。検索ワードを入れてください')
@@ -171,7 +189,13 @@ export async function handleConsoleRequest({
     // canFetch: この Function がその場の取り直しを受けられる印。画面はこれを見てボタンを出す
     return {
       status: 200,
-      payload: { ...state, ...current, canFetch: Boolean(fetcher) },
+      payload: {
+        ...state,
+        ...current,
+        // 焼いた state の候補 (Mac が取った分) に、DB の最新を重ねる
+        candidates: { ...state.candidates, ...current.candidates },
+        canFetch: Boolean(fetcher),
+      },
     }
   }
 

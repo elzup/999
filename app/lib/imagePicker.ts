@@ -27,6 +27,10 @@ export type ImageState = {
   images: Record<string, Record<string, SlotImage>>
   keep: Record<string, true>
   redo: Record<string, { flaggedAt: string; reason?: string }>
+  /** 画像を取ったときの語と検索ワード (枠 → )。今の語と違えば «語変更» */
+  candidates?: Record<string, { word?: string; query?: string }>
+  /** ピッカーに出したまま選んでいない候補の数 (枠 → 数) */
+  choices?: Record<string, number>
   canFetch?: boolean
 }
 
@@ -34,6 +38,8 @@ export type CandidateResult = {
   query: string
   current: SlotImage | null
   candidates: SlotImage[]
+  /** 検索せずに、前に取った候補を返した */
+  reused?: boolean
 }
 
 /** アプリの枠名 (シート・DB の名前) → 画像データの枠名 (src/images/targets.js の CANONICAL_SLOT の逆) */
@@ -101,19 +107,22 @@ export const fetchCandidates = ({
   id,
   slot,
   query,
+  reuse,
   stop,
 }: {
   token: string
   id: string
   slot: string
   query?: string
+  /** 前に取った候補が残っていれば検索せずにそれを返す */
+  reuse?: boolean
   /** 画面の «止める»。サーバの処理は止まらないが、結果を待たずに戻る */
   stop?: AbortSignal
 }) =>
   call<CandidateResult>(
     'candidates',
     token,
-    { id, slot, ...(query ? { query } : {}) },
+    { id, slot, ...(query ? { query } : {}), ...(reuse ? { reuse } : {}) },
     stop
   )
 
@@ -167,11 +176,22 @@ export function useImageOverride(id: string, slot: string) {
 
 // ── 候補タブの一覧 ──
 
-export type CandidateFilter = 'redo' | 'missing' | 'all'
+export type CandidateFilter =
+  | 'redo'
+  | 'missing'
+  | 'unkept'
+  | 'changed'
+  | 'choices'
+  | 'kept'
+  | 'all'
 
 export const CANDIDATE_FILTERS: { id: CandidateFilter; label: string }[] = [
   { id: 'redo', label: '撮り直し' },
   { id: 'missing', label: '未取得' },
+  { id: 'unkept', label: '未確定' },
+  { id: 'changed', label: '語変更' },
+  { id: 'choices', label: '候補あり' },
+  { id: 'kept', label: '確定済み' },
   { id: 'all', label: '全部' },
 ]
 
@@ -184,7 +204,15 @@ export type CandidateItem = {
   image: SlotImage | null
   keep: boolean
   redo: boolean
+  /** 画像を取ったときの語と今の語が違う */
+  changed: boolean
+  /** ピッカーに出したまま選んでいない候補の数 */
+  choices: number
 }
+
+/** 画像を取ったときの語が分かっていて、今の語と違う (語を直したのに画像が古い) */
+const isWordChanged = (fetchedFor: string | undefined, word: string) =>
+  Boolean(fetchedFor) && fetchedFor !== word
 
 // #i はアバター固定の枠 (console と同じく取り直しの対象にしない)
 const isAvatarWord = (word: string) => /#i\b/.test(word)
@@ -213,12 +241,22 @@ export function candidateItems(
             null,
           keep: Boolean(state.keep[key]),
           redo: Boolean(state.redo[key]),
+          changed: isWordChanged(state.candidates?.[key]?.word, word),
+          choices: state.choices?.[key] ?? 0,
         },
       ]
     })
   })
+  const canPick = (it: CandidateItem) => !isAvatarWord(it.word)
   if (filter === 'redo') return items.filter((it) => it.redo && !it.keep)
   if (filter === 'missing')
-    return items.filter((it) => !it.image && !isAvatarWord(it.word))
+    return items.filter((it) => !it.image && canPick(it))
+  if (filter === 'unkept')
+    return items.filter((it) => it.image && !it.keep && canPick(it))
+  if (filter === 'changed')
+    return items.filter((it) => it.image && it.changed && canPick(it))
+  if (filter === 'choices')
+    return items.filter((it) => it.choices > 0 && !it.keep && canPick(it))
+  if (filter === 'kept') return items.filter((it) => it.keep)
   return items
 }
