@@ -8,7 +8,10 @@ import { createPortal } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import {
   fetchCandidates,
+  isLockedError,
   pickImage,
+  recropImage,
+  setKeep,
   setImageOverride,
   StoppedError,
   type SlotImage,
@@ -29,8 +32,12 @@ type Props = {
   slot: string
   word: string
   current: SlotImage | null
+  /** 確定 (ロック) 済みか。分からなければ省く (Function が断ったら確定済みとして出す) */
+  kept?: boolean
   onClose: () => void
   onPicked?: (image: SlotImage) => void
+  /** 確定を付け外した */
+  onKeep?: (on: boolean) => void
 }
 
 type Loaded = { query: string; candidates: SlotImage[]; reused: boolean }
@@ -98,9 +105,15 @@ export default function ImagePickerSheet({
   slot,
   word,
   current,
+  kept = false,
   onClose,
   onPicked,
+  onKeep,
 }: Props) {
+  // 確定済みの枠は候補を取らない (Function も断る)。解除すると選び直せる
+  const [isLocked, setIsLocked] = useState(kept)
+  // 上寄せで切り抜き直したら «今» の画像が変わる
+  const [currentImage, setCurrentImage] = useState(current)
   // 開いた瞬間から検索ワードを出す (サーバが決めた検索ワードが返ってきたら差し替える)
   const tagTitles = useNumberContext()?.tagTitles
   const [query, setQuery] = useState(() => buildSearchWord(word, tagTitles))
@@ -150,6 +163,8 @@ export default function ImagePickerSheet({
     } catch (err) {
       if (err instanceof StoppedError) {
         setIsStopped(true)
+      } else if (isLockedError(err)) {
+        setIsLocked(true)
       } else {
         console.error('candidates', id, slot, err)
         setError(String((err as Error).message || err))
@@ -163,11 +178,65 @@ export default function ImagePickerSheet({
   }
 
   useEffect(() => {
-    load(undefined, true)
+    if (!isLocked) load(undefined, true)
     // 開いた枠の候補を 1 度だけ取る。枠が変わればシートごと作り直される (key)
     // 閉じたら待つのをやめる
     return () => stopRef.current?.abort()
   }, [])
+
+  /** 失敗を出して、押せる状態に戻す */
+  const failed = (label: string, err: unknown) => {
+    console.error(label, id, slot, err)
+    setError(String((err as Error).message || err))
+    setIsSaving(false)
+  }
+
+  /** 選んだ画像 («今» なら今の画像) で確定して閉じる */
+  const decideAndKeep = async () => {
+    setIsSaving(true)
+    setError('')
+    try {
+      if (selected) {
+        const image = await pickImage({ token, id, slot, hash: selected })
+        setImageOverride(id, slot, image)
+        onPicked?.(image)
+      }
+      await setKeep({ token, id, slot, on: true })
+      onKeep?.(true)
+      onClose()
+    } catch (err) {
+      failed('keep', err)
+    }
+  }
+
+  const unlock = async () => {
+    setIsSaving(true)
+    setError('')
+    try {
+      await setKeep({ token, id, slot, on: false })
+      onKeep?.(false)
+      setIsLocked(false)
+      setIsSaving(false)
+      load(undefined, true)
+    } catch (err) {
+      failed('unkeep', err)
+    }
+  }
+
+  /** 今の画像の元画像を上寄せで切り抜き直す。採用もこの場で済む (Function が差し替える) */
+  const recrop = async () => {
+    setIsSaving(true)
+    setError('')
+    try {
+      const image = await recropImage({ token, id, slot })
+      setCurrentImage(image)
+      setImageOverride(id, slot, image)
+      onPicked?.(image)
+      setIsSaving(false)
+    } catch (err) {
+      failed('recrop', err)
+    }
+  }
 
   const decide = async () => {
     if (!selected) return onClose()
@@ -179,9 +248,7 @@ export default function ImagePickerSheet({
       onPicked?.(image)
       onClose()
     } catch (err) {
-      console.error('pick', id, slot, err)
-      setError(String((err as Error).message || err))
-      setIsSaving(false)
+      failed('pick', err)
     }
   }
 
@@ -204,7 +271,7 @@ export default function ImagePickerSheet({
           class="ip-query"
           onSubmit={(e) => {
             e.preventDefault()
-            if (!isLoading) load(query.trim() || undefined)
+            if (!isLoading && !isLocked) load(query.trim() || undefined)
           }}
         >
           <input
@@ -230,7 +297,12 @@ export default function ImagePickerSheet({
               中断
             </button>
           ) : (
-            <button key="search" class="filter-btn" type="submit">
+            <button
+              key="search"
+              class="filter-btn"
+              type="submit"
+              disabled={isLocked}
+            >
               再検索
             </button>
           )}
@@ -241,6 +313,10 @@ export default function ImagePickerSheet({
           <div class="ip-status-note">
             検索を止めました。«再検索» で取り直せます
           </div>
+        ) : isLocked ? (
+          <div class="ip-status-note">
+            確定済みの枠です。«解除» すると選び直せます
+          </div>
         ) : loaded?.reused ? (
           <div class="ip-status-note">
             前に取った候補です。«再検索» で新しく探せます
@@ -248,7 +324,7 @@ export default function ImagePickerSheet({
         ) : null}
         <div class="ip-grid">
           <Tile
-            image={current}
+            image={currentImage}
             word={word}
             label="今"
             isSelected={selected === null}
@@ -267,19 +343,55 @@ export default function ImagePickerSheet({
             <span key={i} class="ip-tile is-loading" />
           ))}
         </div>
+        {/* 上寄せは «今» の画像に対する操作 (候補は元画像を持っていても、採用してから切り抜く) */}
+        {!isLocked && selected === null && currentImage?.sourceImageUrl ? (
+          <div class="ip-tools">
+            <button
+              class="filter-btn"
+              type="button"
+              disabled={isSaving}
+              onClick={recrop}
+              title="元画像を上寄せで切り抜き直す (顔が上にある画像の救済)"
+            >
+              ↥ 今の画像を上寄せで切り直す
+            </button>
+          </div>
+        ) : null}
         {error ? <div class="ip-error">{error}</div> : null}
         <div class="ip-foot">
           <button class="filter-btn" type="button" onClick={onClose}>
             閉じる
           </button>
-          <button
-            class="filter-btn ip-decide"
-            type="button"
-            disabled={!selected || isSaving}
-            onClick={decide}
-          >
-            {isSaving ? '保存中…' : 'これにする'}
-          </button>
+          {isLocked ? (
+            <button
+              class="filter-btn"
+              type="button"
+              disabled={isSaving}
+              onClick={unlock}
+            >
+              {isSaving ? '保存中…' : '解除'}
+            </button>
+          ) : (
+            <>
+              <button
+                class="filter-btn"
+                type="button"
+                disabled={!selected || isSaving}
+                onClick={decide}
+              >
+                これにする
+              </button>
+              <button
+                class="filter-btn ip-decide"
+                type="button"
+                disabled={isSaving || (!selected && !currentImage)}
+                onClick={decideAndKeep}
+                title="選んだ画像 («今» なら今の画像) で確定する。確定した枠は一括の取り直しで上書きされない"
+              >
+                {isSaving ? '保存中…' : '✓ 確定'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>,

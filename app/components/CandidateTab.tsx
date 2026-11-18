@@ -174,6 +174,16 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
     if (target && scrollToNum('.cand-grid', target)) isAnchored.current = true
   })
 
+  /** 確定の付け外しを一覧に反映する */
+  const kept = (item: CandidateItem, on: boolean) => {
+    setState((prev) => {
+      if (!prev) return prev
+      const key = `${item.id}:${item.slot}`
+      const { [key]: _was, ...rest } = prev.keep
+      return { ...prev, keep: on ? { ...rest, [key]: true } : rest }
+    })
+  }
+
   /** 選んだ画像を一覧に反映する (撮り直しの印は Function が外している) */
   const picked = (item: CandidateItem, image: SlotImage) => {
     setState((prev) => {
@@ -310,7 +320,9 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
           word={open.word}
           current={open.image}
           onClose={() => setOpen(null)}
+          kept={open.keep}
           onPicked={(image) => picked(open, image)}
+          onKeep={(on) => kept(open, on)}
         />
       ) : null}
     </>
