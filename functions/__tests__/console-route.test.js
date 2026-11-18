@@ -519,6 +519,19 @@ describe('handleConsoleRequest: その場の取り直し', () => {
       expect(res.payload.query).toBe('q:マオ#コードギアス')
     })
 
+    it('reuseOnly は使える候補が無ければ検索せずに空で返す', async () => {
+      const { request, fetcher } = setup(withImage())
+      const res = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        reuse: true,
+        reuseOnly: true,
+      })
+      expect(res.payload).toMatchObject({ ok: true, candidates: [] })
+      expect(res.payload.reused).toBeUndefined()
+      expect(fetcher.calls).toEqual([])
+    })
+
     it('reuse でも残った候補が無い・検索ワードを渡したときは検索する', async () => {
       const { request, fetcher } = setup(withImage())
       await request('POST', '/console/candidates', {
