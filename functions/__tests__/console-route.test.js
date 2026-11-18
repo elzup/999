@@ -501,6 +501,24 @@ describe('handleConsoleRequest: その場の取り直し', () => {
       expect(fetcher.calls).toHaveLength(1)
     })
 
+    it('reuse でも、候補を取ったときの検索ワードが今と違えば取り直す (タグを展開できなかった頃の候補)', async () => {
+      const { request, docs: stored, fetcher } = setup(withImage())
+      await request('POST', '/console/candidates', { id: '001', slot: 'w2' })
+      // 展開前の検索ワードで取った候補が残っている
+      stored['001:w2'] = {
+        ...stored['001:w2'],
+        candidate: { ...stored['001:w2'].candidate, query: 'マオ cg' },
+      }
+      const res = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        reuse: true,
+      })
+      expect(res.payload.reused).toBeUndefined()
+      expect(fetcher.calls).toHaveLength(2)
+      expect(res.payload.query).toBe('q:マオ#コードギアス')
+    })
+
     it('reuse でも残った候補が無い・検索ワードを渡したときは検索する', async () => {
       const { request, fetcher } = setup(withImage())
       await request('POST', '/console/candidates', {

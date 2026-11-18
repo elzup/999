@@ -168,6 +168,17 @@ export default function ImagePickerSheet({
         reuse,
         stop: stop.signal,
       })
+      // タグを展開できなかった頃に取った候補 (検索ワードが «ミミ pr» のまま) は使わずに取り直す。
+      // 新しい Function は検索ワードが今と違う候補を返さないが、deploy 前の Function のため
+      if (
+        result.reused &&
+        result.query === buildSearchWord(word) &&
+        result.query !== autoQuery
+      ) {
+        stopRef.current = null
+        load(typed, false)
+        return
+      }
       setLoaded({
         query: result.query,
         candidates: result.candidates,

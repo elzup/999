@@ -64,8 +64,12 @@ async function handleCandidates({ body, state, slots, docs, fetcher, now }) {
   // (画面も展開して送るのは、この経路を知らない古い Function でも展開済みの語で探させるため)
   const typed =
     !body.auto && typeof body.query === 'string' ? body.query.trim() : ''
-  // reuse: 前に取った候補が残っていれば検索せずに返す (開き直すたびに取り直さない)
-  if (body.reuse && !typed) {
+  const query =
+    typed || (word ? await fetcher.queryOf(word, state.tagNames ?? {}) : '')
+  // reuse: 前に取った候補が残っていれば検索せずに返す (開き直すたびに取り直さない)。
+  // ただし、その候補を取ったときの検索ワードが今と同じときだけ。タグを展開できなかった頃の
+  // 候補 (ミミ pr で取った分) や、語を直す前の候補を出し続けないため
+  if (body.reuse && !typed && current?.candidate?.query === query) {
     const kept = (current?.choices ?? []).filter(
       (c) => c?.hash !== current?.image?.hash
     )
@@ -81,8 +85,6 @@ async function handleCandidates({ body, state, slots, docs, fetcher, now }) {
         },
       }
   }
-  const query =
-    typed || (word ? await fetcher.queryOf(word, state.tagNames ?? {}) : '')
   if (!query) return fail('この枠に語が無い。検索ワードを入れてください')
 
   let choices
