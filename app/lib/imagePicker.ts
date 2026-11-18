@@ -131,6 +131,7 @@ export const fetchCandidates = ({
   query,
   auto,
   reuse,
+  reuseOnly,
   stop,
 }: {
   token: string
@@ -141,6 +142,8 @@ export const fetchCandidates = ({
   reuse?: boolean
   /** 語から作った検索ワード (自分で打ったものではない)。Function は自分で作り直す */
   auto?: boolean
+  /** 前に取った候補を出すだけで、無ければ検索しない */
+  reuseOnly?: boolean
   /** 画面の «止める»。サーバの処理は止まらないが、結果を待たずに戻る */
   stop?: AbortSignal
 }) =>
@@ -153,6 +156,7 @@ export const fetchCandidates = ({
       ...(query ? { query } : {}),
       ...(auto ? { auto } : {}),
       ...(reuse ? { reuse } : {}),
+      ...(reuseOnly ? { reuseOnly } : {}),
     },
     stop
   )

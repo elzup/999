@@ -85,6 +85,18 @@ async function handleCandidates({ body, state, slots, docs, fetcher, now }) {
         },
       }
   }
+  // reuseOnly: 前に取った候補を出すだけ。使える候補が無ければ検索せずに空で返す
+  // (ピッカーを開いただけで検索の回数を使わない)
+  if (body.reuseOnly)
+    return {
+      status: 200,
+      payload: {
+        ok: true,
+        query,
+        current: current?.image ?? null,
+        candidates: [],
+      },
+    }
   if (!query) return fail('この枠に語が無い。検索ワードを入れてください')
 
   let choices

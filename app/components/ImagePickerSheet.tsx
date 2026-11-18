@@ -36,6 +36,8 @@ type Props = {
   current: SlotImage | null
   /** 確定 (ロック) 済みか。分からなければ省く (Function が断ったら確定済みとして出す) */
   kept?: boolean
+  /** 前に取って残っている候補の数 (候補タブの state.choices)。あれば開いたときにそれを出す */
+  choices?: number
   onClose: () => void
   onPicked?: (image: SlotImage) => void
   /** 確定を付け外した */
@@ -108,6 +110,7 @@ export default function ImagePickerSheet({
   word,
   current,
   kept = false,
+  choices = 0,
   onClose,
   onPicked,
   onKeep,
@@ -137,9 +140,9 @@ export default function ImagePickerSheet({
 
   /**
    * typed を省くと語から (サーバがタグの最新の正式名で) 検索ワードを作る。
-   * reuse なら前に取った候補が残っていればそれを出す (開き直すたびに取り直さない)
+   * reuseOnly は前に取った候補を出すだけで、検索はしない (開いただけで検索の回数を使わない)
    */
-  const load = async (typed?: string, reuse = false) => {
+  const load = async (typed?: string, reuseOnly = false) => {
     const stop = new AbortController()
     stopRef.current = stop
     setSearching({
@@ -160,20 +163,19 @@ export default function ImagePickerSheet({
         // 自分の (タグの最新の正式名で作った) 検索ワードを使い、古い Function はこれで探す
         query: typed ?? (autoQuery || undefined),
         auto: typed === undefined,
-        reuse,
+        reuse: reuseOnly,
+        reuseOnly,
         stop: stop.signal,
       })
-      // タグを展開できなかった頃に取った候補 (検索ワードが «ミミ pr» のまま) は使わずに取り直す。
-      // 新しい Function は検索ワードが今と違う候補を返さないが、deploy 前の Function のため
+      // 前に取った候補が無い・今の検索ワードと違う (タグを展開できなかった頃の候補) ときは、
+      // 何も出さずに待つ。検索は «検索» を押したときだけ
+      if (reuseOnly && !result.reused) return
       if (
         result.reused &&
         result.query === buildSearchWord(word) &&
         result.query !== autoQuery
-      ) {
-        stopRef.current = null
-        load(typed, false)
+      )
         return
-      }
       setLoaded({
         query: result.query,
         candidates: result.candidates,
@@ -198,8 +200,8 @@ export default function ImagePickerSheet({
   }
 
   useEffect(() => {
-    if (!isLocked) load(undefined, true)
-    // 開いた枠の候補を 1 度だけ取る。枠が変わればシートごと作り直される (key)
+    // 開いただけでは検索しない (検索の回数を使わない)。前に取った候補が残っている枠だけ出す
+    if (!isLocked && choices > 0) load(undefined, true)
     // 閉じたら待つのをやめる
     return () => stopRef.current?.abort()
   }, [])
@@ -237,7 +239,6 @@ export default function ImagePickerSheet({
       onKeep?.(false)
       setIsLocked(false)
       setIsSaving(false)
-      load(undefined, true)
     } catch (err) {
       failed('unkeep', err)
     }
@@ -277,7 +278,10 @@ export default function ImagePickerSheet({
           class="ip-query"
           onSubmit={(e) => {
             e.preventDefault()
-            if (!isLoading && !isLocked) load(query.trim() || undefined)
+            if (isLoading || isLocked) return
+            // 語から作った検索ワードのままなら «自動» として送る (Function がタグの最新の正式名で作り直す)
+            const typed = query.trim()
+            load(typed && typed !== autoQuery ? typed : undefined)
           }}
         >
           <input
@@ -309,7 +313,7 @@ export default function ImagePickerSheet({
               type="submit"
               disabled={isLocked}
             >
-              再検索
+              {loaded ? '再検索' : '検索'}
             </button>
           )}
         </form>
@@ -326,6 +330,10 @@ export default function ImagePickerSheet({
         ) : loaded?.reused ? (
           <div class="ip-status-note">
             前に取った候補です。«再検索» で新しく探せます
+          </div>
+        ) : !loaded ? (
+          <div class="ip-status-note">
+            検索ワードを確かめて «検索» を押すと候補を探します
           </div>
         ) : null}
         <div class="ip-grid">

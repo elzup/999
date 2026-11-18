@@ -375,6 +375,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
           current={open.image}
           onClose={() => setOpen(null)}
           kept={open.keep}
+          choices={open.choices}
           onPicked={(image) => picked(open, image)}
           onKeep={(on) => kept(open, on)}
         />
