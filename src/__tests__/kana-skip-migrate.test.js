@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   migrateKanaSkipInDoc,
   migrateKanaSkipInSheet,
+  restoreSkipFor,
   skipNotationFor,
+  skipRewriteFor,
+  tailSkipFor,
 } from '../kana-skip-migrate.js'
 import { rankey } from '../rankey.js'
+import { score } from '../scorer.js'
 
 describe('skipNotationFor', () => {
   it('自動で中間省略になるよみを、読まないかなに ( ) を付けたよみにする', () => {
@@ -43,7 +47,13 @@ describe('migrateKanaSkipInDoc', () => {
   it('対象のスロットのかなだけ書き換え、他は残す', () => {
     const { next, changes } = migrateKanaSkipInDoc(doc)
     expect(changes).toEqual([
-      { slot: 'wh1', word: 'サバンナ', from: 'さばんな', to: 'さば(ん)な' },
+      {
+        slot: 'wh1',
+        kind: 'middle',
+        word: 'サバンナ',
+        from: 'さばんな',
+        to: 'さば(ん)な',
+      },
     ])
     expect(next.slots.wh1).toEqual({
       word: 'サバンナ',
@@ -100,9 +110,64 @@ describe('migrateKanaSkipInSheet', () => {
         cell: 'H2',
         num: '387',
         slot: 'wh1',
+        kind: 'middle',
         before: 'さばんな',
         after: 'さば(ん)な',
       },
     ])
+  })
+})
+
+describe('tailSkipFor (語尾)', () => {
+  it('3 桁を超えて読まない語尾を ( ) で囲む。rankey は変わらない', () => {
+    expect(tailSkipFor('にいさん', '223')).toBe('にいさ(ん)')
+    expect(rankey('にいさ(ん)', '223')).toBe(rankey('にいさん', '223'))
+  })
+
+  it('語尾が 3 桁に収まっているよみは対象外', () => {
+    expect(tailSkipFor('みかみ', '393')).toBeNull()
+  })
+})
+
+describe('restoreSkipFor (よみから消してあるかな)', () => {
+  it('かなだけの語と突き合わせ、消してあるかなを ( ) で戻す', () => {
+    expect(restoreSkipFor('サバンナ', 'さばな', '387')).toBe('さば(ん)な')
+    expect(restoreSkipFor('ミッキー', 'みっき', '391')).toBe('みっき(ー)')
+    // タグ・ラベルは語から外して突き合わせる
+    expect(restoreSkipFor('サバンナ#g -a', 'さばな', '387')).toBe('さば(ん)な')
+  })
+
+  it('読む数字は変わらない', () => {
+    expect(score('さば(ん)な').digits).toBe(score('さばな').digits)
+  })
+
+  it('3 文字以上続けて消してあるかなは ( ) 2 文字ずつに分ける', () => {
+    expect(restoreSkipFor('アイウエオ', 'あお', '07')).toBeNull() // 番号が 3 桁でない
+    const restored = restoreSkipFor('サバンナンナ', 'さばな', '387')
+    expect(restored).toBe('さば(ん)な(んな)')
+  })
+
+  it('漢字の語・よみに語に無い字がある・同じよみは対象外', () => {
+    expect(restoreSkipFor('麻衣', 'まい', '070')).toBeNull()
+    expect(restoreSkipFor('サバンナ', 'さばの', '387')).toBeNull()
+    expect(restoreSkipFor('サバンナ', 'さばんな', '387')).toBeNull()
+  })
+})
+
+describe('skipRewriteFor', () => {
+  it('語と突き合わせる restore を先に、無ければ middle、tail の順に見る', () => {
+    expect(skipRewriteFor('サバンナ', 'さばな', '387')).toEqual({
+      kind: 'restore',
+      to: 'さば(ん)な',
+    })
+    expect(skipRewriteFor('サバンナ', 'さばんな', '387')).toEqual({
+      kind: 'middle',
+      to: 'さば(ん)な',
+    })
+    expect(skipRewriteFor('', 'にいさん', '223')).toEqual({
+      kind: 'tail',
+      to: 'にいさ(ん)',
+    })
+    expect(skipRewriteFor('ミカミ', 'みかみ', '393')).toBeNull()
   })
 })

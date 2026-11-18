@@ -115,16 +115,23 @@ export function findOmission(kana, num) {
 }
 
 /**
- * 記法 ( ) で読まないとしたかなの位置 (読むかなだけを数えた位置)。無ければ -1。
- * ! は 1 つしか置かないので、( ) が 2 つ以上あっても最初の 1 つだけを見る
+ * 記法 ( ) で読まないとしたかなを、途中のもの (!) と語尾のもの (余り) に分ける。
+ * 途中は最初の 1 つの位置 (読むかなだけを数えた位置) を返す。! は 1 つしか置かない。
+ * 語尾 (後ろに読むかなが無い) の ( ) は 3 桁を超えた分と同じ «余り» として扱う (のる(ん) = |n)
+ * @returns {{ omitAt: number, trailing: string }}
  */
-function skipPositionOf(kana) {
+function skipsOf(kana) {
+  const segments = parseNotation(kana)
+  const lastRead = segments.findLastIndex((seg) => !seg.skip)
   let read = 0
-  for (const seg of parseNotation(kana)) {
-    if (seg.skip) return read
-    read += [...seg.text].length
-  }
-  return -1
+  let omitAt = -1
+  let trailing = ''
+  segments.forEach((seg, i) => {
+    if (!seg.skip) read += [...seg.text].length
+    else if (i > lastRead) trailing += seg.text
+    else if (omitAt < 0) omitAt = read
+  })
+  return { omitAt, trailing }
 }
 
 /**
@@ -144,7 +151,12 @@ export function rankey(kana, num, word = '') {
   }
 
   // 記法 (ん) の位置。読むかなだけを数えた位置に ! を置く
-  if (hasNotation(kana)) omitAt = skipPositionOf(kana)
+  let trailingSkip = ''
+  if (hasNotation(kana)) {
+    const skips = skipsOf(kana)
+    omitAt = skips.omitAt
+    trailingSkip = skips.trailing
+  }
 
   // 記法付きのよみは書いた人が読み方を決めているので、中間省略は探さない
   if (detail.digits !== num && !hasNotation(kana)) {
@@ -180,7 +192,7 @@ export function rankey(kana, num, word = '') {
 
   // 余りは2系統ある。読みが3桁を超えた分 (のるん の ん) と、語が読みより長い分
   // (ミッキー の ー)。どちらも「3桁に乗らなかったかな」なので繋げて1つの記号にする。
-  const rest = overflowKana + (leftoverOf(word, kana) || '')
+  const rest = overflowKana + trailingSkip + (leftoverOf(word, kana) || '')
   const suffix = tail + leftoverMark(rest) + (detail.mix ? 'm' : '')
 
   return `${body}|${suffix}`
