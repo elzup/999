@@ -47,7 +47,7 @@ export function colLetter(index) {
   return rest === 0 ? ch : colLetter(rest - 1) + ch
 }
 
-/** check 列: 語とかなの片方だけ / かなが «ひらがな + 記法 [す]» 以外 のとき "|" */
+/** check 列: 語とかなの片方だけ / かなが «ひらがな + 記法 [す] (ん)» 以外 のとき "|" */
 export function checkFormula(wordCol, kanaCol, row) {
   const w = `${wordCol}${row}`
   const k = `${kanaCol}${row}`
@@ -82,6 +82,20 @@ export function rowFormulas(layout, row) {
   ])
   const ng = layout.ng ? [[layout.ng.col, ngFormula(layout.ng.cols, row)]] : []
   return Object.fromEntries([...ng, ...slots])
+}
+
+/**
+ * check 列の式を 2 行目から lastRow まで書き直す範囲 (Sheets API の batchUpdate の data)。
+ * かなの記法を増やしたら、シートの式も正本 (KANA_CELL_PATTERN) に合わせて書き直す
+ * @returns {{range: string, values: string[][]}[]}
+ */
+export function checkColumnUpdates(title, layout, lastRow) {
+  const rows = []
+  for (let row = 2; row <= lastRow; row++) rows.push(row)
+  return slotColumns(layout.slotStart).map((s) => ({
+    range: `'${title}'!${s.check}2:${s.check}${lastRow}`,
+    values: rows.map((row) => [checkFormula(s.word, s.k, row)]),
+  }))
 }
 
 /** 見出し行 { 列記号: 見出し } (スロット部分のみ) */

@@ -9,6 +9,7 @@
 //   t      促音                              ろっし = AtA|
 //   _      先頭0の省略 (2桁しか無い)         れい   = _CA|
 //   !      中間の省略                        りんご = ww!A|   (ん を飛ばす)
+//                                           記法 さば(ん)な でも書ける。無ければ 1 文字飛ばして合う所を探す
 //   v      2桁トークンが3桁境界を跨ぐ        たま   = wwv|v
 //   h      記法 [す] の 1 桁読み (す=33→3)     [す]うる = hBB|
 //
@@ -25,7 +26,7 @@
 
 import { getTier, score } from './scorer.js'
 import { kataToHira, normalizeDakuten, normalizeSmallVowel } from './table.js'
-import { hasNotation, stripNotation } from './kana-notation.js'
+import { hasNotation, parseNotation, stripNotation } from './kana-notation.js'
 
 const TIER_MARK = { core: 'A', sub: 'B', bad: 'C' }
 const TARGET = 3
@@ -114,6 +115,19 @@ export function findOmission(kana, num) {
 }
 
 /**
+ * 記法 ( ) で読まないとしたかなの位置 (読むかなだけを数えた位置)。無ければ -1。
+ * ! は 1 つしか置かないので、( ) が 2 つ以上あっても最初の 1 つだけを見る
+ */
+function skipPositionOf(kana) {
+  let read = 0
+  for (const seg of parseNotation(kana)) {
+    if (seg.skip) return read
+    read += [...seg.text].length
+  }
+  return -1
+}
+
+/**
  * 候補語 1 件の記法を組み立てる。
  * @param {string} kana 読み
  * @param {string} num  3桁の番号
@@ -128,6 +142,9 @@ export function rankey(kana, num, word = '') {
   } catch {
     return null
   }
+
+  // 記法 (ん) の位置。読むかなだけを数えた位置に ! を置く
+  if (hasNotation(kana)) omitAt = skipPositionOf(kana)
 
   // 記法付きのよみは書いた人が読み方を決めているので、中間省略は探さない
   if (detail.digits !== num && !hasNotation(kana)) {

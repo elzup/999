@@ -43,6 +43,7 @@ nr sheet:rankey # 各スロットの rankey 列をシートへ書き戻す (使�
 nr images:pull  # 画像データの正本 (Firestore) と手元の cache を同期する
 nr images:redo-flagged # 撮り直しの印が付いた枠 (web 版 /console/ で付けた分も) をまとめて取り直す
 nr label:n     # ラベル -n / -x に評価 -1 を付け (-n は語から外す)、削除検討候補を出す (dry-run。--apply で書く)
+nr kana:skip   # 自動で中間省略になるよみを記法 さば(ん)な に書き直す (dry-run。--apply で書く)
 nr test        # テスト実行
 ```
 
