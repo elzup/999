@@ -480,6 +480,27 @@ describe('handleConsoleRequest: その場の取り直し', () => {
       expect(res.payload.candidates.map((c) => c.hash)).toEqual(['c1', 'c3'])
     })
 
+    it('auto の検索ワードは画面の展開ではなく、ここで作り直したもので探す (reuse も効く)', async () => {
+      const { request, fetcher } = setup(withImage())
+      const res = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        query: '画面で作った語',
+        auto: true,
+      })
+      expect(fetcher.calls[0].query).toBe('q:マオ#コードギアス')
+      expect(res.payload.query).toBe('q:マオ#コードギアス')
+      const again = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        query: '画面で作った語',
+        auto: true,
+        reuse: true,
+      })
+      expect(again.payload.reused).toBe(true)
+      expect(fetcher.calls).toHaveLength(1)
+    })
+
     it('reuse でも残った候補が無い・検索ワードを渡したときは検索する', async () => {
       const { request, fetcher } = setup(withImage())
       await request('POST', '/console/candidates', {

@@ -107,6 +107,7 @@ export const fetchCandidates = ({
   id,
   slot,
   query,
+  auto,
   reuse,
   stop,
 }: {
@@ -116,13 +117,21 @@ export const fetchCandidates = ({
   query?: string
   /** 前に取った候補が残っていれば検索せずにそれを返す */
   reuse?: boolean
+  /** 語から作った検索ワード (自分で打ったものではない)。Function は自分で作り直す */
+  auto?: boolean
   /** 画面の «止める»。サーバの処理は止まらないが、結果を待たずに戻る */
   stop?: AbortSignal
 }) =>
   call<CandidateResult>(
     'candidates',
     token,
-    { id, slot, ...(query ? { query } : {}), ...(reuse ? { reuse } : {}) },
+    {
+      id,
+      slot,
+      ...(query ? { query } : {}),
+      ...(auto ? { auto } : {}),
+      ...(reuse ? { reuse } : {}),
+    },
     stop
   )
 

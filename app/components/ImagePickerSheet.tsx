@@ -117,8 +117,17 @@ export default function ImagePickerSheet({
   // 上寄せで切り抜き直したら «今» の画像が変わる
   const [currentImage, setCurrentImage] = useState(current)
   // 開いた瞬間から検索ワードを出す (サーバが決めた検索ワードが返ってきたら差し替える)
-  const tagTitles = useNumberContext()?.tagTitles
-  const [query, setQuery] = useState(() => buildSearchWord(word, tagTitles))
+  // 略語タグ → 正式名。正式名 (tagTitles) が無いタグは表示名 (略称) で展開する (id のままよりよい)
+  const ctx = useNumberContext()
+  // 略称は半角カナのことがある (ﾄﾘｯｶﾙ)。検索には全角に揃えて渡す
+  const tagMap = Object.fromEntries(
+    Object.entries({ ...ctx?.tagNames, ...ctx?.tagTitles }).map(
+      ([tag, name]) => [tag, name.normalize('NFKC')]
+    )
+  )
+  // 語から作った検索ワード。自動の検索でもこれを送る (Function が古くても展開済みの語で探す)
+  const autoQuery = buildSearchWord(word, tagMap)
+  const [query, setQuery] = useState(autoQuery)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [searching, setSearching] = useState<Searching | null>(null)
   const [isStopped, setIsStopped] = useState(false)
@@ -152,7 +161,10 @@ export default function ImagePickerSheet({
         token,
         id,
         slot,
-        query: typed,
+        // 自動の検索も、画面で展開した検索ワードを送る。新しい Function は auto を見て
+        // 自分の (タグの最新の正式名で作った) 検索ワードを使い、古い Function はこれで探す
+        query: typed ?? (autoQuery || undefined),
+        auto: typed === undefined,
         reuse,
         stop: stop.signal,
       })
