@@ -60,6 +60,57 @@ export async function fetchBySearch({
   )
 }
 
+// ピッカーに並べる候補の数。ボトムシートの 3×2 のうち 1 枠は «今» (D-0088 A-1)
+export const CANDIDATE_COUNT = 5
+// 候補の DL は落ちやすいので、並べる数より多めに試す。多すぎると Hosting の 60 秒に届く
+const CANDIDATE_TRIES = 10
+
+/**
+ * 検索して、取れた画像を上位から最大 count 枚上げる (ピッカー用)。DL は並列で行う。
+ * @returns {Promise<object[]>} 上げた画像 (検索の順。取れなかったものは除く)
+ */
+export async function fetchCandidates({
+  query,
+  rejected = [],
+  uploadWebp,
+  count = CANDIDATE_COUNT,
+  search = searchImages,
+  download = downloadImage,
+}) {
+  const results = (await search(query, rejected, true)).slice(
+    0,
+    CANDIDATE_TRIES
+  )
+  const settled = await Promise.allSettled(
+    results.map(async (result) => {
+      const { buffer } = await download(result.imageUrl)
+      return { result, webp: await toWebp(buffer) }
+    })
+  )
+  const usable = settled
+    .filter((s) => s.status === 'fulfilled')
+    .map((s) => s.value)
+  // 同じ画像が別 URL で返ることがあるので hash で重ねない
+  const seen = new Set()
+  const unique = usable.filter(({ webp }) => {
+    const { hash } = hashKey(webp)
+    if (seen.has(hash)) return false
+    seen.add(hash)
+    return true
+  })
+  return Promise.all(
+    unique
+      .slice(0, count)
+      .map(({ result, webp }) =>
+        store(
+          webp,
+          { sourcePage: result.sourcePage, sourceImageUrl: result.imageUrl },
+          uploadWebp
+        )
+      )
+  )
+}
+
 /** 今の画像の元画像を上寄せで切り抜き直す (顔が上にある画像の救済) */
 export async function recropTop({ image, uploadWebp }) {
   if (!image?.sourceImageUrl) throw new Error('元画像URLが無い')

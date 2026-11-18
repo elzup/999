@@ -39,8 +39,8 @@ coherence:
 2. ✅ (2026-11-18) **読みの切替**: `store.js` の load\* を «Firestore → cache JSON» に。cache が無い / 古いときは pull。
 3. ✅ (2026-11-18) **書きの切替**: console/server.js と search/fetch/direct の書き込みを Firestore へ。cache は書いた後に更新。
 4. ✅ (2026-11-18) **web 版**: `functions/console-route.js` を `imageSlots` 直読み・直書きに。`imageMarks` を止める。
-5. **Function で取得**: 候補を複数取って GCS に上げ、選んだものを採用する経路。
-6. **UI**: 複数候補のチューザー (`showChooser` の拡張)。
+5. ✅ (2026-11-18) **Function で取得**: 取り直し・自由検索・切り抜き (PR #53)、ピッカー用に候補を 5 枚取る `/console/candidates` (選んだ画像は `choices` にあるものだけ採用できる)
+6. ✅ (2026-11-18) **UI**: アプリの «候補タブ» (3 列の一覧) と、詳細パネルの画像から開くボトムシート (今 + 候補 5 枚、選んで確定、検索ワードを直せる)。D-0088 / D-0089
 
 ## 同期のしくみ (段階 2・3)
 

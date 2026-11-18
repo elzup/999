@@ -6763,3 +6763,262 @@ img[data-concept] {
   font: 500 11px var(--font-mono);
   opacity: 0.8;
 }
+
+/* ── 画像ピッカー (ImagePickerSheet。D-0088 A-1 / B-2 / D-2) ──
+   編集のオーバーレイ (.edit-overlay, 110) の上からも開けるよう、それより上に重ねる */
+.ip-root {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.ip-shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.ip-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  padding: 12px 12px calc(12px + var(--safe-bottom));
+}
+.ip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.ip-id {
+  font: 800 20px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.ip-word {
+  color: var(--text2);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-query {
+  display: flex;
+  gap: 6px;
+}
+.ip-query input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 15px; /* 16px 未満だと iOS が入力時に拡大する手前。15 でも拡大はしない端末が多い */
+}
+.ip-query input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.ip-tile {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 3px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--img-bg);
+  cursor: pointer;
+}
+.ip-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ip-tile:hover {
+  border-color: var(--border);
+}
+.ip-tile.is-selected,
+.ip-tile.is-selected:hover {
+  border-color: var(--accent);
+}
+.ip-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ip-tile.is-loading {
+  background: var(--surface2);
+  animation: ip-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ip-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ip-tile.is-loading {
+    animation: none;
+  }
+}
+.ip-tile-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11px;
+}
+.ip-tile-label {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+.ip-error {
+  color: var(--bad);
+  font-size: 12px;
+}
+.ip-foot {
+  display: flex;
+  gap: 8px;
+}
+.ip-foot .filter-btn {
+  flex: 1;
+  padding: 10px 12px;
+}
+/* 確定は色付きの地。共通の hover で地が変わっても文字が消えないよう、全状態で地と文字を決める */
+.ip-decide,
+.ip-decide:hover,
+.ip-decide:active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+}
+.ip-decide:disabled,
+.ip-decide:disabled:hover {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text2);
+  cursor: default;
+}
+.ip-decide:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+.wl-img-btn {
+  display: contents;
+  cursor: pointer;
+}
+.wl-img-btn:focus-visible .wl-img {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── 候補タブ (CandidateTab。D-0089) ── */
+.cand-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.cand-card:hover {
+  border-color: var(--text2);
+  background: var(--surface);
+  color: var(--text);
+}
+.cand-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.cand-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--img-bg);
+}
+.cand-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cand-thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11px;
+}
+.cand-badge {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface);
+}
+.cand-badge.is-keep {
+  color: var(--accent);
+}
+.cand-badge.is-redo {
+  color: var(--warn);
+}
+.cand-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+}
+.cand-id {
+  font: 800 14px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.cand-slot {
+  font: 600 10px var(--font-mono);
+  color: var(--text2);
+}
+.cand-word {
+  font-size: 11px;
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cand-note {
+  color: var(--text2);
+  font-size: 13px;
+  padding: 16px 4px;
+  text-align: center;
+}

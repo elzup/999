@@ -39,6 +39,7 @@ import BookmarkTab from './components/BookmarkTab'
 import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
 import RepPickerTab from './components/RepPickerTab'
+import CandidateTab from './components/CandidateTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { refreshSessionToken } from './lib/passkeyApi'
@@ -68,6 +69,7 @@ import {
   IconHex,
   IconEdit,
   IconRep,
+  IconImage,
 } from './components/Icons'
 import { TagNamesContext } from './lib/tagNames'
 import { ReadingTablesContext, tablesFromRules } from './lib/reading'
@@ -89,6 +91,7 @@ const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
   hex: <IconHex />,
   edit: <IconEdit />,
   rep: <IconRep />,
+  cand: <IconImage />,
   misc: <IconStats />,
 }
 
@@ -252,8 +255,9 @@ export function App() {
       editVersion,
       tagNames: data?.tagNames,
       tagTitles: data?.tagTitles,
+      token,
     }),
-    [data, bookmarks, toggleBm, editVersion]
+    [data, bookmarks, toggleBm, editVersion, token]
   )
 
   // サブタブを持たないグループのスライド用デッキ。kuku は applyData で注入済みの
@@ -405,6 +409,7 @@ export function App() {
           {tab === 'rep' && (
             <RepPickerTab token={token} numbers={data.numbers} />
           )}
+          {tab === 'cand' && <CandidateTab token={token} />}
           {tab === 'misc' && (
             <MiscTab
               numbers={data.numbers}
@@ -486,19 +491,19 @@ function LoadingScreen({ progress }: { progress: AppDataProgress }) {
     progress.phase === 'downloading' && progress.totalBytes
       ? progress.loadedBytes / progress.totalBytes
       : progress.phase === 'parsing'
-        ? 1
-        : null
+      ? 1
+      : null
 
   const label =
     progress.phase === 'connecting'
       ? 'サーバーに接続中…'
       : progress.phase === 'downloading'
-        ? progress.totalBytes
-          ? `辞書データを受信中… ${Math.round(
-              (progress.loadedBytes / progress.totalBytes) * 100
-            )}%`
-          : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
-        : '辞書データを展開中…'
+      ? progress.totalBytes
+        ? `辞書データを受信中… ${Math.round(
+            (progress.loadedBytes / progress.totalBytes) * 100
+          )}%`
+        : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
+      : '辞書データを展開中…'
 
   return (
     <div class="loading-screen">

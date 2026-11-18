@@ -5,7 +5,8 @@
 //   POST /console/redo-now {id,slot}         その場で語から検索して取り直す (段階 5)
 //   POST /console/search-custom {id,slot,query}  検索ワードを指定して取り直す
 //   POST /console/recrop {id,slot}           今の画像の元画像を上寄せで切り抜き直す
-//   POST /console/set-image {id,slot,image}  2 択で «今までの方» に戻す。今の画像か history にある画像だけ
+//   POST /console/candidates {id,slot,query?} ピッカーに並べる候補を最大 6 枚取る (採用はしない。D-0088)
+//   POST /console/set-image {id,slot,image}  画像を採用する。今の画像・history・ピッカーに出した候補だけ
 //
 // 取り直しの応答は Mac の console/server.js と同じ { ok, image } / { ok: false, error }。
 // 画面が同じ処理で受けられるようにするため。
@@ -15,7 +16,8 @@
 // 焼いたもの。語を含むので認証の後ろでだけ返す。使うのは対象 (targets / kinds) と表示用の名前だけ。
 //
 // slots は src/images/slot-store.js ({ listSlots, setMark, update })、docs は slot-docs.js
-// ({ marksView, applyImage, rejectedUrlsOf, slotDocId })、fetcher は画像の取得 ({ queryOf, bySearch, recrop }) を
+// ({ marksView, applyImage, applyChoices, findSlotImage, rejectedUrlsOf, slotDocId })、fetcher は画像の取得
+// ({ queryOf, bySearch, candidates, recrop }) を
 // 引数で受け取る。Firestore・GCS・検索サイトにも、生成物の functions/lib にも頼らずにテストできるようにするため。
 
 const INVALID_TARGET = 'id/slot が不正です。画面を再読み込みしてください'
@@ -27,6 +29,7 @@ const IMAGE_PATHS = new Set([
   '/console/search-custom',
   '/console/recrop',
   '/console/set-image',
+  '/console/candidates',
 ])
 
 function findTarget(state, { id, slot }) {
@@ -44,6 +47,48 @@ function isValidTarget(state, body) {
 
 const fail = (error) => ({ status: 200, payload: { ok: false, error } })
 const errorText = (err) => String(err?.message || err).slice(0, 200)
+
+/** ピッカーの候補を取って文書に残す。検索ワードを渡せばそれで、無ければ語から作る (D-2) */
+async function handleCandidates({ body, state, slots, docs, fetcher, now }) {
+  const { id, slot } = body
+  const key = docs.slotDocId(id, slot)
+  const current = (await slots.listSlots({ now }))[key] ?? null
+  if (current?.keep) return { status: 409, payload: { error: LOCKED } }
+  const word = findTarget(state, body)?.[slot] ?? ''
+  const typed = typeof body.query === 'string' ? body.query.trim() : ''
+  const query = typed || (word ? await fetcher.queryOf(word) : '')
+  if (!query) return fail('この枠に語が無い。検索ワードを入れてください')
+
+  let choices
+  try {
+    choices = await fetcher.candidates({
+      query,
+      rejected: docs.rejectedUrlsOf(current),
+    })
+  } catch (err) {
+    console.error('console candidates', key, err)
+    return fail(errorText(err))
+  }
+  if (choices.length === 0)
+    return fail('見つからない。検索ワードを変えてください')
+  const candidate = word
+    ? { ...current?.candidate, word, query, status: 'ok' }
+    : undefined
+  const result = await slots.update(id, slot, (doc) =>
+    docs.applyChoices(doc, { id, slot, choices, candidate, now })
+  )
+  if (result.error === 'locked')
+    return { status: 409, payload: { error: LOCKED } }
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      query,
+      current: current?.image ?? null,
+      candidates: choices,
+    },
+  }
+}
 
 /** 1 枠の画像を差し替える操作。取得 (時間がかかる) は transaction の外で済ませてから書く */
 async function handleImageRequest({
@@ -63,15 +108,12 @@ async function handleImageRequest({
   let image
   let candidate
   if (path === '/console/set-image') {
-    const hash = body.image?.hash
-    // 画面から来た画像をそのまま書かない。この枠に一度載った画像 (今か history) だけに戻せる
-    image = [current?.image, ...(current?.history ?? [])].find(
-      (img) => img && hash && img.hash === hash
-    )
+    // 画面から来た画像をそのまま書かない。この枠に一度載った画像 (今・history・出した候補) だけ
+    image = docs.findSlotImage(current, body.image?.hash)
     if (!image)
       return {
         status: 400,
-        payload: { error: 'この枠に載ったことのない画像には戻せない' },
+        payload: { error: 'この枠に出したことのない画像は選べない' },
       }
   } else {
     try {
@@ -138,6 +180,8 @@ export async function handleConsoleRequest({
   if (!isValidTarget(state, body ?? {}))
     return { status: 400, payload: { error: INVALID_TARGET } }
 
+  if (path === '/console/candidates')
+    return handleCandidates({ body, state, slots, docs, fetcher, now })
   if (!op)
     return handleImageRequest({ path, body, state, slots, docs, fetcher, now })
 
