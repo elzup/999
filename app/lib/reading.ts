@@ -143,14 +143,16 @@ function peekNextValue(t: ReadingTables, input: string, pos: number) {
 
 /**
  * かな → 数字列。読めないかなを含むときは null (encode は throw する)。
- * 記法 [す] は区間ごとに読み、[ ] の中は 2 桁の 1 桁目だけを採る (src/encoder.js#encode と同じ)
+ * 記法 [す] は区間ごとに読み、[ ] の中は 2 桁の 1 桁目だけを採る。( ) の中は読まない (src/encoder.js#encode と同じ)
  */
 export function encodeDigits(t: ReadingTables, input: string): string | null {
   if (!hasNotation(input)) return encodePlainDigits(t, input)
   const segments = parseNotation(input)
   if (!segments) return null
   let digits = ''
-  for (const { text, half } of segments) {
+  for (const { text, half, skip } of segments) {
+    // 読まないかな (さば(ん)な の ん) は数字にしない
+    if (skip) continue
     const d = encodePlainDigits(t, text)
     if (d === null) return null
     if (half && (d.length !== 2 || lookup(t, text) === undefined)) return null

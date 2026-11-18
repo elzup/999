@@ -76,11 +76,13 @@ function lookup(token) {
 /**
  * かな文字列 → { digits, tokens, youon4 }
  * 記法 [す] (1 桁読み) を含むときは区間ごとに読み、[ ] の中は 2 桁の 1 桁目だけを採る。
- * その場合のトークンには half: true が付く。
+ * その場合のトークンには half: true が付く。( ) の中 (読まないかな) はトークンにしない。
  */
 export function encode(input) {
   if (!hasNotation(input)) return encodePlain(input)
-  const tokens = parseNotation(input).flatMap(({ text, half }) => {
+  const tokens = parseNotation(input).flatMap(({ text, half, skip }) => {
+    // 読まないかな (さば(ん)な の ん) は数字にしない
+    if (skip) return []
     const { tokens: inner } = encodePlain(text)
     if (!half) return inner
     if (inner.length !== 1 || String(inner[0].value).length !== 2) {

@@ -4,6 +4,8 @@ import {
   MAIN_LAYOUT,
   SIDE_SLOTS,
   SLOT_KEYS,
+  checkColumnUpdates,
+  checkFormula,
   colIndex,
   colLetter,
   rowFormulas,
@@ -66,7 +68,7 @@ describe('MAIN_LAYOUT (999 / 1231 タブ)', () => {
     expect(f.J).toBe('=PICK_FIRST(C2,1)')
     expect(f.V).toBe('=PICK_FIRST(B2,3)')
     expect(f.G).toBe(
-      '=IF(OR(XOR(F2="",H2=""),NOT(OR(H2="",REGEXMATCH(H2,"^([ぁ-ゖ]|\\[[ぁ-ゖ]{1,2}\\])+$")))),"|","")'
+      '=IF(OR(XOR(F2="",H2=""),NOT(OR(H2="",REGEXMATCH(H2,"^([ぁ-ゖ]|\\[[ぁ-ゖ]{1,2}\\]|\\([ぁ-ゖ]{1,2}\\))+$")))),"|","")'
     )
     expect(f.AA).toContain('XOR(Z2="",AB2="")')
     expect(f.H).toBeUndefined()
@@ -82,5 +84,20 @@ describe('MAIN_LAYOUT (999 / 1231 タブ)', () => {
       'rankey',
       'wm1',
     ])
+  })
+})
+
+describe('checkColumnUpdates', () => {
+  it('6 スロットの check 列を 2 行目から最終行まで、正本の式で書き直す', () => {
+    const updates = checkColumnUpdates('999', MAIN_LAYOUT, 4)
+    expect(updates).toHaveLength(6)
+    expect(updates[0].range).toBe("'999'!G2:G4")
+    expect(updates[0].values).toEqual([
+      [checkFormula('F', 'H', 2)],
+      [checkFormula('F', 'H', 3)],
+      [checkFormula('F', 'H', 4)],
+    ])
+    // 記法 (ん) を正しいかなとして通す式になっている
+    expect(updates[0].values[0][0]).toContain('\\([ぁ-ゖ]{1,2}\\)')
   })
 })
