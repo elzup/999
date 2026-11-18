@@ -13,6 +13,14 @@
 **マージで変わるのは画面だけ。** Function と辞書データは手元の `nr deploy` が要る。
 以前は `nr deploy` も画面を出していて、CI が出した画面を手元の版で上書きしうる 2 経路になっていたので外した (2026-11-15)。
 
+### 辞書データは deploy の写しに DB の最新を重ねて返す
+
+`/api/app/data` の辞書データ (`private/data.json`) は `nr deploy` のときに words.tsv から焼いた写し。
+アプリやシートで直した語が次の deploy まで一覧・詳細・テストに出ないので、Function が返す前に
+Firestore の番号文書の語・かな (とそこから決まる人/物の一覧・スコア) を重ねる (`src/firestore/app-entry.js`)。
+アプリは保存が済んだ番号だけ `/api/app/numbers/:num` で読み直し、読み込み済みの辞書データを差し替える。
+画像 (枠の位置に付く)・割当グラフ (`ga`)・読みの集計 (`yomiUse`) は重ねないので、これらは deploy で作り直す。
+
 ### 手元の古い版で上書きしないためのガード
 
 `nr deploy` (と `deploy:api` / `deploy:legacy`) は最初に [`scripts/deploy-guard.ts`](../scripts/deploy-guard.ts) を通す。

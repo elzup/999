@@ -45,6 +45,7 @@ import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { refreshSessionToken } from './lib/passkeyApi'
 import {
   fetchAppData,
+  fetchAppNumberEntry,
   UnauthorizedError,
   type AppDataProgress,
 } from './lib/appDataApi'
@@ -53,6 +54,8 @@ import { setKukuItems } from './lib/kukuQuiz'
 import type { KukuItem } from './lib/kukuQuiz'
 import { isBookmarkReviewDue } from './lib/bookmarkReview'
 import { useBackGuard } from './lib/useBackGuard'
+import { listenWriteQueue } from './lib/writeQueue'
+import { parseNumberEntry, withNumberEntry } from './lib/liveEntry'
 import { NumberContext, type NumberContextValue } from './lib/numberContext'
 import {
   IconNum,
@@ -198,6 +201,24 @@ export function App() {
     return () => {
       cancelled = true
     }
+  }, [token])
+
+  // 保存が済んだ番号は、読み込み済みの辞書データ (一覧・詳細・テストが読む) も差し替える。
+  // 辞書データは deploy のときの写しなので、差し替えないと次の起動まで古い語のまま出る
+  useEffect(() => {
+    if (!token) return
+    return listenWriteQueue({
+      onSettled: (num) => {
+        fetchAppNumberEntry(num, token)
+          .then((raw) => {
+            const entry = parseNumberEntry(raw)
+            if (!entry) return
+            setData((prev) => (prev ? withNumberEntry(prev, entry) : prev))
+          })
+          // 差し替えられなくても保存は済んでいる。次に開いたときサーバが最新を重ねて返す
+          .catch((error) => console.error('app/numbers', num, error))
+      },
+    })
   }, [token])
 
   const toggleBm = useCallback(
@@ -491,19 +512,19 @@ function LoadingScreen({ progress }: { progress: AppDataProgress }) {
     progress.phase === 'downloading' && progress.totalBytes
       ? progress.loadedBytes / progress.totalBytes
       : progress.phase === 'parsing'
-      ? 1
-      : null
+        ? 1
+        : null
 
   const label =
     progress.phase === 'connecting'
       ? 'サーバーに接続中…'
       : progress.phase === 'downloading'
-      ? progress.totalBytes
-        ? `辞書データを受信中… ${Math.round(
-            (progress.loadedBytes / progress.totalBytes) * 100
-          )}%`
-        : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
-      : '辞書データを展開中…'
+        ? progress.totalBytes
+          ? `辞書データを受信中… ${Math.round(
+              (progress.loadedBytes / progress.totalBytes) * 100
+            )}%`
+          : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
+        : '辞書データを展開中…'
 
   return (
     <div class="loading-screen">
