@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { NumberDoc } from '../lib/numberApi'
 import {
   confirmOp,
-  decadeProgress,
+  decadeBreakdown,
+  repLevel,
   isStale,
   matchesFilter,
   pickedSlots,
@@ -145,18 +146,33 @@ describe('matchesFilter', () => {
   })
 })
 
-describe('decadeProgress', () => {
-  it('十の位ごとに確定済みの割合を出す', () => {
+describe('repLevel', () => {
+  it('確定済みの代表の数。未確定は 0', () => {
+    const one = [pick('こい', '鯉')]
+    const two = [pick('こい', '鯉'), pick('こい', '鯉太郎')]
+    expect(repLevel(doc({ rep: { picks: two, confirmed: false } }))).toBe(0)
+    expect(repLevel(doc({ rep: { picks: one, confirmed: true } }))).toBe(1)
+    expect(repLevel(doc({ rep: { picks: two, confirmed: true } }))).toBe(2)
+    // 確定でも代表が無ければ 0
+    expect(repLevel(doc({ rep: { picks: [], confirmed: true } }))).toBe(0)
+  })
+})
+
+describe('decadeBreakdown', () => {
+  it('十の位ごとに 未確定 / ① だけ / ①② の数を出す', () => {
+    const one = [pick('こい', '鯉')]
+    const two = [pick('こい', '鯉'), pick('こい', '鯉太郎')]
     const docs = [
-      doc({ num: '001', rep: { picks: [], confirmed: true } }),
+      doc({ num: '001', rep: { picks: one, confirmed: true } }),
       doc({ num: '002' }),
-      doc({ num: '095', rep: { picks: [], confirmed: true } }),
+      doc({ num: '003', rep: { picks: two, confirmed: true } }),
+      doc({ num: '095', rep: { picks: two, confirmed: true } }),
     ]
-    const progress = decadeProgress(docs)
+    const progress = decadeBreakdown(docs)
     expect(progress).toHaveLength(10)
-    expect(progress[0]).toBe(0.5)
-    expect(progress[9]).toBe(1)
-    expect(progress[5]).toBe(0)
+    expect(progress[0]).toEqual({ total: 3, counts: [1, 1, 1] })
+    expect(progress[9]).toEqual({ total: 1, counts: [0, 0, 1] })
+    expect(progress[5]).toEqual({ total: 0, counts: [0, 0, 0] })
   })
 })
 

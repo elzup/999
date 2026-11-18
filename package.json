@@ -10,6 +10,7 @@
     "push:tags": "node src/push-tags-sheet.js",
     "sync:tags": "node src/sync-tags.js",
     "tag:rename": "node src/tag-rename-cli.js",
+    "label:n": "node src/label-n-migrate-cli.js",
     "backup:data": "bash scripts/backup-data.sh",
     "images:search": "node src/search-word-images.js",
     "images:retag": "node src/search-word-images.js --retag --slot both --limit 999",
