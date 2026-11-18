@@ -50,8 +50,8 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // 画像コンソールの印 (ロック / 撮り直し)。書くのは Function、取り込むのは CLI だけ
-    match /imageMarks/{key} {
+    // 画像の正本 (1 枠 1 文書。spec:image-store)。読み書きは Function と Mac の CLI (Admin SDK) だけ
+    match /imageSlots/{key} {
       allow read, write: if false;
     }
 

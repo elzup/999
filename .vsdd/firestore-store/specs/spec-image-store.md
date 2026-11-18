@@ -38,7 +38,7 @@ coherence:
 1. ✅ (2026-11-18) **投入**: 4 ファイルを `imageSlots` に写す (`nr images:migrate`、dry-run が既定)。件数一致を確認。
 2. ✅ (2026-11-18) **読みの切替**: `store.js` の load\* を «Firestore → cache JSON» に。cache が無い / 古いときは pull。
 3. ✅ (2026-11-18) **書きの切替**: console/server.js と search/fetch/direct の書き込みを Firestore へ。cache は書いた後に更新。
-4. **web 版**: `functions/console-route.js` を `imageSlots` 直読み・直書きに。`imageMarks` を止める。
+4. ✅ (2026-11-18) **web 版**: `functions/console-route.js` を `imageSlots` 直読み・直書きに。`imageMarks` を止める。
 5. **Function で取得**: 候補を複数取って GCS に上げ、選んだものを採用する経路。
 6. **UI**: 複数候補のチューザー (`showChooser` の拡張)。
 

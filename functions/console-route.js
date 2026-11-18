@@ -1,13 +1,13 @@
 // web 版の画像コンソール (hosting の /console/) の経路 (D-0073)。
-//   GET  /console/state                 焼き込んだ state に web の印を重ねて返す
+//   GET  /console/state                 焼き込んだ対象一覧に、正本 imageSlots の画像・印を重ねて返す
 //   POST /console/keep {id,slot,on}     ロックの印
-//   POST /console/redo {id,slot,on}     撮り直しの印 (撮り直し自体は Mac が起きたときに流す)
+//   POST /console/redo {id,slot,on}     撮り直しの印 (撮り直し自体は Mac が流す。段階 5 で Function へ)
 //
+// 画像と印の正本は Firestore imageSlots (spec:image-store, D-0084)。Mac の console と同じ文書を直接読み書きする。
 // state は nr deploy のときに手元の buildState() を functions/private/console-state.json に
-// 焼いたもの (語を含むので認証の後ろでだけ返す)。Function からは手元の JSON に書けないので、
-// 印は Firestore の imageMarks に置き、手元へは nr images:pull-marks で取り込む。
+// 焼いたもの。語を含むので認証の後ろでだけ返す。使うのは対象 (targets / kinds) と表示用の名前だけ。
 //
-// db は { listMarks, setMark }、marks は src/images/marks.js ({ overlayMarks, markDoc }) を
+// slots は src/images/slot-store.js ({ listSlots, setMark })、view は slot-docs.js の marksView を
 // 引数で受け取る。Firestore にも生成物の functions/lib にも頼らずにテストできるようにするため。
 
 const INVALID_TARGET = 'id/slot が不正です。画面を再読み込みしてください'
@@ -22,13 +22,6 @@ function isValidTarget(state, { id, slot }) {
   return slots.includes(slot)
 }
 
-async function currentMarks(state, db, marks) {
-  return marks.overlayMarks(
-    { keep: state.keep ?? {}, redo: state.redo ?? {} },
-    await db.listMarks()
-  )
-}
-
 /**
  * @returns {Promise<{status: number, payload: object} | null>} 担当外の経路なら null
  */
@@ -37,12 +30,12 @@ export async function handleConsoleRequest({
   path,
   body,
   state,
-  db,
-  marks,
+  slots,
+  view,
   now,
 }) {
   if (path === '/console/state' && method === 'GET') {
-    const current = await currentMarks(state, db, marks)
+    const current = view(await slots.listSlots({ now }))
     return { status: 200, payload: { ...state, ...current } }
   }
 
@@ -53,14 +46,16 @@ export async function handleConsoleRequest({
     return { status: 400, payload: { error: INVALID_TARGET } }
 
   const { id, slot } = body
-  const on = Boolean(body.on)
-  const before = await currentMarks(state, db, marks)
-  // ロック中の枠に撮り直しの印を付けると、次の一括で上書きされる (手元の server.js と同じ)
-  if (op === 'redo' && on && before.keep[`${id}:${slot}`])
+  const result = await slots.setMark({
+    id,
+    slot,
+    op,
+    on: Boolean(body.on),
+    reason: body.reason,
+    now,
+  })
+  if (result.error === 'locked')
     return { status: 409, payload: { error: LOCKED } }
-
-  const mark = marks.markDoc({ id, slot, op, on, reason: body.reason, now })
-  await db.setMark(mark)
-  const after = marks.overlayMarks(before, [mark])
-  return { status: 200, payload: { [op]: after[op] } }
+  const current = view(await slots.listSlots({ now }))
+  return { status: 200, payload: { [op]: current[op] } }
 }

@@ -17,7 +17,7 @@
     "images:redo": "node src/fetch-word-images.js --redo-only",
     "images:keep-all": "node src/keep-all.js",
     "images:avatar-i": "node src/avatar-i-images.js",
-    "images:pull-marks": "node src/images/pull-marks.js",
+    "images:redo-flagged": "node src/images/redo-flagged.js",
     "images:fetch-targets": "node src/fetch-target-images.js",
     "images:migrate": "node src/images/migrate.js",
     "images:pull": "node src/images/pull.js",

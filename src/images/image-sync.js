@@ -11,6 +11,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { connect } from '../firestore/db.js'
 import {
   IMAGE_SLOTS,
+  emptySlotDoc,
   fromSlotDocs,
   replaceImage,
   splitSlotKey,
@@ -32,14 +33,10 @@ const PULL_OVERLAP_MS = 5 * 60 * 1000
 const TX_CHUNK = 100
 const FIELDS = ['image', 'keep', 'redo', 'candidate']
 
-const emptyDoc = (key) => ({
-  ...splitSlotKey(key),
-  image: null,
-  keep: false,
-  redo: null,
-  candidate: null,
-  history: [],
-})
+const emptyDoc = (key) => {
+  const { id, slot } = splitSlotKey(key)
+  return emptySlotDoc(id, slot)
+}
 
 /** 文書から updatedAt を除いた «中身» */
 const bodyOf = ({ updatedAt: _u, ...doc }) => doc
@@ -165,19 +162,34 @@ export async function syncImages({
 }
 
 /**
- * CLI の main を同期で挟む。最初の同期に失敗したら main を走らせない
- * (正本と切れたまま手元だけ書き換えると、次の同期で衝突か上書きになる)。
+ * 起動時の同期。つながらなくても止めずにオフラインで続ける: 手元の変更は base との差分として
+ * 残り、次につながったときに送られる (同じ枠を別の面が先に書いていれば衝突として報告)。
+ * ただし base が無い (一度も同期していない) ときは止める。次の同期は送らずに全件を取り込むので、
+ * オフラインで書いた分が消えるため。
+ * @returns {Promise<boolean>} 続けてよいか
  */
-export async function withImageSync(main) {
+export async function syncOnStart(label) {
   try {
     await syncImages()
+    return true
   } catch (err) {
     console.error(err)
-    console.error(
-      '✗ 画像の正本 (Firestore) と同期できないので止めた。認証を確認して再実行'
+    if (!loadBase()) {
+      console.error(
+        `✗ ${label}: 画像の正本 (Firestore) と一度も同期していないので止めた。認証を確認して再実行`
+      )
+      return false
+    }
+    console.warn(
+      `⚠ ${label}: 画像の正本 (Firestore) とつながらない。手元の cache で続け、変更は次の同期で送る`
     )
-    process.exit(1)
+    return true
   }
+}
+
+/** CLI の main を同期で挟む */
+export async function withImageSync(main) {
+  if (!(await syncOnStart('画像の同期'))) process.exit(1)
   let failure = null
   try {
     await main()
@@ -189,10 +201,9 @@ export async function withImageSync(main) {
     console.log(`画像の同期: 送信 ${r.pushed} 枠 / 取り込み ${r.pulled} 枠`)
   } catch (err) {
     console.error(err)
-    console.error(
-      '✗ 変更を Firestore に送れなかった。手元には残っているので、次の同期で再送される'
+    console.warn(
+      '⚠ 変更を Firestore に送れなかった。手元には残っているので、次の同期で送られる'
     )
-    failure = failure ?? err
   }
   if (failure) {
     console.error(failure)

@@ -11,8 +11,9 @@ const here = dirname(fileURLToPath(import.meta.url))
 const outDir = join(here, '..', 'functions', 'private')
 
 const state = buildState()
-// 候補の生データ (検索結果の URL 一式) は web の画面が使わないので焼かない
-const baked = { ...state, candidates: {} }
+// 候補の生データ (検索結果の URL 一式) は web の画面が使わないので焼かない。
+// 画像と印は Function が正本 (imageSlots) から重ねるので焼かない (spec:image-store)
+const baked = { ...state, candidates: {}, images: {}, keep: {}, redo: {} }
 
 mkdirSync(outDir, { recursive: true })
 writeFileSync(join(outDir, 'console-state.json'), JSON.stringify(baked) + '\n')
