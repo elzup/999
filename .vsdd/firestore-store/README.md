@@ -47,6 +47,7 @@ DB → シートの書き戻し、競合解決、削除の伝播、ローカル 
 第 3 段階:
 
 12. `design:sheet-bisync` — シート ⇄ DB の双方向同期 (両方を正本にする。8 と 10 の語・かな部分を置き換える)
+13. `spec:image-store` — 画像データ (manifest / keep / redo / candidates) の正本を Firestore `imageSlots` に移し、手元の JSON を cache にする (10 で «別途» とした画像)
 
 ## 実接続の手順
 
