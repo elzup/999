@@ -345,16 +345,36 @@ function saveCustomQuery(id, slot, query) {
   }
 }
 
+// 語から画像検索のワードを作る。略語タグは正式名に展開する (ミミ#pr -a → ミミ プリコネ)。
+// src/images/query.js の buildSearchWord と同じ規則 (クライアントからは import できない)。
+function searchWordOf(w) {
+  if (!w) return ''
+  const [head, ...tags] = w.split('#').map((p) => p.trim())
+  const expanded = [
+    head,
+    ...tags.map((t) => tagNameOf(t.replace(/\s+-\w+$/, '').trim())),
+  ]
+    .filter(Boolean)
+    .join(' ')
+  return expanded
+    .replace(/\s+-\w+$/g, '')
+    .trim()
+    .split(',')[0]
+    .trim()
+    .replace(/\(([^)]*)\)/g, ' $1')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 // 検索ワードを指定して取得 (未取得スロットの救済 / 任意の語で取り直し)
 async function customSearch(id, slot, btn) {
   if (readOnly) return
   const w = state.targets.find((x) => x.id === id)
-  // 前回この枠に入れた検索ワード > 保存済みクエリ > 語そのもの の順で初期値にする
+  // 前回この枠に入れた検索ワード > 保存済みクエリ > 語から作った検索ワード の順で初期値にする
   const def =
     loadCustomQuery(id, slot) ||
     state.candidates?.[`${id}:${slot}`]?.query ||
-    (w && w[slot]) ||
-    ''
+    searchWordOf(w?.[slot])
   const q = window.prompt('検索ワードを指定', def)
   if (q == null) return // キャンセル
   saveCustomQuery(id, slot, q)

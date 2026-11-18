@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as docs from '../../src/images/slot-docs.js'
 import { createSlotStore } from '../../src/images/slot-store.js'
+import { buildSearchWord } from '../../src/images/query.js'
 import { handleConsoleRequest } from '../console-route.js'
 
 const NOW = '2026-11-18T00:00:00.000Z'
@@ -10,7 +11,10 @@ const state = {
   targets: [
     { id: '001', kind: 'num', w2: 'マオ#コードギアス' },
     { id: '002', kind: 'num', slots: ['w1', 'w1#res'], w1: 'ミミ' },
+    { id: '003', kind: 'num', w1: 'ミミ#pr -a' },
   ],
+  // 略語タグ → 正式名 (Mac の tags.json を焼いたもの)
+  tagNames: { pr: 'プリコネ' },
 }
 
 const img = (hash) => ({ url: `https://example.test/${hash}.webp`, hash })
@@ -457,5 +461,25 @@ describe('handleConsoleRequest: その場の取り直し', () => {
       expect(stored['001:w2'].history[0].hash).toBe('cur')
       expect(stored['001:w2'].redo).toBeNull()
     })
+  })
+})
+
+describe('handleConsoleRequest: 検索ワード', () => {
+  it('語の略語タグは正式名に展開して検索する (Mac の一括と同じ)', async () => {
+    const { request, fetcher, docs: stored } = setup()
+    fetcher.queryOf = async (word, tagMap) => buildSearchWord(word, tagMap)
+    await request('POST', '/console/redo-now', { id: '003', slot: 'w1' })
+    expect(fetcher.calls[0].query).toBe('ミミ プリコネ')
+    expect(stored['003:w1'].candidate.query).toBe('ミミ プリコネ')
+  })
+
+  it('候補の取得も同じ展開で検索する', async () => {
+    const { request, fetcher } = setup()
+    fetcher.queryOf = async (word, tagMap) => buildSearchWord(word, tagMap)
+    const res = await request('POST', '/console/candidates', {
+      id: '003',
+      slot: 'w1',
+    })
+    expect(res.payload.query).toBe('ミミ プリコネ')
   })
 })

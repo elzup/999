@@ -56,7 +56,8 @@ async function handleCandidates({ body, state, slots, docs, fetcher, now }) {
   if (current?.keep) return { status: 409, payload: { error: LOCKED } }
   const word = findTarget(state, body)?.[slot] ?? ''
   const typed = typeof body.query === 'string' ? body.query.trim() : ''
-  const query = typed || (word ? await fetcher.queryOf(word) : '')
+  const query =
+    typed || (word ? await fetcher.queryOf(word, state.tagNames ?? {}) : '')
   if (!query) return fail('この枠に語が無い。検索ワードを入れてください')
 
   let choices
@@ -125,7 +126,7 @@ async function handleImageRequest({
         if (path === '/console/redo-now') {
           const word = findTarget(state, body)?.[slot]
           if (!word) return fail('この枠に語が無い')
-          query = await fetcher.queryOf(word)
+          query = await fetcher.queryOf(word, state.tagNames ?? {})
           candidate = { ...current?.candidate, word, query, status: 'ok' }
         } else {
           query = typeof body.query === 'string' ? body.query.trim() : ''
