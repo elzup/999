@@ -50,13 +50,24 @@ export const IMAGE_SLOT_OF: Record<string, string> = {
 // Hosting から Function への転送が 60 秒で切れるので、それより少し長く
 const TIMEOUT_MS = 65_000
 
+/** 画面の «止める» で打ち切った (失敗ではない) */
+export class StoppedError extends Error {
+  constructor() {
+    super('止めました')
+    this.name = 'StoppedError'
+  }
+}
+
 async function call<T>(
   path: string,
   token: string,
-  body?: Record<string, unknown>
+  body?: Record<string, unknown>,
+  stop?: AbortSignal
 ): Promise<T> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const onStop = () => controller.abort()
+  stop?.addEventListener('abort', onStop)
   let res: Response
   try {
     res = await fetch(`/api/console/${path}`, {
@@ -69,10 +80,12 @@ async function call<T>(
       signal: controller.signal,
     })
   } catch (err) {
+    if (stop?.aborted) throw new StoppedError()
     console.error('image api', path, err)
     throw new Error('通信できません (圏外・タイムアウト)')
   } finally {
     clearTimeout(timer)
+    stop?.removeEventListener('abort', onStop)
   }
   const data = await res.json().catch(() => null)
   if (!res.ok) throw new Error(data?.error || `失敗しました (${res.status})`)
@@ -88,17 +101,21 @@ export const fetchCandidates = ({
   id,
   slot,
   query,
+  stop,
 }: {
   token: string
   id: string
   slot: string
   query?: string
+  /** 画面の «止める»。サーバの処理は止まらないが、結果を待たずに戻る */
+  stop?: AbortSignal
 }) =>
-  call<CandidateResult>('candidates', token, {
-    id,
-    slot,
-    ...(query ? { query } : {}),
-  })
+  call<CandidateResult>(
+    'candidates',
+    token,
+    { id, slot, ...(query ? { query } : {}) },
+    stop
+  )
 
 /** 候補を採用する。Function はこの枠に出した画像だけを受け付けるので hash だけ送る */
 export const pickImage = async ({

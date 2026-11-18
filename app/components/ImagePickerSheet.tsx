@@ -5,13 +5,16 @@
 // 画面の上半分に指を伸ばさない規約 (docs/screen-layout.md) に合わせ、シートは下端に出し、
 // 確定・閉じるは最下段に置く。
 import { createPortal } from 'preact/compat'
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import {
   fetchCandidates,
   pickImage,
   setImageOverride,
+  StoppedError,
   type SlotImage,
 } from '../lib/imagePicker'
+import { useNumberContext } from '../lib/numberContext'
+import { buildSearchWord } from '../lib/searchWord'
 import { wordImage } from '../lib/wordImage'
 
 // 3×2 の 1 枠は «今» なので、候補は 5 枚まで並べる
@@ -30,6 +33,42 @@ type Props = {
 }
 
 type Loaded = { query: string; candidates: SlotImage[] }
+
+/** 走っている検索。auto は開いたときの自動の検索 */
+type Searching = { query: string; isAuto: boolean; startedAt: number }
+
+/** 何で検索しているか・何秒たったか・止めるボタンを出す帯 (開いた瞬間に検索が走っているのが見えるように) */
+function SearchStatus({
+  searching,
+  onStop,
+}: {
+  searching: Searching
+  onStop: () => void
+}) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  const seconds = Math.max(0, Math.floor((now - searching.startedAt) / 1000))
+  return (
+    <div class="ip-status" role="status">
+      <span class="ip-spinner" aria-hidden="true" />
+      <div class="ip-status-text">
+        <div class="ip-status-main">
+          {searching.query ? `«${searching.query}» で` : ''}
+          {searching.isAuto ? '自動で検索中' : '検索中'}
+        </div>
+        <div class="ip-status-sub">
+          候補の画像を取り込んでいます · {seconds}秒
+        </div>
+      </div>
+      <button class="filter-btn ip-stop" type="button" onClick={onStop}>
+        止める
+      </button>
+    </div>
+  )
+}
 
 function Tile({
   image,
@@ -70,33 +109,64 @@ export default function ImagePickerSheet({
   onClose,
   onPicked,
 }: Props) {
-  const [query, setQuery] = useState('')
+  // 開いた瞬間から検索ワードを出す (サーバが決めた検索ワードが返ってきたら差し替える)
+  const tagTitles = useNumberContext()?.tagTitles
+  const [query, setQuery] = useState(() => buildSearchWord(word, tagTitles))
   const [loaded, setLoaded] = useState<Loaded | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [searching, setSearching] = useState<Searching | null>(null)
+  const [isStopped, setIsStopped] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   // null は «今» (変えない)
   const [selected, setSelected] = useState<string | null>(null)
+  const stopRef = useRef<AbortController | null>(null)
+  // 検索中に検索ワードを打ち始めたら、返ってきた検索ワードで上書きしない
+  const isEditedRef = useRef(false)
+  const isLoading = searching !== null
 
+  /** typed を省くと語から (サーバがタグの最新の正式名で) 検索ワードを作る */
   const load = async (typed?: string) => {
-    setIsLoading(true)
+    const stop = new AbortController()
+    stopRef.current = stop
+    setSearching({
+      query: typed ?? query,
+      isAuto: typed === undefined,
+      startedAt: Date.now(),
+    })
+    setIsStopped(false)
+    isEditedRef.current = false
     setError('')
     setSelected(null)
     try {
-      const result = await fetchCandidates({ token, id, slot, query: typed })
+      const result = await fetchCandidates({
+        token,
+        id,
+        slot,
+        query: typed,
+        stop: stop.signal,
+      })
       setLoaded({ query: result.query, candidates: result.candidates })
-      setQuery(result.query)
+      if (!isEditedRef.current) setQuery(result.query)
     } catch (err) {
-      console.error('candidates', id, slot, err)
-      setError(String((err as Error).message || err))
+      if (err instanceof StoppedError) {
+        setIsStopped(true)
+      } else {
+        console.error('candidates', id, slot, err)
+        setError(String((err as Error).message || err))
+      }
     } finally {
-      setIsLoading(false)
+      if (stopRef.current === stop) {
+        stopRef.current = null
+        setSearching(null)
+      }
     }
   }
 
   useEffect(() => {
     load()
     // 開いた枠の候補を 1 度だけ取る。枠が変わればシートごと作り直される (key)
+    // 閉じたら待つのをやめる
+    return () => stopRef.current?.abort()
   }, [])
 
   const decide = async () => {
@@ -140,12 +210,25 @@ export default function ImagePickerSheet({
             type="search"
             value={query}
             placeholder="検索ワード"
-            onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+            onInput={(e) => {
+              isEditedRef.current = true
+              setQuery((e.target as HTMLInputElement).value)
+            }}
           />
           <button class="filter-btn" type="submit" disabled={isLoading}>
             {isLoading ? '検索中…' : '再検索'}
           </button>
         </form>
+        {searching ? (
+          <SearchStatus
+            searching={searching}
+            onStop={() => stopRef.current?.abort()}
+          />
+        ) : isStopped ? (
+          <div class="ip-status-note">
+            検索を止めました。«再検索» で取り直せます
+          </div>
+        ) : null}
         <div class="ip-grid">
           <Tile
             image={current}
