@@ -49,7 +49,10 @@ const SLOT_SIDE = {
   O: 'm',
 }
 const SIDE_LABEL = { h: '人', m: '物' }
-const tagNameOf = (tag) => state.tagNames?.[tag] || tag
+// タグの名前は 2 つある。表示は略称 (tagShorts、無ければ正式名)、検索は正式名 (tagNames = シートの title)
+const tagNameOf = (tag) =>
+  state.tagShorts?.[tag] || state.tagNames?.[tag] || tag
+const tagTitleOf = (tag) => state.tagNames?.[tag] || tag
 
 // 表示中の対象の種類 (番号 / 日付 / カード)。枠の並びは種類ごとにサーバが返す
 // (src/images/targets.js の IMAGE_KINDS)。番号・日付は 人 1〜3 → 物 1〜3 の 6 枠
@@ -352,7 +355,7 @@ function searchWordOf(w) {
   const [head, ...tags] = w.split('#').map((p) => p.trim())
   const expanded = [
     head,
-    ...tags.map((t) => tagNameOf(t.replace(/\s+-\w+$/, '').trim())),
+    ...tags.map((t) => tagTitleOf(t.replace(/\s+-\w+$/, '').trim())),
   ]
     .filter(Boolean)
     .join(' ')
@@ -911,11 +914,12 @@ function renderTagFilter() {
   for (const [tag, n] of tagCounts()) {
     const opt = document.createElement('option')
     opt.value = tag
-    const name = state.tagNames?.[tag]
-    // datalist はブラウザが value と label の両方で絞るので、表示名を label に入れておけば
+    const name = tagNameOf(tag)
+    const title = tagTitleOf(tag)
+    // datalist はブラウザが value と label の両方で絞るので、略称と正式名を label に入れておけば
     // «アトリエ» と打っても #res が候補に出る
-    opt.label =
-      name && name !== tag ? `#${tag} ${name} (${n})` : `#${tag} (${n})`
+    const names = [...new Set([name, title])].filter((n) => n !== tag)
+    opt.label = `${names.join(' / ') || '#' + tag} (${n})`
     list.appendChild(opt)
   }
   const input = document.getElementById('tag-filter')
@@ -932,7 +936,9 @@ function tagFromInput(value) {
   const known = tagCounts().map(([tag]) => tag)
   if (known.includes(text)) return text
   const byName = known.find(
-    (tag) => fold(state.tagNames?.[tag] ?? '') === fold(text)
+    (tag) =>
+      fold(tagNameOf(tag)) === fold(text) ||
+      fold(tagTitleOf(tag)) === fold(text)
   )
   return byName ?? text
 }

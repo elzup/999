@@ -51,9 +51,15 @@ const MIME = {
   '.svg': 'image/svg+xml',
 }
 
-// タグの表示名 (res → アトリエ)。sync:tags の出力。無い手元では表示名なしで動く
+// タグの正式名 (res → ライザのアトリエ)。sync:tags の出力。検索ワードの展開に使う。無い手元では名前なしで動く
 function loadTagNames() {
   const path = join(repoRoot, 'src', 'data', 'tags.json')
+  return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {}
+}
+
+// タグの略称 (short_title)。表示はこちらを先に使う
+function loadTagShorts() {
+  const path = join(repoRoot, 'src', 'data', 'tags-short.json')
   return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {}
 }
 
@@ -72,6 +78,7 @@ export function buildState() {
     redo: redo.redo || {},
     keep: keep.keep || {},
     tagNames: loadTagNames(),
+    tagShorts: loadTagShorts(),
   }
 }
 

@@ -438,9 +438,14 @@ async function withLiveSearchTagNames(state) {
     if (!doc) return state
     return {
       ...state,
+      // tagNames は検索用の正式名 (title)、tagShorts は表示用の略称 (short_title → title)
       tagNames: {
         ...(state.tagNames ?? {}),
         ...lib.tagNames.searchNamesOf(doc.names),
+      },
+      tagShorts: {
+        ...(state.tagShorts ?? {}),
+        ...lib.tagNames.displayNamesOf(doc.names),
       },
     }
   } catch (error) {
@@ -512,9 +517,14 @@ async function withLiveTagNames(data) {
     if (!doc) return data
     return {
       ...data,
+      // 表示用 (略称 → 正式名) と、検索・グループの見出し用 (正式名) の 2 つを最新にする
       tagNames: {
         ...(data.tagNames ?? {}),
         ...lib.tagNames.displayNamesOf(doc.names),
+      },
+      tagTitles: {
+        ...(data.tagTitles ?? {}),
+        ...lib.tagNames.searchNamesOf(doc.names),
       },
     }
   } catch (error) {
