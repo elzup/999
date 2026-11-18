@@ -86,6 +86,11 @@ export function saveBookmarkViews(views: Record<string, number>) {
 // Tab
 export function loadTab(): TabId {
   const saved = localStorage.getItem('tab999')
+  // 代表タブは候補タブの «代表» にまとめた。開いていた人は候補タブの代表で開く
+  if (saved === 'rep') {
+    localStorage.setItem('pick.mode', 'rep')
+    return 'cand'
+  }
   return (VALID_TABS as readonly string[]).includes(saved ?? '')
     ? (saved as TabId)
     : 'num'
@@ -248,7 +253,6 @@ export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
   bm: true,
   hex: false,
   edit: false,
-  rep: false,
   // 画像の候補から選ぶタブ (D-0089)。console の代わりなので最初から出す
   cand: true,
   misc: true,
