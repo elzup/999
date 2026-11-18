@@ -60,7 +60,10 @@ async function handleCandidates({ body, state, slots, docs, fetcher, now }) {
   const current = (await slots.listSlots({ now }))[key] ?? null
   if (current?.keep) return { status: 409, payload: { error: LOCKED } }
   const word = findTarget(state, body)?.[slot] ?? ''
-  const typed = typeof body.query === 'string' ? body.query.trim() : ''
+  // auto: 画面が語から作った検索ワード。ここでタグの最新の正式名で作り直すので、打った語とは扱わない
+  // (画面も展開して送るのは、この経路を知らない古い Function でも展開済みの語で探させるため)
+  const typed =
+    !body.auto && typeof body.query === 'string' ? body.query.trim() : ''
   // reuse: 前に取った候補が残っていれば検索せずに返す (開き直すたびに取り直さない)
   if (body.reuse && !typed) {
     const kept = (current?.choices ?? []).filter(
