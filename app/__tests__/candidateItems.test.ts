@@ -49,3 +49,37 @@ describe('candidateItems の絞り込み', () => {
     expect(item).toMatchObject({ changed: true, choices: 0 })
   })
 })
+
+describe('検索語の誤り (タグを展開しないまま取った画像)', () => {
+  const base: ImageState = {
+    kinds: { num: { label: '番号', slots: ['w1', 'w2'] } },
+    targets: [
+      { id: '010', kind: 'num', w1: 'ミミ#pr -a', w2: 'マオ#cg' },
+      { id: '011', kind: 'num', w1: 'ボブ', w2: 'エリカ#tri' },
+    ],
+    images: {
+      '010': { w1: img('m'), w2: img('o') },
+      '011': { w1: img('b'), w2: img('e') },
+    },
+    keep: { '010:w2': true },
+    redo: {},
+    candidates: {
+      '010:w1': { query: 'ミミ pr' }, // 展開しないまま取った
+      '010:w2': { query: 'マオ cg' }, // 確定済みでも出す
+      '011:w1': { query: 'ボブ' }, // タグの無い語は当たらない
+      '011:w2': { query: 'エリカ 別の語' }, // 自分で打った語は当たらない
+    },
+  }
+  const titles = { pr: 'プリコネ', cg: 'コードギアス', tri: 'トリッカル' }
+
+  it('取ったときの検索ワードが展開しない語と同じ枠だけ', () => {
+    const keys = candidateItems(base, 'stale', titles).map(
+      (it) => `${it.id}:${it.slot}`
+    )
+    expect(keys).toEqual(['010:w1', '010:w2'])
+  })
+
+  it('正式名の分からないタグは判定しない (展開しても同じ語になる)', () => {
+    expect(candidateItems(base, 'stale', {})).toEqual([])
+  })
+})
