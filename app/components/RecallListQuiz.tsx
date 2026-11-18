@@ -3,6 +3,7 @@ import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import { candidatesOf } from '../lib/choice'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
+import TaggedWord from './TaggedWord'
 
 type Props = {
   title: string
@@ -110,7 +111,7 @@ function RecallListQuiz({
             <span class="rl-word">
               {isRevealed ? (
                 <>
-                  {row.word}
+                  <TaggedWord word={row.word} />
                   {row.kana ? <Yomi class="rl-kana" kana={row.kana} /> : null}
                 </>
               ) : (

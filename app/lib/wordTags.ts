@@ -128,11 +128,14 @@ export const TAG_MEANINGS: Record<string, string> = {
 }
 
 /** «#g 概念» «-n 馴染みがない» のような意味の一覧 (詳細カードで語をタップしたとき) */
-export function marksMeaning(tags: string[], labels: string[]): string[] {
+export function marksMeaning(
+  tags: string[],
+  labels: string[],
+  names: Record<string, string> = {}
+): string[] {
   return [
-    ...tags.map((t) =>
-      TAG_MEANINGS[t] ? `#${t} ${TAG_MEANINGS[t]}` : `#${t}`
-    ),
+    // タグは表示名 (short_title → title)。無ければ組み込みの意味、それも無ければ id
+    ...tags.map((t) => names[t] ?? TAG_MEANINGS[t] ?? t),
     ...labels.map((l) => {
       const meaning = LABELS.find((x) => x.id === l)?.meaning
       return meaning ? `-${l} ${meaning}` : `-${l}`

@@ -24,6 +24,7 @@ import {
   scrollToNum,
 } from '../lib/pickPosition'
 import Screen, { DockBar, DockRow } from './Screen'
+import TaggedWord from './TaggedWord'
 
 const FILTER_KEY = 'cand.filter'
 const KIND_KEY = 'cand.kind'
@@ -87,7 +88,9 @@ function ItemCard({
         <span class="cand-id">{item.id}</span>
         <span class="cand-slot">{item.slotName}</span>
       </span>
-      <span class="cand-word">{item.word}</span>
+      <span class="cand-word">
+        <TaggedWord word={item.word} />
+      </span>
     </button>
   )
 }

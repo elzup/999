@@ -3,6 +3,7 @@ import { useMemo } from 'preact/hooks'
 import type { NumberEntry, RulesData } from '../data/schema'
 import type { Combo, ReadingPart } from '../lib/recallTree'
 import { buildRecallTree } from '../lib/recallTree'
+import TaggedWord from './TaggedWord'
 
 type Props = {
   numbers: NumberEntry[]
@@ -33,7 +34,7 @@ function ComboRow({ combo }: { combo: Combo }) {
         {combo.examples.length > 0 ? (
           combo.examples.map((e) => (
             <span key={e.num} class="recall-ex">
-              {e.word}
+              <TaggedWord word={e.word} />
               <span class="recall-ex-num">{e.num}</span>
             </span>
           ))

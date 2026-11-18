@@ -52,6 +52,7 @@ import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
 import { useNumberContext } from '../lib/numberContext'
+import { tagNameOf, useTagNames } from '../lib/tagNames'
 
 const REP_RANKS = [1, 2] as const
 const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
@@ -814,6 +815,7 @@ function TagRow({
   knownTags: TagSuggestion[]
   onChange: (word: string) => void
 }) {
+  const names = useTagNames()
   const [adding, setAdding] = useState(false)
   const [query, setQuery] = useState('')
   const parsed = parseWord(word)
@@ -838,8 +840,8 @@ function TagRow({
           </span>
         ) : null}
         {parsed.tags.map((tag) => (
-          <span key={'t' + tag} class="nd-tag">
-            #{tag}
+          <span key={'t' + tag} class="nd-tag" title={`#${tag}`}>
+            {tagNameOf(tag, names)}
             <button
               class="nd-tag-x"
               aria-label={`タグ ${tag} を外す`}

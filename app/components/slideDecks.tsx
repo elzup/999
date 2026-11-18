@@ -10,6 +10,7 @@ import { getFfRows, isValidFfRow } from '../lib/ffQuiz'
 import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
 import type { SlideDeck } from '../lib/slideDeck'
 import { wordImage } from '../lib/wordImage'
+import TaggedWord from './TaggedWord'
 
 // 各グループのデータを SlideDeck (問題面 → 答え面) に写す。
 // 表示部品はここに閉じ、SlidePlayer には中身を意識させない。
@@ -49,7 +50,9 @@ function WordRow({
         />
       ) : null}
       <div class="slide-word-text">
-        <span class="slide-word-main">{word}</span>
+        <span class="slide-word-main">
+          <TaggedWord word={word} />
+        </span>
         {kana ? <Yomi class="slide-word-kana" kana={kana} /> : null}
       </div>
     </div>

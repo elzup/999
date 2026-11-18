@@ -2,12 +2,14 @@ import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { collectNumberTags } from '../lib/tags'
 import Screen, { DockBar } from './Screen'
+import { tagNameOf, useTagNames } from '../lib/tagNames'
 
 type Props = {
   numbers: NumberEntry[]
 }
 
 function TagPanel({ numbers }: Props) {
+  const names = useTagNames()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -17,9 +19,10 @@ function TagPanel({ numbers }: Props) {
     if (!q) return tags
     return tags.filter((entry) => {
       if (entry.tag.toLowerCase().includes(q)) return true
+      if (tagNameOf(entry.tag, names).toLowerCase().includes(q)) return true
       return entry.occurrences.some((occ) => occ.base.toLowerCase().includes(q))
     })
-  }, [tags, query])
+  }, [tags, query, names])
 
   const selectedTag =
     filtered.find((entry) => entry.tag === selected) ||
@@ -40,7 +43,7 @@ function TagPanel({ numbers }: Props) {
             }
             onClick={() => setSelected(entry.tag)}
           >
-            <span class="tag-name">#{entry.tag}</span>
+            <span class="tag-name">{tagNameOf(entry.tag, names)}</span>
             <span class="tag-count">{entry.count}</span>
             <span class="tag-meta">
               人{entry.categories.hito} 物{entry.categories.mono} 念
@@ -56,7 +59,9 @@ function TagPanel({ numbers }: Props) {
       <div class="tag-panel-detail">
         <div class="tag-detail-card">
           <div class="tag-detail-head">
-            <span class="tag-detail-title">#{selectedTag.tag}</span>
+            <span class="tag-detail-title">
+              {tagNameOf(selectedTag.tag, names)}
+            </span>
             <span class="tag-detail-sub">{selectedTag.nums.length}番号</span>
           </div>
           <div class="tag-num-list">
