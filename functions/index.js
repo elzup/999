@@ -141,7 +141,9 @@ export const api = onRequest(
           method: req.method,
           path,
           body: req.body || {},
-          state: readPrivateJson('console-state.json'),
+          state: await withLiveSearchTagNames(
+            readPrivateJson('console-state.json')
+          ),
           ...(await loadImageSlots()),
           now: new Date().toISOString(),
         })
@@ -408,6 +410,29 @@ async function syncTagNamesSafely(lib, spreadsheetId, now) {
   } catch (error) {
     // タグ名は表示名だけ。読めなくても語の同期の結果は変わらず、配信データの名前で出る
     console.error('sheetSync(tagNames)', error)
+  }
+}
+
+/**
+ * console の state のタグ名 (焼いた tags.json = tag → 正式名) に、シート同期で DB に置いた最新の正式名を重ねる。
+ * 検索ワードの略語タグの展開 (#tri → トリッカル) に使うので、deploy 後にシートへ足したタグも効かせる
+ */
+async function withLiveSearchTagNames(state) {
+  try {
+    const lib = await loadSheetSync()
+    const doc = await lib.tagNamesStore.read()
+    if (!doc) return state
+    return {
+      ...state,
+      tagNames: {
+        ...(state.tagNames ?? {}),
+        ...lib.tagNames.searchNamesOf(doc.names),
+      },
+    }
+  } catch (error) {
+    // DB が読めなくても console は動かす。展開が deploy 時点の表になるだけ
+    console.error('console(tagNames)', error)
+    return state
   }
 }
 

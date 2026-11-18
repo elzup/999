@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   displayNamesOf,
+  searchNamesOf,
   syncTagNames,
   tagNamesFromValues,
 } from '../firestore/tag-names.js'
@@ -51,6 +52,15 @@ describe('displayNamesOf', () => {
   it('short_title → title の順。title が ? なら出さない', () => {
     expect(displayNamesOf(tagNamesFromValues(VALUES))).toEqual({
       ipra: 'ｱｲﾄﾞﾘｰﾌﾟﾗｲﾄﾞ',
+      g: '概念',
+    })
+  })
+})
+
+describe('searchNamesOf', () => {
+  it('検索には正式名 (title) を使う。title が ? なら出さない (tags.json と同じ)', () => {
+    expect(searchNamesOf(tagNamesFromValues(VALUES))).toEqual({
+      ipra: 'アイドリープライド',
       g: '概念',
     })
   })

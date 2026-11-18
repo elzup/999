@@ -41,6 +41,18 @@ export function displayNamesOf(names) {
   )
 }
 
+/**
+ * 検索に使う正式名の表 (tag → title)。Mac の sync-tags.js が書く src/data/tags.json と同じ規則で、
+ * title が空か ? のタグは載せない (略語のまま検索するほうがまし)
+ */
+export function searchNamesOf(names) {
+  return Object.fromEntries(
+    Object.entries(names ?? {})
+      .map(([tag, n]) => [tag, n.title])
+      .filter(([, title]) => title && title !== UNKNOWN_TITLE)
+  )
+}
+
 const sameNames = (a, b) => JSON.stringify(a ?? {}) === JSON.stringify(b ?? {})
 
 export function createTagNamesStore(db) {
