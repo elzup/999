@@ -892,6 +892,8 @@ function TagRow({
             <span class="nd-move-label">ラベル</span>
             {LABELS.map((label) => {
               const on = parsed.labels.includes(label.id)
+              // 引退したラベル (-n → 評価 -1) は付いている語でだけ出す (外す用)
+              if (label.retired && !on) return null
               return (
                 <button
                   key={label.id}
