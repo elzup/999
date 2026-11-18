@@ -2,6 +2,8 @@
 //   GET  /api/state        対象 (番号・日付・カード) + manifest + candidates + redo を merge して返す
 //   POST /api/redo {id,slot,on}  word-images-redo.json を更新
 //   静的: console/index.html, console/app.js
+// 画像データの正本は Firestore imageSlots (spec:image-store)。手元の JSON は cache で、
+// API の前後で syncImages() が送受信する。
 // ※ ファイル書込が必要なので静的ホスティング(bayalhost)では動かない。ローカル運用専用。
 
 import { spawnSync } from 'node:child_process'
@@ -36,6 +38,7 @@ import {
 import { buildAvatarImage } from '../src/avatar-i-images.js'
 import { parseSlot } from '../src/images/tag-variants.js'
 import { extractName } from '../src/words.js'
+import { syncImages } from '../src/images/image-sync.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
@@ -255,8 +258,31 @@ const isValidTarget = ({ id, slot }) => {
   )
 }
 
+// 同期は 1 本ずつ。並べないと 2 つの同期が同じ base を読んで同じ枠を二度送る
+let syncQueue = Promise.resolve()
+function queueSync(when) {
+  syncQueue = syncQueue.then(() =>
+    syncImages().then(
+      (r) => {
+        if (r.pushed || r.pulled)
+          console.log(
+            `  画像の同期 (${when}): 送信 ${r.pushed} / 取り込み ${r.pulled}`
+          )
+      },
+      // 落とさない: 送れなかった変更は手元に残り、base との差分として次の同期で再送される
+      (err) => console.error(`✗ 画像の同期に失敗 (${when})`, err)
+    )
+  )
+  return syncQueue
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`)
+  // 読む前に web など別の面の更新を取り込む。書いた後の送信は応答を返してから行う
+  if (url.pathname.startsWith('/api/')) {
+    await queueSync('前')
+    if (req.method === 'POST') res.on('finish', () => queueSync('後'))
+  }
 
   // 別サイトのページからの書き込み (CSRF) を断る。application/json の POST は
   // ブラウザが事前確認を挟み、この server は CORS を返さないので他所からは送れない
@@ -342,6 +368,16 @@ const server = createServer(async (req, res) => {
 // 直接実行時のみ listen (build-static.js から import される時は起動しない)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   // 書き込み API に認証が無いので、同じ LAN の他の端末からは受け付けない
+  // 正本と切れたまま起動すると、手元だけ書き換えて次の同期で衝突する
+  try {
+    await syncImages()
+  } catch (err) {
+    console.error(err)
+    console.error(
+      '✗ 画像の正本 (Firestore) と同期できないので起動しない。認証を確認'
+    )
+    process.exit(1)
+  }
   server.listen(PORT, '127.0.0.1', () => {
     console.log(`console: http://localhost:${PORT}`)
   })

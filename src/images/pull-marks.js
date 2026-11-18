@@ -12,6 +12,7 @@ import { MARKS_COLLECTION, overlayMarks } from './marks.js'
 import { PATHS, loadKeep, loadRedo, writeJson } from './store.js'
 import { PIPELINE_SLOTS, kindOf } from './targets.js'
 import { redoDirect } from './direct.js'
+import { withImageSync } from './image-sync.js'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -78,7 +79,4 @@ async function main() {
   if (process.argv.includes('--redo') && flagged > 0) await redoFlagged()
 }
 
-main().catch((error) => {
-  console.error('pull-marks', error)
-  process.exitCode = 1
-})
+withImageSync(main)

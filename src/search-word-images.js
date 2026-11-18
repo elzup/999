@@ -26,6 +26,7 @@ import {
 // wh/wm 多候補スキーマを w1/w2/w1_2/w2_2 に正規化する共有ローダを使う
 // (旧ローカル loadWords は tsv 生カラムのままで _2 スロットを拾えなかった)
 import { loadWords } from './words.js'
+import { withImageSync } from './images/image-sync.js'
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
 
@@ -196,7 +197,4 @@ async function main() {
   console.log('next: nr images:fetch  (DL→webp→GCS upload)')
 }
 
-main().catch((err) => {
-  console.error(err.message)
-  process.exit(1)
-})
+withImageSync(main)

@@ -22,6 +22,7 @@ import {
   slotKey,
 } from './images/store.js'
 import { extractName } from './words.js'
+import { withImageSync } from './images/image-sync.js'
 
 const DICEBEAR_VERSION = '10.x'
 const STYLE = 'miniavs'
@@ -173,8 +174,5 @@ async function main() {
 
 // console/server.js から import されたときは一括処理を走らせない
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
-  main().catch((err) => {
-    console.error(err)
-    process.exit(1)
-  })
+  withImageSync(main)
 }

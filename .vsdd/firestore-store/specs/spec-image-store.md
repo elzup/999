@@ -35,12 +35,25 @@ coherence:
 
 ## 段階
 
-1. **投入**: 4 ファイルを `imageSlots` に写す (`nr images:migrate`、dry-run が既定)。件数一致を確認。
-2. **読みの切替**: `store.js` の load\* を «Firestore → cache JSON» に。cache が無い / 古いときは pull。
-3. **書きの切替**: console/server.js と search/fetch/direct の書き込みを Firestore へ。cache は書いた後に更新。
+1. ✅ (2026-11-18) **投入**: 4 ファイルを `imageSlots` に写す (`nr images:migrate`、dry-run が既定)。件数一致を確認。
+2. ✅ (2026-11-18) **読みの切替**: `store.js` の load\* を «Firestore → cache JSON» に。cache が無い / 古いときは pull。
+3. ✅ (2026-11-18) **書きの切替**: console/server.js と search/fetch/direct の書き込みを Firestore へ。cache は書いた後に更新。
 4. **web 版**: `functions/console-route.js` を `imageSlots` 直読み・直書きに。`imageMarks` を止める。
 5. **Function で取得**: 候補を複数取って GCS に上げ、選んだものを採用する経路。
 6. **UI**: 複数候補のチューザー (`showChooser` の拡張)。
+
+## 同期のしくみ (段階 2・3)
+
+既存のスクリプトと console は 4 ファイルを読み書きしたまま、前後で `syncImages()` (`src/images/image-sync.js`) を挟む。
+
+1. 手元の 4 ファイルを base (`src/data/image-sync-base.json`、前回同期した時点の文書) と比べ、変わった枠だけ送る。
+   トランザクション内で正本の `updatedAt` が base と違えば別の面が先に書いたので、送らずに «衝突» として報告する。
+2. `updatedAt` が前回より新しい文書だけ取り込み、4 ファイルと base を作り直す (時計のずれに 5 分の重なりを持たせる)。
+
+- 入口: CLI は `withImageSync(main)` (最初の同期に失敗したら走らせない)。console/server.js は起動時と `/api/*` の前後。
+  単独では `nr images:pull`。`sync:all` と `deploy` の前にも通す。
+- base が無い端末 (初回・新しい Mac) は送らずに全件を取り込む。古い 4 ファイルで正本を潰さないため。
+- 文書は消さない。手元から消えた枠は中身を空にし、`history` は残す。
 
 ## Invariants
 

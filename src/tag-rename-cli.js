@@ -32,6 +32,7 @@ import {
   loadRedo,
   writeJson,
 } from './images/store.js'
+import { withImageSync } from './images/image-sync.js'
 
 const PROJECT_ID = 'anoz-memosupo'
 const SPREADSHEET_ID = '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
@@ -184,7 +185,4 @@ async function main() {
   console.log('\n書き込み完了。nr sync でローカルの words.tsv を取り直すこと')
 }
 
-main().catch((err) => {
-  console.error(err.message)
-  process.exit(1)
-})
+withImageSync(main)

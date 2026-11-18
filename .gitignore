@@ -11,6 +11,7 @@ src/data/word-images-redo.json
 src/data/word-images-keep.json
 src/data/tags.json
 src/data/tags-short.json
+src/data/image-sync-base.json
 dist-gallery/
 src/visualize-words.data.json
 .firebase/
