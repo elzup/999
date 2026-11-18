@@ -92,7 +92,7 @@ export function replaceImage(doc, image) {
   const history =
     prev && !isSame
       ? [prev, ...(doc.history ?? [])].slice(0, HISTORY_LIMIT)
-      : (doc.history ?? [])
+      : doc.history ?? []
   return { ...doc, image, history }
 }
 
@@ -139,6 +139,31 @@ export function applyImage(doc, { id, slot, image, candidate, now }) {
       updatedAt: now,
     },
   }
+}
+
+/**
+ * ピッカーに出した候補を文書に残す。採用画像は変えない。
+ * 選んだ画像を set-image で受けるとき、ここにある画像だけを採用できる (画面から来た中身は書かない)。
+ * @returns {{doc: object} | {error: 'locked'}}
+ */
+export function applyChoices(doc, { id, slot, choices, candidate, now }) {
+  const base = doc ?? emptySlotDoc(id, slot)
+  if (base.keep) return { error: 'locked' }
+  return {
+    doc: {
+      ...base,
+      choices,
+      candidate: candidate === undefined ? base.candidate : candidate,
+      updatedAt: now,
+    },
+  }
+}
+
+/** この枠に一度載った画像 (今・history・ピッカーに出した候補) から hash で探す */
+export function findSlotImage(doc, hash) {
+  if (!hash) return null
+  const pool = [doc?.image, ...(doc?.history ?? []), ...(doc?.choices ?? [])]
+  return pool.find((img) => img && img.hash === hash) ?? null
 }
 
 /** 撮り直しで避ける画像 (今の画像・前に差し替えた画像・候補で弾いた URL) */

@@ -19,6 +19,8 @@ import TaggedWord, { hasMarks } from './TaggedWord'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
 import { rankeyOf } from '../lib/rankey'
+import { IMAGE_SLOT_OF, useImageOverride } from '../lib/imagePicker'
+import ImagePickerSheet from './ImagePickerSheet'
 
 type Props = {
   d: NumberEntry
@@ -81,6 +83,56 @@ function wordRows(d: NumberEntry): WordRow[] {
     rows.push({ slot: 'wm2', word: wm2.word, img: wm2.img, dim: true })
   }
   return rows
+}
+
+/**
+ * 語の行の画像。ログインしていれば押すと候補のシートが開く (D-0088 E-1)。
+ * 選び直した画像は次のデプロイまで配信データに無いので、この画面では override で見せる
+ */
+function RowImage({ num, row }: { num: string; row: WordRow }) {
+  const ctx = useNumberContext()
+  const slot = IMAGE_SLOT_OF[row.slot]
+  const override = useImageOverride(num, slot ?? row.slot)
+  const [isOpen, setIsOpen] = useState(false)
+  const url = override?.url ?? row.img
+  const canPick = Boolean(ctx?.token && slot)
+  const image = url ? (
+    <img
+      class="wl-img"
+      loading="lazy"
+      {...wordImage(url, 34, row.word)}
+      alt={row.word}
+    />
+  ) : (
+    <span class="wl-img empty" />
+  )
+  if (!canPick) return image
+  return (
+    <>
+      <button
+        type="button"
+        class="wl-img-btn"
+        aria-label={`${row.word} の画像を選び直す`}
+        onClick={(e) => {
+          // 行のタップ (ヨミの出し入れ) と分ける
+          e.stopPropagation()
+          setIsOpen(true)
+        }}
+      >
+        {image}
+      </button>
+      {isOpen ? (
+        <ImagePickerSheet
+          token={ctx?.token ?? ''}
+          id={num}
+          slot={slot}
+          word={row.word}
+          current={url ? { url, hash: override?.hash ?? '' } : null}
+          onClose={() => setIsOpen(false)}
+        />
+      ) : null}
+    </>
+  )
 }
 
 type Kind = 'kind-h' | 'kind-m' | 'kind-g'
@@ -202,16 +254,7 @@ function NumDetailPanel(props: Props) {
               {/* 人 (wh) か 物 (wm) かは画像の形 (人 = 丸 / 物 = 角丸) と左上の色丸で示す。
                   色はチップの 人 / 物 と同じ。札の列を無くして語の幅を取る */}
               <span class="wl-img-wrap">
-                {row.img ? (
-                  <img
-                    class="wl-img"
-                    loading="lazy"
-                    {...wordImage(row.img, 34, row.word)}
-                    alt={row.word}
-                  />
-                ) : (
-                  <span class="wl-img empty" />
-                )}
+                <RowImage num={d.num} row={row} />
                 <span class="wl-kind-badge">
                   {KIND_LABEL[kindOf(row.slot)]}
                 </span>

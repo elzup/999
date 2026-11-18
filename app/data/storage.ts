@@ -249,6 +249,8 @@ export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
   hex: false,
   edit: false,
   rep: false,
+  // 画像の候補から選ぶタブ (D-0089)。console の代わりなので最初から出す
+  cand: true,
   misc: true,
 }
 

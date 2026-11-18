@@ -201,6 +201,17 @@ export function IconClose() {
   )
 }
 
+/** 画像の候補から選ぶタブ。額縁と山 */
+export function IconImage() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="M21 17l-5-5-9 8" />
+    </svg>
+  )
+}
+
 /** 代表 (①②) を選ぶタブ。丸付き数字の 1 */
 export function IconRep() {
   return (

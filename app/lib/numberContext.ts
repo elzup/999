@@ -21,6 +21,8 @@ export type NumberContextValue = {
   tagNames?: Record<string, string>
   /** タグの正式名 (title)。略称でなく正式名で見せたい所 (グループ画面) 用 */
   tagTitles?: Record<string, string>
+  /** 編集用の通行証。詳細パネルの画像から候補のシートを開くのに使う (D-0088 E-1)。未ログインなら空 */
+  token?: string
 }
 
 export const NumberContext = createContext<NumberContextValue | null>(null)

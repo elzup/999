@@ -72,6 +72,15 @@ function fakeFetcher() {
         ? null
         : { ...img('new'), sourceImageUrl: 'https://src.test/new.jpg' }
     },
+    candidates: async (args) => {
+      calls.push({ op: 'candidates', ...args })
+      return args.query === 'q:none'
+        ? []
+        : ['c1', 'c2', 'c3'].map((h) => ({
+            ...img(h),
+            sourceImageUrl: `https://src.test/${h}.jpg`,
+          }))
+    },
     recrop: async ({ image }) => {
       calls.push({ op: 'recrop', image })
       return { ...image, ...img('top') }
@@ -374,5 +383,79 @@ describe('handleConsoleRequest: その場の取り直し', () => {
     })
     expect(res.status).toBe(400)
     expect(fetcher.calls).toEqual([])
+  })
+
+  describe('ピッカーの候補 (D-0088)', () => {
+    it('candidates は語から検索して候補を返し、文書に残す (採用はしない)', async () => {
+      const { request, docs: stored, fetcher } = setup(withImage())
+      const res = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+      })
+      expect(res.payload).toMatchObject({
+        ok: true,
+        query: 'q:マオ#コードギアス',
+      })
+      expect(res.payload.current.hash).toBe('cur')
+      expect(res.payload.candidates.map((c) => c.hash)).toEqual([
+        'c1',
+        'c2',
+        'c3',
+      ])
+      expect(fetcher.calls[0].rejected).toContain('https://src.test/cur.jpg')
+      expect(stored['001:w2'].image.hash).toBe('cur')
+      expect(stored['001:w2'].choices.map((c) => c.hash)).toEqual([
+        'c1',
+        'c2',
+        'c3',
+      ])
+    })
+
+    it('検索ワードを渡せばそれで探す (D-2)', async () => {
+      const { request, fetcher } = setup(withImage())
+      await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        query: ' 別の語 ',
+      })
+      expect(fetcher.calls[0].query).toBe('別の語')
+    })
+
+    it('見つからなければ ok: false で理由を返す', async () => {
+      const { request } = setup(withImage())
+      const res = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        query: 'q:none',
+      })
+      expect(res.payload.ok).toBe(false)
+    })
+
+    it('ロック中の枠は候補を取らない', async () => {
+      const { request, fetcher } = setup()
+      const res = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w1',
+      })
+      expect(res.status).toBe(409)
+      expect(fetcher.calls).toEqual([])
+    })
+
+    it('出した候補は set-image で採用でき、前の画像は history に残る', async () => {
+      const { request, docs: stored } = setup(withImage())
+      await request('POST', '/console/candidates', { id: '001', slot: 'w2' })
+      const res = await request('POST', '/console/set-image', {
+        id: '001',
+        slot: 'w2',
+        image: { hash: 'c2', url: 'https://evil.test/ignored.webp' },
+      })
+      expect(res.payload.ok).toBe(true)
+      expect(stored['001:w2'].image).toMatchObject({
+        hash: 'c2',
+        url: 'https://example.test/c2.webp',
+      })
+      expect(stored['001:w2'].history[0].hash).toBe('cur')
+      expect(stored['001:w2'].redo).toBeNull()
+    })
   })
 })
