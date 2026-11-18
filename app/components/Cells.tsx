@@ -114,10 +114,7 @@ export function NumMdCard({
     )
   }
   return (
-    <div
-      class={'md-card' + (selected ? ' selected' : '')}
-      onClick={onSelect}
-    >
+    <div class={'md-card' + (selected ? ' selected' : '')} onClick={onSelect}>
       {cand?.img ? (
         <img
           class="md-card-img"
@@ -175,19 +172,27 @@ export function BmCardCard({
 export function TagMdCard({
   tag,
   title,
+  short,
   count,
   cand,
   onSelect,
 }: {
   tag: string
   title: string
+  /** 略称 (short_title)。正式名と違うときだけ小さく添える (#id は出さない) */
+  short?: string
   count: number
   /** 画像を出す語。語も渡すのは概念 (#g) の額縁を付けるため */
   cand: Candidate | undefined
   onSelect: () => void
 }) {
   return (
-    <button type="button" class="md-card tag-md-card" onClick={onSelect}>
+    <button
+      type="button"
+      class="md-card tag-md-card"
+      onClick={onSelect}
+      data-tag={tag}
+    >
       {cand?.img ? (
         <img
           class="md-card-img"
@@ -201,7 +206,9 @@ export function TagMdCard({
       <span class="md-card-num">{count}</span>
       <span class="md-card-word">
         {title}
-        <span class="tag-md-card-id">#{tag}</span>
+        {short && short !== title ? (
+          <span class="tag-md-card-id">{short}</span>
+        ) : null}
       </span>
     </button>
   )

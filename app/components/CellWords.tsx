@@ -3,6 +3,7 @@ import { useMemo } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import type { SelectedCell } from '../lib/allocation'
 import { getCellWords } from '../lib/allocation'
+import TaggedWord from './TaggedWord'
 
 type Props = {
   numbers: NumberEntry[]
@@ -54,7 +55,9 @@ function CellWords({ numbers, selected, onPickNum }: Props) {
               onClick={() => onPickNum?.(w.num)}
             >
               <span class="cellwords-num">{w.num}</span>
-              <span class="cellwords-word">{w.word}</span>
+              <span class="cellwords-word">
+                <TaggedWord word={w.word} />
+              </span>
               <span class="cellwords-slot">{w.slot}</span>
             </button>
           ))}

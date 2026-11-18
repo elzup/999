@@ -23,7 +23,7 @@ type Props = {
 
 type TagRow = TagSuggestion & {
   count: number
-  /** 正式名 (title)。無ければ略称、それも無ければ #タグ */
+  /** 正式名 (title)。無ければ略称、それも無ければタグの id */
   title: string
   /** カードに出す画像の語 */
   cand: Candidate | undefined
@@ -71,6 +71,7 @@ function TagList({ rows, onPick }: TagListProps) {
           key={row.tag}
           tag={row.tag}
           title={row.title}
+          short={row.name}
           count={row.count}
           cand={row.cand}
           onSelect={() => onPick(row.tag)}
@@ -92,7 +93,7 @@ function TagFilterTab({ numbers }: Props) {
       [...tagStats(numbers)].map(([t, stat]) => ({
         tag: t,
         name: tagNames?.[t],
-        title: tagTitles?.[t] ?? tagNames?.[t] ?? `#${t}`,
+        title: tagTitles?.[t] ?? tagNames?.[t] ?? t,
         count: stat.count,
         cand: stat.cand,
       })),
@@ -155,7 +156,11 @@ function TagFilterTab({ numbers }: Props) {
       <MdRevealToggle mode={reveal.mode} onChange={reveal.setMode} />
       <DockBar
         title={current.title}
-        sub={`#${current.tag} ・ ${matched.length} 番号`}
+        sub={`${
+          current.name && current.name !== current.title
+            ? `${current.name} ・ `
+            : ''
+        }${matched.length} 番号`}
       >
         <button class="filter-btn" onClick={() => pickTag(null)}>
           タグ一覧へ

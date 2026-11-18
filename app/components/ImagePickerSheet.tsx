@@ -16,6 +16,7 @@ import {
 import { useNumberContext } from '../lib/numberContext'
 import { buildSearchWord } from '../lib/searchWord'
 import { wordImage } from '../lib/wordImage'
+import TaggedWord from './TaggedWord'
 
 // 3×2 の 1 枠は «今» なので、候補は 5 枚まで並べる
 const SHOWN_CANDIDATES = 5
@@ -195,7 +196,9 @@ export default function ImagePickerSheet({
       <div class="ip-sheet" role="dialog" aria-label={`${id} の画像を選ぶ`}>
         <div class="ip-head">
           <span class="ip-id">{id}</span>
-          <span class="ip-word">{word}</span>
+          <span class="ip-word">
+            <TaggedWord word={word} />
+          </span>
         </div>
         <form
           class="ip-query"

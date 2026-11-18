@@ -39,6 +39,7 @@ import {
   saveHundred,
   scrollToNum,
 } from '../lib/pickPosition'
+import TaggedWord from './TaggedWord'
 
 const VIEW_KEY = 'rep.view'
 type View = 'rows' | 'cards'
@@ -77,7 +78,7 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       )}
       <span class="rp-word">
         <Yomi class="rp-kana" kana={row.kana} />
-        {row.word}
+        <TaggedWord word={row.word} />
       </span>
       {row.repRank ? <span class="rp-mark">{MARK[row.repRank]}</span> : null}
     </button>

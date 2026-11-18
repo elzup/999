@@ -18,13 +18,13 @@ export function hasMarks(word: string): boolean {
 }
 
 /**
- * showNames: 右肩に id ではなく表示名 (ipra → アイドリープライド) を出す。
- * 余白のある詳細パネル用。一覧などの狭い場所は id のまま。
- * 表示名はシートの short_title (省略表示用)、無ければ title が配信データで届く
+ * 右肩のタグは id ではなく表示名で出す (ipra → ｱｲﾄﾞﾘｰﾌﾟﾗｲﾄﾞ)。
+ * 表示名はシートの short_title (省略表示用)、無ければ title (正式名)。どちらも無いタグだけ id。
+ * showNames={false} は id のまま出す (使う所は無くした。比べたいときの逃げ道)
  */
 function TaggedWord({
   word,
-  showNames = false,
+  showNames = true,
 }: {
   word: string
   showNames?: boolean
