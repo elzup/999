@@ -6998,10 +6998,19 @@ img[data-concept] {
 }
 .ip-tools {
   display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ip-tools-label {
+  flex: none;
+  font-size: 11px;
+  color: var(--text2);
 }
 .ip-tools .filter-btn {
   flex: 1;
-  padding: 8px 12px;
+  min-width: 0;
+  padding: 8px 4px;
+  font-size: 12px;
 }
 .ip-foot .filter-btn {
   flex: 1;

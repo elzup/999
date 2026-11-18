@@ -65,3 +65,42 @@ describe('fetchCandidates', () => {
     expect(uploaded).toHaveLength(CANDIDATE_COUNT)
   })
 })
+
+describe('toWebpAt', () => {
+  it('寄せ方ごとに 400x400 に切り抜き、知らない寄せ方は断る', async () => {
+    const { default: sharp } = await import('sharp')
+    const { toWebpAt, CROP_POSITIONS } = await import('../images/process.js')
+    // 横長の画像: 左半分が赤、右半分が青
+    const input = await sharp({
+      create: { width: 800, height: 400, channels: 3, background: '#f00' },
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: {
+              width: 400,
+              height: 400,
+              channels: 3,
+              background: '#00f',
+            },
+          })
+            .png()
+            .toBuffer(),
+          left: 400,
+          top: 0,
+        },
+      ])
+      .png()
+      .toBuffer()
+    const colorOf = async (position) => {
+      const { data } = await sharp(await toWebpAt(input, position))
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+      return data[0] > data[2] ? 'red' : 'blue'
+    }
+    expect(CROP_POSITIONS).toContain('centre')
+    expect(await colorOf('left')).toBe('red')
+    expect(await colorOf('right')).toBe('blue')
+    await expect(toWebpAt(input, 'middle')).rejects.toThrow()
+  })
+})
