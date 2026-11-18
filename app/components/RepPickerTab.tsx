@@ -31,6 +31,7 @@ import {
 } from '../lib/repPicker'
 import Screen, { DockBar, DockRow } from './Screen'
 import RepCard from './RepCard'
+import RepStats from './RepStats'
 import { wordImage } from '../lib/wordImage'
 import {
   DIGITS,
@@ -42,8 +43,13 @@ import {
 import TaggedWord from './TaggedWord'
 
 const VIEW_KEY = 'rep.view'
-type View = 'rows' | 'cards'
-const VIEWS: View[] = ['rows', 'cards']
+type View = 'rows' | 'cards' | 'stats'
+const VIEWS: View[] = ['rows', 'cards', 'stats']
+const VIEW_LABELS: Record<View, string> = {
+  rows: '行',
+  cards: 'カード',
+  stats: '統計',
+}
 const MARK = ['', '①', '②']
 
 type Props = {
@@ -195,6 +201,33 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
     }
   }, [hundred, token])
 
+  // 統計を開いたときだけ、1000 番号ぶん (百の位 10 個) を読む。読んだ百の位は一覧と共有する
+  const [statsLoaded, setStatsLoaded] = useState(0)
+  useEffect(() => {
+    if (view !== 'stats' || !token) return
+    let alive = true
+    const missing = DIGITS.filter((h) => !hundredCache.current.has(h))
+    setStatsLoaded(DIGITS.length - missing.length)
+    for (const h of missing) {
+      fetchHundred(Number(h), token)
+        .then((list) => {
+          for (const doc of list) queue.setBase(doc)
+          hundredCache.current.set(h, list.map((doc) => doc.num).sort())
+          if (alive) setStatsLoaded((n) => n + 1)
+        })
+        .catch((error) => alive && setStatus(String(error.message)))
+    }
+    return () => {
+      alive = false
+    }
+  }, [view, token])
+  const statsDocs =
+    view === 'stats'
+      ? DIGITS.flatMap((h) => hundredCache.current.get(h) ?? [])
+          .map((num) => queue.view(num))
+          .filter((doc): doc is NumberDoc => doc !== null)
+      : []
+
   const docs = nums
     .map((num) => queue.view(num))
     .filter((doc): doc is NumberDoc => doc !== null)
@@ -294,37 +327,40 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
     )
   }
 
-  const main = !visible.length ? (
-    <div class="screen-empty">{loading ? '読み込み中…' : '該当なし'}</div>
-  ) : view === 'cards' ? (
-    // 詳細カードを縦に並べる。一覧と同じく下から上へ (先頭の番号が親指側)
-    <div class="rp-cards stack-up" style={{ '--stack-gap': '8px' }}>
-      {visible.map((doc) => (
-        <RepCard
-          key={doc.num}
-          doc={doc}
-          entry={entries.get(doc.num)}
-          mark={marks[doc.num]}
-          onPick={(slot) => pick(doc, slot)}
-          onConfirm={() => confirmOne(doc)}
-          onOpen={ctx ? () => ctx.openEditor(doc.num) : undefined}
-        />
-      ))}
-    </div>
-  ) : (
-    <ul class="rp-list stack-up" style={{ '--stack-gap': '4px' }}>
-      {visible.map((doc) => (
-        <RepRow
-          key={doc.num}
-          doc={doc}
-          entry={entries.get(doc.num)}
-          mark={marks[doc.num]}
-          onPick={(slot) => pick(doc, slot)}
-          onOpen={ctx ? () => ctx.openEditor(doc.num) : undefined}
-        />
-      ))}
-    </ul>
-  )
+  const main =
+    view === 'stats' ? (
+      <RepStats docs={statsDocs} loadedHundreds={statsLoaded} />
+    ) : !visible.length ? (
+      <div class="screen-empty">{loading ? '読み込み中…' : '該当なし'}</div>
+    ) : view === 'cards' ? (
+      // 詳細カードを縦に並べる。一覧と同じく下から上へ (先頭の番号が親指側)
+      <div class="rp-cards stack-up" style={{ '--stack-gap': '8px' }}>
+        {visible.map((doc) => (
+          <RepCard
+            key={doc.num}
+            doc={doc}
+            entry={entries.get(doc.num)}
+            mark={marks[doc.num]}
+            onPick={(slot) => pick(doc, slot)}
+            onConfirm={() => confirmOne(doc)}
+            onOpen={ctx ? () => ctx.openEditor(doc.num) : undefined}
+          />
+        ))}
+      </div>
+    ) : (
+      <ul class="rp-list stack-up" style={{ '--stack-gap': '4px' }}>
+        {visible.map((doc) => (
+          <RepRow
+            key={doc.num}
+            doc={doc}
+            entry={entries.get(doc.num)}
+            mark={marks[doc.num]}
+            onPick={(slot) => pick(doc, slot)}
+            onOpen={ctx ? () => ctx.openEditor(doc.num) : undefined}
+          />
+        ))}
+      </ul>
+    )
 
   const dock = (
     <>
@@ -341,7 +377,7 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
               aria-pressed={view === id}
               onClick={() => chooseView(id)}
             >
-              {id === 'rows' ? '行' : 'カード'}
+              {VIEW_LABELS[id]}
             </button>
           ))}
         </div>
@@ -361,61 +397,65 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
           </span>
         </DockRow>
       ) : null}
-      <div class="rp-filters">
-        {REP_FILTERS.map(([id, label]) => (
-          <button
-            key={id}
-            class={'rp-seg' + (filter === id ? ' active' : '')}
-            aria-pressed={filter === id}
-            onClick={() => setFilter(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <DockRow>
-        <span class="dock-row-label">百</span>
-        <div class="rp-digits">
-          {DIGITS.map((d) => (
-            <button
-              key={d}
-              class={'rp-digit' + (hundred === d ? ' active' : '')}
-              aria-pressed={hundred === d}
-              onClick={() => chooseHundred(d)}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-      </DockRow>
-      <div class="rp-digits">
-        {progress.map(({ total, counts }, decade) => {
-          const [none, one, two] = counts
-          const pct = (n: number) => (total ? (n / total) * 100 : 0)
-          // 全部確定したら枠ごと色を変える (①② まで揃えば青、① だけの番号が残れば緑)
-          const done = total > 0 && none === 0
-          return (
-            <button
-              key={decade}
-              class={
-                'rp-digit rp-decade' +
-                (done ? (one === 0 ? ' is-done2' : ' is-done1') : '')
-              }
-              onClick={() => jumpTo(decade)}
-              aria-label={`${hundred}${decade}0 へ (①② ${two} · ① だけ ${one} · 未確定 ${none} / ${total})`}
-            >
-              {decade}0
-              {total ? (
-                <span class="rp-decade-bar" aria-hidden="true">
-                  <i class="lv2" style={{ width: `${pct(two)}%` }} />
-                  <i class="lv1" style={{ width: `${pct(one)}%` }} />
-                  <i class="lv0" style={{ width: `${pct(none)}%` }} />
-                </span>
-              ) : null}
-            </button>
-          )
-        })}
-      </div>
+      {view === 'stats' ? null : (
+        <>
+          <div class="rp-filters">
+            {REP_FILTERS.map(([id, label]) => (
+              <button
+                key={id}
+                class={'rp-seg' + (filter === id ? ' active' : '')}
+                aria-pressed={filter === id}
+                onClick={() => setFilter(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <DockRow>
+            <span class="dock-row-label">百</span>
+            <div class="rp-digits">
+              {DIGITS.map((d) => (
+                <button
+                  key={d}
+                  class={'rp-digit' + (hundred === d ? ' active' : '')}
+                  aria-pressed={hundred === d}
+                  onClick={() => chooseHundred(d)}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </DockRow>
+          <div class="rp-digits">
+            {progress.map(({ total, counts }, decade) => {
+              const [none, one, two] = counts
+              const pct = (n: number) => (total ? (n / total) * 100 : 0)
+              // 全部確定したら枠ごと色を変える (①② まで揃えば青、① だけの番号が残れば緑)
+              const done = total > 0 && none === 0
+              return (
+                <button
+                  key={decade}
+                  class={
+                    'rp-digit rp-decade' +
+                    (done ? (one === 0 ? ' is-done2' : ' is-done1') : '')
+                  }
+                  onClick={() => jumpTo(decade)}
+                  aria-label={`${hundred}${decade}0 へ (①② ${two} · ① だけ ${one} · 未確定 ${none} / ${total})`}
+                >
+                  {decade}0
+                  {total ? (
+                    <span class="rp-decade-bar" aria-hidden="true">
+                      <i class="lv2" style={{ width: `${pct(two)}%` }} />
+                      <i class="lv1" style={{ width: `${pct(one)}%` }} />
+                      <i class="lv0" style={{ width: `${pct(none)}%` }} />
+                    </span>
+                  ) : null}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
     </>
   )
 
