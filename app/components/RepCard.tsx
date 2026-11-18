@@ -1,4 +1,4 @@
-// 代表タブの «カード» 表示の 1 枚。詳細カード (NumDetailPanel) と同じ見た目で、
+// 候補タブの «代表» の «カード» 表示の 1 枚。詳細カード (NumDetailPanel) と同じ見た目で、
 // 候補を全部 (人 wh1〜3 / 物 wm1〜3) 縦に並べ、語の行をタップして ①② を選ぶ。
 // 選んだ時点で確定する (行表示のチップと同じ «選ぶ = 確定»)。
 //
@@ -125,8 +125,8 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
               {status === 'confirmed'
                 ? '確定済み'
                 : hasPicks
-                ? 'この代表で確定'
-                : '既定 (①②) で確定'}
+                  ? 'この代表で確定'
+                  : '既定 (①②) で確定'}
             </span>
           </button>
         )}

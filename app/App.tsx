@@ -38,7 +38,6 @@ import {
 import BookmarkTab from './components/BookmarkTab'
 import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
-import RepPickerTab from './components/RepPickerTab'
 import PickTab from './components/PickTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
@@ -71,7 +70,6 @@ import {
   IconSlide,
   IconHex,
   IconEdit,
-  IconRep,
   IconImage,
 } from './components/Icons'
 import { TagNamesContext } from './lib/tagNames'
@@ -93,7 +91,6 @@ const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
   bm: <IconStar />,
   hex: <IconHex />,
   edit: <IconEdit />,
-  rep: <IconRep />,
   cand: <IconImage />,
   misc: <IconStats />,
 }
@@ -426,9 +423,6 @@ export function App() {
               // 積んだ履歴が 1 つ残り、次の «戻る» が空振りする
               onClose={editTarget ? closeEditor : undefined}
             />
-          )}
-          {tab === 'rep' && (
-            <RepPickerTab token={token} numbers={data.numbers} />
           )}
           {tab === 'cand' && <PickTab token={token} numbers={data.numbers} />}
           {tab === 'misc' && (
