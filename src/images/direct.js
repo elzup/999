@@ -12,8 +12,8 @@ import {
   writeJson,
   slotKey,
 } from './store.js'
-import { downloadImage } from './download.js'
-import { toWebp, hashKey } from './process.js'
+import { hashKey } from './process.js'
+import { fetchFirstUsable } from './fetch-one.js'
 import { uploadWebp } from './upload.js'
 import { searchImages } from './search.js'
 import { buildSearchWord } from './query.js'
@@ -59,24 +59,6 @@ export async function redoDirect({ id, slot }) {
     word,
     rejected,
   })
-}
-
-// 先頭候補はホットリンク拒否・HTML 応答・巨大画像で落ちやすいので、上位を順に試す
-const MAX_DOWNLOAD_TRIES = 5
-
-/** 候補を上から DL→webp 変換し、最初に通ったものを返す。全滅なら最後の理由で throw */
-async function fetchFirstUsable(results) {
-  let lastError = null
-  for (const result of results.slice(0, MAX_DOWNLOAD_TRIES)) {
-    try {
-      const { buffer } = await downloadImage(result.imageUrl)
-      return { result, webp: await toWebp(buffer) }
-    } catch (err) {
-      console.error(`  DL失敗 ${result.imageUrl}: ${err.message || err}`)
-      lastError = err
-    }
-  }
-  throw new Error(`候補の取得に全部失敗: ${lastError?.message || lastError}`)
 }
 
 /**

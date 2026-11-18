@@ -55,14 +55,20 @@ Secret Manager にあるので、デプロイする側には要らない。
 ## web 版の画像コンソール (`/console/`)
 
 手元の画像コンソール (`nr console`) を、Mac が落ちていても開けるように本番にも置いている (D-0073)。
-付けられるのは «確定 (ロック)» と «撮り直し» の印だけで、取り直しそのものは Mac でしかできない。
+«確定 (ロック)» と «撮り直し» の印に加えて、取り直し・自由検索・上寄せの切り抜き・2 択の戻しも
+Function (`api`) がその場で行う (段階 5)。アバター (#i) の作り直しだけは Mac にしか無い。
 
 - 画面: `console/` の index.html / app.js / icons.js を vite の build が `dist/console/` に写す。CI が画面と一緒に出す
 - 対象 (語) の一覧: `nr deploy` の `sync:private` が手元の `buildState()` を `functions/private/console-state.json` に焼く。
   語を含むので、認証付きの `/api/console/state` からだけ返す。語を足した・直したのに出ないときは `nr deploy`
 - 画像と印: 正本の Firestore `imageSlots` を Function が直接読み書きする (spec:image-store)。Mac の console と同じ文書なので、
   web で付けた印は Mac の次の同期 (console の起動時・操作のたび、`nr images:pull`) で手元の cache に入る。
-  撮り直しそのものは Mac の `nr images:redo-flagged` (段階 5 で Function へ移す)
+  撮り直しの印をまとめて取り直すのは Mac の `nr images:redo-flagged`
+- その場の取り直し: `functions/console-route.js` の `/console/redo-now` ・ `search-custom` ・ `recrop` ・ `set-image`。
+  検索 → DL → 400px の webp → GCS (`anoz-memosupo-words`) を `src/images/fetch-one.js` で行う (`sync:functions` が `functions/lib/images/` に写す)。
+  GCS へは Function の実行用サービスアカウントで上げるので、そのアカウントにバケットへの書き込み (Storage オブジェクト作成者) が要る
+- 画面は Function が `/console/state` に `canFetch: true` を載せたときだけ取り直しのボタンを出す。
+  画面は main に入れば CI が出すが Function は `nr deploy` まで古いままなので、その間は印だけ付けられる今までの画面になる
 - 手元の `nr console` は起動前に `scripts/console-start.ts` を通す。main が遅れていて fast-forward できれば
   `git pull` する。失敗しても警告だけで起動する
 - ログイン: 999 アプリと同じ通行証 (localStorage の `editToken999`)。先にアプリでログインしておく

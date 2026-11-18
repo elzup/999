@@ -1,10 +1,13 @@
 // 画像コンソール gallery。/api/state があればサーバ運用(redo 書込可)、
 // 無ければ ./state.json を読む静的(閲覧専用)モードにフォールバックする。
 // 本番 hosting の /console/ で開いたときは web 版 (D-0073): 認証付きの /api/console/* を読み、
-// 付けられるのはロックと撮り直しの印だけ (取り直しそのものは Mac が起きたときに流す)。
+// 取り直し・切り抜き・自由検索も Function がその場で行う。アバターの作り直しだけは Mac にしか無い。
 
 const IS_WEB = location.pathname.startsWith('/console/')
 const API = IS_WEB ? '/api/console' : '/api'
+// その場で取り直せるか。web 版は Function が対応していると state に canFetch を載せる。
+// 画面は main に入れば CI が出すが、Function は Mac の nr deploy まで古いままなので、それまでは印だけ付ける
+const canFetch = () => !IS_WEB || Boolean(state?.canFetch)
 // 999 アプリがログイン時に保存する通行証 (app/lib/editorAuth.ts の EDIT_TOKEN_KEY)
 const TOKEN_KEY = 'editToken999'
 
@@ -210,13 +213,7 @@ async function redoNow(id, slot, btn) {
   setIconLabel(btn, 'spinner')
   btn.disabled = true
   try {
-    const res = await fetch('/api/redo-now', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, slot }),
-    })
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' (サーバを再起動?)')
-    const data = await res.json()
+    const data = await postJson(`${API}/redo-now`, { id, slot })
     if (!data.ok || !data.image) throw new Error(data.error || '画像取得に失敗')
     if (!state.images[id]) state.images[id] = {}
     state.images[id][slot] = data.image // 新を一旦採用
@@ -265,12 +262,7 @@ async function recropTop(id, slot, btn) {
   setIconLabel(btn, 'spinner')
   btn.disabled = true
   try {
-    const res = await fetch('/api/recrop', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, slot }),
-    })
-    const data = await res.json()
+    const data = await postJson(`${API}/recrop`, { id, slot })
     if (!data.ok || !data.image) throw new Error(data.error || '失敗')
     if (!state.images[id]) state.images[id] = {}
     state.images[id][slot] = data.image
@@ -370,12 +362,7 @@ async function customSearch(id, slot, btn) {
   setIconLabel(btn, 'spinner')
   btn.disabled = true
   try {
-    const res = await fetch('/api/search-custom', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, slot, query: q }),
-    })
-    const data = await res.json()
+    const data = await postJson(`${API}/search-custom`, { id, slot, query: q })
     if (!data.ok || !data.image) throw new Error(data.error || '失敗')
     if (!state.images[id]) state.images[id] = {}
     state.images[id][slot] = data.image
@@ -422,7 +409,7 @@ function showChooser(id, slot, oldImg, newImg) {
   box.appendChild(
     opt('undo', '今までの方', oldImg, async () => {
       try {
-        await postJson('/api/set-image', { id, slot, image: oldImg })
+        await postJson(`${API}/set-image`, { id, slot, image: oldImg })
         state.images[id][slot] = oldImg
         refreshSlot(id, slot)
       } catch (e) {
@@ -609,7 +596,9 @@ function actionsEl(v, slot) {
     actions.appendChild(b)
   }
   const { id } = v
-  if (IS_WEB) return webActionsEl(v, slot, actions, mk)
+  // アバターの作り直しは Mac にしか無い (dicebear の生成を Function に持っていない)
+  if (IS_WEB && !canFetch()) return webActionsEl(v, slot, actions, mk)
+  if (IS_WEB && v.isAvatarI) return actions
   if (v.isAvatarI) {
     // 名前が変わった (または実写のまま) 枠だけ作り直せる。他は押す物が無い
     if (v.isAvatarPending || v.changed) {
@@ -662,8 +651,8 @@ function actionsEl(v, slot) {
   return actions
 }
 
-// web 版の操作。取り直し・切り抜き・自由検索は Mac の中でしか動かないので出さず、
-// 代わりに撮り直しの印を付ける (サムネイルを押すのと同じ)
+// 取り直しの経路を持たない (Mac の nr deploy 前の) Function につながっている web 版の操作。
+// 取り直し・切り抜き・自由検索は出さず、代わりに撮り直しの印を付ける (サムネイルを押すのと同じ)
 function webActionsEl(v, slot, actions, mk) {
   const { id } = v
   if (v.isAvatarI) return actions
@@ -689,7 +678,7 @@ function webActionsEl(v, slot, actions, mk) {
 }
 
 // ── まとめて取得 ──
-// «未取得» で絞っているとき、表示中の枠を 1 つずつ順に取得する (web 版は取得の印を付けるだけ)。
+// «未取得» で絞っているとき、表示中の枠を 1 つずつ順に取得する。
 // 検索 API を叩きすぎないよう並列にしない。走っている間はボタンが «止める» になる
 let bulk = null
 
@@ -721,7 +710,7 @@ function renderBulkBar() {
     btn.onclick = () => {
       bulk = { ...bulk, isStopping: true }
     }
-  } else if (IS_WEB) {
+  } else if (!canFetch()) {
     setIconLabel(btn, 'flag', `未取得 ${targets.length} 枠に取得の印を付ける`)
     btn.title = 'Mac が起きたときにまとめて取り直す'
     btn.onclick = () => runBulk(targets)
@@ -733,18 +722,12 @@ function renderBulkBar() {
 }
 
 async function fetchOneMissing(id, slot) {
-  if (IS_WEB) {
+  if (!canFetch()) {
     const data = await postJson(`${API}/redo`, { id, slot, on: true })
     state.redo = data.redo
     return
   }
-  const res = await fetch('/api/redo-now', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ id, slot }),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status} (サーバを再起動?)`)
-  const data = await res.json()
+  const data = await postJson(`${API}/redo-now`, { id, slot })
   if (!data.ok || !data.image) throw new Error(data.error || '画像取得に失敗')
   const key = `${id}:${slot}`
   const { [key]: _done, ...redo } = state.redo ?? {}
@@ -835,9 +818,8 @@ function renderStats() {
   }
   const unconfirmed = has - kept
   const note = readOnly ? ' <span class="readonly-note">(閲覧専用)</span>' : ''
-  document.getElementById(
-    'stats'
-  ).innerHTML = `画像 ${has}/${total} ・ 確定 ${kept} ・ 未確定 ${unconfirmed} ・ redo ${flagged}${note}`
+  document.getElementById('stats').innerHTML =
+    `画像 ${has}/${total} ・ 確定 ${kept} ・ 未確定 ${unconfirmed} ・ redo ${flagged}${note}`
 }
 
 function renderKinds() {

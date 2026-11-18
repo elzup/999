@@ -92,7 +92,7 @@ export function replaceImage(doc, image) {
   const history =
     prev && !isSame
       ? [prev, ...(doc.history ?? [])].slice(0, HISTORY_LIMIT)
-      : doc.history ?? []
+      : (doc.history ?? [])
   return { ...doc, image, history }
 }
 
@@ -119,6 +119,36 @@ export function applyMark(doc, { id, slot, op, on, reason, now }) {
   if (on && base.keep) return { error: 'locked' }
   const redo = on ? { flaggedAt: now, reason: reason || '' } : null
   return { doc: { ...base, redo, updatedAt: now } }
+}
+
+/**
+ * 取り直した画像を採用した文書を返す。前の画像は history に残し、撮り直しの印は消す。
+ * candidate を渡したときだけ候補の記録 (語・検索ワード) を差し替える。入力は書き換えない。
+ * ロック中の枠は差し替えない (ロックは «この画像で確定» の意味なので)。
+ * @returns {{doc: object} | {error: 'locked'}}
+ */
+export function applyImage(doc, { id, slot, image, candidate, now }) {
+  const base = doc ?? emptySlotDoc(id, slot)
+  if (base.keep) return { error: 'locked' }
+  const next = replaceImage(base, image)
+  return {
+    doc: {
+      ...next,
+      redo: null,
+      candidate: candidate === undefined ? base.candidate : candidate,
+      updatedAt: now,
+    },
+  }
+}
+
+/** 撮り直しで避ける画像 (今の画像・前に差し替えた画像・候補で弾いた URL) */
+export function rejectedUrlsOf(doc) {
+  const urls = [
+    doc?.image?.sourceImageUrl,
+    ...(doc?.history ?? []).map((h) => h.sourceImageUrl),
+    ...(doc?.candidate?.rejectedUrls ?? []),
+  ]
+  return [...new Set(urls.filter(Boolean))]
 }
 
 /** 文書の集まりから、画面が使う images / keep / redo を作る */
