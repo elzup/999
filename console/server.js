@@ -38,7 +38,7 @@ import {
 import { buildAvatarImage } from '../src/avatar-i-images.js'
 import { parseSlot } from '../src/images/tag-variants.js'
 import { extractName } from '../src/words.js'
-import { syncImages } from '../src/images/image-sync.js'
+import { syncImages, syncOnStart } from '../src/images/image-sync.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..')
@@ -368,16 +368,8 @@ const server = createServer(async (req, res) => {
 // 直接実行時のみ listen (build-static.js から import される時は起動しない)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   // 書き込み API に認証が無いので、同じ LAN の他の端末からは受け付けない
-  // 正本と切れたまま起動すると、手元だけ書き換えて次の同期で衝突する
-  try {
-    await syncImages()
-  } catch (err) {
-    console.error(err)
-    console.error(
-      '✗ 画像の正本 (Firestore) と同期できないので起動しない。認証を確認'
-    )
-    process.exit(1)
-  }
+  // つながらなくても cache で起動する (変更は次の同期で送る)。一度も同期していない端末だけ止める
+  if (!(await syncOnStart('console'))) process.exit(1)
   server.listen(PORT, '127.0.0.1', () => {
     console.log(`console: http://localhost:${PORT}`)
   })
