@@ -21,7 +21,7 @@ import {
 import { useNumberContext } from '../lib/numberContext'
 import {
   confirmOp,
-  decadeProgress,
+  decadeBreakdown,
   isStale,
   matchesFilter,
   REP_FILTERS,
@@ -200,7 +200,7 @@ function RepPickerTab({ token, numbers }: Props) {
   const isVisible = (doc: NumberDoc) =>
     matchesFilter(doc, filter) || kept.has(doc.num)
   const visible = docs.filter(isVisible)
-  const progress = decadeProgress(docs)
+  const progress = decadeBreakdown(docs)
   const doneCount = docs.filter((doc) => doc.rep?.confirmed).length
 
   // 押した瞬間にキューへ積む (画面はキューの文書を出すので、その場で変わって黄)
@@ -365,19 +365,32 @@ function RepPickerTab({ token, numbers }: Props) {
         </div>
       </DockRow>
       <div class="rp-digits">
-        {progress.map((ratio, decade) => (
-          <button
-            key={decade}
-            class="rp-digit rp-decade"
-            onClick={() => jumpTo(decade)}
-            aria-label={`${hundred}${decade}0 へ (確定 ${Math.round(
-              ratio * 100
-            )}%)`}
-          >
-            {decade}0
-            <i style={{ width: `${ratio * 100}%` }} />
-          </button>
-        ))}
+        {progress.map(({ total, counts }, decade) => {
+          const [none, one, two] = counts
+          const pct = (n: number) => (total ? (n / total) * 100 : 0)
+          // 全部確定したら枠ごと色を変える (①② まで揃えば青、① だけの番号が残れば緑)
+          const done = total > 0 && none === 0
+          return (
+            <button
+              key={decade}
+              class={
+                'rp-digit rp-decade' +
+                (done ? (one === 0 ? ' is-done2' : ' is-done1') : '')
+              }
+              onClick={() => jumpTo(decade)}
+              aria-label={`${hundred}${decade}0 へ (①② ${two} · ① だけ ${one} · 未確定 ${none} / ${total})`}
+            >
+              {decade}0
+              {total ? (
+                <span class="rp-decade-bar" aria-hidden="true">
+                  <i class="lv2" style={{ width: `${pct(two)}%` }} />
+                  <i class="lv1" style={{ width: `${pct(one)}%` }} />
+                  <i class="lv0" style={{ width: `${pct(none)}%` }} />
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
       </div>
     </>
   )
