@@ -1,7 +1,9 @@
 // 候補タブ (D-0089)。画像コンソール (/console/) の一括編集をアプリのタブにしたもの。
 // 撮り直し・未取得の枠を 3 列で並べ、押すとボトムシート (ImagePickerSheet) で候補から選ぶ。
 // 選んで閉じると一覧の同じ位置に戻るので、次の枠を続けて直せる (C-3)。
-import { useEffect, useMemo, useState } from 'preact/hooks'
+// 代表と同じタブで切り替える (PickTab)。番号は百の位ごとに出し、十の位へ飛べる。
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import type { ComponentChildren } from 'preact'
 import {
   CANDIDATE_FILTERS,
   candidateItems,
@@ -14,15 +16,37 @@ import {
 import { loadSubTab, saveSubTab } from '../data/storage'
 import { wordImage } from '../lib/wordImage'
 import ImagePickerSheet from './ImagePickerSheet'
+import {
+  DIGITS,
+  anchorTarget,
+  loadHundred,
+  saveHundred,
+  scrollToNum,
+} from '../lib/pickPosition'
 import Screen, { DockBar, DockRow } from './Screen'
 
 const FILTER_KEY = 'cand.filter'
+const KIND_KEY = 'cand.kind'
+const KINDS = ['num', 'date', 'card'] as const
+type Kind = (typeof KINDS)[number]
+const KIND_LABELS: Record<Kind, string> = {
+  num: '番号',
+  date: '日付',
+  card: 'カード',
+}
 const COLS = 3
-// «全部» は 2000 枠を超える。画像を一度に並べすぎないよう先頭だけ出す
-const MAX_SHOWN = 300
+// 日付の «全部» は 2000 枠を超える。画像を一度に並べすぎないよう先頭だけ出す
+// (番号は百の位ごと = 最大 600 枠)
+const MAX_SHOWN = 600
 const THUMB_PX = 120
 
-type Props = { token: string }
+type Props = {
+  token: string
+  /** [代表 | 画像] の切替。dock の見出しの位置に出す */
+  modeSwitch?: ComponentChildren
+  /** 代表から切り替えてきたときに見ていた番号。その枠の位置で開く */
+  anchor?: string | null
+}
 
 function ItemCard({
   item,
@@ -32,7 +56,12 @@ function ItemCard({
   onOpen: () => void
 }) {
   return (
-    <button type="button" class="cand-card" onClick={onOpen}>
+    <button
+      type="button"
+      class="cand-card"
+      onClick={onOpen}
+      data-num={/^\d{3}$/.test(item.id) ? item.id : undefined}
+    >
       <span class="cand-thumb">
         {item.image ? (
           <img
@@ -43,8 +72,16 @@ function ItemCard({
         ) : (
           <span class="cand-thumb-empty">未取得</span>
         )}
-        {item.keep ? <span class="cand-badge is-keep">確定</span> : null}
-        {item.redo ? <span class="cand-badge is-redo">撮り直し</span> : null}
+        <span class="cand-badges">
+          {item.keep ? <span class="cand-badge is-keep">確定</span> : null}
+          {item.redo ? <span class="cand-badge is-redo">撮り直し</span> : null}
+          {item.changed ? (
+            <span class="cand-badge is-changed">語変更</span>
+          ) : null}
+          {item.choices > 0 && !item.keep ? (
+            <span class="cand-badge is-choices">候補 {item.choices}</span>
+          ) : null}
+        </span>
       </span>
       <span class="cand-head">
         <span class="cand-id">{item.id}</span>
@@ -57,13 +94,21 @@ function ItemCard({
 
 const FILTER_IDS = CANDIDATE_FILTERS.map((f) => f.id)
 
-export default function CandidateTab({ token }: Props) {
+export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   const [state, setState] = useState<ImageState | null>(null)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<CandidateFilter>(() =>
     loadSubTab(FILTER_KEY, FILTER_IDS, 'redo')
   )
   const [open, setOpen] = useState<CandidateItem | null>(null)
+  // 代表から来たら番号を出す。百の位は代表と共有する
+  const [kind, setKind] = useState<Kind>(() =>
+    anchor ? 'num' : loadSubTab(KIND_KEY, KINDS, 'num')
+  )
+  const [hundred, setHundred] = useState(() => {
+    if (anchor) saveHundred(anchor[0])
+    return anchor ? anchor[0] : loadHundred()
+  })
 
   const load = async () => {
     setError('')
@@ -79,9 +124,20 @@ export default function CandidateTab({ token }: Props) {
     if (token) load()
   }, [token])
 
+  const kindOf = useMemo(
+    () => new Map(state?.targets.map((t) => [t.id, t.kind]) ?? []),
+    [state]
+  )
   const items = useMemo(
-    () => (state ? candidateItems(state, filter) : []),
-    [state, filter]
+    () =>
+      state
+        ? candidateItems(state, filter).filter(
+            (it) =>
+              kindOf.get(it.id) === kind &&
+              (kind !== 'num' || it.id[0] === hundred)
+          )
+        : [],
+    [state, filter, kind, hundred, kindOf]
   )
   const shown = items.slice(0, MAX_SHOWN)
 
@@ -90,14 +146,46 @@ export default function CandidateTab({ token }: Props) {
     setFilter(next)
   }
 
+  const chooseKind = (next: Kind) => {
+    saveSubTab(KIND_KEY, next)
+    setKind(next)
+  }
+
+  const chooseHundred = (next: string) => {
+    saveHundred(next)
+    setHundred(next)
+  }
+
+  // 番号の並びは十の位ごと。押すとその十の位の最初の枠を下端に合わせる
+  const nums = [...new Set(shown.map((it) => it.id))]
+  const jumpTo = (decade: number) => {
+    const target = nums.find((num) => Number(num[1]) >= decade)
+    if (target) scrollToNum('.cand-grid', target)
+  }
+
+  // 代表から切り替えてきたら、見ていた番号の枠を下端に合わせる (読み込めた後に 1 度だけ)
+  const isAnchored = useRef(!anchor)
+  useEffect(() => {
+    if (isAnchored.current || !anchor || !nums.length) return
+    const target = anchorTarget(nums, anchor)
+    if (target && scrollToNum('.cand-grid', target)) isAnchored.current = true
+  })
+
   /** 選んだ画像を一覧に反映する (撮り直しの印は Function が外している) */
   const picked = (item: CandidateItem, image: SlotImage) => {
     setState((prev) => {
       if (!prev) return prev
       const key = `${item.id}:${item.slot}`
       const { [key]: _done, ...redo } = prev.redo
+      const left = Math.max(0, (prev.choices?.[key] ?? 0) - 1)
       return {
         ...prev,
+        // 選んだ候補は残りから外れる。画像は今の語で選び直したので «語変更» も外す
+        choices: { ...prev.choices, [key]: left },
+        candidates: {
+          ...prev.candidates,
+          [key]: { ...prev.candidates?.[key], word: item.word },
+        },
         images: {
           ...prev.images,
           [item.id]: { ...prev.images[item.id], [item.slot]: image },
@@ -137,7 +225,7 @@ export default function CandidateTab({ token }: Props) {
         dock={
           <>
             <DockBar
-              title="候補"
+              title={modeSwitch ?? '候補'}
               sub={
                 state
                   ? `${items.length} 枠${
@@ -150,18 +238,63 @@ export default function CandidateTab({ token }: Props) {
                 読み直す
               </button>
             </DockBar>
-            <DockRow>
+            <div class="rp-filters">
+              {KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  class={'rp-seg' + (kind === k ? ' active' : '')}
+                  aria-pressed={kind === k}
+                  onClick={() => chooseKind(k)}
+                >
+                  {KIND_LABELS[k]}
+                </button>
+              ))}
+              <span class="cand-filter-gap" aria-hidden="true" />
               {CANDIDATE_FILTERS.map((f) => (
                 <button
                   key={f.id}
                   type="button"
-                  class={'filter-btn' + (filter === f.id ? ' active' : '')}
+                  class={'rp-seg' + (filter === f.id ? ' active' : '')}
+                  aria-pressed={filter === f.id}
                   onClick={() => choose(f.id)}
                 >
                   {f.label}
                 </button>
               ))}
-            </DockRow>
+            </div>
+            {kind === 'num' ? (
+              <>
+                <DockRow>
+                  <span class="dock-row-label">百</span>
+                  <div class="rp-digits">
+                    {DIGITS.map((d) => (
+                      <button
+                        key={d}
+                        class={'rp-digit' + (hundred === d ? ' active' : '')}
+                        aria-pressed={hundred === d}
+                        onClick={() => chooseHundred(d)}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </DockRow>
+                <div class="rp-digits">
+                  {DIGITS.map((d, decade) => (
+                    <button
+                      key={d}
+                      class="rp-digit"
+                      onClick={() => jumpTo(decade)}
+                      disabled={!nums.some((num) => Number(num[1]) === decade)}
+                      aria-label={`${hundred}${decade}0 へ`}
+                    >
+                      {decade}0
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </>
         }
       />

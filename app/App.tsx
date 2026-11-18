@@ -39,7 +39,7 @@ import BookmarkTab from './components/BookmarkTab'
 import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
 import RepPickerTab from './components/RepPickerTab'
-import CandidateTab from './components/CandidateTab'
+import PickTab from './components/PickTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { refreshSessionToken } from './lib/passkeyApi'
@@ -430,7 +430,7 @@ export function App() {
           {tab === 'rep' && (
             <RepPickerTab token={token} numbers={data.numbers} />
           )}
-          {tab === 'cand' && <CandidateTab token={token} />}
+          {tab === 'cand' && <PickTab token={token} numbers={data.numbers} />}
           {tab === 'misc' && (
             <MiscTab
               numbers={data.numbers}

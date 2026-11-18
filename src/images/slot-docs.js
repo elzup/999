@@ -92,7 +92,7 @@ export function replaceImage(doc, image) {
   const history =
     prev && !isSame
       ? [prev, ...(doc.history ?? [])].slice(0, HISTORY_LIMIT)
-      : doc.history ?? []
+      : (doc.history ?? [])
   return { ...doc, image, history }
 }
 
@@ -176,8 +176,29 @@ export function rejectedUrlsOf(doc) {
   return [...new Set(urls.filter(Boolean))]
 }
 
-/** 文書の集まりから、画面が使う images / keep / redo を作る */
+/** 文書の集まりから、画面が使う images / keep / redo / candidates / choices を作る */
 export function marksView(docs) {
-  const { manifest, keep, redo } = fromSlotDocs(docs)
-  return { images: manifest.images, keep: keep.keep, redo: redo.redo }
+  const { manifest, keep, redo, candidates } = fromSlotDocs(docs)
+  return {
+    images: manifest.images,
+    keep: keep.keep,
+    redo: redo.redo,
+    // 画像を取ったときの語と検索ワード (語が変わった枠を見分ける)
+    candidates: candidates.items,
+    choices: pendingChoicesOf(docs),
+  }
+}
+
+/**
+ * ピッカーに出したまま選んでいない候補の数 (枠 → 数)。今の画像は数えない。
+ * 候補タブの «候補あり» と、ピッカーを開いたときに前回の候補を出すのに使う
+ */
+export function pendingChoicesOf(docs) {
+  const out = {}
+  for (const doc of Object.values(docs)) {
+    const current = doc.image?.hash
+    const n = (doc.choices ?? []).filter((c) => c?.hash !== current).length
+    if (n > 0) out[slotDocId(doc.id, doc.slot)] = n
+  }
+  return out
 }

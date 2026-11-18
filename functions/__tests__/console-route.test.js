@@ -445,6 +445,48 @@ describe('handleConsoleRequest: その場の取り直し', () => {
       expect(fetcher.calls).toEqual([])
     })
 
+    it('reuse なら前に取った候補を検索せずに返す (今の画像は除く)', async () => {
+      const { request, fetcher } = setup(withImage())
+      await request('POST', '/console/candidates', { id: '001', slot: 'w2' })
+      await request('POST', '/console/set-image', {
+        id: '001',
+        slot: 'w2',
+        image: { hash: 'c2' },
+      })
+      const res = await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        reuse: true,
+      })
+      expect(fetcher.calls).toHaveLength(1)
+      expect(res.payload).toMatchObject({ ok: true, reused: true })
+      expect(res.payload.candidates.map((c) => c.hash)).toEqual(['c1', 'c3'])
+    })
+
+    it('reuse でも残った候補が無い・検索ワードを渡したときは検索する', async () => {
+      const { request, fetcher } = setup(withImage())
+      await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        reuse: true,
+      })
+      await request('POST', '/console/candidates', {
+        id: '001',
+        slot: 'w2',
+        reuse: true,
+        query: 'ゼロ',
+      })
+      expect(fetcher.calls).toHaveLength(2)
+    })
+
+    it('state に、選んでいない候補の数と画像を取ったときの語を載せる', async () => {
+      const { request } = setup(withImage())
+      await request('POST', '/console/candidates', { id: '001', slot: 'w2' })
+      const res = await request('GET', '/console/state', {})
+      expect(res.payload.choices).toEqual({ '001:w2': 3 })
+      expect(res.payload.candidates['001:w2'].word).toBe('マオ#コードギアス')
+    })
+
     it('出した候補は set-image で採用でき、前の画像は history に残る', async () => {
       const { request, docs: stored } = setup(withImage())
       await request('POST', '/console/candidates', { id: '001', slot: 'w2' })

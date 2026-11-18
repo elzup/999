@@ -32,7 +32,7 @@ type Props = {
   onPicked?: (image: SlotImage) => void
 }
 
-type Loaded = { query: string; candidates: SlotImage[] }
+type Loaded = { query: string; candidates: SlotImage[]; reused: boolean }
 
 /** 走っている検索。auto は開いたときの自動の検索 */
 type Searching = { query: string; isAuto: boolean; startedAt: number }
@@ -115,8 +115,11 @@ export default function ImagePickerSheet({
   const isEditedRef = useRef(false)
   const isLoading = searching !== null
 
-  /** typed を省くと語から (サーバがタグの最新の正式名で) 検索ワードを作る */
-  const load = async (typed?: string) => {
+  /**
+   * typed を省くと語から (サーバがタグの最新の正式名で) 検索ワードを作る。
+   * reuse なら前に取った候補が残っていればそれを出す (開き直すたびに取り直さない)
+   */
+  const load = async (typed?: string, reuse = false) => {
     const stop = new AbortController()
     stopRef.current = stop
     setSearching({
@@ -134,10 +137,15 @@ export default function ImagePickerSheet({
         id,
         slot,
         query: typed,
+        reuse,
         stop: stop.signal,
       })
-      setLoaded({ query: result.query, candidates: result.candidates })
-      if (!isEditedRef.current) setQuery(result.query)
+      setLoaded({
+        query: result.query,
+        candidates: result.candidates,
+        reused: Boolean(result.reused),
+      })
+      if (!isEditedRef.current && result.query) setQuery(result.query)
     } catch (err) {
       if (err instanceof StoppedError) {
         setIsStopped(true)
@@ -154,7 +162,7 @@ export default function ImagePickerSheet({
   }
 
   useEffect(() => {
-    load()
+    load(undefined, true)
     // 開いた枠の候補を 1 度だけ取る。枠が変わればシートごと作り直される (key)
     // 閉じたら待つのをやめる
     return () => stopRef.current?.abort()
@@ -229,6 +237,10 @@ export default function ImagePickerSheet({
         ) : isStopped ? (
           <div class="ip-status-note">
             検索を止めました。«再検索» で取り直せます
+          </div>
+        ) : loaded?.reused ? (
+          <div class="ip-status-note">
+            前に取った候補です。«再検索» で新しく探せます
           </div>
         ) : null}
         <div class="ip-grid">

@@ -4,6 +4,7 @@
 // 行は人 / 物の 2 段に候補チップを並べ、チップの左に画像を出す (D-0030)。
 // dock は 絞り込み / 百の位 / 十の位ジャンプ (D-0029)。
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
+import type { ComponentChildren } from 'preact'
 import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
 import { loadSubTab, saveSubTab } from '../data/storage'
@@ -31,17 +32,26 @@ import {
 import Screen, { DockBar, DockRow } from './Screen'
 import RepCard from './RepCard'
 import { wordImage } from '../lib/wordImage'
+import {
+  DIGITS,
+  anchorTarget,
+  loadHundred,
+  saveHundred,
+  scrollToNum,
+} from '../lib/pickPosition'
 
-const HUNDRED_KEY = 'rep.hundred'
 const VIEW_KEY = 'rep.view'
 type View = 'rows' | 'cards'
 const VIEWS: View[] = ['rows', 'cards']
-const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 const MARK = ['', '①', '②']
 
 type Props = {
   token: string
   numbers: NumberEntry[]
+  /** 候補タブの [代表 | 画像] の切替。dock の見出しの位置に出す */
+  modeSwitch?: ComponentChildren
+  /** 画像から切り替えてきたときに見ていた番号。その行の位置で開く */
+  anchor?: string | null
 }
 
 function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
@@ -58,7 +68,7 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       {row.imageUrl ? (
         <img
           class="rp-thumb"
-          {...wordImage(row.imageUrl, 28, row.word)}
+          {...wordImage(row.imageUrl, 44, row.word)}
           alt=""
           loading="lazy"
         />
@@ -125,11 +135,13 @@ function RepRow({
   )
 }
 
-function RepPickerTab({ token, numbers }: Props) {
+function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
   const ctx = useNumberContext()
-  const [hundred, setHundred] = useState(() =>
-    loadSubTab(HUNDRED_KEY, DIGITS, '0')
-  )
+  // 百の位は画像側と共有する。見ていた番号があればその百の位で開く
+  const [hundred, setHundred] = useState(() => {
+    if (anchor) saveHundred(anchor[0])
+    return anchor ? anchor[0] : loadHundred()
+  })
   // この百の位の番号 (並び)。文書の中身は保存キューから引く (押した後の値を含む)
   const [nums, setNums] = useState<string[]>([])
   const [filter, setFilter] = useState<RepFilter>('all')
@@ -231,9 +243,20 @@ function RepPickerTab({ token, numbers }: Props) {
   }
 
   const chooseHundred = (next: string) => {
-    saveSubTab(HUNDRED_KEY, next)
+    saveHundred(next)
     setHundred(next)
   }
+
+  // 画像から切り替えてきたら、見ていた番号の行を下端に合わせる (読み込めた後に 1 度だけ)
+  const isAnchored = useRef(!anchor)
+  useEffect(() => {
+    if (isAnchored.current || !anchor || !visible.length) return
+    const target = anchorTarget(
+      visible.map((doc) => doc.num),
+      anchor
+    )
+    if (target && scrollToNum('.screen-main', target)) isAnchored.current = true
+  })
 
   const chooseView = (next: View) => {
     saveSubTab(VIEW_KEY, next)
@@ -306,7 +329,7 @@ function RepPickerTab({ token, numbers }: Props) {
     <>
       {status ? <div class="rp-status">{status}</div> : null}
       <DockBar
-        title="代表"
+        title={modeSwitch ?? '代表'}
         sub={`${doneCount}/${docs.length} 確定 · ${hundred}00-${hundred}99`}
       >
         <div class="rp-views">
