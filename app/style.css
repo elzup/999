@@ -6996,6 +6996,13 @@ img[data-concept] {
   display: flex;
   gap: 8px;
 }
+.ip-tools {
+  display: flex;
+}
+.ip-tools .filter-btn {
+  flex: 1;
+  padding: 8px 12px;
+}
 .ip-foot .filter-btn {
   flex: 1;
   padding: 10px 12px;

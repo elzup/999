@@ -146,6 +146,36 @@ export const pickImage = async ({
     })
   ).image
 
+/** 確定 (ロック) を付け外す。ロックした枠は一括の取り直しでも上書きされない */
+export const setKeep = async ({
+  token,
+  id,
+  slot,
+  on,
+}: {
+  token: string
+  id: string
+  slot: string
+  on: boolean
+}) =>
+  (await call<{ keep: Record<string, true> }>('keep', token, { id, slot, on }))
+    .keep
+
+/** 今の画像の元画像を上寄せで切り抜き直す (顔が上にある画像の救済) */
+export const recropImage = async ({
+  token,
+  id,
+  slot,
+}: {
+  token: string
+  id: string
+  slot: string
+}) => (await call<{ image: SlotImage }>('recrop', token, { id, slot })).image
+
+/** Function がロック中の枠を断ったときの文言 (functions/console-route.js の LOCKED) */
+export const isLockedError = (err: unknown) =>
+  String((err as Error)?.message ?? err).startsWith('ロック中')
+
 // ── この画面の中で選んだ画像 (次のデプロイまで配信データに無い) ──
 
 let overrides: Record<string, SlotImage> = {}
