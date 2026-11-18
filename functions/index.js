@@ -299,8 +299,9 @@ function createImageFetcher() {
     return lib
   }
   return {
-    async queryOf(word) {
-      return (await load()).query.buildSearchWord(word)
+    // tagMap は焼いた state の tagNames (略語タグ → 正式名)。Mac の search-word-images と同じ展開にする
+    async queryOf(word, tagMap) {
+      return (await load()).query.buildSearchWord(word, tagMap)
     },
     async bySearch({ query, rejected }) {
       const { uploadWebp, fetchOne } = await load()

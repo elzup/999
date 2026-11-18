@@ -46,6 +46,12 @@ export function loadTargets() {
   })
 }
 
+// 略語タグ → 正式名 (sync:tags の出力)。番号の一括 (search-word-images) と同じ展開にする
+function loadTagMap() {
+  const text = readDataFile('tags.json')
+  return text ? JSON.parse(text) : {}
+}
+
 export async function redoDirect({ id, slot }) {
   const word = loadTargets().find((t) => t.id === id)?.[slot]
   if (!word) return { ok: false, error: 'この枠に語が無い' }
@@ -55,7 +61,7 @@ export async function redoDirect({ id, slot }) {
   return searchAndStore({
     id,
     slot,
-    query: buildSearchWord(word),
+    query: buildSearchWord(word, loadTagMap()),
     word,
     rejected,
   })
