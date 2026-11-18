@@ -16,6 +16,7 @@ import {
   writeJson,
   slotKey,
 } from './images/store.js'
+import { withImageSync } from './images/image-sync.js'
 
 const REDO_ONLY = process.argv.includes('--redo-only')
 // console の «取り直し» は 1 枠だけ処理する。--redo-only だけだと redo の印が付いた全枠
@@ -102,7 +103,4 @@ async function main() {
   )
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+withImageSync(main)

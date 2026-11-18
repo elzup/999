@@ -1,0 +1,97 @@
+// 画像データ 4 ファイル (manifest / keep / redo / candidates) と、Firestore の
+// imageSlots/{id}:{slot} 文書 (1 枠 1 文書) を相互に変換する。spec:image-store
+//
+// 正本は Firestore、手元の 4 ファイルはその cache (D-0084)。
+// fromSlotDocs(toSlotDocs(files)) が元と一致することを投入の条件にする (REQ-IMG-003)。
+
+export const IMAGE_SLOTS = 'imageSlots'
+
+/** 差し替え前の画像を残す数。撮り直しを数回ぶん巻き戻せれば足りる */
+export const HISTORY_LIMIT = 5
+
+export const slotDocId = (id, slot) => `${id}:${slot}`
+
+/** "043:w1#ｽﾀﾚ" → { id: '043', slot: 'w1#ｽﾀﾚ' }。id に ':' は入らない */
+export function splitSlotKey(key) {
+  const at = key.indexOf(':')
+  if (at <= 0) throw new Error(`枠のキーが不正: ${key}`)
+  return { id: key.slice(0, at), slot: key.slice(at + 1) }
+}
+
+function manifestKeys(manifest) {
+  return Object.entries(manifest.images ?? {}).flatMap(([id, slots]) =>
+    Object.keys(slots).map((slot) => slotDocId(id, slot))
+  )
+}
+
+/**
+ * 4 ファイルから枠ごとの文書を作る。入力は書き換えない。
+ * @returns {Record<string, object>} 文書 id → 文書
+ */
+export function toSlotDocs({ manifest, keep, redo, candidates }) {
+  const keys = new Set([
+    ...manifestKeys(manifest),
+    ...Object.keys(keep.keep ?? {}),
+    ...Object.keys(redo.redo ?? {}),
+    ...Object.keys(candidates.items ?? {}),
+  ])
+  return Object.fromEntries(
+    [...keys].sort().map((key) => {
+      const { id, slot } = splitSlotKey(key)
+      const doc = {
+        id,
+        slot,
+        image: manifest.images?.[id]?.[slot] ?? null,
+        keep: Boolean(keep.keep?.[key]),
+        redo: redo.redo?.[key] ?? null,
+        candidate: candidates.items?.[key] ?? null,
+        history: [],
+      }
+      return [key, doc]
+    })
+  )
+}
+
+/** 枠ごとの文書から 4 ファイルを作り直す (cache の生成にも使う) */
+export function fromSlotDocs(docs) {
+  const manifest = { version: 1, images: {} }
+  const keep = { version: 1, keep: {} }
+  const redo = { version: 1, redo: {} }
+  const candidates = { version: 1, items: {} }
+  for (const doc of Object.values(docs)) {
+    const key = slotDocId(doc.id, doc.slot)
+    if (doc.image)
+      manifest.images[doc.id] = {
+        ...manifest.images[doc.id],
+        [doc.slot]: doc.image,
+      }
+    if (doc.keep) keep.keep[key] = true
+    if (doc.redo) redo.redo[key] = doc.redo
+    if (doc.candidate) candidates.items[key] = doc.candidate
+  }
+  return { manifest, keep, redo, candidates }
+}
+
+/** 件数の要約。投入前後の照合に使う */
+export function countFiles({ manifest, keep, redo, candidates }) {
+  return {
+    images: manifestKeys(manifest).length,
+    keep: Object.keys(keep.keep ?? {}).length,
+    redo: Object.keys(redo.redo ?? {}).length,
+    candidates: Object.keys(candidates.items ?? {}).length,
+  }
+}
+
+/**
+ * 採用画像を差し替えた文書を返す。前の画像は history の先頭に残す (REQ-IMG-001)。
+ * 同じ hash への差し替えは履歴を増やさない。
+ */
+export function replaceImage(doc, image) {
+  const prev = doc.image
+  const isSame = prev && image && prev.hash === image.hash
+  const history =
+    prev && !isSame
+      ? [prev, ...(doc.history ?? [])].slice(0, HISTORY_LIMIT)
+      : doc.history ?? []
+  return { ...doc, image, history }
+}

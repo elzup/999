@@ -19,6 +19,8 @@
     "images:avatar-i": "node src/avatar-i-images.js",
     "images:pull-marks": "node src/images/pull-marks.js",
     "images:fetch-targets": "node src/fetch-target-images.js",
+    "images:migrate": "node src/images/migrate.js",
+    "images:pull": "node src/images/pull.js",
     "console": "node scripts/console-start.ts && npm run sync && node console/server.js",
     "console:rep": "node console/rep-server.js",
     "console:ps": "pgrep -fl 'console/(rep-)?server\\.js' || echo 'no console server running'",
@@ -28,7 +30,7 @@
     "lyrics": "node src/gen-words-lyrics.js",
     "sheet:rankey": "node src/sheet-audit.mjs --write-rankey",
     "sheet:audit": "node src/sheet-audit.mjs",
-    "sync:all": "npm run sync && npm run sync:tags && npm run sync:card && npm run lyrics && npm run build:data",
+    "sync:all": "npm run sync && npm run images:pull && npm run sync:tags && npm run sync:card && npm run lyrics && npm run build:data",
     "db:plan": "node src/db-sync.js",
     "db:offline": "node src/db-sync.js --offline",
     "db:push": "node src/db-sync.js --apply",
@@ -55,8 +57,8 @@
     "sync:private": "mkdir -p functions/private && cp private/data.json functions/private/data.json && cp src/visualize-words.data.json functions/private/visualize-words.data.json && node scripts/bake-console-state.js",
     "sync:functions": "bash scripts/sync-functions-lib.sh",
     "deploy:legacy": "node scripts/deploy-guard.ts && npm run build:preview && firebase deploy --only hosting",
-    "deploy": "node scripts/deploy-guard.ts && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
-    "deploy:api": "node scripts/deploy-guard.ts && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
+    "deploy": "node scripts/deploy-guard.ts && npm run images:pull && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
+    "deploy:api": "node scripts/deploy-guard.ts && npm run images:pull && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {

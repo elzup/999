@@ -1,16 +1,22 @@
-// word-images 系 JSON (candidates / manifest / redo) の読み書き。原子的書込 (tmp→rename)。
+// word-images 系 JSON (candidates / manifest / redo / keep) の読み書き。原子的書込 (tmp→rename)。
+// 正本は Firestore imageSlots で、これらは cache (spec:image-store)。同期は image-sync.js。
 
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const dataDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'data')
+// IMAGE_DATA_DIR はテスト用 (同期のテストで本物の cache を書き換えないため)
+const dataDir =
+  process.env.IMAGE_DATA_DIR ||
+  join(dirname(fileURLToPath(import.meta.url)), '..', 'data')
 
 export const PATHS = {
   candidates: join(dataDir, 'word-images.candidates.json'),
   manifest: join(dataDir, 'word-images.json'),
   redo: join(dataDir, 'word-images-redo.json'),
   keep: join(dataDir, 'word-images-keep.json'),
+  // 前回 Firestore と同期した時点の文書 (image-sync.js)。差分を取る基準
+  syncBase: join(dataDir, 'image-sync-base.json'),
 }
 
 export function readJson(path, fallback) {

@@ -6,6 +6,7 @@ import { parseArgs } from 'node:util'
 import { loadManifest } from './images/store.js'
 import { IMAGE_KINDS, PIPELINE_SLOTS } from './images/targets.js'
 import { loadTargets, redoDirect } from './images/direct.js'
+import { withImageSync } from './images/image-sync.js'
 
 const { values } = parseArgs({
   options: {
@@ -22,30 +23,35 @@ if (!IMAGE_KINDS[kind]) {
 // ここで取るのは、そのパイプラインが知らない 3 番目 (wh3 / wm3) とタグ違いの枠 (w1_2#res など)
 const isOurs = (slot) => kind !== 'num' || !PIPELINE_SLOTS.includes(slot)
 
-const images = loadManifest().images || {}
-const jobs = loadTargets()
-  .filter((t) => t.kind === kind)
-  .flatMap((t) =>
-    t.slots
-      .filter((slot) => isOurs(slot) && t[slot] && !images[t.id]?.[slot])
-      .map((slot) => ({ id: t.id, slot, word: t[slot] }))
-  )
+// 正本から取り込んだ cache で未取得を数える (withImageSync が先に同期する)
+async function main() {
+  const images = loadManifest().images || {}
+  const jobs = loadTargets()
+    .filter((t) => t.kind === kind)
+    .flatMap((t) =>
+      t.slots
+        .filter((slot) => isOurs(slot) && t[slot] && !images[t.id]?.[slot])
+        .map((slot) => ({ id: t.id, slot, word: t[slot] }))
+    )
 
-console.log(`${IMAGE_KINDS[kind].label}: 未取得 ${jobs.length} 枠`)
-if (values['dry-run']) {
-  for (const job of jobs) console.log(`  ${job.id}:${job.slot} ${job.word}`)
-  process.exit(0)
-}
-
-let failed = 0
-// 検索 API の連打を避けて 1 枠ずつ順に取る
-for (const job of jobs) {
-  const result = await redoDirect(job)
-  if (result.ok) {
-    console.log(`  ${job.id}:${job.slot} ${job.word} -> ok`)
-  } else {
-    failed++
-    console.log(`  ${job.id}:${job.slot} ${job.word} -> ${result.error}`)
+  console.log(`${IMAGE_KINDS[kind].label}: 未取得 ${jobs.length} 枠`)
+  if (values['dry-run']) {
+    for (const job of jobs) console.log(`  ${job.id}:${job.slot} ${job.word}`)
+    return
   }
+
+  let failed = 0
+  // 検索 API の連打を避けて 1 枠ずつ順に取る
+  for (const job of jobs) {
+    const result = await redoDirect(job)
+    if (result.ok) {
+      console.log(`  ${job.id}:${job.slot} ${job.word} -> ok`)
+    } else {
+      failed++
+      console.log(`  ${job.id}:${job.slot} ${job.word} -> ${result.error}`)
+    }
+  }
+  console.log(`完了: 成功 ${jobs.length - failed} / 失敗 ${failed}`)
 }
-console.log(`完了: 成功 ${jobs.length - failed} / 失敗 ${failed}`)
+
+withImageSync(main)

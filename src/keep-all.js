@@ -9,25 +9,30 @@ import {
   writeJson,
   slotKey,
 } from './images/store.js'
+import { withImageSync } from './images/image-sync.js'
 
 const CLEAR = process.argv.includes('--clear')
 
-const keep = loadKeep()
-if (CLEAR) {
-  keep.keep = {}
-  writeJson(PATHS.keep, keep)
-  console.log('全ロック解除しました')
-} else {
-  const images = loadManifest().images || {}
-  let n = 0
-  for (const num of Object.keys(images)) {
-    for (const slot of Object.keys(images[num])) {
-      if (images[num][slot]?.url) {
-        keep.keep[slotKey(num, slot)] = true
-        n++
+function main() {
+  const keep = loadKeep()
+  if (CLEAR) {
+    keep.keep = {}
+    writeJson(PATHS.keep, keep)
+    console.log('全ロック解除しました')
+  } else {
+    const images = loadManifest().images || {}
+    let n = 0
+    for (const num of Object.keys(images)) {
+      for (const slot of Object.keys(images[num])) {
+        if (images[num][slot]?.url) {
+          keep.keep[slotKey(num, slot)] = true
+          n++
+        }
       }
     }
+    writeJson(PATHS.keep, keep)
+    console.log(`${n} 枚をロックしました (一括処理で上書きされません)`)
   }
-  writeJson(PATHS.keep, keep)
-  console.log(`${n} 枚をロックしました (一括処理で上書きされません)`)
 }
+
+withImageSync(main)
