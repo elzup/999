@@ -4,7 +4,8 @@
 //   POST /console/redo {id,slot,on}          撮り直しの印 (Mac の nr images:redo-flagged がまとめて取り直す)
 //   POST /console/redo-now {id,slot}         その場で語から検索して取り直す (段階 5)
 //   POST /console/search-custom {id,slot,query}  検索ワードを指定して取り直す
-//   POST /console/recrop {id,slot}           今の画像の元画像を上寄せで切り抜き直す
+//   POST /console/recrop {id,slot,position?} 今の画像の元画像を寄せ方を決めて切り抜き直す
+//                                       position: top / bottom / left / right / centre (既定 top)
 //   POST /console/candidates {id,slot,query?,reuse?} ピッカーに並べる候補を最大 6 枚取る (採用はしない。D-0088)
 //                                       reuse なら前に取った候補が残っていれば検索せずに返す
 //   POST /console/set-image {id,slot,image}  画像を採用する。今の画像・history・ピッカーに出した候補だけ
@@ -20,6 +21,9 @@
 // ({ marksView, applyImage, applyChoices, findSlotImage, rejectedUrlsOf, slotDocId })、fetcher は画像の取得
 // ({ queryOf, bySearch, candidates, recrop }) を
 // 引数で受け取る。Firestore・GCS・検索サイトにも、生成物の functions/lib にも頼らずにテストできるようにするため。
+
+/** 切り抜きの寄せ方 (src/images/process.js の CROP_POSITIONS と同じ。functions/lib に頼らないため写す) */
+const CROP_POSITIONS = ['top', 'bottom', 'left', 'right', 'centre']
 
 const INVALID_TARGET = 'id/slot が不正です。画面を再読み込みしてください'
 const LOCKED = 'ロック中の枠です。取り直すならロックを外してから'
@@ -138,7 +142,13 @@ async function handleImageRequest({
     try {
       if (path === '/console/recrop') {
         if (!current?.image?.sourceImageUrl) return fail('元画像URLが無い')
-        image = await fetcher.recrop({ image: current.image })
+        const position = body.position ?? 'top'
+        if (!CROP_POSITIONS.includes(position))
+          return {
+            status: 400,
+            payload: { error: '切り抜きの寄せ方が不正です' },
+          }
+        image = await fetcher.recrop({ image: current.image, position })
       } else {
         let query
         if (path === '/console/redo-now') {

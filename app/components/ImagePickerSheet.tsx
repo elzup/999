@@ -1,5 +1,5 @@
 // 画像ピッカーのボトムシート (D-0088: A-1 / B-2 / D-2)。
-// 開くと 1 枠の候補を取り、«今» + 候補 5 枚の 3×2 から選んで «これにする» で採用する。
+// 開くと 1 枠の候補を取り、«今» + 候補 5 枚の 3×2 から選んで «✓ 確定» で採用してロックする (やり直すときは «解除»)。
 // 検索ワードを直して取り直せる。候補タブと詳細パネルの画像から開く。
 //
 // 画面の上半分に指を伸ばさない規約 (docs/screen-layout.md) に合わせ、シートは下端に出し、
@@ -8,12 +8,14 @@ import { createPortal } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import {
   fetchCandidates,
+  CROP_BUTTONS,
   isLockedError,
   pickImage,
   recropImage,
   setKeep,
   setImageOverride,
   StoppedError,
+  type CropPosition,
   type SlotImage,
 } from '../lib/imagePicker'
 import { useNumberContext } from '../lib/numberContext'
@@ -223,32 +225,18 @@ export default function ImagePickerSheet({
     }
   }
 
-  /** 今の画像の元画像を上寄せで切り抜き直す。採用もこの場で済む (Function が差し替える) */
-  const recrop = async () => {
+  /** 今の画像の元画像を寄せ方を決めて切り抜き直す。採用もこの場で済む (Function が差し替える) */
+  const recrop = async (position: CropPosition) => {
     setIsSaving(true)
     setError('')
     try {
-      const image = await recropImage({ token, id, slot })
+      const image = await recropImage({ token, id, slot, position })
       setCurrentImage(image)
       setImageOverride(id, slot, image)
       onPicked?.(image)
       setIsSaving(false)
     } catch (err) {
       failed('recrop', err)
-    }
-  }
-
-  const decide = async () => {
-    if (!selected) return onClose()
-    setIsSaving(true)
-    setError('')
-    try {
-      const image = await pickImage({ token, id, slot, hash: selected })
-      setImageOverride(id, slot, image)
-      onPicked?.(image)
-      onClose()
-    } catch (err) {
-      failed('pick', err)
     }
   }
 
@@ -343,18 +331,22 @@ export default function ImagePickerSheet({
             <span key={i} class="ip-tile is-loading" />
           ))}
         </div>
-        {/* 上寄せは «今» の画像に対する操作 (候補は元画像を持っていても、採用してから切り抜く) */}
+        {/* 切り直しは «今» の画像に対する操作 (候補は確定してから切り直す) */}
         {!isLocked && selected === null && currentImage?.sourceImageUrl ? (
-          <div class="ip-tools">
-            <button
-              class="filter-btn"
-              type="button"
-              disabled={isSaving}
-              onClick={recrop}
-              title="元画像を上寄せで切り抜き直す (顔が上にある画像の救済)"
-            >
-              ↥ 今の画像を上寄せで切り直す
-            </button>
+          <div class="ip-tools" role="group" aria-label="今の画像を切り直す">
+            <span class="ip-tools-label">切り直す</span>
+            {CROP_BUTTONS.map(({ position, label }) => (
+              <button
+                key={position}
+                class="filter-btn"
+                type="button"
+                disabled={isSaving}
+                onClick={() => recrop(position)}
+                title={`元画像を${label.replace(/^\S+ /, '')}寄せで切り抜き直す`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         ) : null}
         {error ? <div class="ip-error">{error}</div> : null}
@@ -373,14 +365,6 @@ export default function ImagePickerSheet({
             </button>
           ) : (
             <>
-              <button
-                class="filter-btn"
-                type="button"
-                disabled={!selected || isSaving}
-                onClick={decide}
-              >
-                これにする
-              </button>
               <button
                 class="filter-btn ip-decide"
                 type="button"

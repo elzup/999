@@ -17,13 +17,25 @@ export async function toWebp(input) {
     .toBuffer()
 }
 
-/** 上寄せで 400x400 にクロップ (顔が上にある画像の救済用) */
-export async function toWebpTop(input) {
+/** 切り抜きの寄せ方。sharp の position にそのまま渡す (centre は中央) */
+export const CROP_POSITIONS = ['top', 'bottom', 'left', 'right', 'centre']
+
+/**
+ * 寄せ方を決めて 400x400 にクロップする (自動の切り抜きで顔や本体が切れた画像の救済用)
+ * @param {Buffer} input
+ * @param {string} position CROP_POSITIONS のどれか
+ */
+export async function toWebpAt(input, position) {
+  if (!CROP_POSITIONS.includes(position))
+    throw new Error(`切り抜きの寄せ方が不正: ${position}`)
   return sharp(input)
-    .resize(IMG_SIZE, IMG_SIZE, { fit: 'cover', position: 'top' })
+    .resize(IMG_SIZE, IMG_SIZE, { fit: 'cover', position })
     .webp({ quality: 82 })
     .toBuffer()
 }
+
+/** 上寄せで 400x400 にクロップ (顔が上にある画像の救済用) */
+export const toWebpTop = (input) => toWebpAt(input, 'top')
 
 // 画面での表示は最大 72px (スライド)。3 倍密度でも 216px で足りるので 240px、
 // 28〜34px の一覧 (一度に大量に出る) は 3 倍で 102px 前後なので 96px を用意する。

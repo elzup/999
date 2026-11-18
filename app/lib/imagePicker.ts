@@ -161,16 +161,31 @@ export const setKeep = async ({
   (await call<{ keep: Record<string, true> }>('keep', token, { id, slot, on }))
     .keep
 
-/** 今の画像の元画像を上寄せで切り抜き直す (顔が上にある画像の救済) */
+/** 切り抜きの寄せ方 (src/images/process.js の CROP_POSITIONS と同じ) */
+export type CropPosition = 'top' | 'bottom' | 'left' | 'right' | 'centre'
+
+export const CROP_BUTTONS: { position: CropPosition; label: string }[] = [
+  { position: 'top', label: '↑ 上' },
+  { position: 'bottom', label: '↓ 下' },
+  { position: 'left', label: '← 左' },
+  { position: 'right', label: '→ 右' },
+  { position: 'centre', label: '中央' },
+]
+
+/** 今の画像の元画像を、寄せ方を決めて切り抜き直す (自動の切り抜きで顔や本体が切れた画像の救済) */
 export const recropImage = async ({
   token,
   id,
   slot,
+  position,
 }: {
   token: string
   id: string
   slot: string
-}) => (await call<{ image: SlotImage }>('recrop', token, { id, slot })).image
+  position: CropPosition
+}) =>
+  (await call<{ image: SlotImage }>('recrop', token, { id, slot, position }))
+    .image
 
 /** Function がロック中の枠を断ったときの文言 (functions/console-route.js の LOCKED) */
 export const isLockedError = (err: unknown) =>

@@ -85,8 +85,8 @@ function fakeFetcher() {
             sourceImageUrl: `https://src.test/${h}.jpg`,
           }))
     },
-    recrop: async ({ image }) => {
-      calls.push({ op: 'recrop', image })
+    recrop: async ({ image, position }) => {
+      calls.push({ op: 'recrop', image, position })
       return { ...image, ...img('top') }
     },
   }
@@ -334,6 +334,23 @@ describe('handleConsoleRequest: その場の取り直し', () => {
     })
     expect(res.payload).toEqual({ ok: false, error: '検索ワードが空' })
     expect(fetcher.calls).toEqual([])
+  })
+
+  it('recrop は寄せ方を渡せる (既定は上寄せ)。不正な寄せ方は断る', async () => {
+    const { request, fetcher } = setup(withImage())
+    await request('POST', '/console/recrop', { id: '001', slot: 'w2' })
+    await request('POST', '/console/recrop', {
+      id: '001',
+      slot: 'w2',
+      position: 'left',
+    })
+    expect(fetcher.calls.map((c) => c.position)).toEqual(['top', 'left'])
+    const bad = await request('POST', '/console/recrop', {
+      id: '001',
+      slot: 'w2',
+      position: 'middle',
+    })
+    expect(bad.status).toBe(400)
   })
 
   it('recrop は今の画像を切り抜き直す', async () => {
