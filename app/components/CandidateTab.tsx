@@ -8,6 +8,7 @@ import {
   CANDIDATE_FILTERS,
   candidateItems,
   fetchImageState,
+  setRedo,
   type CandidateFilter,
   type CandidateItem,
   type ImageState,
@@ -25,6 +26,7 @@ import {
 } from '../lib/pickPosition'
 import Screen, { DockBar, DockRow } from './Screen'
 import TaggedWord from './TaggedWord'
+import { useNumberContext } from '../lib/numberContext'
 
 const FILTER_KEY = 'cand.filter'
 const KIND_KEY = 'cand.kind'
@@ -82,6 +84,9 @@ function ItemCard({
           {item.choices > 0 && !item.keep ? (
             <span class="cand-badge is-choices">候補 {item.choices}</span>
           ) : null}
+          {item.stale ? (
+            <span class="cand-badge is-changed">検索語の誤り</span>
+          ) : null}
         </span>
       </span>
       <span class="cand-head">
@@ -113,6 +118,37 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
     return anchor ? anchor[0] : loadHundred()
   })
 
+  // 検索語の誤りの判定は、検索と同じく正式名 (title) で展開して比べる
+  const tagTitles = useNumberContext()?.tagTitles ?? {}
+  const [bulk, setBulk] = useState('')
+  const [isFlagging, setIsFlagging] = useState(false)
+
+  /**
+   * 検索語の誤りの枠に、撮り直しの印をまとめて付ける (確定済みは外す。Function も断る)。
+   * 1 枠ずつ順に送る (Function に同時に投げすぎない)
+   */
+  const flagStale = async () => {
+    const targets = items.filter((it) => !it.keep && !it.redo)
+    if (!targets.length) return
+    setIsFlagging(true)
+    let redo = state?.redo ?? {}
+    let done = 0
+    for (const it of targets) {
+      setBulk(`印を付けています ${done}/${targets.length}`)
+      try {
+        redo = await setRedo({ token, id: it.id, slot: it.slot, on: true })
+        done++
+      } catch (err) {
+        console.error('flag stale', it.id, it.slot, err)
+      }
+    }
+    setState((prev) => (prev ? { ...prev, redo } : prev))
+    setIsFlagging(false)
+    setBulk(
+      `${done}/${targets.length} 枠に撮り直しの印を付けた。ピッカーで開くか、Mac の nr images:redo-flagged で取り直す`
+    )
+  }
+
   const load = async () => {
     setError('')
     try {
@@ -134,7 +170,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   const items = useMemo(
     () =>
       state
-        ? candidateItems(state, filter).filter(
+        ? candidateItems(state, filter, tagTitles).filter(
             (it) =>
               kindOf.get(it.id) === kind &&
               (kind !== 'num' || it.id[0] === hundred)
@@ -251,6 +287,24 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
                 読み直す
               </button>
             </DockBar>
+            {filter === 'stale' ? (
+              <DockRow>
+                <span class="dock-row-label cand-bulk-note">
+                  {bulk ||
+                    'タグを正式名にしないまま検索して取った画像。別物のことがある'}
+                </span>
+                <button
+                  class="filter-btn"
+                  type="button"
+                  disabled={
+                    isFlagging || !items.some((it) => !it.keep && !it.redo)
+                  }
+                  onClick={flagStale}
+                >
+                  未確定に撮り直しの印
+                </button>
+              </DockRow>
+            ) : null}
             <div class="rp-filters">
               {KINDS.map((k) => (
                 <button

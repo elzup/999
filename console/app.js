@@ -350,12 +350,14 @@ function saveCustomQuery(id, slot, query) {
 
 // 語から画像検索のワードを作る。略語タグは正式名に展開する (ミミ#pr -a → ミミ プリコネ)。
 // src/images/query.js の buildSearchWord と同じ規則 (クライアントからは import できない)。
-function searchWordOf(w) {
+// expand = false は «タグを展開しない語» (タグ展開の不具合のあいだに保存された検索ワードの見分けに使う)
+function searchWordOf(w, expand = true) {
   if (!w) return ''
   const [head, ...tags] = w.split('#').map((p) => p.trim())
+  const tagWord = (t) => (expand ? tagTitleOf(t) : t)
   const expanded = [
     head,
-    ...tags.map((t) => tagTitleOf(t.replace(/\s+-\w+$/, '').trim())),
+    ...tags.map((t) => tagWord(t.replace(/\s+-\w+$/, '').trim())),
   ]
     .filter(Boolean)
     .join(' ')
@@ -373,11 +375,15 @@ function searchWordOf(w) {
 async function customSearch(id, slot, btn) {
   if (readOnly) return
   const w = state.targets.find((x) => x.id === id)
-  // 前回この枠に入れた検索ワード > 保存済みクエリ > 語から作った検索ワード の順で初期値にする
+  // 前回この枠に入れた検索ワード > 保存済みクエリ > 語から作った検索ワード の順で初期値にする。
+  // 保存済みクエリがタグを展開しないままの語 (不具合のあいだに保存された分) なら使わない
+  const word = w?.[slot]
+  const saved = state.candidates?.[`${id}:${slot}`]?.query
+  const isStale =
+    saved === searchWordOf(word, false) &&
+    searchWordOf(word) !== searchWordOf(word, false)
   const def =
-    loadCustomQuery(id, slot) ||
-    state.candidates?.[`${id}:${slot}`]?.query ||
-    searchWordOf(w?.[slot])
+    loadCustomQuery(id, slot) || (isStale ? '' : saved) || searchWordOf(word)
   const q = window.prompt('検索ワードを指定', def)
   if (q == null) return // キャンセル
   saveCustomQuery(id, slot, q)

@@ -5,6 +5,7 @@
 // 配信データ (data.json) の画像は nr deploy の時点のもの。ピッカーで選んだ画像は
 // 次のデプロイまで配信データに載らないので、この画面の中では overrides で上書きして見せる。
 import { useEffect, useState } from 'preact/hooks'
+import { buildSearchWord } from './searchWord'
 
 export type SlotImage = {
   url: string
@@ -101,6 +102,27 @@ async function call<T>(
 
 export const fetchImageState = (token: string) =>
   call<ImageState>('state', token)
+
+/** 撮り直しの印を付け外す。印の付いた枠は Mac の nr images:redo-flagged がまとめて取り直す */
+export const setRedo = async ({
+  token,
+  id,
+  slot,
+  on,
+}: {
+  token: string
+  id: string
+  slot: string
+  on: boolean
+}) =>
+  (
+    await call<{ redo: ImageState['redo'] }>('redo', token, {
+      id,
+      slot,
+      on,
+      reason: 'タグを展開しない検索ワードで取った画像',
+    })
+  ).redo
 
 export const fetchCandidates = ({
   token,
@@ -237,6 +259,7 @@ export type CandidateFilter =
   | 'changed'
   | 'choices'
   | 'kept'
+  | 'stale'
   | 'all'
 
 export const CANDIDATE_FILTERS: { id: CandidateFilter; label: string }[] = [
@@ -246,6 +269,7 @@ export const CANDIDATE_FILTERS: { id: CandidateFilter; label: string }[] = [
   { id: 'changed', label: '語変更' },
   { id: 'choices', label: '候補あり' },
   { id: 'kept', label: '確定済み' },
+  { id: 'stale', label: '検索語の誤り' },
   { id: 'all', label: '全部' },
 ]
 
@@ -262,6 +286,8 @@ export type CandidateItem = {
   changed: boolean
   /** ピッカーに出したまま選んでいない候補の数 */
   choices: number
+  /** 略語タグを正式名に展開しないまま検索して取った画像 (ミミ#pr を «ミミ pr» で探した) */
+  stale: boolean
 }
 
 /** 画像を取ったときの語が分かっていて、今の語と違う (語を直したのに画像が古い) */
@@ -272,9 +298,25 @@ const isWordChanged = (fetchedFor: string | undefined, word: string) =>
 const isAvatarWord = (word: string) => /#i\b/.test(word)
 
 /** 候補タブに並べる枠。対象 (番号・日付・カード) の順のまま */
+/**
+ * 略語タグを展開しないまま検索して取った枠か。取ったときの検索ワードが «タグを展開しない語»
+ * と同じで、正式名で展開すると違う語になるもの (タグ展開の不具合のあいだに取った画像)。
+ * 自分で打った検索ワードで取った枠は、どちらとも違うので当たらない
+ */
+export function isStaleQuery(
+  query: string | undefined,
+  word: string,
+  tagTitles: Record<string, string>
+): boolean {
+  if (!query) return false
+  const raw = buildSearchWord(word)
+  return query === raw && buildSearchWord(word, tagTitles) !== raw
+}
+
 export function candidateItems(
   state: ImageState,
-  filter: CandidateFilter
+  filter: CandidateFilter,
+  tagTitles: Record<string, string> = {}
 ): CandidateItem[] {
   const items = state.targets.flatMap((target) => {
     const slots = target.slots ?? state.kinds[target.kind]?.slots ?? []
@@ -297,6 +339,7 @@ export function candidateItems(
           redo: Boolean(state.redo[key]),
           changed: isWordChanged(state.candidates?.[key]?.word, word),
           choices: state.choices?.[key] ?? 0,
+          stale: isStaleQuery(state.candidates?.[key]?.query, word, tagTitles),
         },
       ]
     })
@@ -312,5 +355,8 @@ export function candidateItems(
   if (filter === 'choices')
     return items.filter((it) => it.choices > 0 && !it.keep && canPick(it))
   if (filter === 'kept') return items.filter((it) => it.keep)
+  // 確定済みも出す (確定していても画像が別物のことがある。解除してから取り直す)
+  if (filter === 'stale')
+    return items.filter((it) => it.image && it.stale && canPick(it))
   return items
 }

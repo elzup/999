@@ -6232,6 +6232,12 @@ button.is-failed {
   font-size: 13px;
   font-weight: 700;
 }
+.cand-bulk-note {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text2);
+}
 .cand-filter-gap {
   flex: none;
   width: 1px;
