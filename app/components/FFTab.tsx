@@ -32,7 +32,7 @@ import {
 } from '../lib/ffQuiz'
 
 const FF_SUB_TABS = ['ref', 'bin', 'test'] as const
-type Sub = typeof FF_SUB_TABS[number]
+type Sub = (typeof FF_SUB_TABS)[number]
 const FF_SUB_KEY = 'subtab.ff'
 export type FfRun =
   | { kind: 'ff'; dir: FfDir; questions: ChoiceQuestion[]; id: number }

@@ -79,7 +79,8 @@ function SearchStatus({ searching }: { searching: Searching }) {
 /** 切り抜きの決め方を短く (タイルの札・ボタンの横に出す) */
 function cropLabel(choice: CropChoice) {
   if (!choice) return ''
-  if ('rect' in choice) return '手動'
+  // 寄せ方のボタンで置いたまま動かしていなければ、その寄せ方で出す
+  if ('rect' in choice && !choice.position) return '手動'
   return (
     CROP_BUTTONS.find((b) => b.position === choice.position)?.label ?? ''
   ).replace(/^\S+ /, '')
@@ -243,12 +244,20 @@ export default function ImagePickerSheet({
 
   /**
    * 選んだ画像 («今» なら今の画像) で確定して閉じる。切り抜きを決めていれば、採用してから
-   * その範囲で切り抜き直す (/console/recrop は今の画像の元画像を切り抜く)
+   * その範囲で切り抜き直す (/console/recrop は今の画像の元画像を切り抜く)。
+   * 確定済みの枠は、切り抜きを決めていれば外してから切り抜き直して確定し直す
+   * (Function はロック中の枠の切り抜き直しを断る。いちいち «解除» を押さなくてよいように)
    */
   const decideAndKeep = async (choice: CropChoice = crop) => {
+    if (isLocked && !choice) return onClose()
     setIsSaving(true)
     setError('')
+    let isUnlocked = false
     try {
+      if (isLocked) {
+        await setKeep({ token, id, slot, on: false })
+        isUnlocked = true
+      }
       const adopt = (image: SlotImage) => {
         setCurrentImage(image)
         setImageOverride(id, slot, image)
@@ -265,13 +274,20 @@ export default function ImagePickerSheet({
             token,
             id,
             slot,
-            ...('rect' in choice ? { rect: choice.rect } : choice),
+            ...('rect' in choice
+              ? { rect: choice.rect }
+              : { position: choice.position }),
           })
         )
       await setKeep({ token, id, slot, on: true })
       onKeep?.(true)
       onClose()
     } catch (err) {
+      // 外したまま失敗した。画面も «未確定» に揃える (もう一度 «✓ 確定» を押せる)
+      if (isUnlocked) {
+        setIsLocked(false)
+        onKeep?.(false)
+      }
       failed('keep', err)
     }
   }
@@ -293,7 +309,8 @@ export default function ImagePickerSheet({
   const selectedImage = selected
     ? (candidates.find((c) => c.hash === selected) ?? null)
     : currentImage
-  const canEdit = !isLocked && Boolean(selectedImage?.sourceImageUrl)
+  // 確定済みでも切り抜きは見て直せる (確定のときに外して切り抜き直し、確定し直す)
+  const canEdit = Boolean(selectedImage?.sourceImageUrl)
   const select = (hash: string | null) => {
     // 選んだタイルをもう一度押すと全画面で切り抜きを見る
     if (hash === selected) {
@@ -431,9 +448,10 @@ export default function ImagePickerSheet({
               disabled={isSaving}
               onClick={unlock}
             >
-              {isSaving ? '保存中…' : '解除'}
+              {isSaving && !crop ? '保存中…' : '解除'}
             </button>
-          ) : (
+          ) : null}
+          {!isLocked || crop ? (
             <>
               <button
                 class="filter-btn ip-decide"
@@ -445,7 +463,7 @@ export default function ImagePickerSheet({
                 {isSaving ? '保存中…' : '✓ 確定'}
               </button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
       {isEditing && selectedImage ? (

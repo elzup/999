@@ -375,3 +375,17 @@ export function candidateItems(
     return items.filter((it) => it.image && it.stale && canPick(it))
   return items
 }
+
+/**
+ * フィルタに当たる枠に、開いた枠 (確定などでフィルタから外れたもの) を元の並びのまま足す
+ */
+export function keepOpened(
+  all: CandidateItem[],
+  matched: CandidateItem[],
+  opened: Set<string>
+): CandidateItem[] {
+  if (!opened.size) return matched
+  const keyOf = (it: CandidateItem) => `${it.id}:${it.slot}`
+  const keys = new Set(matched.map(keyOf))
+  return all.filter((it) => keys.has(keyOf(it)) || opened.has(keyOf(it)))
+}

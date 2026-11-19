@@ -26,7 +26,10 @@ import {
 } from '../lib/imagePicker'
 
 /** 切り抜きの決め方。null は今の切り抜き (自動) のまま */
-export type CropChoice = { rect: CropRect } | { position: CropPosition } | null
+export type CropChoice =
+  | { rect: CropRect; position?: CropPosition }
+  | { position: CropPosition }
+  | null
 
 type Props = {
   image: SlotImage
@@ -174,7 +177,9 @@ export default function CropEditor({
         : `手動 (${Math.round(scale * 100)}%)`
   // 元画像を読めないときは、寄せ方だけ選べる (範囲はサーバが決める)
   const pickPosition = (position: CropPosition) =>
-    setChoice(natural ? { rect: presetRect(natural, position) } : { position })
+    setChoice(
+      natural ? { rect: presetRect(natural, position), position } : { position }
+    )
   const isPositionOn = (position: CropPosition) =>
     natural
       ? active === position

@@ -50,7 +50,7 @@ const TIERS = [
   { key: 'hard', label: '難', desc: '足し算が繰り上がる +' },
 ] as const
 
-type TierKey = typeof TIERS[number]['key']
+type TierKey = (typeof TIERS)[number]['key']
 
 function groupByLabel(items: KukuItem[]) {
   const groups: { label: string; rows: KukuItem[] }[] = []
@@ -209,10 +209,10 @@ function KukuTab() {
             (ratio < 0
               ? ''
               : ratio >= 0.9
-              ? ' ok'
-              : ratio >= 0.6
-              ? ' mid'
-              : ' low')
+                ? ' ok'
+                : ratio >= 0.6
+                  ? ' mid'
+                  : ' low')
           return (
             <button key={ab} class={cls} onClick={() => startAbQuiz(ab)}>
               <span class="kuku-ab-num">{ab}</span>
