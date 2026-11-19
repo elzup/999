@@ -207,20 +207,31 @@ export const CROP_BUTTONS: { position: CropPosition; label: string }[] = [
   { position: 'centre', label: '中央' },
 ]
 
-/** 今の画像の元画像を、寄せ方を決めて切り抜き直す (自動の切り抜きで顔や本体が切れた画像の救済) */
+/**
+ * 今の画像の元画像を、寄せ方を決めて切り抜き直す (自動の切り抜きで顔や本体が切れた画像の救済)。
+ * rect (元画像に対する割合) を渡すとその範囲で切り抜く (全画面プレビューで決めた範囲)
+ */
 export const recropImage = async ({
   token,
   id,
   slot,
   position,
+  rect,
 }: {
   token: string
   id: string
   slot: string
-  position: CropPosition
+  position?: CropPosition
+  rect?: { x: number; y: number; w: number; h: number }
 }) =>
-  (await call<{ image: SlotImage }>('recrop', token, { id, slot, position }))
-    .image
+  (
+    await call<{ image: SlotImage }>('recrop', token, {
+      id,
+      slot,
+      ...(position ? { position } : {}),
+      ...(rect ? { rect } : {}),
+    })
+  ).image
 
 /** Function がロック中の枠を断ったときの文言 (functions/console-route.js の LOCKED) */
 export const isLockedError = (err: unknown) =>

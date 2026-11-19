@@ -104,3 +104,45 @@ describe('toWebpAt', () => {
     await expect(toWebpAt(input, 'middle')).rejects.toThrow()
   })
 })
+
+describe('toWebpRect', () => {
+  it('範囲 (割合) で 400x400 に切り抜き、はみ出す範囲は断る', async () => {
+    const { default: sharp } = await import('sharp')
+    const { toWebpRect } = await import('../images/process.js')
+    // 横長の画像: 左 1/4 が赤、残りが青
+    const input = await sharp({
+      create: { width: 800, height: 400, channels: 3, background: '#00f' },
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: {
+              width: 200,
+              height: 400,
+              channels: 3,
+              background: '#f00',
+            },
+          })
+            .png()
+            .toBuffer(),
+          left: 0,
+          top: 0,
+        },
+      ])
+      .png()
+      .toBuffer()
+    const out = async (rect) =>
+      sharp(await toWebpRect(input, rect))
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+    const red = await out({ x: 0, y: 0.25, w: 0.25, h: 0.5 })
+    expect(red.info.width).toBe(400)
+    expect(red.info.height).toBe(400)
+    expect(red.data[0]).toBeGreaterThan(red.data[2])
+    const blue = await out({ x: 0.5, y: 0, w: 0.5, h: 1 })
+    expect(blue.data[2]).toBeGreaterThan(blue.data[0])
+    await expect(
+      toWebpRect(input, { x: 0.8, y: 0, w: 0.5, h: 1 })
+    ).rejects.toThrow()
+  })
+})

@@ -4,8 +4,9 @@
 //   POST /console/redo {id,slot,on}          撮り直しの印 (Mac の nr images:redo-flagged がまとめて取り直す)
 //   POST /console/redo-now {id,slot}         その場で語から検索して取り直す (段階 5)
 //   POST /console/search-custom {id,slot,query}  検索ワードを指定して取り直す
-//   POST /console/recrop {id,slot,position?} 今の画像の元画像を寄せ方を決めて切り抜き直す
+//   POST /console/recrop {id,slot,position?,rect?} 今の画像の元画像を寄せ方を決めて切り抜き直す
 //                                       position: top / bottom / left / right / centre (既定 top)
+//                                       rect: {x,y,w,h} 元画像に対する割合 (0〜1)。あれば position より優先
 //   POST /console/candidates {id,slot,query?,reuse?} ピッカーに並べる候補を最大 6 枚取る (採用はしない。D-0088)
 //                                       reuse なら前に取った候補が残っていれば検索せずに返す
 //   POST /console/set-image {id,slot,image}  画像を採用する。今の画像・history・ピッカーに出した候補だけ
@@ -24,6 +25,23 @@
 
 /** 切り抜きの寄せ方 (src/images/process.js の CROP_POSITIONS と同じ。functions/lib に頼らないため写す) */
 const CROP_POSITIONS = ['top', 'bottom', 'left', 'right', 'centre']
+
+/** 切り抜きの範囲 (src/images/process.js の isCropRect と同じ) */
+function isCropRect(rect) {
+  if (!rect || typeof rect !== 'object') return false
+  const { x, y, w, h } = rect
+  if (![x, y, w, h].every((v) => typeof v === 'number' && Number.isFinite(v)))
+    return false
+  const eps = 1e-6
+  return (
+    x >= 0 &&
+    y >= 0 &&
+    w > 0.01 &&
+    h > 0.01 &&
+    x + w <= 1 + eps &&
+    y + h <= 1 + eps
+  )
+}
 
 const INVALID_TARGET = 'id/slot が不正です。画面を再読み込みしてください'
 const LOCKED = 'ロック中の枠です。取り直すならロックを外してから'
@@ -165,7 +183,18 @@ async function handleImageRequest({
             status: 400,
             payload: { error: '切り抜きの寄せ方が不正です' },
           }
-        image = await fetcher.recrop({ image: current.image, position })
+        const rect = body.rect ?? null
+        if (rect !== null && !isCropRect(rect))
+          return {
+            status: 400,
+            payload: { error: '切り抜きの範囲が不正です' },
+          }
+        const { x, y, w, h } = rect ?? {}
+        image = await fetcher.recrop({
+          image: current.image,
+          position,
+          ...(rect ? { rect: { x, y, w, h } } : {}),
+        })
       } else {
         let query
         if (path === '/console/redo-now') {

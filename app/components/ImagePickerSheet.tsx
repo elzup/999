@@ -1,11 +1,14 @@
 // 画像ピッカーのボトムシート (D-0088: A-1 / B-2 / D-2)。
 // 開くと 1 枠の候補を取り、«今» + 候補 5 枚の 3×2 から選んで «✓ 確定» で採用してロックする (やり直すときは «解除»)。
 // 検索ワードを直して取り直せる。候補タブと詳細パネルの画像から開く。
+// 選んだ画像は «⤢ 全体» (または選んだタイルをもう一度押す) で全画面の元画像を出し、
+// 切り抜きの寄せ・範囲を確かめて決めてから確定できる (CropEditor)。
 //
 // 画面の上半分に指を伸ばさない規約 (docs/screen-layout.md) に合わせ、シートは下端に出し、
 // 確定・閉じるは最下段に置く。
 import { createPortal } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
+import { cropImageStyle } from '../lib/cropRect'
 import {
   fetchCandidates,
   CROP_BUTTONS,
@@ -15,12 +18,12 @@ import {
   setKeep,
   setImageOverride,
   StoppedError,
-  type CropPosition,
   type SlotImage,
 } from '../lib/imagePicker'
 import { useNumberContext } from '../lib/numberContext'
 import { buildSearchWord } from '../lib/searchWord'
 import { wordImage } from '../lib/wordImage'
+import CropEditor, { type CropChoice } from './CropEditor'
 import TaggedWord from './TaggedWord'
 
 // 3×2 の 1 枠は «今» なので、候補は 5 枚まで並べる
@@ -73,19 +76,32 @@ function SearchStatus({ searching }: { searching: Searching }) {
   )
 }
 
+/** 切り抜きの決め方を短く (タイルの札・ボタンの横に出す) */
+function cropLabel(choice: CropChoice) {
+  if (!choice) return ''
+  if ('rect' in choice) return '手動'
+  return (
+    CROP_BUTTONS.find((b) => b.position === choice.position)?.label ?? ''
+  ).replace(/^\S+ /, '')
+}
+
 function Tile({
   image,
   word,
   label,
+  crop,
   isSelected,
   onSelect,
 }: {
   image: SlotImage | null
   word: string
   label?: string
+  /** 決めた切り抜き (確定前)。元画像で範囲だけ見せる */
+  crop?: CropChoice
   isSelected: boolean
   onSelect: () => void
 }) {
+  const rect = crop && 'rect' in crop ? crop.rect : null
   return (
     <button
       type="button"
@@ -93,12 +109,20 @@ function Tile({
       aria-pressed={isSelected}
       onClick={onSelect}
     >
-      {image ? (
+      {image && rect && image.sourceImageUrl ? (
+        <img
+          src={image.sourceImageUrl}
+          alt=""
+          referrerpolicy="no-referrer"
+          style={cropImageStyle(rect)}
+        />
+      ) : image ? (
         <img {...wordImage(image.url, TILE_PX, word)} alt="" />
       ) : (
         <span class="ip-tile-empty">画像なし</span>
       )}
       {label ? <span class="ip-tile-label">{label}</span> : null}
+      {crop ? <span class="ip-tile-crop">{cropLabel(crop)}</span> : null}
     </button>
   )
 }
@@ -133,6 +157,9 @@ export default function ImagePickerSheet({
   const [error, setError] = useState('')
   // null は «今» (変えない)
   const [selected, setSelected] = useState<string | null>(null)
+  // 選んだ画像の切り抜き (確定のときに切り抜き直す)。null は今の切り抜き (自動) のまま
+  const [crop, setCrop] = useState<CropChoice>(null)
+  const [isEditing, setIsEditing] = useState(false)
   const stopRef = useRef<AbortController | null>(null)
   // 検索中に検索ワードを打ち始めたら、返ってきた検索ワードで上書きしない
   const isEditedRef = useRef(false)
@@ -154,6 +181,7 @@ export default function ImagePickerSheet({
     isEditedRef.current = false
     setError('')
     setSelected(null)
+    setCrop(null)
     try {
       const result = await fetchCandidates({
         token,
@@ -213,16 +241,33 @@ export default function ImagePickerSheet({
     setIsSaving(false)
   }
 
-  /** 選んだ画像 («今» なら今の画像) で確定して閉じる */
-  const decideAndKeep = async () => {
+  /**
+   * 選んだ画像 («今» なら今の画像) で確定して閉じる。切り抜きを決めていれば、採用してから
+   * その範囲で切り抜き直す (/console/recrop は今の画像の元画像を切り抜く)
+   */
+  const decideAndKeep = async (choice: CropChoice = crop) => {
     setIsSaving(true)
     setError('')
     try {
-      if (selected) {
-        const image = await pickImage({ token, id, slot, hash: selected })
+      const adopt = (image: SlotImage) => {
+        setCurrentImage(image)
         setImageOverride(id, slot, image)
         onPicked?.(image)
       }
+      if (selected) {
+        adopt(await pickImage({ token, id, slot, hash: selected }))
+        // 採用した画像は «今» になる (切り抜きで失敗しても、もう一度は «今» の切り抜き直し)
+        setSelected(null)
+      }
+      if (choice)
+        adopt(
+          await recropImage({
+            token,
+            id,
+            slot,
+            ...('rect' in choice ? { rect: choice.rect } : choice),
+          })
+        )
       await setKeep({ token, id, slot, on: true })
       onKeep?.(true)
       onClose()
@@ -244,22 +289,20 @@ export default function ImagePickerSheet({
     }
   }
 
-  /** 今の画像の元画像を寄せ方を決めて切り抜き直す。採用もこの場で済む (Function が差し替える) */
-  const recrop = async (position: CropPosition) => {
-    setIsSaving(true)
-    setError('')
-    try {
-      const image = await recropImage({ token, id, slot, position })
-      setCurrentImage(image)
-      setImageOverride(id, slot, image)
-      onPicked?.(image)
-      setIsSaving(false)
-    } catch (err) {
-      failed('recrop', err)
-    }
-  }
-
   const candidates = loaded?.candidates.slice(0, SHOWN_CANDIDATES) ?? []
+  const selectedImage = selected
+    ? (candidates.find((c) => c.hash === selected) ?? null)
+    : currentImage
+  const canEdit = !isLocked && Boolean(selectedImage?.sourceImageUrl)
+  const select = (hash: string | null) => {
+    // 選んだタイルをもう一度押すと全画面で切り抜きを見る
+    if (hash === selected) {
+      if (canEdit) setIsEditing(true)
+      return
+    }
+    setSelected(hash)
+    setCrop(null)
+  }
   const placeholders = isLoading
     ? Array.from({ length: SHOWN_CANDIDATES }, (_, i) => i)
     : []
@@ -341,38 +384,39 @@ export default function ImagePickerSheet({
             image={currentImage}
             word={word}
             label="今"
+            crop={selected === null ? crop : undefined}
             isSelected={selected === null}
-            onSelect={() => setSelected(null)}
+            onSelect={() => select(null)}
           />
           {candidates.map((image) => (
             <Tile
               key={image.hash}
               image={image}
               word={word}
+              crop={selected === image.hash ? crop : undefined}
               isSelected={selected === image.hash}
-              onSelect={() => setSelected(image.hash)}
+              onSelect={() => select(image.hash)}
             />
           ))}
           {placeholders.map((i) => (
             <span key={i} class="ip-tile is-loading" />
           ))}
         </div>
-        {/* 切り直しは «今» の画像に対する操作 (候補は確定してから切り直す) */}
-        {!isLocked && selected === null && currentImage?.sourceImageUrl ? (
-          <div class="ip-tools" role="group" aria-label="今の画像を切り直す">
-            <span class="ip-tools-label">切り直す</span>
-            {CROP_BUTTONS.map(({ position, label }) => (
-              <button
-                key={position}
-                class="filter-btn"
-                type="button"
-                disabled={isSaving}
-                onClick={() => recrop(position)}
-                title={`元画像を${label.replace(/^\S+ /, '')}寄せで切り抜き直す`}
-              >
-                {label}
-              </button>
-            ))}
+        {/* 選んだ画像の元画像を全画面で出して、切り抜きの寄せ・範囲を確かめて決める */}
+        {canEdit ? (
+          <div class="ip-tools">
+            <span class="ip-tools-label">
+              切り抜き: {crop ? cropLabel(crop) : '自動'}
+            </span>
+            <button
+              class="filter-btn"
+              type="button"
+              disabled={isSaving}
+              onClick={() => setIsEditing(true)}
+              title="元画像を全画面で出して、切り抜く範囲を確かめて決める"
+            >
+              ⤢ 全体を見て寄せる
+            </button>
           </div>
         ) : null}
         {error ? <div class="ip-error">{error}</div> : null}
@@ -395,7 +439,7 @@ export default function ImagePickerSheet({
                 class="filter-btn ip-decide"
                 type="button"
                 disabled={isSaving || (!selected && !currentImage)}
-                onClick={decideAndKeep}
+                onClick={() => decideAndKeep()}
                 title="選んだ画像 («今» なら今の画像) で確定する。確定した枠は一括の取り直しで上書きされない"
               >
                 {isSaving ? '保存中…' : '✓ 確定'}
@@ -404,6 +448,23 @@ export default function ImagePickerSheet({
           )}
         </div>
       </div>
+      {isEditing && selectedImage ? (
+        <CropEditor
+          image={selectedImage}
+          title={`${id} ${word}`}
+          choice={crop}
+          isSaving={isSaving}
+          onCancel={() => setIsEditing(false)}
+          onApply={(choice) => {
+            setCrop(choice)
+            setIsEditing(false)
+          }}
+          onDecide={(choice) => {
+            setCrop(choice)
+            decideAndKeep(choice)
+          }}
+        />
+      ) : null}
     </div>,
     document.body
   )
