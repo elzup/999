@@ -135,14 +135,17 @@ export default function ImagePickerSheet({
   slot,
   word,
   current,
-  kept = false,
+  kept,
   choices = 0,
   onClose,
   onPicked,
   onKeep,
 }: Props) {
   // 確定済みの枠は候補を取らない (Function も断る)。解除すると選び直せる
-  const [isLocked, setIsLocked] = useState(kept)
+  const [isLocked, setIsLocked] = useState(kept === true)
+  // 開いたときに確定済みかを確かめている間 (詳細パネルからは確定済みかが分からない)。
+  // 分かるまで検索は押せない (押してから «ロック中» で断られないように)
+  const [isChecking, setIsChecking] = useState(kept === undefined)
   // 上寄せで切り抜き直したら «今» の画像が変わる
   const [currentImage, setCurrentImage] = useState(current)
   // 開いた瞬間から検索ワードを出す (サーバが決めた検索ワードが返ってきたら差し替える)
@@ -175,11 +178,14 @@ export default function ImagePickerSheet({
   const load = async (typed?: string, reuseOnly = false) => {
     const stop = new AbortController()
     stopRef.current = stop
-    setSearching({
-      query: typed ?? query,
-      isAuto: typed === undefined,
-      startedAt: Date.now(),
-    })
+    // 前に取った候補を出すだけ (検索しない) のときは «検索中» を出さない
+    if (reuseOnly) setIsChecking(true)
+    else
+      setSearching({
+        query: typed ?? query,
+        isAuto: typed === undefined,
+        startedAt: Date.now(),
+      })
     setIsStopped(false)
     isEditedRef.current = false
     setError('')
@@ -200,6 +206,9 @@ export default function ImagePickerSheet({
       })
       // 前に取った候補が無い・今の検索ワードと違う (タグを展開できなかった頃の候補) ときは、
       // 何も出さずに待つ。検索は «検索» を押したときだけ
+      // 正本の今の画像 (元画像 URL つき)。詳細パネルは配信データの URL しか持たないので、
+      // これで全画面の切り抜きを開けるようにする
+      if (result.current) setCurrentImage(result.current)
       if (reuseOnly && !result.reused) return
       if (
         result.reused &&
@@ -226,13 +235,15 @@ export default function ImagePickerSheet({
       if (stopRef.current === stop) {
         stopRef.current = null
         setSearching(null)
+        setIsChecking(false)
       }
     }
   }
 
   useEffect(() => {
-    // 開いただけでは検索しない (検索の回数を使わない)。前に取った候補が残っている枠だけ出す
-    if (!isLocked && choices > 0) load(undefined, true)
+    // 開いただけでは検索しない (検索の回数を使わない)。確定済みかを確かめ、
+    // 前に取った候補が残っていればそれを出す (確定済みなら Function が断るので、それで分かる)
+    if (!isLocked) load(undefined, true)
     // 閉じたら待つのをやめる
     return () => stopRef.current?.abort()
   }, [])
@@ -344,7 +355,7 @@ export default function ImagePickerSheet({
           class="ip-query"
           onSubmit={(e) => {
             e.preventDefault()
-            if (isLoading || isLocked) return
+            if (isLoading || isLocked || isChecking) return
             // 語から作った検索ワードのままなら «自動» として送る (Function がタグの最新の正式名で作り直す)
             const typed = query.trim()
             load(typed && typed !== autoQuery ? typed : undefined)
@@ -355,6 +366,7 @@ export default function ImagePickerSheet({
             type="search"
             value={query}
             placeholder="検索ワード"
+            disabled={isLocked}
             onInput={(e) => {
               isEditedRef.current = true
               setQuery((e.target as HTMLInputElement).value)
@@ -377,7 +389,8 @@ export default function ImagePickerSheet({
               key="search"
               class="filter-btn"
               type="submit"
-              disabled={isLocked}
+              disabled={isLocked || isChecking}
+              title={isLocked ? '確定済みの枠は検索できません' : undefined}
             >
               {loaded ? '再検索' : '検索'}
             </button>
@@ -391,12 +404,14 @@ export default function ImagePickerSheet({
           </div>
         ) : isLocked ? (
           <div class="ip-status-note">
-            確定済みの枠です。«解除» すると選び直せます
+            確定済みの枠です。検索はできません (切り抜きは直せます)
           </div>
         ) : loaded?.reused ? (
           <div class="ip-status-note">
             前に取った候補です。«再検索» で新しく探せます
           </div>
+        ) : isChecking ? (
+          <div class="ip-status-note">確定済みかを確かめています…</div>
         ) : !loaded ? (
           <div class="ip-status-note">
             検索ワードを確かめて «検索» を押すと候補を探します

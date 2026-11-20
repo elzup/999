@@ -7198,6 +7198,15 @@ img[data-concept] {
   padding: 8px 4px;
   font-size: 12px;
 }
+/* 押せないボタンは押せないと分かる見た目に (共通の .filter-btn は無効の見た目を持たない) */
+.ip-sheet .filter-btn:disabled,
+.ce-root .filter-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ip-query input:disabled {
+  opacity: 0.5;
+}
 .ip-foot .filter-btn {
   flex: 1;
   padding: 10px 12px;
