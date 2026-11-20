@@ -3,7 +3,7 @@
 // 候補タブの代表と編集画面で別々に持つと、同じ番号を両方から書いたときに前提の時刻が
 // ずれて衝突する。閉じて開き直すと «読んだ文書» と «保存待ち» が消える。
 // 1 本にして端末 (localStorage) にも書いておけば、どの画面からでも続きから送れる。
-import { fetchNumber, patchNumber } from './numberApi'
+import { fetchNumber, patchNumber, type NumberDoc } from './numberApi'
 import { loadEditorToken } from './editorAuth'
 import { NumberOpQueue } from './opQueue'
 
@@ -42,4 +42,13 @@ export function writeQueue(): NumberOpQueue {
 export function listenWriteQueue(listener: Listener): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)
+}
+
+/** 保存待ちの編集を重ねた番号文書 (送り終わるまで、辞書データにこれを重ねて出す) */
+export function pendingViews(): NumberDoc[] {
+  const queue = writeQueue()
+  return queue
+    .pendingNums()
+    .map((num) => queue.view(num))
+    .filter((doc): doc is NumberDoc => doc !== null)
 }

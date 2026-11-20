@@ -88,8 +88,18 @@ export function useRepSlots(hundred: number, numbers: NumberEntry[]) {
       const slot = first && entry ? slotOfPick(entry, first) : null
       if (slot) slots[num] = slot
     }
+    // 辞書データの代表 (保存待ちの編集もすぐ重なる) があればそちらを正にする。
+    // 百の位の読み込みは保存が済んでからなので、それまで古い代表が出ていた
+    for (const entry of numbers) {
+      if (!entry.rep || !entry.num.startsWith(String(hundred))) continue
+      const resolved = entry.rep.picks.map((pick) => slotOfPick(entry, pick))
+      const first = resolved.find((slot) => slot !== null)
+      if (first) slots[entry.num] = first
+      else delete slots[entry.num]
+      status[entry.num] = entryRepInfo(entry)!.status
+    }
     return { slots, status, state }
-  }, [docs, numbers, state])
+  }, [docs, numbers, state, hundred])
 }
 
 export type RepInfo = {
@@ -106,10 +116,30 @@ export function useRepInfo(num: string): RepInfo | null {
   const hundred = /^\d{3}$/.test(num) ? Number(num[0]) : null
   const { docs } = useHundredDocs(hundred)
   const doc = docs?.get(num)
-  return useMemo(
-    () => (doc ? { status: repStatus(doc), picks: livePicks(doc) } : null),
-    [doc]
+  const entry = useNumberContext()?.numbers.find((n) => n.num === num)
+  return useMemo(() => {
+    // 辞書データの代表 (保存待ちの編集もすぐ重なる) を先に見る
+    const fromEntry = entry ? entryRepInfo(entry) : null
+    if (fromEntry) return fromEntry
+    return doc ? { status: repStatus(doc), picks: livePicks(doc) } : null
+  }, [doc, entry])
+}
+
+/** 辞書データの 1 件の代表 (無ければ null)。今の候補に当たらない代表があれば要再確認 */
+function entryRepInfo(entry: NumberEntry): RepInfo | null {
+  if (!entry.rep) return null
+  const picks = entry.rep.picks.filter(
+    (pick) => slotOfPick(entry, pick) !== null
   )
+  const status: RepStatus =
+    picks.length < entry.rep.picks.length
+      ? 'stale'
+      : picks.length === 0
+        ? 'open'
+        : entry.rep.confirmed
+          ? 'confirmed'
+          : 'held'
+  return { status, picks }
 }
 
 /** 語 (タグ込み) が代表の何番目か (1, 2)。代表でなければ 0 */

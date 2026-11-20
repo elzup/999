@@ -211,6 +211,11 @@ export class NumberOpQueue {
     return this.marks.get(`${num}:${key}`)
   }
 
+  /** 保存待ちの操作がある番号 */
+  pendingNums(): string[] {
+    return [...new Set(this.pending.map((entry) => entry.num))]
+  }
+
   /** 保存待ちの操作の数 (num を渡せばその番号だけ) */
   pendingCount(num?: string): number {
     return this.pending.filter((entry) => !num || entry.num === num).length

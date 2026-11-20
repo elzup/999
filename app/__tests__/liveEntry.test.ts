@@ -32,3 +32,37 @@ describe('parseNumberEntry', () => {
     expect(parseNumberEntry(undefined)).toBeNull()
   })
 })
+
+describe('withDocView (保存待ちの編集をすぐ辞書データに映す)', () => {
+  it('語・かな・画像・代表を新旧両方の名前に映す。文書に画像が無い枠は今の画像のまま', async () => {
+    const { withDocView } = await import('../lib/liveEntry')
+    const entry = {
+      num: '531',
+      wh1: '古い',
+      w1: '古い',
+      wh1Img: 'old.webp',
+      w1Img: 'old.webp',
+    } as unknown as Parameters<typeof withDocView>[0]
+    const out = withDocView(entry, {
+      num: '531',
+      slots: {
+        wh1: { word: 'コミー#tri', kana: 'こみー' },
+        wm1: { word: '物', kana: 'もの', imageUrl: 'm.webp' },
+      },
+      rep: { picks: [{ k: 'こみー', w: 'コミー#tri' }], confirmed: false },
+    }) as unknown as Record<string, unknown>
+    expect(out).toMatchObject({
+      wh1: 'コミー#tri',
+      w1: 'コミー#tri',
+      wh1k: 'こみー',
+      w1k: 'こみー',
+      wh1Img: 'old.webp',
+      wm1: '物',
+      w2: '物',
+      wm1Img: 'm.webp',
+      w2Img: 'm.webp',
+      wh3: '',
+      rep: { picks: [{ k: 'こみー', w: 'コミー#tri' }], confirmed: false },
+    })
+  })
+})

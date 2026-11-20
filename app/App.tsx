@@ -53,8 +53,12 @@ import { setKukuItems } from './lib/kukuQuiz'
 import type { KukuItem } from './lib/kukuQuiz'
 import { isBookmarkReviewDue } from './lib/bookmarkReview'
 import { useBackGuard } from './lib/useBackGuard'
-import { listenWriteQueue } from './lib/writeQueue'
-import { parseNumberEntry, withNumberEntry } from './lib/liveEntry'
+import { listenWriteQueue, pendingViews } from './lib/writeQueue'
+import {
+  parseNumberEntry,
+  withDocViews,
+  withNumberEntry,
+} from './lib/liveEntry'
 import { listenImageChange } from './lib/imagePicker'
 import { withSlotImages } from '../src/images/entry-images.js'
 import { NumberContext, type NumberContextValue } from './lib/numberContext'
@@ -158,7 +162,8 @@ export function App() {
       // 描画前に注入しないと出題側が空データで動いてしまう
       setFfRows((parsed.ff ?? []) as unknown as FfRow[])
       setKukuItems((parsed.kuku ?? []) as unknown as KukuItem[])
-      setData(parsed)
+      // 読み直した辞書データにも、まだ送り終わっていない編集を重ねる (古い語に戻さない)
+      setData(withDocViews(parsed, pendingViews()))
       hasData = true
     }
 
@@ -218,7 +223,15 @@ export function App() {
   // 辞書データは deploy のときの写しなので、差し替えないと次の起動まで古い語のまま出る
   useEffect(() => {
     if (!token) return
+    // 保存待ちの編集は、送り終わるのを待たずに辞書データへ映す (編集画面以外にもすぐ出す)
+    const showPending = () => {
+      const views = pendingViews()
+      if (views.length)
+        setData((prev) => (prev ? withDocViews(prev, views) : prev))
+    }
+    showPending()
     return listenWriteQueue({
+      onChange: showPending,
       onSettled: (num) => {
         // 代表 (①②)・確定状態はマップと詳細カードが百の位ごとに読んで持っている (useRepSlots)。
         // どの画面で保存しても読み直させる (前は重ねて開いた編集画面を閉じたときだけだった)
