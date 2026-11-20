@@ -3,7 +3,7 @@
 // アップロードは引数で受け取る (Mac は鍵ファイル、Function は実行用のサービスアカウントで上げるため)。
 
 import { downloadImage } from './download.js'
-import { hashKey, toWebp, toWebpAt } from './process.js'
+import { hashKey, toWebp, toWebpAt, toWebpRect } from './process.js'
 import { searchImages } from './search.js'
 
 // 先頭候補はホットリンク拒否・HTML 応答・巨大画像で落ちやすいので、上位を順に試す
@@ -111,11 +111,17 @@ export async function fetchCandidates({
   )
 }
 
-/** 今の画像の元画像を、寄せ方を決めて切り抜き直す (上寄せ = 顔が上にある画像の救済) */
-export async function recropAt({ image, uploadWebp, position = 'top' }) {
+/**
+ * 今の画像の元画像を、寄せ方を決めて切り抜き直す (上寄せ = 顔が上にある画像の救済)。
+ * rect があれば寄せ方より優先し、その範囲で切り抜く (全画面プレビューで決めた範囲)
+ */
+export async function recropAt({ image, uploadWebp, position = 'top', rect }) {
   if (!image?.sourceImageUrl) throw new Error('元画像URLが無い')
   const { buffer } = await downloadImage(image.sourceImageUrl)
-  const next = await store(await toWebpAt(buffer, position), image, uploadWebp)
+  const webp = rect
+    ? await toWebpRect(buffer, rect)
+    : await toWebpAt(buffer, position)
+  const next = await store(webp, image, uploadWebp)
   return { ...image, ...next }
 }
 

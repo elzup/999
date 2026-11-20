@@ -95,12 +95,12 @@ function MemoView({
         e.key === 'ArrowRight'
           ? 1
           : e.key === 'ArrowLeft'
-          ? -1
-          : e.key === 'ArrowDown'
-          ? rowStep
-          : e.key === 'ArrowUp'
-          ? -rowStep
-          : 0
+            ? -1
+            : e.key === 'ArrowDown'
+              ? rowStep
+              : e.key === 'ArrowUp'
+                ? -rowStep
+                : 0
       if (step === 0) return
       e.preventDefault()
       move(step)
@@ -342,8 +342,8 @@ function BinaryResult({
                 r.points === COLS
                   ? 'var(--green, #34d399)'
                   : r.points > 0
-                  ? 'var(--amber, #fbbf24)'
-                  : 'var(--text2)',
+                    ? 'var(--amber, #fbbf24)'
+                    : 'var(--text2)',
             }}
           >
             {r.index + 1}:{r.points}
@@ -552,8 +552,8 @@ function BinaryTest({
                   color: ch
                     ? 'var(--text)'
                     : isCaret
-                    ? 'var(--accent)'
-                    : 'var(--muted, #6b7280)',
+                      ? 'var(--accent)'
+                      : 'var(--muted, #6b7280)',
                   borderBottom: isCaret
                     ? '2px solid var(--accent)'
                     : '2px solid transparent',

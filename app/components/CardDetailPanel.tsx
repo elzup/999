@@ -12,7 +12,7 @@ type CardValueItem = [
   label: string,
   val: string,
   score: number,
-  img: string | undefined
+  img: string | undefined,
 ]
 
 function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {

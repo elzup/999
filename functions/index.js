@@ -327,9 +327,9 @@ function createImageFetcher() {
       const { uploadWebp, fetchOne } = await load()
       return fetchOne.fetchCandidates({ query, rejected, uploadWebp })
     },
-    async recrop({ image, position }) {
+    async recrop({ image, position, rect }) {
       const { uploadWebp, fetchOne } = await load()
-      return fetchOne.recropAt({ image, uploadWebp, position })
+      return fetchOne.recropAt({ image, uploadWebp, position, rect })
     },
   }
 }

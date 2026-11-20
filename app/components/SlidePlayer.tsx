@@ -94,7 +94,7 @@ function SlidePlayer({ deck, bookmarks, onToggleBm, onQuit }: Props) {
   const [phase, setPhase] = useState<SlidePhase>(() => initialPhase(settings))
 
   const curId = currentId(state)
-  const cur = curId ? byId.get(curId) ?? null : null
+  const cur = curId ? (byId.get(curId) ?? null) : null
 
   const persist = useCallback((next: SlideSettings) => {
     setSettings(next)

@@ -83,3 +83,17 @@ describe('検索語の誤り (タグを展開しないまま取った画像)', (
     expect(candidateItems(base, 'stale', {})).toEqual([])
   })
 })
+
+describe('keepOpened (確定しても開いた枠は一覧に残す)', () => {
+  it('フィルタから外れた開いた枠を、元の並びのまま足す', async () => {
+    const { keepOpened } = await import('../lib/imagePicker')
+    const all = candidateItems(state, 'all')
+    const key = (it: (typeof all)[number]) => `${it.id}:${it.slot}`
+    const matched = all.slice(1, 2)
+    const opened = new Set([key(all[0])])
+    expect(keepOpened(all, matched, opened).map(key)).toEqual(
+      [all[0], all[1]].map(key)
+    )
+    expect(keepOpened(all, matched, new Set())).toBe(matched)
+  })
+})

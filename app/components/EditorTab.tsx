@@ -647,12 +647,12 @@ function getPatternLabel(kana: string) {
     tokens.length >= 4
       ? 'DD+D'
       : tokens.length === 3
-      ? hasSmall || hasSokuon
-        ? 'DD+D'
-        : 'D+D+D'
-      : tokens.length === 2
-      ? 'D+D'
-      : 'D'
+        ? hasSmall || hasSokuon
+          ? 'DD+D'
+          : 'D+D+D'
+        : tokens.length === 2
+          ? 'D+D'
+          : 'D'
   return hasSokuon ? `${base} / っ` : base
 }
 

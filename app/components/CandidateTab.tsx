@@ -8,6 +8,7 @@ import {
   CANDIDATE_FILTERS,
   candidateItems,
   fetchImageState,
+  keepOpened,
   setRedo,
   type CandidateFilter,
   type CandidateItem,
@@ -109,6 +110,13 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
     loadSubTab(FILTER_KEY, FILTER_IDS, 'redo')
   )
   const [open, setOpen] = useState<CandidateItem | null>(null)
+  // このフィルタで開いた枠。確定してフィルタ (未確定など) から外れても、フィルタ・種類を
+  // 切り替えるか読み直すまでは同じ位置に残す (確定した直後に開き直して切り抜きを直せるように)
+  const [opened, setOpened] = useState<Set<string>>(() => new Set())
+  const openItem = (item: CandidateItem) => {
+    setOpened((prev) => new Set(prev).add(`${item.id}:${item.slot}`))
+    setOpen(item)
+  }
   // 代表から来たら番号を出す。百の位は代表と共有する
   const [kind, setKind] = useState<Kind>(() =>
     anchor ? 'num' : loadSubTab(KIND_KEY, KINDS, 'num')
@@ -151,6 +159,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
 
   const load = async () => {
     setError('')
+    setOpened(new Set())
     try {
       setState(await fetchImageState(token))
     } catch (err) {
@@ -170,24 +179,30 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   const items = useMemo(
     () =>
       state
-        ? candidateItems(state, filter, tagTitles).filter(
+        ? keepOpened(
+            candidateItems(state, 'all', tagTitles),
+            candidateItems(state, filter, tagTitles),
+            opened
+          ).filter(
             (it) =>
               kindOf.get(it.id) === kind &&
               (kind !== 'num' || it.id[0] === hundred)
           )
         : [],
-    [state, filter, kind, hundred, kindOf]
+    [state, filter, kind, hundred, kindOf, opened]
   )
   const shown = items.slice(0, MAX_SHOWN)
 
   const choose = (next: CandidateFilter) => {
     saveSubTab(FILTER_KEY, next)
     setFilter(next)
+    setOpened(new Set())
   }
 
   const chooseKind = (next: Kind) => {
     saveSubTab(KIND_KEY, next)
     setKind(next)
+    setOpened(new Set())
   }
 
   const chooseHundred = (next: string) => {
@@ -265,7 +280,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
               <ItemCard
                 key={`${item.id}:${item.slot}`}
                 item={item}
-                onOpen={() => setOpen(item)}
+                onOpen={() => openItem(item)}
               />
             ))}
             {message ? <div class="cand-note grid-full">{message}</div> : null}

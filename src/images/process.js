@@ -34,6 +34,51 @@ export async function toWebpAt(input, position) {
     .toBuffer()
 }
 
+/**
+ * 元画像の中の範囲を指定して 400x400 に切り抜く (画像ピッカーの全画面プレビューで決めた範囲)。
+ * 範囲は向きを直した (EXIF の回転を当てた) 元画像に対する割合。ブラウザの表示と同じ向きで測るため
+ * @param {Buffer} input
+ * @param {{x: number, y: number, w: number, h: number}} rect 左上と幅・高さ (0〜1)
+ */
+export async function toWebpRect(input, rect) {
+  if (!isCropRect(rect)) throw new Error('切り抜きの範囲が不正')
+  const { data, info } = await sharp(input)
+    .rotate()
+    .toBuffer({ resolveWithObject: true })
+  const left = Math.min(info.width - 1, Math.round(rect.x * info.width))
+  const top = Math.min(info.height - 1, Math.round(rect.y * info.height))
+  const width = Math.max(
+    1,
+    Math.min(info.width - left, Math.round(rect.w * info.width))
+  )
+  const height = Math.max(
+    1,
+    Math.min(info.height - top, Math.round(rect.h * info.height))
+  )
+  return sharp(data)
+    .extract({ left, top, width, height })
+    .resize(IMG_SIZE, IMG_SIZE, { fit: 'cover' })
+    .webp({ quality: 82 })
+    .toBuffer()
+}
+
+const EPS = 1e-6
+/** 切り抜きの範囲として受け付けられるか (割合で、元画像からはみ出さない) */
+export function isCropRect(rect) {
+  if (!rect || typeof rect !== 'object') return false
+  const { x, y, w, h } = rect
+  if (![x, y, w, h].every((v) => typeof v === 'number' && Number.isFinite(v)))
+    return false
+  return (
+    x >= 0 &&
+    y >= 0 &&
+    w > 0.01 &&
+    h > 0.01 &&
+    x + w <= 1 + EPS &&
+    y + h <= 1 + EPS
+  )
+}
+
 /** 上寄せで 400x400 にクロップ (顔が上にある画像の救済用) */
 export const toWebpTop = (input) => toWebpAt(input, 'top')
 
