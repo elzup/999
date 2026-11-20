@@ -99,8 +99,8 @@ describe('score', () => {
     expect(result.tokens[1].type).toBe('sokuon')
   })
 
-  it('カット: bad + sokuon + overflow, 5桁', () => {
-    const result = score('カット')
+  it('かっと: bad + sokuon + overflow, 5桁', () => {
+    const result = score('かっと')
     expect(result.digits).toBe('91010')
     expect(result.digitCount).toBe(5)
     // カ(bad 0.6) + ッ(sokuon 2) + ト(overflow -1) = 1.6

@@ -5,6 +5,7 @@ import {
 } from './google-sheets.js'
 import { rankey } from './rankey.js'
 import { encode } from './encoder.js'
+import { stripNotation } from './kana-notation.js'
 import { extractName, isKanaOnly, normalizeForCompare } from './words.js'
 
 const ID = '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
@@ -128,7 +129,7 @@ for (let r = 1; r < rows.length; r++) {
         if (nn && nw && nn[0] !== nw[0]) flag = flag || 'read'
       }
       // 3文字目が促音
-      const chars = [...wk]
+      const chars = [...stripNotation(wk)]
       if (chars[2] === 'っ' || chars[2] === 'ッ') flag = flag || 'sokuon3'
     }
     if (!flag) continue

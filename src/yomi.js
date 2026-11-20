@@ -65,6 +65,8 @@ export function buildYomiUse(entries) {
         continue
       }
       for (const token of tokens) {
+        // 半指定 (チャ) は 2 字読みを 1 桁しか使っていないので、2 字読みの使用に数えない
+        if (token.half) continue
         const key = toYomiKey(token.kana)
         if (key)
           use.get(key).set(entry.num + ':' + slot, { num: entry.num, slot })
