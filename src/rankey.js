@@ -9,9 +9,9 @@
 //   t      促音                              ろっし = AtA|
 //   _      先頭0の省略 (2桁しか無い)         れい   = _CA|
 //   !      中間の省略                        りんご = ww!A|   (ん を飛ばす)
-//                                           記法 さば(ん)な でも書ける。無ければ 1 文字飛ばして合う所を探す
+//                                           記法 さばﾝな でも書ける。無ければ 1 文字飛ばして合う所を探す
 //   v      2桁トークンが3桁境界を跨ぐ        たま   = wwv|v
-//   h      記法 [す] の 1 桁読み (す=33→3)     [す]うる = hBB|
+//   h      記法 ス (カタカナ) の半指定 (す=33→3) スうる = hBB|
 //
 //   接尾 (パイプの後ろ)
 //   v      境界を跨いだ2桁の外側
@@ -115,9 +115,9 @@ export function findOmission(kana, num) {
 }
 
 /**
- * 記法 ( ) で読まないとしたかなを、途中のもの (!) と語尾のもの (余り) に分ける。
+ * 記法 (半角カナ) で読まないとしたかなを、途中のもの (!) と語尾のもの (余り) に分ける。
  * 途中は最初の 1 つの位置 (読むかなだけを数えた位置) を返す。! は 1 つしか置かない。
- * 語尾 (後ろに読むかなが無い) の ( ) は 3 桁を超えた分と同じ «余り» として扱う (のる(ん) = |n)
+ * 語尾 (後ろに読むかなが無い) の読まないかなは 3 桁を超えた分と同じ «余り» として扱う (のるﾝ = |n)
  * @returns {{ omitAt: number, trailing: string }}
  */
 function skipsOf(kana) {
@@ -128,7 +128,7 @@ function skipsOf(kana) {
   let trailing = ''
   segments.forEach((seg, i) => {
     if (!seg.skip) read += [...seg.text].length
-    else if (i > lastRead) trailing += seg.text
+    else if (i > lastRead) trailing += seg.hira
     else if (omitAt < 0) omitAt = read
   })
   return { omitAt, trailing }
@@ -150,7 +150,7 @@ export function rankey(kana, num, word = '') {
     return null
   }
 
-  // 記法 (ん) の位置。読むかなだけを数えた位置に ! を置く
+  // 記法 ﾝ の位置。読むかなだけを数えた位置に ! を置く
   let trailingSkip = ''
   if (hasNotation(kana)) {
     const skips = skipsOf(kana)

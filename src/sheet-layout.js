@@ -47,7 +47,7 @@ export function colLetter(index) {
   return rest === 0 ? ch : colLetter(rest - 1) + ch
 }
 
-/** check 列: 語とかなの片方だけ / かなが «ひらがな + 記法 [す] (ん)» 以外 のとき "|" */
+/** check 列: 語とかなの片方だけ / かなが «ひらがな + 記法 (カタカナ / 半角カナ)» 以外 のとき "|" */
 export function checkFormula(wordCol, kanaCol, row) {
   const w = `${wordCol}${row}`
   const k = `${kanaCol}${row}`

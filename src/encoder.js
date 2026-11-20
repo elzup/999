@@ -76,12 +76,12 @@ function lookup(token) {
 /**
  * かな文字列 → { digits, tokens, youon4 }
  * 記法 (docs/kana-notation.md) を含むときは区間ごとに読み、半指定 (カタカナ) は 2 桁の 1 桁目だけを採る。
- * その場合のトークンには half: true が付く。( ) の中 (読まないかな) はトークンにしない。
+ * その場合のトークンには half: true が付く。半角カナ (読まないかな) はトークンにしない。
  */
 export function encode(input) {
   if (!hasNotation(input)) return encodePlain(input)
   const tokens = parseNotation(input).flatMap(({ text, hira, half, skip }) => {
-    // 読まないかな (さば(ん)な の ん) は数字にしない
+    // 読まないかな (さばﾝな の ﾝ) は数字にしない
     if (skip) return []
     const { tokens: inner } = encodePlain(hira)
     if (!half) return inner

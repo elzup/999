@@ -9,7 +9,7 @@
 import { createContext } from 'preact'
 import { useContext } from 'preact/hooks'
 import type { RulesData } from '../data/schema'
-import { hasNotation, kataToHiraText, parseNotation } from './kanaNotation'
+import { hasNotation, parseNotation } from './kanaNotation'
 
 export type ReadingTables = {
   single: Record<string, string>
@@ -143,7 +143,7 @@ function peekNextValue(t: ReadingTables, input: string, pos: number) {
 
 /**
  * かな → 数字列。読めないかなを含むときは null (encode は throw する)。
- * 記法は区間ごとに読み、半指定 (カタカナ) は 2 桁の 1 桁目だけを採る。( ) の中は読まない (src/encoder.js#encode と同じ)
+ * 記法は区間ごとに読み、半指定 (カタカナ) は 2 桁の 1 桁目だけを採る。半角カナは読まない (src/encoder.js#encode と同じ)
  */
 export function encodeDigits(t: ReadingTables, input: string): string | null {
   if (!hasNotation(input)) return encodePlainDigits(t, input)
@@ -151,7 +151,7 @@ export function encodeDigits(t: ReadingTables, input: string): string | null {
   if (!segments) return null
   let digits = ''
   for (const { hira, half, skip } of segments) {
-    // 読まないかな (さば(ん)な の ん) は数字にしない
+    // 読まないかな (さばﾝな の ﾝ) は数字にしない
     if (skip) continue
     const d = encodePlainDigits(t, hira)
     if (d === null) return null
@@ -159,15 +159,6 @@ export function encodeDigits(t: ReadingTables, input: string): string | null {
     digits += half ? d[0] : d
   }
   return digits
-}
-
-/** 半指定の字 (ス / す) が読む 1 桁 (す=33 → 3)。半指定にできないかななら null */
-export function halfDigit(t: ReadingTables, kana: string): string | null {
-  const text = kataToHiraText(kana)
-  const d = encodePlainDigits(t, text)
-  return d !== null && d.length === 2 && lookup(t, text) !== undefined
-    ? d[0]
-    : null
 }
 
 /** 読みの表。配信データの rules から App で作って流し込む (表示部品が 1 桁読みの数字を引く) */

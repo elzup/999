@@ -149,7 +149,7 @@ describe('reading.ts と encoder.js の一致', () => {
     }
     expect(diffs.slice(0, 20)).toEqual([])
     expect(encodeDigits(tables, 'さば(んな')).toBe(null)
-    expect(checkReading(tables, 'さば(ん)な', '387')).toEqual({
+    expect(checkReading(tables, 'さばﾝな', '387')).toEqual({
       status: 'ok',
       viaOmission: false,
     })

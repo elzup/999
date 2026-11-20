@@ -13,7 +13,7 @@ import { hasNotation, stripNotation } from './kana-notation.js'
 /**
  * よみが番号に合うか。rankey と同じ規則で許す:
  *   3 桁を超えた分は余り (ひるま = 160|0) / 先頭 0 の省略 (れい = 01) / 中間 1 文字の省略 (りんご)
- * 記法 [す] の 1 桁読みは encode が digits に反映済み
+ * 記法 ス (カタカナ) の半指定は encode が digits に反映済み
  */
 function readingMatchesNum(kana, digits, num) {
   if (digits.startsWith(num)) return true

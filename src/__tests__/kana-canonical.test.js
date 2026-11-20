@@ -38,7 +38,7 @@ describe('よみを 1 通りの書き方に揃える', () => {
   })
 
   it('途中の読まないかなは ( ) で書く', () => {
-    expect(canonicalRewriteFor('', 'さばんな', '387')?.to).toBe('さば(ん)な')
+    expect(canonicalRewriteFor('', 'さばんな', '387')?.to).toBe('さばﾝな')
   })
 })
 

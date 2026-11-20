@@ -3,6 +3,7 @@ import {
   KANA_CELL_PATTERN,
   hasNotation,
   parseNotation,
+  readPart,
   stripNotation,
 } from '../kana-notation.js'
 import { encode } from '../encoder.js'
@@ -31,7 +32,7 @@ describe('半指定 (カタカナ) の分解', () => {
     expect(re.test('すうる')).toBe(true)
     expect(re.test('スうる')).toBe(true)
     expect(re.test('チャい')).toBe(true)
-    expect(re.test('さば(ん)な')).toBe(true)
+    expect(re.test('さばﾝな')).toBe(true)
     expect(re.test('さば(ん')).toBe(false)
     expect(re.test('さば(x)な')).toBe(false)
     expect(re.test('すうる[x]')).toBe(false)
@@ -68,51 +69,63 @@ describe('記法付きのよみの読み', () => {
   })
 })
 
-describe('記法 ( ) (読まないかな)', () => {
+describe('記法 半角カナ (読まないかな)', () => {
   it('地のかなと読まない区間に分け、記号を外すとかなは残る', () => {
-    expect(parseNotation('さば(ん)な')).toEqual([
+    expect(parseNotation('さばﾝな')).toEqual([
       { text: 'さば', hira: 'さば', half: false, skip: false },
-      { text: 'ん', hira: 'ん', half: false, skip: true },
+      { text: 'ﾝ', hira: 'ん', half: false, skip: true },
       { text: 'な', hira: 'な', half: false, skip: false },
     ])
-    expect(stripNotation('さば(ん)な')).toBe('さばんな')
-    expect(stripNotation('ス(う)る')).toBe('すうる')
-    expect(hasNotation('さば(ん)な')).toBe(true)
+    expect(stripNotation('さばﾝな')).toBe('さばんな')
+    expect(stripNotation('スｳる')).toBe('すうる')
+    expect(hasNotation('さばﾝな')).toBe(true)
   })
 
-  it('括弧が閉じていない・中身がひらがなでないものは読めない', () => {
+  it('続けて書いた半角カナは 1 つの読まない区間、濁点もひらがなに戻す', () => {
+    expect(parseNotation('きすﾏｰｸ')[1]).toEqual({
+      text: 'ﾏｰｸ',
+      hira: 'まーく',
+      half: false,
+      skip: true,
+    })
+    expect(stripNotation('りﾝｺﾞ')).toBe('りんご')
+    expect(readPart('さばﾝな')).toBe('さばな')
+  })
+
+  it('括弧・英数字があるよみは読めない (旧記法 (ん) [す] は廃止)', () => {
+    expect(() => parseNotation('さば(ん)な')).toThrow()
     expect(() => parseNotation('さば(んな')).toThrow()
-    expect(() => parseNotation('さば)ん(な')).toThrow()
-    expect(() => parseNotation('さば(x)な')).toThrow()
+    expect(() => parseNotation('[す]うる')).toThrow()
+    expect(() => parseNotation('さばxな')).toThrow()
   })
 
-  it('( ) の中は数字にしない', () => {
-    expect(encode('さば(ん)な').digits).toBe('387')
-    expect(encode('り(ん)ご').digits).toBe('615')
+  it('半角カナは数字にしない', () => {
+    expect(encode('さばﾝな').digits).toBe('387')
+    expect(encode('りﾝご').digits).toBe('615')
     // 1 桁読みと一緒に使える
-    expect(encode('ス(う)る').digits).toBe('36')
+    expect(encode('スｳる').digits).toBe('36')
   })
 
   it('rankey は自動で見つけた中間省略と同じ ! を、記法の位置に置く', () => {
-    expect(rankey('さば(ん)な', '387')).toBe(rankey('さばんな', '387'))
-    expect(rankey('さば(ん)な', '387')).toBe('AA!A|')
-    expect(rankey('り(ん)ご', '615')).toBe('ww!A|')
+    expect(rankey('さばﾝな', '387')).toBe(rankey('さばんな', '387'))
+    expect(rankey('さばﾝな', '387')).toBe('AA!A|')
+    expect(rankey('りﾝご', '615')).toBe('ww!A|')
   })
 
   it('語尾の ( ) は ! ではなく余りとして表す (3 桁を超えた分と同じ)', () => {
-    expect(rankey('にいさ(ん)', '223')).toBe(rankey('にいさん', '223'))
-    expect(rankey('にいさ(ん)', '223')).toBe('AAA|n')
-    expect(rankey('みっき(ー)', '391')).toBe('BtA|-')
+    expect(rankey('にいさﾝ', '223')).toBe(rankey('にいさん', '223'))
+    expect(rankey('にいさﾝ', '223')).toBe('AAA|n')
+    expect(rankey('みっきｰ', '391')).toBe('BtA|-')
   })
 
   it('( ) は語尾の ー も囲める', () => {
-    expect(new RegExp(KANA_CELL_PATTERN).test('みっき(ー)')).toBe(true)
-    expect(stripNotation('みっき(ー)')).toBe('みっきー')
+    expect(new RegExp(KANA_CELL_PATTERN).test('みっきｰ')).toBe(true)
+    expect(stripNotation('みっきｰ')).toBe('みっきー')
   })
 
   it('記法があれば自動の探索はしない (書いた読み方を優先する)', () => {
-    // さ(ば)んな = 307。番号 387 に合わせて別の 1 文字を飛ばしたりしない
-    expect(score('さ(ば)んな').digits).toBe('307')
-    expect(rankey('さ(ば)んな', '387')).toBe('A!AA|')
+    // さﾊﾞんな = 307。番号 387 に合わせて別の 1 文字を飛ばしたりしない
+    expect(score('さﾊﾞんな').digits).toBe('307')
+    expect(rankey('さﾊﾞんな', '387')).toBe('A!AA|')
   })
 })
