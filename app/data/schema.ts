@@ -53,8 +53,15 @@ export const GoroAllocSchema = z.object({
 
 export type GoroAlloc = z.infer<typeof GoroAllocSchema>
 
+/** 代表 (①②)。値 (読み + 語) で持つ。番号文書から /api/app/data が重ねる */
+export const RepSchema = z.object({
+  picks: z.array(z.object({ k: z.string(), w: z.string() })),
+  confirmed: z.boolean(),
+})
+
 export const NumberEntrySchema = z.object({
   num: z.string().regex(/^\d{3}$/),
+  rep: RepSchema.optional(),
   w1: z.string().default(''),
   w1k: z.string().default(''),
   w2: z.string().default(''),

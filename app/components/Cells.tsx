@@ -4,7 +4,7 @@
 import { h } from 'preact'
 import type { CardEntry, CardStats, NumberEntry } from '../data/schema'
 import { formatCardId } from '../data/cards'
-import { candidatesOf, type Candidate } from '../lib/choice'
+import { candidatesOf, repCandidates, type Candidate } from '../lib/choice'
 import { nameOf } from '../lib/numberDetail'
 import { wordImage } from '../lib/wordImage'
 
@@ -76,14 +76,6 @@ export function CardCell({ c, selected, stat, onSelect }: CardCellProps) {
 // md カードはスマホで 3 列 (120px 前後)、広い画面では 1 枚 170px で止まって列が増える (.md-grid)
 const MD_CARD_PX = 170
 
-/** 人 / 物 の先頭の候補を 1 つずつ (人 → 物 の順) */
-function leadCandidates(d: NumberEntry): Candidate[] {
-  const all = candidatesOf(d)
-  const hito = all.find((c) => c.slot.startsWith('wh'))
-  const mono = all.find((c) => c.slot.startsWith('wm'))
-  return [hito, mono].filter((c): c is Candidate => c !== undefined)
-}
-
 /**
  * 番号の md カード (UI 候補 A-2): 画像 1 枚を枠いっぱいに出し、番号を左上、語を下の帯に重ねる。
  * どの語を出すかは画面が決めて渡す (ブックマークは人の先頭、タグ一覧はそのタグの語)
@@ -133,7 +125,7 @@ export function NumMdCard({
   )
 }
 
-/** ブックマークの md カード。画像は人の先頭 (無ければ物の先頭) */
+/** ブックマークの md カード。代表① の語と画像 (代表が無ければ人の先頭、無ければ物の先頭) */
 export function BmNumCard({
   d,
   open,
@@ -143,7 +135,7 @@ export function BmNumCard({
   return (
     <NumMdCard
       num={d.num}
-      cand={leadCandidates(d)[0]}
+      cand={repCandidates(d)[0]}
       open={open}
       selected={selected}
       onSelect={onSelect}

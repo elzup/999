@@ -4,7 +4,7 @@ import type { ComponentChildren } from 'preact'
 import type { CardEntry, NumberEntry } from '../data/schema'
 import { D3_LIST, PI_1000_DIGITS, YEAR_DATA } from '../data/constants'
 import { cardValues, formatCardId } from '../data/cards'
-import { candidateAt } from '../lib/choice'
+import { repCandidates } from '../lib/choice'
 import { ETYMOLOGY_DATA } from '../data/etymology'
 import { getFfRows, isValidFfRow } from '../lib/ffQuiz'
 import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
@@ -69,8 +69,7 @@ const TAG_LABELS: [key: 'hito' | 'mono' | 'gainen', label: string][] = [
 
 // 数字 1 件ぶんの答え面 (代表語 2 つ + 人/物/念)。数字デッキと π デッキで共有する。
 function NumberAnswer({ d }: { d: NumberEntry }) {
-  const first = candidateAt(d, 'wh1')
-  const second = candidateAt(d, 'wm1')
+  const [first, second] = repCandidates(d)
   return (
     <>
       <div class="slide-words">

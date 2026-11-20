@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'preact/hooks'
 import Yomi from './Yomi'
 import type { NumberEntry } from '../data/schema'
-import { candidatesOf } from '../lib/choice'
+import { repCandidates } from '../lib/choice'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 import TaggedWord from './TaggedWord'
 
@@ -20,7 +20,7 @@ type Row = { num: string; word: string; kana: string; bmKey: string }
 function toRows(entries: NumberEntry[]): Row[] {
   const rows: Row[] = []
   for (const entry of entries) {
-    const cand = candidatesOf(entry)[0]
+    const cand = repCandidates(entry)[0]
     if (!cand) continue
     rows.push({
       num: entry.num,

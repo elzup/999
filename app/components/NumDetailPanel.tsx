@@ -12,7 +12,7 @@ import { IconEdit } from './Icons'
 import { BookmarkButton } from './Screen'
 import { parseTaggedItems } from '../lib/tags'
 import { nameOf, REP_STATUS_LABEL } from '../lib/numberDetail'
-import { candidateAt } from '../lib/choice'
+import { repCandidates } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
@@ -45,45 +45,18 @@ type WordRow = {
 }
 
 /**
- * 表示する語の行を組み立てる。
- *
- * 2 枠目の穴埋め (mono が空なら人の 2 人目、hito が空なら物の 2 つ目) は
- * 元の表示規則をそのまま踏襲している。rankey を持つのは 1 番手だけ。
+ * 表示する語の行。代表 ①② (repCandidates。代表が無ければ人・物の先頭) を上から。
+ * rankey を持つのは 1 番手だけ (2 番手は薄く出す)
  */
 function wordRows(d: NumberEntry): WordRow[] {
-  const rows: WordRow[] = []
-  // 新旧の列名 (wh1 / w1 など) の読み替えは candidateAt に任せる
-  const wh1 = candidateAt(d, 'wh1')
-  const wm1 = candidateAt(d, 'wm1')
-  const wh2 = candidateAt(d, 'wh2')
-  const wm2 = candidateAt(d, 'wm2')
-
-  if (wh1) {
-    rows.push({
-      slot: 'wh1',
-      word: wh1.word,
-      kana: wh1.kana,
-      img: wh1.img,
-      rk: rankeyOf(wh1.kana, d.num, wh1.word),
-    })
-  }
-  if (wm1) {
-    rows.push({
-      slot: 'wm1',
-      word: wm1.word,
-      kana: wm1.kana,
-      img: wm1.img,
-      rk: rankeyOf(wm1.kana, d.num, wm1.word),
-      dim: true,
-    })
-  }
-  if (!wm1 && wh2) {
-    rows.push({ slot: 'wh2', word: wh2.word, img: wh2.img, dim: true })
-  }
-  if (!wh1 && wm2) {
-    rows.push({ slot: 'wm2', word: wm2.word, img: wm2.img, dim: true })
-  }
-  return rows
+  return repCandidates(d).map((cand, i) => ({
+    slot: cand.slot,
+    word: cand.word,
+    kana: cand.kana,
+    img: cand.img,
+    rk: rankeyOf(cand.kana, d.num, cand.word),
+    dim: i > 0,
+  }))
 }
 
 /**
@@ -253,7 +226,7 @@ function NumDetailPanel(props: Props) {
         <div class="word-list">
           {rows.map((row) => (
             <div
-              key={row.slot}
+              key={row.slot + row.word}
               class={
                 'word-line ' +
                 kindOf(row.slot) +

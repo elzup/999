@@ -115,3 +115,20 @@ describe('numbersWithDocs', () => {
     expect(numbers[1]).toBe(other)
   })
 })
+
+describe('withRep (代表を配信データの 1 件に載せる)', () => {
+  it('番号文書の代表と確定を載せ、同じなら元の 1 件のまま', async () => {
+    const { withRep } = await import('../firestore/app-entry.js')
+    const entry = { num: '531' }
+    const doc = {
+      rep: { picks: [{ k: 'こみー', w: 'コミー#tri' }], confirmed: true },
+    }
+    const out = withRep(entry, doc)
+    expect(out.rep).toEqual({
+      picks: [{ k: 'こみー', w: 'コミー#tri' }],
+      confirmed: true,
+    })
+    expect(withRep(out, doc)).toBe(out)
+    expect(withRep(entry, {})).toBe(entry)
+  })
+})

@@ -76,7 +76,23 @@ const isImageField = (key) => key.endsWith('Img')
  * 配信データの 1 件に、DB の文書の語・かなを重ねた 1 件を返す。入力は書き換えない。
  * 文書の語・かながもう入っていれば、同じ 1 件をそのまま返す
  */
+/**
+ * 代表 (①②) と確定を 1 件に載せる。代表は番号文書にしか無く、配信データには無かったので、
+ * ブックマーク・詳細・スライドなどが «人の 1 番目» を代表のつもりで出していた
+ */
+export function withRep(entry, doc) {
+  if (!doc?.rep) return entry
+  const picks = (doc.rep.picks ?? [])
+    .map((pick) => ({ k: text(pick?.k), w: text(pick?.w) }))
+    .filter((pick) => pick.w)
+  const rep = { picks, confirmed: Boolean(doc.rep.confirmed) }
+  return JSON.stringify(entry.rep) === JSON.stringify(rep)
+    ? entry
+    : { ...entry, rep }
+}
+
 export function entryWithDoc(entry, doc) {
+  entry = withRep(entry, doc)
   if (!doc?.slots || isDocReflected(entry, doc)) return entry
   // 人/物の一覧は 1〜3 番目をスロットから、4 番目以降を文書の一覧から取る (シートの列と同じ形)
   const form = sheetFormOfDoc(doc)

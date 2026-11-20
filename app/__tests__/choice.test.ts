@@ -98,3 +98,44 @@ describe('slotOfPick (マップのタイル = 代表①)', () => {
     expect(slotOfPick(e, { k: 'かさ', w: '傘' })).toBeNull()
   })
 })
+
+describe('repCandidates (番号の代表として出す語)', () => {
+  it('代表 ①② を、その順に候補へ引き直す', async () => {
+    const { repCandidates } = await import('../lib/choice')
+    const d = base({
+      wh1: '人一',
+      wh1k: 'ひと',
+      wh3: '人三',
+      wh3k: 'さん',
+      wm1: '物一',
+      wm1k: 'もの',
+      rep: {
+        picks: [
+          { k: 'さん', w: '人三' },
+          { k: 'もの', w: '物一' },
+        ],
+        confirmed: true,
+      },
+    })
+    expect(repCandidates(d).map((c) => c.word)).toEqual(['人三', '物一'])
+  })
+
+  it('代表が無い・当たらない分は人・物の先頭で補う', async () => {
+    const { repCandidates } = await import('../lib/choice')
+    const d = base({ wh1: '人一', wm1: '物一' })
+    expect(repCandidates(d).map((c) => c.word)).toEqual(['人一', '物一'])
+    const stale = base({
+      wh1: '人一',
+      wm1: '物一',
+      rep: { picks: [{ k: 'x', w: '消えた語' }], confirmed: false },
+    })
+    expect(repCandidates(stale).map((c) => c.word)).toEqual(['人一', '物一'])
+    const one = base({
+      wh1: '人一',
+      wm2: '物二',
+      wm1: '物一',
+      rep: { picks: [{ k: '', w: '物二' }], confirmed: false },
+    })
+    expect(repCandidates(one).map((c) => c.word)).toEqual(['物二', '人一'])
+  })
+})

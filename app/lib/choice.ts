@@ -126,6 +126,37 @@ export function slotOfPick(
   return (exact ?? byWord)?.slot ?? null
 }
 
+/** 人・物の先頭の候補を 1 つずつ (人 → 物 の順)。代表が決まっていないときの代わり */
+export function leadCandidates(entry: NumberEntry): Candidate[] {
+  const all = candidatesOf(entry)
+  const hito = all.find((c) => c.slot.startsWith('wh'))
+  const mono = all.find((c) => c.slot.startsWith('wm'))
+  return [hito, mono].filter((c): c is Candidate => c !== undefined)
+}
+
+/**
+ * 番号の代表として出す候補 (多くて 2 つ。①, ② の順)。番号を 1〜2 語で見せる所
+ * (ブックマーク・詳細・スライド・連想テスト) はみなこれで引く。
+ * 代表は値 (読み + 語) で持つので候補に引き直す。代表が無い・語が変わって当たらない分は、
+ * 人・物の先頭で補う (代表を決める前の出し方)
+ */
+export function repCandidates(entry: NumberEntry): Candidate[] {
+  const all = [...candidatesOf(entry), ...slotCandidates(entry)]
+  const picked = (entry.rep?.picks ?? [])
+    .map(
+      (pick) =>
+        all.find((c) => c.word === pick.w && c.kana === pick.k) ??
+        all.find((c) => c.word === pick.w)
+    )
+    .filter((c): c is Candidate => c !== undefined)
+  const out: Candidate[] = []
+  for (const c of [...picked, ...leadCandidates(entry)]) {
+    if (out.length >= 2) break
+    if (!out.some((o) => o.slot === c.slot && o.word === c.word)) out.push(c)
+  }
+  return out
+}
+
 function slotText(
   entry: NumberEntry,
   field: keyof NumberEntry,

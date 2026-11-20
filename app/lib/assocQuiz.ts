@@ -1,19 +1,19 @@
 // 999「数字 → 語」連想テストの純ロジック。
-// 数字(例 573)を見せ、その採用語(候補の第一スロット)を4択から選ぶ。
+// 数字(例 573)を見せ、その代表語 (代表①) を4択から選ぶ。
 // UI 非依存・rng 注入で決定的にテストできる。
 
 import type { NumberEntry } from '../data/schema'
-import { candidatesOf } from './choice'
+import { repCandidates } from './choice'
 import { shuffle } from './kukuQuiz'
 import type { ChoiceQuestion } from '../components/ChoiceQuiz'
 
 export type AssocItem = { num: string; word: string }
 
-/** 語(採用候補の先頭)を持つ entry だけを num→word に落とす */
+/** 語 (代表①、無ければ人の先頭) を持つ entry だけを num→word に落とす */
 export function assocPool(entries: readonly NumberEntry[]): AssocItem[] {
   const out: AssocItem[] = []
   for (const entry of entries) {
-    const word = candidatesOf(entry)[0]?.word
+    const word = repCandidates(entry)[0]?.word
     if (!word) continue
     out.push({ num: entry.num, word })
   }
