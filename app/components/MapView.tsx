@@ -12,6 +12,7 @@ import type { Slot } from '../lib/choice'
 import { useRepSlots } from '../lib/useRepSlots'
 import { REP_STATUS_LABEL, type RepStatus } from '../lib/numberDetail'
 import NumDetailPanel from './NumDetailPanel'
+import { useTagNames, wordText } from '../lib/tagNames'
 import Screen, { DockRow } from './Screen'
 import { useSelection } from '../lib/useSelection'
 import DetailSheet from './DetailSheet'
@@ -54,10 +55,11 @@ function MapTileView({
   /** 代表の確定状態。確定していないタイルだけ右上に印を付ける */
   rep?: RepStatus
 }) {
+  const names = useTagNames()
   return (
     <button
       class={'ymap-tile' + (selected ? ' sel' : '')}
-      title={`${tile.xy} → ${tile.num}${tile.word ? ' ' + tile.word : ''}${
+      title={`${tile.xy} → ${tile.num}${tile.word ? ' ' + wordText(tile.word, names) : ''}${
         rep && rep !== 'confirmed' ? ' (' + REP_STATUS_LABEL[rep] + ')' : ''
       }`}
       onClick={onSelect}

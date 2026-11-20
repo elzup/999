@@ -25,6 +25,7 @@ import { buildSearchWord } from '../lib/searchWord'
 import { wordImage } from '../lib/wordImage'
 import CropEditor, { type CropChoice } from './CropEditor'
 import TaggedWord from './TaggedWord'
+import { useTagNames, wordText } from '../lib/tagNames'
 
 // 3×2 の 1 枠は «今» なので、候補は 5 枚まで並べる
 const SHOWN_CANDIDATES = 5
@@ -148,6 +149,7 @@ export default function ImagePickerSheet({
   // 検索は必ず正式名 (tagTitles = シートの title) で展開する。表示用の略称 (tagNames) は使わない。
   // 正式名の無いタグは id のまま (略称で探すと別のものが出る)
   const tagMap = useNumberContext()?.tagTitles ?? {}
+  const tagNames = useTagNames()
   // 語から作った検索ワード。自動の検索でもこれを送る (Function が古くても展開済みの語で探す)
   const autoQuery = buildSearchWord(word, tagMap)
   const [query, setQuery] = useState(autoQuery)
@@ -327,7 +329,11 @@ export default function ImagePickerSheet({
   return createPortal(
     <div class="ip-root">
       <div class="ip-shade" onClick={onClose} />
-      <div class="ip-sheet" role="dialog" aria-label={`${id} の画像を選ぶ`}>
+      <div
+        class="ip-sheet"
+        role="dialog"
+        aria-label={`${id} ${wordText(word, tagNames)} の画像を選ぶ`}
+      >
         <div class="ip-head">
           <span class="ip-id">{id}</span>
           <span class="ip-word">
@@ -469,7 +475,8 @@ export default function ImagePickerSheet({
       {isEditing && selectedImage ? (
         <CropEditor
           image={selectedImage}
-          title={`${id} ${word}`}
+          id={id}
+          word={word}
           choice={crop}
           isSaving={isSaving}
           onCancel={() => setIsEditing(false)}

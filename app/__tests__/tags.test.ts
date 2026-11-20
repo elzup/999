@@ -96,3 +96,12 @@ describe('collectNumberTags', () => {
     ])
   })
 })
+
+describe('wordText (文字だけで語を出すときの書き方)', () => {
+  it('タグは表示名を括弧で添え、ラベルは落とす', async () => {
+    const { wordText } = await import('../lib/tagNames')
+    expect(wordText('鯉#g -n', {})).toBe('鯉 (概念)')
+    expect(wordText('ミミ#pr', { pr: 'ﾌﾟﾘｷｭｱ' })).toBe('ミミ (ﾌﾟﾘｷｭｱ)')
+    expect(wordText('猫', {})).toBe('猫')
+  })
+})

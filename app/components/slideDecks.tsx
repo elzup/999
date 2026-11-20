@@ -11,6 +11,7 @@ import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
 import type { SlideDeck } from '../lib/slideDeck'
 import { wordImage } from '../lib/wordImage'
 import TaggedWord from './TaggedWord'
+import { useTagNames, wordText } from '../lib/tagNames'
 
 // 各グループのデータを SlideDeck (問題面 → 答え面) に写す。
 // 表示部品はここに閉じ、SlidePlayer には中身を意識させない。
@@ -39,6 +40,7 @@ function WordRow({
   img?: string
   isSub?: boolean
 }) {
+  const names = useTagNames()
   return (
     <div class={'slide-word-row' + (isSub ? ' sub' : '')}>
       {img ? (
@@ -46,7 +48,7 @@ function WordRow({
           class="slide-word-img"
           loading="lazy"
           {...wordImage(img, 72, word)}
-          alt={word}
+          alt={wordText(word, names)}
         />
       ) : null}
       <div class="slide-word-text">

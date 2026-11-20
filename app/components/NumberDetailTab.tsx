@@ -52,7 +52,7 @@ import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
 import { useNumberContext } from '../lib/numberContext'
-import { tagNameOf, useTagNames } from '../lib/tagNames'
+import { tagNameOf, useTagNames, wordText } from '../lib/tagNames'
 
 const REP_RANKS = [1, 2] as const
 const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
@@ -92,6 +92,7 @@ export default function NumberDetailTab({
   focusSlot?: string
   onClose?: () => void
 }) {
+  const names = useTagNames()
   const [num, setNum] = useState(initialNum)
   const [jump, setJump] = useState(initialNum)
   const [note, setNote] = useState<Note>(EMPTY_NOTE)
@@ -279,7 +280,7 @@ export default function NumberDetailTab({
     queue.enqueueMove(
       doc.num,
       { row: { slot: row.slot, imageUrl: row.imageUrl }, to },
-      `「${row.word}」を ${to} に移しました`
+      `「${wordText(row.word, names)}」を ${to} に移しました`
     )
   }
 
@@ -573,6 +574,7 @@ function SlotCard({
   onPickRep: (rank: 1 | 2) => void
   onRate: (value: number) => void
 }) {
+  const names = useTagNames()
   // 書き換え中・足しただけの枠は、代表と評価を付ける相手 (保存された語) と
   // 画面の語がずれている。押せない飾りを並べず、保存が先だと書く
   const pending = !isSaved || changed
@@ -631,7 +633,7 @@ function SlotCard({
             class={'nd-img' + (row.imageStale ? ' stale' : '')}
             loading="lazy"
             {...wordImage(row.imageUrl, 40, row.word)}
-            alt={row.word}
+            alt={wordText(row.word, names)}
             title={row.imageStale ? '確定時点の語と違う画像' : undefined}
           />
         ) : (

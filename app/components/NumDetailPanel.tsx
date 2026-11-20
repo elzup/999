@@ -16,7 +16,7 @@ import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
-import { useTagNames } from '../lib/tagNames'
+import { useTagNames, wordText } from '../lib/tagNames'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
 import { rankeyOf } from '../lib/rankey'
@@ -92,6 +92,7 @@ function wordRows(d: NumberEntry): WordRow[] {
  */
 function RowImage({ num, row }: { num: string; row: WordRow }) {
   const ctx = useNumberContext()
+  const names = useTagNames()
   const slot = IMAGE_SLOT_OF[row.slot]
   const override = useImageOverride(num, slot ?? row.slot)
   const [isOpen, setIsOpen] = useState(false)
@@ -102,7 +103,7 @@ function RowImage({ num, row }: { num: string; row: WordRow }) {
       class="wl-img"
       loading="lazy"
       {...wordImage(url, 34, row.word)}
-      alt={row.word}
+      alt={wordText(row.word, names)}
     />
   ) : (
     <span class="wl-img empty" />
@@ -113,7 +114,7 @@ function RowImage({ num, row }: { num: string; row: WordRow }) {
       <button
         type="button"
         class="wl-img-btn"
-        aria-label={`${row.word} の画像を選び直す`}
+        aria-label={`${wordText(row.word, names)} の画像を選び直す`}
         onClick={(e) => {
           // 行のタップ (ヨミの出し入れ) と分ける
           e.stopPropagation()

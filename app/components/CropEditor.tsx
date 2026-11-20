@@ -24,6 +24,8 @@ import {
   type CropPosition,
   type SlotImage,
 } from '../lib/imagePicker'
+import { useTagNames, wordText } from '../lib/tagNames'
+import TaggedWord from './TaggedWord'
 
 /** 切り抜きの決め方。null は今の切り抜き (自動) のまま */
 export type CropChoice =
@@ -33,7 +35,10 @@ export type CropChoice =
 
 type Props = {
   image: SlotImage
-  title: string
+  /** 番号 (見出しに出す) */
+  id: string
+  /** 語 (タグは表示名で出す) */
+  word: string
   choice: CropChoice
   isSaving: boolean
   /** 決めた切り抜きで戻る (まだ保存しない) */
@@ -49,13 +54,15 @@ type Pointer = { x: number; y: number }
 
 export default function CropEditor({
   image,
-  title,
+  id,
+  word,
   choice: initial,
   isSaving,
   onApply,
   onDecide,
   onCancel,
 }: Props) {
+  const names = useTagNames()
   const source = image.sourceImageUrl ?? ''
   const [natural, setNatural] = useState<Size | null>(null)
   const [loadFailed, setLoadFailed] = useState(!source)
@@ -189,10 +196,12 @@ export default function CropEditor({
     <div
       class="ce-root"
       role="dialog"
-      aria-label={`${title} の切り抜きを決める`}
+      aria-label={`${id} ${wordText(word, names)} の切り抜きを決める`}
     >
       <div class="ce-head">
-        <span class="ce-title">{title}</span>
+        <span class="ce-title">
+          {id} <TaggedWord word={word} />
+        </span>
         <span class="ce-mode">{label}</span>
       </div>
       <div class="ce-stage" ref={stageRef}>
