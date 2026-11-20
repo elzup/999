@@ -141,8 +141,8 @@ export const api = onRequest(
           method: req.method,
           path,
           body: req.body || {},
-          state: await withLiveSearchTagNames(
-            readPrivateJson('console-state.json')
+          state: await withLiveTargets(
+            await withLiveSearchTagNames(readPrivateJson('console-state.json'))
           ),
           ...(await loadImageSlots()),
           now: new Date().toISOString(),
@@ -160,9 +160,10 @@ export const api = onRequest(
 
       // 辞書本体 (私的連想 + 画像URL)。認証済みブラウザだけが取得できる。
       if (req.method === 'GET' && path === '/app/data') {
-        // 配信データは deploy のときの写し。アプリ・シートで直した語とタグ名は DB の最新を重ねる
+        // 配信データは deploy のときの写し。アプリ・シートで直した語とタグ名、
+        // アプリ・console で選び直した画像は DB の最新を重ねる
         const data = await withLiveNumbers(readPrivateJson('data.json'))
-        res.json(await withLiveTagNames(data))
+        res.json(await withLiveImages(await withLiveTagNames(data)))
         return
       }
 
@@ -174,7 +175,9 @@ export const api = onRequest(
           res.status(404).json({ ok: false, error: 'not_found' })
           return
         }
-        res.json({ ok: true, entry })
+        // 画像も最新に (語を保存した後にこれで差し替えるので、選び直した画像を古い画像で戻さない)
+        const { numbers } = await withLiveImages({ numbers: [entry] })
+        res.json({ ok: true, entry: numbers[0] })
         return
       }
 
@@ -507,6 +510,39 @@ async function liveNumberEntry(num) {
   const doc = (await store.readNumbers([num]))[num]
   if (doc && numberDocs) numberDocs.docs = { ...numberDocs.docs, [num]: doc }
   return lib.entryWithDoc(delivered, doc)
+}
+
+let entryImagesLib = null
+const loadEntryImagesLib = async () =>
+  (entryImagesLib ??= await import('./lib/images/entry-images.js'))
+
+/** 配信データ (番号・日付・カード) に、正本 imageSlots の画像を重ねる。読めなければ配信データのまま */
+async function withLiveImages(data) {
+  try {
+    const [{ slots }, lib] = await Promise.all([
+      loadImageSlots(),
+      loadEntryImagesLib(),
+    ])
+    const docs = await slots.listSlots({ now: new Date().toISOString() })
+    return lib.withSlotImages(data, docs)
+  } catch (error) {
+    console.error('app/data(images)', error)
+    return data
+  }
+}
+
+/** console の対象の語 (deploy のときに焼いたもの) を、番号文書の最新の語にする */
+async function withLiveTargets(state) {
+  try {
+    const [docs, lib] = await Promise.all([
+      readNumberDocs(),
+      loadEntryImagesLib(),
+    ])
+    return lib.withLiveTargetWords(state, docs)
+  } catch (error) {
+    console.error('console(targets)', error)
+    return state
+  }
 }
 
 /** 配信データのタグ名に、シート同期で DB に置いた最新の名前を重ねる (deploy 無しで直せるように) */

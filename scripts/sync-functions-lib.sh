@@ -30,7 +30,7 @@ for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation word
 done
 
 # web 版の画像コンソール (console-route.js / index.js が読む)。印と、その場の取り直し (検索 → DL → webp → GCS)
-for name in slot-docs slot-store uploader fetch-one search ddg bing download process query; do
+for name in entry-images slot-docs slot-store uploader fetch-one search ddg bing download process query; do
   cp "$root/src/images/$name.js" "$lib/images/$name.js"
 done
 

@@ -14,8 +14,8 @@ export type RepSlotsState = 'loading' | 'ready' | 'error'
  * API (REQ-NAPI-008) で百の位 1 つぶんずつ Firestore から読む。
  *
  * マップと詳細カードが同じ百の位を何度も引かないよう、ここで共有する。
- * 編集画面を閉じるたび (NumberContext の editVersion) に読み直すので、
- * 編集で代表を変えればマップにも詳細カードにもそのまま出る。
+ * 番号の保存が済むたび・編集画面を閉じるたび (NumberContext の editVersion) に読み直すので、
+ * どの画面で代表を変えてもマップにも詳細カードにもそのまま出る。
  */
 const cache = new Map<string, Promise<NumberDoc[]>>()
 
@@ -25,6 +25,9 @@ function loadHundred(hundred: number, version: number): Promise<NumberDoc[]> {
   const key = `${hundred}:${version}`
   let hit = cache.get(key)
   if (!hit) {
+    // 保存のたびに版が進むので、古い版の読み込みは捨てる (溜め込まない)
+    for (const old of cache.keys())
+      if (!old.endsWith(`:${version}`)) cache.delete(old)
     hit = fetchHundred(hundred, token)
     // 編集画面にも渡しておく (詳細カードから «編集» を開いたとき待たない)
     hit.then((docs) => writeQueue().seed(docs)).catch(() => {})

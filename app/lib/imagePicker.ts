@@ -243,9 +243,24 @@ let overrides: Record<string, SlotImage> = {}
 const listeners = new Set<() => void>()
 const keyOf = (id: string, slot: string) => `${id}:${slot}`
 
+type ImageChange = (id: string, slot: string, image: SlotImage) => void
+const changeListeners = new Set<ImageChange>()
+
 export function setImageOverride(id: string, slot: string, image: SlotImage) {
   overrides = { ...overrides, [keyOf(id, slot)]: image }
   listeners.forEach((fn) => fn())
+  changeListeners.forEach((fn) => fn(id, slot, image))
+}
+
+/**
+ * 画像を選び直したのを聞く。App はこれで読み込み済みの辞書データ (一覧・詳細・マップ・スライド・
+ * テストが読む) を差し替える。override を見る所だけでなく、全部の画面に同じ画像を出すため
+ */
+export function listenImageChange(fn: ImageChange) {
+  changeListeners.add(fn)
+  return () => {
+    changeListeners.delete(fn)
+  }
 }
 
 export const imageOverride = (id: string, slot: string) =>

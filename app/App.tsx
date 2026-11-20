@@ -55,6 +55,8 @@ import { isBookmarkReviewDue } from './lib/bookmarkReview'
 import { useBackGuard } from './lib/useBackGuard'
 import { listenWriteQueue } from './lib/writeQueue'
 import { parseNumberEntry, withNumberEntry } from './lib/liveEntry'
+import { listenImageChange } from './lib/imagePicker'
+import { withSlotImages } from '../src/images/entry-images.js'
 import { NumberContext, type NumberContextValue } from './lib/numberContext'
 import {
   IconNum,
@@ -200,12 +202,27 @@ export function App() {
     }
   }, [token])
 
+  // ピッカーで選び直した画像は、読み込み済みの辞書データにもその場で書く (どの画面にも同じ画像を出す)。
+  // 読み直したときはサーバが正本 (imageSlots) の画像を重ねて返す
+  useEffect(
+    () =>
+      listenImageChange((id, slot, image) =>
+        setData((prev) =>
+          prev ? withSlotImages(prev, { [`${id}:${slot}`]: { image } }) : prev
+        )
+      ),
+    []
+  )
+
   // 保存が済んだ番号は、読み込み済みの辞書データ (一覧・詳細・テストが読む) も差し替える。
   // 辞書データは deploy のときの写しなので、差し替えないと次の起動まで古い語のまま出る
   useEffect(() => {
     if (!token) return
     return listenWriteQueue({
       onSettled: (num) => {
+        // 代表 (①②)・確定状態はマップと詳細カードが百の位ごとに読んで持っている (useRepSlots)。
+        // どの画面で保存しても読み直させる (前は重ねて開いた編集画面を閉じたときだけだった)
+        setEditVersion((v) => v + 1)
         fetchAppNumberEntry(num, token)
           .then((raw) => {
             const entry = parseNumberEntry(raw)
