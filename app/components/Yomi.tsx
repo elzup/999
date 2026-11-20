@@ -1,6 +1,6 @@
-// よみの表示。記法 [す] (2 桁かなを 1 桁目だけで読む) の字には、読む数字を右肩に小さく添える (す³うる)。
+// よみの表示。半指定の字 (カタカナ。2 桁かなを 1 桁目だけで読む) には、読む数字を右肩に小さく添える (ス³うる)。
 // 記法 (ん) (読まないかな) の字は、薄く取り消し線で出す (さばんな の ん)。
-// 正本の記法は src/kana-notation.js (D-0062)、見せ方は QA-0043 で A-4 に決めた。
+// 記法の仕様は docs/kana-notation.md (D-0092)、見せ方は QA-0043 で A-4 に決めた。
 import { parseNotation } from '../lib/kanaNotation'
 import { halfDigit, useReadingTables } from '../lib/reading'
 

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { encode } from './encoder.js'
+import { stripNotation } from './kana-notation.js'
 import {
   SINGLE_DIGIT,
   normalizeDakuten,
@@ -87,7 +88,7 @@ const readBad = (word, wk) => {
   return nn && nw && nn[0] !== nw[0]
 }
 const sokuon3 = (wk) => {
-  const c = [...wk][2]
+  const c = [...stripNotation(wk)][2]
   return c === 'っ' || c === 'ッ'
 }
 

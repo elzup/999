@@ -44,10 +44,10 @@ describe('encode', () => {
     expect(encode('はひ').digits).toBe(encode('ぱぴ').digits)
   })
 
-  it('ジャジュジョ例外', () => {
-    expect(encode('ジャ').digits).toBe('68')
-    expect(encode('ジュ').digits).toBe('67')
-    expect(encode('ジョ').digits).toBe('64')
+  it('じゃじゅじょ例外', () => {
+    expect(encode('じゃ').digits).toBe('68')
+    expect(encode('じゅ').digits).toBe('67')
+    expect(encode('じょ').digits).toBe('64')
   })
 
   it('ん → 0 (core)', () => {
@@ -96,8 +96,8 @@ describe('encode', () => {
   })
 
   it('促音: 後続が2桁かなの場合', () => {
-    // カット: カ(9) + ッ(10) + ト(10)
-    expect(encode('カット').digits).toBe('91010')
+    // かっと: か(9) + っ(10) + と(10)
+    expect(encode('かっと').digits).toBe('91010')
   })
 
   it('促音: 末尾の促音はエラー', () => {

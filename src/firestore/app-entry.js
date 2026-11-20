@@ -23,6 +23,7 @@ export function tokenLabel(t) {
     single: 'D',
     double: 'DD',
     sokuon: 'っ',
+    half: 'h',
     halfOverflow: 'H',
     overflow: 'X',
   }

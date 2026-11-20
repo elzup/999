@@ -68,7 +68,7 @@ describe('MAIN_LAYOUT (999 / 1231 タブ)', () => {
     expect(f.J).toBe('=PICK_FIRST(C2,1)')
     expect(f.V).toBe('=PICK_FIRST(B2,3)')
     expect(f.G).toBe(
-      '=IF(OR(XOR(F2="",H2=""),NOT(OR(H2="",REGEXMATCH(H2,"^([ぁ-ゖ]|\\[[ぁ-ゖ]{1,2}\\]|\\([ぁ-ゖー]{1,2}\\))+$")))),"|","")'
+      '=IF(OR(XOR(F2="",H2=""),NOT(OR(H2="",REGEXMATCH(H2,"^([ぁ-ゖ]|[ァ-ヶ][ァィゥェォャュョー]?|\\([ぁ-ゖー]{1,2}\\))+$")))),"|","")'
     )
     expect(f.AA).toContain('XOR(Z2="",AB2="")')
     expect(f.H).toBeUndefined()

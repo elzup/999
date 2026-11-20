@@ -1,4 +1,5 @@
 import type { NumberEntry, RulesData } from '../data/schema'
+import { readPart } from './kanaNotation'
 
 export type Tier = 'core' | 'sub' | 'bad' | 'double'
 
@@ -71,7 +72,7 @@ function cleanWord(w: string): string {
 /** 同じ下2桁を持つ兄弟番号の中で、末尾がこの読みに一致する語を集める */
 function findExamples(siblings: NumberEntry[], kana: string): Example[] {
   return siblings
-    .filter((s) => s.w1k && s.w1k.endsWith(kana))
+    .filter((s) => s.w1k && readPart(s.w1k).endsWith(kana))
     .map((s) => ({ num: s.num, word: cleanWord(s.w1) || s.w1k }))
 }
 
@@ -152,7 +153,7 @@ function buildDistribution(
     .filter((c) => c.examples.length > 0)
     .map((c) => ({ kana: c.kana, count: c.examples.length }))
   const matched = registered.filter((s) =>
-    combos.some((c) => s.w1k.endsWith(c.kana))
+    combos.some((c) => readPart(s.w1k).endsWith(c.kana))
   ).length
   return {
     items,

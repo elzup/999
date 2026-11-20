@@ -43,6 +43,7 @@ function buildData(filename = 'words.tsv') {
     bad: 0,
     double: 0,
     sokuon: 0,
+    half: 0,
     halfOverflow: 0,
     overflow: 0,
   }

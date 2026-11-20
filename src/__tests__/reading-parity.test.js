@@ -104,15 +104,21 @@ describe('reading.ts と encoder.js の一致', () => {
     expect(diffs.slice(0, 20)).toEqual([])
   })
 
-  it('記法 [す] (1 桁読み) の読みも encoder.js と同じになる', () => {
+  it('半指定 (カタカナ) の読みも encoder.js と同じになる', () => {
     const halves = Object.entries({ ...DOUBLE_DIGIT, ...LONG_DIGIT })
       .filter(([, v]) => String(v).length === 2)
       .map(([kana]) => kana)
+      .filter((kana) => /^[ぁ-ゖ][ぁぃぅぇぉゃゅょー]?$/.test(kana))
+      .map((kana) =>
+        kana.replace(/[ぁ-ゖ]/g, (c) =>
+          String.fromCharCode(c.charCodeAt(0) + 0x60)
+        )
+      )
     const plain = Object.keys(SINGLE_DIGIT).slice(0, 12)
     const diffs = []
     for (const h of halves) {
       for (const p of plain) {
-        for (const kana of [`[${h}]${p}`, `${p}[${h}]`, `${p}[${h}]${p}`]) {
+        for (const kana of [`${h}${p}`, `${p}${h}`, `${p}${h}${p}`]) {
           const want = reference(kana)
           const got = encodeDigits(tables, kana)
           if (want !== got) diffs.push({ kana, want, got })
@@ -120,7 +126,8 @@ describe('reading.ts と encoder.js の一致', () => {
       }
     }
     expect(diffs.slice(0, 20)).toEqual([])
-    expect(encodeDigits(tables, '[い]う')).toBe(null)
+    expect(encodeDigits(tables, 'イう')).toBe(null)
+    expect(encodeDigits(tables, '[す]う')).toBe(null)
     expect(encodeDigits(tables, '[すう')).toBe(null)
   })
 
@@ -132,7 +139,7 @@ describe('reading.ts と encoder.js の一致', () => {
         for (const kana of [
           `${a}(${b})${a}`,
           `${a}${b}(${a})${b}`,
-          `[す](${a})${b}`,
+          `ス(${a})${b}`,
         ]) {
           const want = reference(kana)
           const got = encodeDigits(tables, kana)
