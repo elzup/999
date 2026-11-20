@@ -93,13 +93,20 @@ export const LABELS: Array<{ id: string; meaning: string; retired?: boolean }> =
   ]
 
 /** name はシートの tags タブの表示名 (res → アトリエ)。無いタグもある */
-export type TagSuggestion = { tag: string; count: number; name?: string }
+export type TagSuggestion = {
+  tag: string
+  count: number
+  /** 表示名 (略称) */
+  name?: string
+  /** 正式名 (title)。略称と同じく検索に当てる */
+  title?: string
+}
 
 // 半角カナ・全角英数・大文字小文字の違いで当たらないことが無いようにそろえる
 const foldForSearch = (text: string) => text.normalize('NFKC').toLowerCase()
 
 /**
- * 入力中の文字に合うタグ候補。タグ (id) と表示名のどちらにも当てる
+ * 入力中の文字に合うタグ候補。タグ (id)・表示名・正式名のどれにも当てる
  * («アトリエ» と打って #res を出せるように)。前方一致を先に、その中は使われている
  * 回数の多い順。既に付いているタグは出さない
  */
@@ -113,7 +120,9 @@ export function suggestTags(
   const pool = known.filter((item) => !exclude.includes(item.tag))
   if (!q) return pool.slice(0, limit)
   const keysOf = (item: TagSuggestion) =>
-    [item.tag, item.name ?? ''].filter(Boolean).map(foldForSearch)
+    [item.tag, item.name ?? '', item.title ?? '']
+      .filter(Boolean)
+      .map(foldForSearch)
   const head = pool.filter((item) => keysOf(item).some((k) => k.startsWith(q)))
   const mid = pool.filter(
     (item) => !head.includes(item) && keysOf(item).some((k) => k.includes(q))

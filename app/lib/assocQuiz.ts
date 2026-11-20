@@ -47,6 +47,7 @@ export function buildAssocQuestion(
     prompt: item.num,
     answer: item.word,
     choices: shuffle([item.word, ...distractors], rng),
+    isWord: true,
     bmKey: 'n:' + item.num,
   }
 }

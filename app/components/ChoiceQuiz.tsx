@@ -2,6 +2,7 @@ import { useEffect, useReducer, useCallback, useRef } from 'preact/hooks'
 import { vibrate } from '../lib/haptics'
 import type { ReviewItem } from './ReviewPanel'
 import TestNavBar from './TestNavBar'
+import TaggedWord from './TaggedWord'
 import MarkButton from './MarkButton'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { applyMarks, useReviewMarks } from '../lib/reviewMarks'
@@ -11,6 +12,8 @@ export type ChoiceQuestion = {
   prompt: string
   answer: string
   choices: string[]
+  /** 選択肢・正解が辞書の語 (タグ付き)。語は TaggedWord で出す (タグは表示名) */
+  isWord?: boolean
   /** 振り返りでブックマークする際のキー(例: 'n:573')。無ければ★を出さない。 */
   bmKey?: string
 }
@@ -120,6 +123,7 @@ function ChoiceQuiz({
           correct,
           userAnswer: choice,
           rightAnswer: q.answer,
+          isWord: q.isWord,
           bmKey: q.bmKey,
         },
       })
@@ -214,7 +218,9 @@ function ChoiceQuiz({
                   <span class="cm-choice-index">
                     {String.fromCharCode(65 + i)}
                   </span>
-                  <span class="cm-choice-value">{choice}</span>
+                  <span class="cm-choice-value">
+                    {q.isWord ? <TaggedWord word={choice} /> : choice}
+                  </span>
                 </button>
               )
             })}

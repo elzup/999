@@ -53,6 +53,20 @@ const SIDE_LABEL = { h: '人', m: '物' }
 const tagNameOf = (tag) =>
   state.tagShorts?.[tag] || state.tagNames?.[tag] || tag
 const tagTitleOf = (tag) => state.tagNames?.[tag] || tag
+// 語の本体 (タグとラベル -n を落とす。app/lib/wordTags.ts の parseWord と同じ)
+const LABEL_RE = /(^|\s)-([a-z])(?=\s|$)/g
+const baseOfWord = (word) =>
+  String(word ?? '')
+    .replace(TAG_RE, '')
+    .replace(LABEL_RE, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
+/** 文字だけで語を出すとき (alt・title・本文): タグは表示名を括弧で添える (app の wordText と同じ) */
+const wordText = (word) => {
+  const tags = [...new Set(tagsOfWord(word))]
+  const base = baseOfWord(word)
+  return tags.length ? `${base} (${tags.map(tagNameOf).join('・')})` : base
+}
 
 // 表示中の対象の種類 (番号 / 日付 / カード)。枠の並びは種類ごとにサーバが返す
 // (src/images/targets.js の IMAGE_KINDS)。番号・日付は 人 1〜3 → 物 1〜3 の 6 枠
@@ -491,7 +505,7 @@ function thumbEl(v, slot) {
     i.loading = 'lazy'
     i.decoding = 'async'
     i.src = v.img.url
-    i.alt = v.word
+    i.alt = wordText(v.word)
     // 概念 (#g) は実物の写真ではないので、アプリと同じく二重の枠で見分ける
     if (tagsOfWord(v.word).includes('g')) i.dataset.concept = ''
     thumb.appendChild(i)
@@ -534,7 +548,11 @@ function slotHead(w, slot) {
   key.className = 'slot-key'
   // 枠はシート・アプリと同じ名前 (wh1〜wm3) で出す。保存のキーは旧名 (w1 など) のまま
   const base = baseSlot(slot)
-  key.textContent = (state.slotNames?.[base] || base) + slot.slice(base.length)
+  // タグ違いで分けた枠 (w1#res) はタグを表示名で添える
+  const tag = slot.slice(base.length + 1)
+  key.textContent =
+    (state.slotNames?.[base] || base) + (tag ? ` ${tagNameOf(tag)}` : '')
+  if (tag) key.title = tagTitleOf(tag)
   head.append(num, key)
   return head
 }
@@ -548,15 +566,15 @@ function wordRow(word) {
     el.textContent = '(空)'
     return el
   }
-  el.title = word
+  el.title = [...new Set(tagsOfWord(word))].map(tagTitleOf).join('・')
   const base = document.createElement('span')
-  base.textContent = String(word).replace(TAG_RE, '').trim()
+  base.textContent = baseOfWord(word)
   el.appendChild(base)
   for (const tag of new Set(tagsOfWord(word))) {
     const b = document.createElement('button')
     b.className = 'word-tag'
     b.textContent = tagNameOf(tag)
-    b.title = `#${tag} で絞る`
+    b.title = `${tagTitleOf(tag)} で絞る`
     b.onclick = () => setTagFilter(tag)
     el.appendChild(b)
   }
@@ -602,7 +620,7 @@ function statRow(v) {
     row.appendChild(chip('is-changed', 'alert', '語変更'))
     const was = document.createElement('div')
     was.className = 'slot-was'
-    was.textContent = `取得時: ${searchedWord(v.id, v.slot, v.img)}`
+    was.textContent = `取得時: ${wordText(searchedWord(v.id, v.slot, v.img))}`
     row.appendChild(was)
   }
   return row
@@ -1000,7 +1018,7 @@ function renderTagList(list) {
   for (const s of tagSummaries()) {
     const row = document.createElement('button')
     row.className = 'tag-row' + (s.tag === tagFilter ? ' active' : '')
-    row.title = `#${s.tag}`
+    row.title = tagTitleOf(s.tag)
     const img = s.kept ?? s.any
     if (img) {
       const bg = document.createElement('img')

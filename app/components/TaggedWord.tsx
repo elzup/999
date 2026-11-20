@@ -6,6 +6,7 @@
 // (概念 #g と 馴染みがない -n) は語そのものの見た目でも分かるようにする。
 import { h } from 'preact'
 import { parseWord } from '../lib/wordTags'
+import { parseTaggedItems } from '../lib/tags'
 import { tagNameOf, useTagNames } from '../lib/tagNames'
 
 /** 語の見た目を変えるタグ・ラベル。ほかは右肩の文字だけ */
@@ -60,6 +61,29 @@ function TaggedWord({
         </span>
       ) : null}
     </span>
+  )
+}
+
+/**
+ * カンマ区切りの語の一覧 (人・物・念の列: "信長,空海#a -n,#b") を、1 語ずつ TaggedWord で出す。
+ * "#b" だけの項目は直前の語の続き (parseTaggedItems の省略記法) として語を補う
+ */
+export function TaggedList({ raw, sep = '、' }: { raw: string; sep?: string }) {
+  const items = parseTaggedItems(raw)
+  return (
+    <>
+      {items.map((item, i) => {
+        const word = item.label.startsWith('#')
+          ? `${item.base}${item.label}`
+          : item.label
+        return (
+          <span key={i}>
+            {i > 0 ? sep : null}
+            <TaggedWord word={word} />
+          </span>
+        )
+      })}
+    </>
   )
 }
 

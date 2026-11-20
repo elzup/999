@@ -16,7 +16,7 @@ import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
-import { useTagNames, wordText } from '../lib/tagNames'
+import { useTagNames, useTagTitles, wordText } from '../lib/tagNames'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
 import { rankeyOf } from '../lib/rankey'
@@ -183,6 +183,7 @@ function NumDetailPanel(props: Props) {
   const { d } = props
   const ctx = useNumberContext()
   const tagNames = useTagNames()
+  const tagTitles = useTagTitles()
   const bookmarks = props.bookmarks ?? ctx?.bookmarks
   const onToggleBm = props.onToggleBm ?? ctx?.onToggleBm
   const onEdit = props.onEdit ?? (ctx ? () => ctx.openEditor(d.num) : undefined)
@@ -227,7 +228,13 @@ function NumDetailPanel(props: Props) {
     ),
   ].map((word) => {
     const { base, tags, labels } = parseWord(word)
-    return { base, text: marksMeaning(tags, labels, tagNames).join(' ・ ') }
+    // 意味の説明なので、タグは略称ではなく正式名で出す
+    return {
+      base,
+      text: marksMeaning(tags, labels, { ...tagNames, ...tagTitles }).join(
+        ' ・ '
+      ),
+    }
   })
 
   return (

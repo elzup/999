@@ -94,7 +94,10 @@ function RecallTreePanel({ numbers, rules, input }: Props) {
             </span>
             {(tree.assigned?.w1 || tree.assigned?.w2) && (
               <span class="recall-assigned">
-                登録: <b>{tree.assigned.w1 || tree.assigned.w2}</b>
+                登録:{' '}
+                <b>
+                  <TaggedWord word={tree.assigned.w1 || tree.assigned.w2} />
+                </b>
                 <span class="recall-assigned-k">
                   {tree.assigned.w1k || tree.assigned.w2k}
                 </span>

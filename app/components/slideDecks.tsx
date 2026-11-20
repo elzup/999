@@ -10,7 +10,7 @@ import { getFfRows, isValidFfRow } from '../lib/ffQuiz'
 import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
 import type { SlideDeck } from '../lib/slideDeck'
 import { wordImage } from '../lib/wordImage'
-import TaggedWord from './TaggedWord'
+import TaggedWord, { TaggedList } from './TaggedWord'
 import { useTagNames, wordText } from '../lib/tagNames'
 
 // 各グループのデータを SlideDeck (問題面 → 答え面) に写す。
@@ -90,7 +90,9 @@ function NumberAnswer({ d }: { d: NumberEntry }) {
         {TAG_LABELS.filter(([key]) => d[key]).map(([key, label]) => (
           <div key={key} class="detail-chip">
             <span class="dc-label">{label}</span>
-            <span class="dc-val">{d[key]}</span>
+            <span class="dc-val">
+              <TaggedList raw={String(d[key])} />
+            </span>
           </div>
         ))}
       </div>

@@ -1,6 +1,7 @@
 import { h } from 'preact'
 import { useMemo, useState } from 'preact/hooks'
 import NumDetailPanel from './NumDetailPanel'
+import TaggedWord from './TaggedWord'
 import DetailSheet from './DetailSheet'
 import { numOfBmKey, useNumberContext } from '../lib/numberContext'
 import { useSelection } from '../lib/useSelection'
@@ -10,6 +11,8 @@ export type ReviewItem = {
   correct: boolean
   userAnswer?: string
   rightAnswer: string
+  /** 答えが辞書の語 (タグ付き)。TaggedWord で出す (タグは表示名) */
+  isWord?: boolean
   /** ブックマークキー(例: 'n:573')。bookmarks/onToggleBm と揃ったとき★を出す。 */
   bmKey?: string
   /** テスト中に «あとで見返す» 印を付けた問題 */
@@ -17,6 +20,10 @@ export type ReviewItem = {
   /** タップで詳細パネルを開く番号。無ければ bmKey の番号を使う */
   num?: string
 }
+
+/** 答えの表示。語ならタグを表示名で出す (生の #tag を出さない) */
+const answerOf = (item: ReviewItem, text: string | undefined) =>
+  item.isWord && text ? <TaggedWord word={text} /> : text
 
 type Props = {
   title: string
@@ -112,9 +119,13 @@ function ReviewPanel({
                 <div key={'w' + i} {...rowProps(item, 'wrong')}>
                   {mark(item)}
                   <span class="review-label">{item.label}</span>
-                  <span class="review-user">{item.userAnswer}</span>
+                  <span class="review-user">
+                    {answerOf(item, item.userAnswer)}
+                  </span>
                   <span class="review-arrow">&rarr;</span>
-                  <span class="review-right">{item.rightAnswer}</span>
+                  <span class="review-right">
+                    {answerOf(item, item.rightAnswer)}
+                  </span>
                   {renderStar(item)}
                 </div>
               ))}
@@ -125,7 +136,9 @@ function ReviewPanel({
             <div key={'c' + i} {...rowProps(item, 'correct')}>
               {mark(item)}
               <span class="review-label">{item.label}</span>
-              <span class="review-right">{item.rightAnswer}</span>
+              <span class="review-right">
+                {answerOf(item, item.rightAnswer)}
+              </span>
               {renderStar(item)}
             </div>
           ))}

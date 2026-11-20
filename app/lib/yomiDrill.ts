@@ -1,3 +1,4 @@
+import { parseWord } from './wordTags'
 import type {
   NumberEntry,
   RulesData,
@@ -21,7 +22,7 @@ export type YomiItem = {
 }
 
 export const YOMI_SCOPES = ['all', 'youon', 'long'] as const
-export type YomiScope = typeof YOMI_SCOPES[number]
+export type YomiScope = (typeof YOMI_SCOPES)[number]
 
 export const YOMI_SCOPE_LABEL: Record<YomiScope, string> = {
   all: '全部',
@@ -124,11 +125,7 @@ export function scopedNums(items: readonly YomiItem[]): Set<string> {
  * 語からタグ (#akn) と末尾ラベル (-j) を落とす。4択の選択肢に編集用の記号が
  * 混ざると、語そのものより記号で見分けられてしまう。
  */
-const quizWord = (word: string) =>
-  word
-    .split('#')[0]
-    .replace(/\s+-\w+$/, '')
-    .trim()
+const quizWord = (word: string) => parseWord(word).base
 
 /**
  * 範囲内の読みを使う番号を (num, word) に落とす。

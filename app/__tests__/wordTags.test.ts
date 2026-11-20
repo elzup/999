@@ -107,3 +107,20 @@ describe('suggestTags の表示名での検索', () => {
     ])
   })
 })
+
+describe('suggestTags は正式名でも引ける', () => {
+  it('略称に無い文字でも、正式名 (title) に当たれば出す', () => {
+    const known = [
+      {
+        tag: 'tri',
+        count: 3,
+        name: 'ﾄﾘｯｶﾙ',
+        title: 'トリッカル・もちもちほっぺ大作戦',
+      },
+      { tag: 'res', count: 5, name: 'アトリエ' },
+    ]
+    expect(suggestTags(known, 'もちもち', []).map((s) => s.tag)).toEqual([
+      'tri',
+    ])
+  })
+})

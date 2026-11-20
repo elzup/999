@@ -52,7 +52,7 @@ import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
 import { useNumberContext } from '../lib/numberContext'
-import { tagNameOf, useTagNames, wordText } from '../lib/tagNames'
+import { tagNameOf, useTagLabel, useTagNames, wordText } from '../lib/tagNames'
 
 const REP_RANKS = [1, 2] as const
 const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
@@ -133,9 +133,10 @@ export default function NumberDetailTab({
             tag,
             count,
             name: tagNames?.[tag],
+            title: ctx?.tagTitles?.[tag],
           }))
         : [],
-    [numbers, tagNames]
+    [numbers, tagNames, ctx?.tagTitles]
   )
 
   /**
@@ -818,6 +819,7 @@ function TagRow({
   onChange: (word: string) => void
 }) {
   const names = useTagNames()
+  const tagLabel = useTagLabel()
   const [adding, setAdding] = useState(false)
   const [query, setQuery] = useState('')
   const parsed = parseWord(word)
@@ -842,11 +844,11 @@ function TagRow({
           </span>
         ) : null}
         {parsed.tags.map((tag) => (
-          <span key={'t' + tag} class="nd-tag" title={`#${tag}`}>
+          <span key={'t' + tag} class="nd-tag" title={tagLabel.title(tag)}>
             {tagNameOf(tag, names)}
             <button
               class="nd-tag-x"
-              aria-label={`タグ ${tag} を外す`}
+              aria-label={`タグ ${tagLabel.short(tag)} を外す`}
               onClick={() => onChange(removeTag(word, tag))}
             >
               ×
@@ -895,9 +897,9 @@ function TagRow({
                 class="nd-tag-cand"
                 onClick={() => commit(item.tag)}
               >
-                #{item.tag}
-                {item.name && item.name !== item.tag ? (
-                  <span class="nd-tag-name">{item.name}</span>
+                {item.name ?? tagNameOf(item.tag, names)}
+                {item.title && item.title !== item.name ? (
+                  <span class="nd-tag-name">{item.title}</span>
                 ) : null}
                 <small>{item.count}</small>
               </button>
