@@ -1,36 +1,30 @@
-// 読まないかなを記法 ( ) で書く (nr kana:skip の規則)。3 種類ある。
+// 読まないかなを記法 (半角カナ) で書く (nr kana:skip の規則)。3 種類ある。
 //
 //   middle  rankey が «1 文字飛ばせば番号に合う» を自動で探して ! を付けていたよみ
-//           さばんな → さば(ん)な (どのかなを読まないかをよみに残す)
+//           さばんな → さばﾝな (どのかなを読まないかをよみに残す)
 //   tail    3 桁を超えて読まない語尾 (rankey の余り)
-//           にいさん → にいさ(ん)
+//           にいさん → にいさﾝ
 //   restore よみから読まないかなを消してあるもの。語 (かなだけの語) と突き合わせて戻す
-//           サバンナ / さばな → さば(ん)な、ミッキー / みっき → みっき(ー)
+//           サバンナ / さばな → さばﾝな、ミッキー / みっき → みっきｰ
 //
 // middle と tail は rankey が変わらないものだけ、restore は読む数字が変わらないものだけを候補にする
 // (どれも読み方を変えない置き換え)。記法がもう付いているよみは触らない。
 
 import { SLOT_KEYS } from './sheet-layout.js'
-import { KANA_CELL_PATTERN, hasNotation } from './kana-notation.js'
+import { KANA_CELL_PATTERN, hasNotation, toSkipKana } from './kana-notation.js'
 import { findOmission, rankey } from './rankey.js'
 import { score } from './scorer.js'
 import { extractName, isKanaOnly, toHiragana } from './words.js'
 
 const KANA_CELL = new RegExp(KANA_CELL_PATTERN)
-/** ( ) で囲めるかな (記法の正本と同じ) */
+/** 読まないかなにできる字 (ひらがなと ー) */
 const SKIPPABLE = /^[ぁ-ゖー]+$/
 
 const text = (value) =>
   value === null || value === undefined ? '' : String(value).trim()
 
-/** 読まないかなの並びを ( ) で囲む。( ) に入るのは 2 文字までなので分ける (ちゃん → (ちゃ)(ん)) */
-function wrapSkip(run) {
-  const chars = [...run]
-  const groups = []
-  for (let i = 0; i < chars.length; i += 2)
-    groups.push(`(${chars.slice(i, i + 2).join('')})`)
-  return groups.join('')
-}
+/** 読まないかなの並びを半角カナにする (ちゃん → ﾁｬﾝ) */
+const wrapSkip = (run) => toSkipKana(run)
 
 const digitsOf = (kana) => {
   try {
@@ -45,7 +39,7 @@ const isTarget = (reading, num) =>
   Boolean(reading) && !hasNotation(reading) && /^\d{3}$/.test(text(num))
 
 /**
- * 自動で中間省略と判定されるよみを、記法 ( ) で書いたよみにする。対象外なら null
+ * 自動で中間省略と判定されるよみを、記法 (半角カナ) で書いたよみにする。対象外なら null
  * @param {string} kana よみ
  * @param {string} num  3 桁の番号
  */
@@ -57,18 +51,18 @@ export function skipNotationFor(kana, num) {
   const at = findOmission(reading, num)
   if (at < 0) return null
   const chars = [...reading]
-  // 記法で囲めるのはひらがなだけ (シートの check 列と同じ)
+  // 読まないかなにできるのはひらがなだけ (シートの check 列と同じ)
   if (!/^[ぁ-ゖ]$/.test(chars[at])) return null
   const next = [
     ...chars.slice(0, at),
-    `(${chars[at]})`,
+    toSkipKana(chars[at]),
     ...chars.slice(at + 1),
   ].join('')
   return rankey(next, num) === before ? next : null
 }
 
 /**
- * 3 桁を超えて読まない語尾を ( ) で囲んだよみにする (にいさん → にいさ(ん))。対象外なら null
+ * 3 桁を超えて読まない語尾を半角カナにしたよみにする (にいさん → にいさﾝ)。対象外なら null
  */
 export function tailSkipFor(kana, num) {
   const reading = text(kana)
@@ -96,8 +90,8 @@ export function tailSkipFor(kana, num) {
 }
 
 /**
- * よみから消してある読まないかなを、語 (かなだけの語) と突き合わせて ( ) で戻す。
- * サバンナ / さばな → さば(ん)な。読む数字が変わるもの・突き合わせられないものは null
+ * よみから消してある読まないかなを、語 (かなだけの語) と突き合わせて半角カナで戻す。
+ * サバンナ / さばな → さばﾝな。読む数字が変わるもの・突き合わせられないものは null
  */
 export function restoreSkipFor(word, kana, num) {
   const reading = text(kana)

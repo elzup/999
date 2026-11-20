@@ -1,31 +1,21 @@
-// よみの表示。半指定の字 (カタカナ。2 桁かなを 1 桁目だけで読む) には、読む数字を右肩に小さく添える (ス³うる)。
-// 記法 (ん) (読まないかな) の字は、薄く取り消し線で出す (さばんな の ん)。
-// 記法の仕様は docs/kana-notation.md (D-0092)、見せ方は QA-0043 で A-4 に決めた。
+// よみの表示。書かれたままの字を出す (半指定のカタカナ ス、読まないかなの半角カナ ﾝ)。
+// 読まないかなは数字にしないことが分かるよう薄く出す。読む数字は添えない (ツ² のような別の見た目を作らない)。
+// 記法の仕様は docs/kana-notation.md (D-0093)。
 import { parseNotation } from '../lib/kanaNotation'
-import { halfDigit, useReadingTables } from '../lib/reading'
 
 type Props = { kana: string; class?: string }
 
 const Yomi = ({ kana, class: cls }: Props) => {
-  const tables = useReadingTables()
   const segments = parseNotation(kana)
-  // 括弧が壊れたよみは、直すきっかけになるよう書かれたまま出す
-  if (!segments || segments.every((s) => !s.half && !s.skip)) {
+  if (!segments || segments.every((s) => !s.skip)) {
     return <span class={cls}>{kana}</span>
   }
   return (
     <span class={cls}>
       {segments.map((s, i) =>
         s.skip ? (
-          <span key={i} class="yomi-skip" title="読まないかな (中間の省略)">
+          <span key={i} class="yomi-skip" title="読まないかな">
             {s.text}
-          </span>
-        ) : s.half ? (
-          <span key={i} class="yomi-half" title="2 桁のかなを 1 桁目だけで読む">
-            {s.text}
-            <sup class="yomi-half-digit">
-              {(tables && halfDigit(tables, s.text)) ?? '?'}
-            </sup>
           </span>
         ) : (
           s.text

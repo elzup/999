@@ -2,8 +2,8 @@
 // 読み書きは kana-canonical-cli.js (nr kana:canonical)。DB だけを書く (D-0091)。
 //
 //   kata    カタカナを普通に読んでいるよみ    パソ → ぱそ   (カタカナは半指定の記法なので)
-//   youon4  拗音 4 字の自動省略               じょんき → じょ(ん)き
-//   restore / middle                          kana-skip-migrate.js の規則 (途中の読まないかなを ( ) で書く)
+//   youon4  拗音 4 字の自動省略               じょんき → じょﾝき
+//   restore / middle                          kana-skip-migrate.js の規則 (途中の読まないかなを半角カナで書く)
 //                                             語尾の書き足し (tail など) は最短よみの規則と食い違うので当てない
 //   half    番号に合わない 2 桁かなを半指定に みつる → みツる (候補が 1 つに決まるときだけ)
 //
@@ -13,12 +13,13 @@
 // どちらも {k, w} の完全一致で語に紐付いているので、付け替えないと外れる。
 
 import { SLOT_KEYS } from './sheet-layout.js'
-import { KANA_CELL_PATTERN, hasNotation } from './kana-notation.js'
+import { KANA_CELL_PATTERN, hasNotation, toSkipKana } from './kana-notation.js'
 import { skipRewriteFor } from './kana-skip-migrate.js'
 import { encode } from './encoder.js'
 
 const KANA_CELL = new RegExp(KANA_CELL_PATTERN)
 const SMALL = 'ぁぃぅぇぉゃゅょー'
+const HANKAKU = /[ｦ-ﾟ]/
 
 const text = (value) =>
   value === null || value === undefined ? '' : String(value).trim()
@@ -53,14 +54,14 @@ const fitsNum = (digits, num) =>
 
 /** パソ → ぱそ。ひらがなにしても読む数字が同じなら置き換える */
 export function kataPlainFor(kana) {
-  if (!/[ァ-ヶ]/.test(kana) || /[()]/.test(kana)) return null
+  if (!/[ァ-ヶ]/.test(kana) || HANKAKU.test(kana)) return null
   // 半指定として読めるなら記法として書かれているので触らない
   if (digitsOf(kana) !== null) return null
   const hira = toHira(kana)
   return KANA_CELL.test(hira) && digitsOf(hira) !== null ? hira : null
 }
 
-/** じょんき → じょ(ん)き。拗音 4 字の省略を encoder が暗黙に当てているよみ */
+/** じょんき → じょﾝき。拗音 4 字の省略を encoder が暗黙に当てているよみ */
 export function youon4SkipFor(kana) {
   if (hasNotation(kana)) return null
   let result
@@ -71,22 +72,15 @@ export function youon4SkipFor(kana) {
   }
   if (!result.youon4) return null
   const chars = [...kana]
-  const next = `${chars[0]}${chars[1]}(${chars[2]})${chars[3]}`
+  const next = `${chars[0]}${chars[1]}${toSkipKana(chars[2])}${chars[3]}`
   return digitsOf(next) === result.digits ? next : null
 }
 
-/** 地のかなの位置 (半指定にできる字の頭)。( ) の中と小書きは除く */
+/** 地のかなの位置 (半指定にできる字の頭)。読まないかな (半角カナ) と小書きは除く */
 function halfStarts(kana) {
-  const chars = [...kana]
-  const starts = []
-  let depth = 0
-  chars.forEach((ch, i) => {
-    if (ch === '(') depth++
-    else if (ch === ')') depth--
-    else if (depth === 0 && /[ぁ-ゖ]/.test(ch) && !SMALL.includes(ch))
-      starts.push(i)
-  })
-  return starts
+  return [...kana].flatMap((ch, i) =>
+    /[ぁ-ゖ]/.test(ch) && !SMALL.includes(ch) ? [i] : []
+  )
 }
 
 /** i 文字目 (と続く小書き) をカタカナにしたよみ。作れなければ null */
@@ -132,12 +126,12 @@ export function canonicalRewriteFor(word, kana, num) {
   apply('kata', kataPlainFor(to))
   apply('youon4', youon4SkipFor(to))
   // restore / tail は読む数字を変えずに書き方だけ直す規則なので、番号に合っているよみにだけ当てる。
-  // 合っていないよみに tail を当てると «みつる → みつ(る)» のように別の番号の形に揃えてしまう
+  // 合っていないよみに tail を当てると «みつる → みつﾙ» のように別の番号の形に揃えてしまう
   const fits = fitsNum(digitsOf(to), num)
   const skip = skipRewriteFor(word, to, num)
   // 語尾の書き足し (tail / 語尾まで戻す restore) は当てない。よみは 3 桁に届く最短で止める
   // 規則 (キスマーク=きす) と食い違うため未決 (docs/kana-notation.md)
-  const isTrailing = (next) => next.endsWith(')')
+  const isTrailing = (next) => HANKAKU.test([...next].at(-1) ?? '')
   if (
     skip &&
     skip.kind !== 'tail' &&

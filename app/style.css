@@ -6778,20 +6778,11 @@ img[data-concept] {
   text-shadow: 0 0 6px var(--bg);
 }
 
-/* よみの 1 桁読み [す] (QA-0043 A-4): 字の右肩に読む数字を小さく添える */
-/* 記法 (ん): 読まないかな。数字にしないことが分かるよう薄く取り消し線で出す */
+/* 記法 ﾝ (半角カナ): 読まないかな。数字にしないことが分かるよう薄く取り消し線で出す */
 .yomi-skip {
   opacity: 0.45;
   text-decoration: line-through;
   text-decoration-thickness: 1px;
-}
-.yomi-half-digit {
-  font-size: 0.62em;
-  color: var(--warn);
-  margin-left: 1px;
-  vertical-align: 0.55em;
-  line-height: 0;
-  font-variant-numeric: tabular-nums;
 }
 
 /* グループ画面のタグの md カード。<button> なので既定の枠・文字の並びを md カードに揃える */
