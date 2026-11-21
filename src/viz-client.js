@@ -607,6 +607,7 @@ function RuleCharts({ ruleStats }) {
     { key: 'sub', label: 'single sub', cls: 'tok-sub' },
     { key: 'bad', label: 'single bad', cls: 'tok-bad' },
     { key: 'sokuon', label: 'sokuon (っ)', cls: 'tok-sokuon' },
+    { key: 'half', label: 'half (半指定 ス)', cls: 'tok-halfspec' },
     { key: 'halfOverflow', label: 'halfOverflow', cls: 'tok-half' },
     { key: 'overflow', label: 'overflow', cls: 'tok-overflow' },
   ]
