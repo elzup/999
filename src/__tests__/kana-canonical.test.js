@@ -37,8 +37,21 @@ describe('よみを 1 通りの書き方に揃える', () => {
     expect(canonicalRewriteFor('キスマーク', 'きす', '933')).toBe(null)
   })
 
-  it('途中の読まないかなは ( ) で書く', () => {
-    expect(canonicalRewriteFor('', 'さばんな', '387')?.to).toBe('さばﾝな')
+  it('どのかなを読まないかは自動で決めない (中間省略・半指定のどちらでも合うよみも)', () => {
+    expect(canonicalRewriteFor('', 'さばんな', '387')).toBe(null)
+    expect(canonicalRewriteFor('ツミレ', 'つみれ', '230')).toBe(null)
+  })
+
+  it('語と突き合わせて途中のかなを戻す。ー は戻さない (う / い で書くことがあり一意でない)', () => {
+    expect(canonicalRewriteFor('ミミック', 'みみく', '339')?.to).toBe('みみｯく')
+    expect(canonicalRewriteFor('ニート', 'にと', '210')).toBe(null)
+  })
+
+  it('頭 3 桁で番号に合っているよみのかなを «読まない» にしない', () => {
+    // はっと = は8 っ10 と10 (810|10)、ねおん = ね79 お0 ん0 (790|0)。っ / お は読んでいるかな
+    expect(canonicalRewriteFor('ハット', 'はっと', '810')).toBe(null)
+    expect(canonicalRewriteFor('ネオン', 'ねおん', '790')).toBe(null)
+    expect(canonicalRewriteFor('ヨット', 'よっと', '410')).toBe(null)
   })
 })
 

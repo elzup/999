@@ -132,14 +132,21 @@ export function canonicalRewriteFor(word, kana, num) {
   // 語尾の書き足し (tail / 語尾まで戻す restore) は当てない。よみは 3 桁に届く最短で止める
   // 規則 (キスマーク=きす) と食い違うため未決 (docs/kana-notation.md)
   const isTrailing = (next) => HANKAKU.test([...next].at(-1) ?? '')
-  if (
-    skip &&
-    skip.kind !== 'tail' &&
-    !isTrailing(skip.to) &&
-    (fits || skip.kind === 'middle')
-  )
-    apply(skip.kind, skip.to)
-  else if (!fits) apply('half', halfFor(to, num))
+  // 自動で当てる skip は restore (語と突き合わせて途中のかなを戻す) だけ。
+  // middle は当てない。rankey の中間省略の探索は番号との完全一致で見るので、頭 3 桁で合っているよみ
+  // (はっと=81010 → 810、ねおん=7900 → 790) にも ! を付ける。それを記法にすると本来読んでいるかな
+  // (っ / お) を «読まない» に書き換えて読み方を壊す。番号に合わないよみでも、どのかなを読まないかは
+  // 一意に決まらない (つみれ=230 は つﾐれ とも ツみれ とも読める) ので人が決める。
+  // 語の ー を戻す restore も当てない。よみでは ー を う / い で書くことがあり (ニュース=にゅうす、
+  // バジーナ=ばじいな)、どの字で «読まない» を書くかが一意に決まらない (未決: docs/kana-notation.md)
+  const isRestorable =
+    skip?.kind === 'restore' &&
+    fits &&
+    !skip.to.includes('ｰ') &&
+    !isTrailing(skip.to)
+  if (isRestorable) apply('restore', skip.to)
+  // 半指定も、中間省略でも合わせられるよみ (つみれ) では読み方が一意に決まらないので当てない
+  else if (!fits && skip?.kind !== 'middle') apply('half', halfFor(to, num))
   return kinds.length ? { kinds, to } : null
 }
 
