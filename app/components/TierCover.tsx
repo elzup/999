@@ -48,19 +48,19 @@ const FULL: Size = {
   font: 16,
   hasText: true,
 }
-// ミニ: ★ / 編集 のボタン (高さ約 38px) の横に収まる大きさ。かなは読めないので描かない
+// ミニ: ★ / 編集 を縦 2 行に積んだ高さ (約 82px) の正方形に収まる大きさ。かなは小さく、行ラベル・見出しは省く
 const MINI: Size = {
-  cellW: 11,
-  cellH: 7,
+  cellW: 19,
+  cellH: 14,
   gap: 2,
   labelW: 0,
   headH: 0,
-  restGap: 4,
-  restW: 7,
-  arrowW: 4,
-  lane: 1.5,
+  restGap: 5,
+  restW: 11,
+  arrowW: 5,
+  lane: 2,
   stroke: 1.5,
-  font: 0,
+  font: 9,
   hasText: false,
 }
 // 長押しとみなす長さ。iOS の文字選択 (約 500ms) より先に出す
@@ -222,7 +222,7 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
       ))}
       {cover.words.map(path)}
       {/* かなは線の上に出す (線が文字を潰さないように) */}
-      {s.hasText
+      {s.font > 0
         ? [
             ...cover.cells.map((c) => {
               const b = g.cellBox(c)
@@ -230,7 +230,7 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
                 't:' + nodeKey(c),
                 b.x + b.w / 2,
                 b.y,
-                c.kana || '—',
+                c.kana || (s.hasText ? '—' : ''),
                 used.has(nodeKey(c))
               )
             }),

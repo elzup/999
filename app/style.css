@@ -600,8 +600,8 @@ body {
   color: var(--text);
   font-weight: bold;
 }
-/* 詳細カードの下端。★ / 編集 を横 1 列、その右にティアカバーのミニ表示 (D-0099 / D-0100)。
-   ミニ表示はボタンの高さに収まるので、カードの高さは増えない */
+/* 詳細カードの下端。★ / 編集 を縦 2 行に積み、その右にボタン 2 行分の正方形でティアカバーのミニ表示
+   (D-0101)。図が出ない番号はボタンを今まで通り横 1 列に並べる */
 .detail-foot {
   display: flex;
   align-items: stretch;
@@ -613,12 +613,19 @@ body {
   min-width: 0;
   margin-top: 0;
 }
+.detail-foot:has(.tier-cover) > .detail-foot-actions {
+  flex-direction: column;
+}
 /* ティアカバー: 読みの格子に語の経路 (TierCover.tsx)。語の行より控えめに */
 .tier-cover {
   flex-shrink: 0;
-  align-self: center;
-  padding: 2px;
-  border-radius: 4px;
+  align-self: stretch;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--surface2);
   cursor: zoom-in;
   /* 長押しで文字選択・メニューを出さない。縦スクロールはそのまま */
   user-select: none;
@@ -642,6 +649,12 @@ body {
 :is(.tier-cover, .tier-cover-pop) svg {
   display: block;
   font-size: 10px;
+}
+/* 正方形の領域 (ボタン 2 行分) に収まるよう、viewBox ごと縮める */
+.tier-cover svg {
+  max-width: calc(100% - 6px);
+  max-height: calc(100% - 6px);
+  height: auto;
 }
 :is(.tier-cover, .tier-cover-pop) .tc-head,
 :is(.tier-cover, .tier-cover-pop) .tc-label {
