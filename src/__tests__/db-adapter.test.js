@@ -35,6 +35,10 @@ function fakeStore() {
 /** firebase-admin を差し替えて connect を読む */
 async function loadConnect(store) {
   vi.resetModules()
+  // トークンがあると db.js は firebase-admin を通らず実 DB に直接繋ぐ (tokenStore)。
+  // direnv で FIRESTORE_ACCESS_TOKEN が入っているシェルでもモックを使うように消す
+  vi.stubEnv('FIRESTORE_ACCESS_TOKEN', '')
+  vi.stubEnv('GOOGLE_OAUTH_ACCESS_TOKEN', '')
   vi.doMock('firebase-admin/app', () => ({
     getApps: () => [{ name: 'test' }],
     initializeApp: () => ({ name: 'test' }),
