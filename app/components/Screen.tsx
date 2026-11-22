@@ -66,17 +66,27 @@ export function DockBar({ title, sub, children }: DockBarProps) {
 /**
  * panel に詳細カードを複数枚積むとき (2桁グループの 10 枚、π の 2 枚)。
  * 各カードが自前の ★ / 編集 を持つので、積んだまま見せると上のカードの操作が
- * 画面上半分に来る。枠を先頭カード 1 枚分の高さにしてカード単位でスナップさせ、
- * 先頭のカードを下端 (親指側) に置く。高さはカードごとに違うので実測する
+ * 画面上半分に来る。枠を先頭カード visible 枚分の高さにしてカード単位でスナップさせ、
+ * 先頭のカードを下端 (親指側) に置く。高さはカードごとに違うので実測する。
+ * π は 2 枚とも見えないと複数あることが分かりにくいので 2 枚分 (D-0104)
  */
-export function PanelCards({ children }: { children: ComponentChildren }) {
+export function PanelCards({
+  children,
+  visible = 1,
+}: {
+  children: ComponentChildren
+  visible?: number
+}) {
   const frameRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
     const frame = frameRef.current
-    const first = frame?.querySelector('.stack-up > *')
-    if (!frame || !(first instanceof HTMLElement)) return
-    frame.style.maxHeight = first.offsetHeight + 'px'
+    const cards = [...(frame?.querySelectorAll('.stack-up > *') ?? [])]
+      .slice(0, visible)
+      .filter((el): el is HTMLElement => el instanceof HTMLElement)
+    if (!frame || cards.length === 0) return
+    const height = cards.reduce((sum, el) => sum + el.offsetHeight, 0)
+    frame.style.maxHeight = height + 'px'
   })
 
   return (

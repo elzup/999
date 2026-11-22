@@ -683,7 +683,12 @@ function PiTab({ numbers }: Props) {
   // 2 組 (= 2 枚) をまとめて出す
   const panel =
     mode === 'view' && selectedPair ? (
-      <DetailSheet stacked nav={nav} onClose={() => setSelected(null)}>
+      <DetailSheet
+        stacked
+        stackVisible={2}
+        nav={nav}
+        onClose={() => setSelected(null)}
+      >
         {selectedPair.map((d) => (
           <NumDetailPanel key={d.num} d={d} />
         ))}
