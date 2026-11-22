@@ -21,6 +21,7 @@ import {
 } from '../lib/cropRect'
 import {
   CROP_BUTTONS,
+  cropSourceOf,
   type CropPosition,
   type SlotImage,
 } from '../lib/imagePicker'
@@ -56,7 +57,7 @@ export default function CropEditor({
   onDecide,
   onCancel,
 }: Props) {
-  const source = image.sourceImageUrl ?? ''
+  const source = cropSourceOf(image)
   const [natural, setNatural] = useState<Size | null>(null)
   const [loadFailed, setLoadFailed] = useState(!source)
   const [box, setBox] = useState<Size | null>(null)

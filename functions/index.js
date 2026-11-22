@@ -307,10 +307,11 @@ function createImageFetcher() {
         import('./lib/images/fetch-one.js'),
         import('./lib/images/query.js'),
       ])
-      const { uploadWebp } = uploader.createUploader(() =>
+      const { uploadWebp, saveOnce } = uploader.createUploader(() =>
         getStorage().bucket(uploader.BUCKET)
       )
-      lib = { uploadWebp, fetchOne, query }
+      // 元画像は縮小版を作らずに 1 ファイルだけ上げる (切り抜き直しにしか使わない)
+      lib = { uploadWebp, saveOriginal: saveOnce, fetchOne, query }
     }
     return lib
   }
@@ -320,16 +321,32 @@ function createImageFetcher() {
       return (await load()).query.buildSearchWord(word, tagMap)
     },
     async bySearch({ query, rejected }) {
-      const { uploadWebp, fetchOne } = await load()
-      return fetchOne.fetchBySearch({ query, rejected, uploadWebp })
+      const { uploadWebp, saveOriginal, fetchOne } = await load()
+      return fetchOne.fetchBySearch({
+        query,
+        rejected,
+        uploadWebp,
+        saveOriginal,
+      })
     },
     async candidates({ query, rejected }) {
-      const { uploadWebp, fetchOne } = await load()
-      return fetchOne.fetchCandidates({ query, rejected, uploadWebp })
+      const { uploadWebp, saveOriginal, fetchOne } = await load()
+      return fetchOne.fetchCandidates({
+        query,
+        rejected,
+        uploadWebp,
+        saveOriginal,
+      })
     },
     async recrop({ image, position, rect }) {
-      const { uploadWebp, fetchOne } = await load()
-      return fetchOne.recropAt({ image, uploadWebp, position, rect })
+      const { uploadWebp, saveOriginal, fetchOne } = await load()
+      return fetchOne.recropAt({
+        image,
+        uploadWebp,
+        saveOriginal,
+        position,
+        rect,
+      })
     },
   }
 }

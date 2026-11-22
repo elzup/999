@@ -176,7 +176,8 @@ async function handleImageRequest({
   } else {
     try {
       if (path === '/console/recrop') {
-        if (!current?.image?.sourceImageUrl) return fail('元画像URLが無い')
+        const { originalUrl, sourceImageUrl } = current?.image ?? {}
+        if (!originalUrl && !sourceImageUrl) return fail('元画像URLが無い')
         const position = body.position ?? 'top'
         if (!CROP_POSITIONS.includes(position))
           return {
