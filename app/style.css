@@ -600,6 +600,79 @@ body {
   color: var(--text);
   font-weight: bold;
 }
+/* ティアカバー: 読みの格子に語の経路 (TierCover.tsx)。語の行より控えめに */
+.tier-cover {
+  margin: 8px 0 0;
+  overflow-x: auto;
+}
+.tier-cover svg {
+  display: block;
+  font-size: 10px;
+}
+.tier-cover .tc-head,
+.tier-cover .tc-label {
+  fill: var(--text2);
+  font-size: 8px;
+}
+.tier-cover .tc-head {
+  text-anchor: middle;
+  font-family: var(--font-mono);
+}
+.tier-cover .tc-label {
+  text-anchor: end;
+}
+.tier-cover .tc-divider {
+  stroke: var(--border);
+  stroke-dasharray: 2 2;
+}
+.tier-cover .tc-cell rect {
+  fill: var(--surface2);
+  stroke: var(--border);
+}
+.tier-cover .tc-cell.none rect {
+  fill: none;
+}
+.tier-cover .tc-cell.on rect {
+  fill: color-mix(in srgb, var(--accent) 14%, var(--surface2));
+  stroke: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.tier-cover .tc-cell.rest rect {
+  stroke-dasharray: 3 2;
+}
+.tier-cover .tc-kana {
+  fill: var(--text2);
+  opacity: 0.55;
+  text-anchor: middle;
+  /* 線の上でも読めるよう、地の色で縁取る */
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+}
+.tier-cover .tc-kana.on {
+  fill: var(--text);
+  opacity: 1;
+  font-weight: bold;
+}
+.tier-cover .tc-path path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
+}
+.tier-cover .tc-path.kind-h path {
+  stroke: var(--kind-h);
+}
+.tier-cover .tc-path.kind-m path {
+  stroke: var(--kind-m);
+}
+.tier-cover .tc-path.kind-h circle {
+  fill: var(--kind-h);
+}
+.tier-cover .tc-path.kind-m circle {
+  fill: var(--kind-m);
+}
 .detail-extras .dc-val.tappable {
   cursor: pointer;
 }

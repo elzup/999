@@ -15,6 +15,8 @@ export type ReadingTables = {
   single: Record<string, string>
   double: Record<string, string>
   long: Record<string, string>
+  /** 元の表 (1 桁読みの core / sub / bad の区分を引くため) */
+  rules: RulesData
 }
 
 export function tablesFromRules(rules: RulesData): ReadingTables {
@@ -37,6 +39,7 @@ export function tablesFromRules(rules: RulesData): ReadingTables {
     single,
     double: fromMatrix(rules.doubleMatrix),
     long: fromMatrix(rules.longMatrix),
+    rules,
   }
 }
 
@@ -91,6 +94,10 @@ function normalizeSmallVowel(token: string): string {
 
 const isSokuon = (ch: string) => ch === 'っ' || ch === 'ッ'
 
+/** 1 桁読みの表を引くときの形 (濁点・カタカナ・小書きの母音を清音のひらがなに) */
+export const normalizeSingleKana = (ch: string) =>
+  normalizeSmallVowel(kataToHira(normalizeDakuten(ch)))
+
 // ---- 変換 (src/encoder.js と同じ手順) ----
 
 function lookup(t: ReadingTables, token: string): string | undefined {
@@ -119,7 +126,13 @@ function lookup(t: ReadingTables, token: string): string | undefined {
   return undefined
 }
 
-function youon4Digits(t: ReadingTables, input: string): string | null {
+/**
+ * 読みの 1 区切り。digits が空のものは読まないかな (拗音4ルールの う/ん、記法の半角カナ)。
+ * すべての digits をつなげると encodeDigits の結果になる
+ */
+export type ReadingToken = { kana: string; digits: string }
+
+function youon4Tokens(t: ReadingTables, input: string): ReadingToken[] | null {
   const chars = [...input]
   if (chars.length !== 4) return null
   if (!SMALL_YYO.includes(chars[1])) return null
@@ -129,7 +142,11 @@ function youon4Digits(t: ReadingTables, input: string): string | null {
   if (head === undefined) return null
   const last = lookup(t, chars[3])
   if (last === undefined) return null
-  return head + last
+  return [
+    { kana: chars[0] + chars[1], digits: head },
+    { kana: chars[2], digits: '' },
+    { kana: chars[3], digits: last },
+  ]
 }
 
 function peekNextValue(t: ReadingTables, input: string, pos: number) {
@@ -146,19 +163,36 @@ function peekNextValue(t: ReadingTables, input: string, pos: number) {
  * 記法は区間ごとに読み、半指定 (カタカナ) は 2 桁の 1 桁目だけを採る。半角カナは読まない (src/encoder.js#encode と同じ)
  */
 export function encodeDigits(t: ReadingTables, input: string): string | null {
-  if (!hasNotation(input)) return encodePlainDigits(t, input)
+  const tokens = readingTokens(t, input)
+  return tokens === null ? null : tokens.map((tk) => tk.digits).join('')
+}
+
+/** かな → 読みの区切り。読めないかなを含むときは null (手順は encodeDigits と同じ) */
+export function readingTokens(
+  t: ReadingTables,
+  input: string
+): ReadingToken[] | null {
+  if (!hasNotation(input)) return plainTokens(t, input)
   const segments = parseNotation(input)
   if (!segments) return null
-  let digits = ''
+  const out: ReadingToken[] = []
   for (const { hira, half, skip } of segments) {
     // 読まないかな (さばﾝな の ﾝ) は数字にしない
-    if (skip) continue
-    const d = encodePlainDigits(t, hira)
-    if (d === null) return null
-    if (half && (d.length !== 2 || lookup(t, hira) === undefined)) return null
-    digits += half ? d[0] : d
+    if (skip) {
+      out.push({ kana: hira, digits: '' })
+      continue
+    }
+    const tokens = plainTokens(t, hira)
+    if (tokens === null) return null
+    if (!half) {
+      out.push(...tokens)
+      continue
+    }
+    const d = tokens.map((tk) => tk.digits).join('')
+    if (d.length !== 2 || lookup(t, hira) === undefined) return null
+    out.push({ kana: hira, digits: d[0] })
   }
-  return digits
+  return out
 }
 
 /** 読みの表。配信データの rules から App で作って流し込む (表示部品が 1 桁読みの数字を引く) */
@@ -166,34 +200,35 @@ export const ReadingTablesContext = createContext<ReadingTables | null>(null)
 
 export const useReadingTables = () => useContext(ReadingTablesContext)
 
-function encodePlainDigits(t: ReadingTables, input: string): string | null {
-  const y4 = youon4Digits(t, input)
+function plainTokens(t: ReadingTables, input: string): ReadingToken[] | null {
+  const y4 = youon4Tokens(t, input)
   if (y4) return y4
 
-  let digits = ''
+  const out: ReadingToken[] = []
   let i = 0
   while (i < input.length) {
     if (isSokuon(input[i])) {
       const next = peekNextValue(t, input, i + 1)
       if (next === undefined) return null
-      digits += next
+      out.push({ kana: input[i], digits: next })
       i += 1
       continue
     }
     if (i + 1 < input.length) {
-      const val = lookup(t, input.slice(i, i + 2))
+      const pair = input.slice(i, i + 2)
+      const val = lookup(t, pair)
       if (val !== undefined) {
-        digits += val
+        out.push({ kana: pair, digits: val })
         i += 2
         continue
       }
     }
     const val = lookup(t, input[i])
     if (val === undefined) return null
-    digits += val
+    out.push({ kana: input[i], digits: val })
     i += 1
   }
-  return digits
+  return out
 }
 
 /**

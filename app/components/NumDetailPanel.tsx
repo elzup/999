@@ -22,6 +22,7 @@ import { wordImage } from '../lib/wordImage'
 import { rankeyOf } from '../lib/rankey'
 import { IMAGE_SLOT_OF, useImageOverride } from '../lib/imagePicker'
 import ImagePickerSheet from './ImagePickerSheet'
+import TierCover from './TierCover'
 
 type Props = {
   d: NumberEntry
@@ -321,6 +322,8 @@ function NumDetailPanel(props: Props) {
           ))}
         </ul>
       ) : null}
+
+      <TierCover d={d} />
 
       {/* カードの操作は ★ / 編集 だけ。閉じる・前へ / 次へ は DetailSheet の最下段 */}
       {onToggleBm || onEdit ? (
