@@ -631,6 +631,10 @@ body {
   bottom: 12px;
   display: flex;
 }
+/* π のように積むカードには ★ / 編集 が無く、図だけで 1 行使ってカードが伸びるので出さない (D-0105) */
+.panel-cards .tier-cover {
+  display: none;
+}
 /* ティアカバー: 読みの格子に語の経路 (TierCover.tsx)。語の行より控えめに */
 .tier-cover {
   flex-shrink: 0;
