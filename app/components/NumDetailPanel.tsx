@@ -129,7 +129,8 @@ function RowImage({ num, row }: { num: string; row: WordRow }) {
           id={num}
           slot={slot}
           word={row.word}
-          current={url ? { url, hash: override?.hash ?? '' } : null}
+          // 選び直した画像は元画像つき。無ければ表示用の URL だけ渡し、ピッカーが取り直す
+          current={override ?? (url ? { url, hash: '' } : null)}
           onClose={() => setIsOpen(false)}
         />
       ) : null}

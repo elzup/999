@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import { cropImageStyle } from '../lib/cropRect'
 import {
   fetchCandidates,
+  fetchSlotState,
   CROP_BUTTONS,
   cropSourceOf,
   isLockedError,
@@ -39,7 +40,7 @@ type Props = {
   slot: string
   word: string
   current: SlotImage | null
-  /** 確定 (ロック) 済みか。分からなければ省く (Function が断ったら確定済みとして出す) */
+  /** 確定 (ロック) 済みか。分からなければ省く (開いたときに今の画像と一緒に取り直す) */
   kept?: boolean
   /** 前に取って残っている候補の数 (候補タブの state.choices)。あれば開いたときにそれを出す */
   choices?: number
@@ -143,7 +144,9 @@ export default function ImagePickerSheet({
   onKeep,
 }: Props) {
   // 確定済みの枠は候補を取らない (Function も断る)。解除すると選び直せる
-  const [isLocked, setIsLocked] = useState(kept)
+  const [isLocked, setIsLocked] = useState(kept ?? false)
+  // 確定済みか分からずに開いた (詳細パネルから)。取り直すまで確定・解除・切り抜きを出さない
+  const [isStateReady, setIsStateReady] = useState(kept !== undefined)
   // 上寄せで切り抜き直したら «今» の画像が変わる
   const [currentImage, setCurrentImage] = useState(current)
   // 開いた瞬間から検索ワードを出す (サーバが決めた検索ワードが返ってきたら差し替える)
@@ -231,6 +234,25 @@ export default function ImagePickerSheet({
   }
 
   useEffect(() => {
+    if (isStateReady) return
+    let isAlive = true
+    fetchSlotState(token, id, slot)
+      .then((state) => {
+        if (!isAlive) return
+        if (state.image) setCurrentImage(state.image)
+        setIsLocked(state.kept)
+        setIsStateReady(true)
+      })
+      .catch((err) => {
+        console.error('slot state', id, slot, err)
+        if (isAlive) setError('今の画像の情報を取れませんでした: ' + String(err))
+      })
+    return () => {
+      isAlive = false
+    }
+  }, [])
+
+  useEffect(() => {
     // 開いただけでは検索しない (検索の回数を使わない)。前に取った候補が残っている枠だけ出す
     if (!isLocked && choices > 0) load(undefined, true)
     // 閉じたら待つのをやめる
@@ -315,7 +337,7 @@ export default function ImagePickerSheet({
     ? (candidates.find((c) => c.hash === selected) ?? null)
     : currentImage
   // 確定済みでも切り抜きは見て直せる (確定のときに外して切り抜き直し、確定し直す)
-  const canEdit = Boolean(cropSourceOf(selectedImage))
+  const canEdit = isStateReady && Boolean(cropSourceOf(selectedImage))
   const select = (hash: string | null) => {
     // 選んだタイルをもう一度押すと全画面で切り抜きを見る
     if (hash === selected) {
@@ -448,7 +470,9 @@ export default function ImagePickerSheet({
           <button class="filter-btn" type="button" onClick={onClose}>
             閉じる
           </button>
-          {isLocked ? (
+          {!isStateReady ? (
+            <span class="ip-status-note">読み込み中…</span>
+          ) : isLocked ? (
             <button
               class="filter-btn"
               type="button"
@@ -458,7 +482,7 @@ export default function ImagePickerSheet({
               {isSaving && !crop ? '保存中…' : '解除'}
             </button>
           ) : null}
-          {!isLocked || crop ? (
+          {isStateReady && (!isLocked || crop || selected) ? (
             <>
               <button
                 class="filter-btn ip-decide"
