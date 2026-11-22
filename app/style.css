@@ -600,8 +600,9 @@ body {
   color: var(--text);
   font-weight: bold;
 }
-/* 詳細カードの下端。★ / 編集 を縦 2 行に積み、その右にボタン 2 行分の正方形でティアカバーのミニ表示
-   (D-0101)。図が出ない番号はボタンを今まで通り横 1 列に並べる */
+/* 詳細カードの下端。★ / 編集 は横 1 列。ティアカバーのミニ表示は DetailSheet の最下段の
+   右端 (.sheet-side) に置き、★ / 編集 の行と ‹ 前｜閉じる｜次 › の行をまたぐ正方形にする (D-0103)。
+   一辺 (--tc-sq) は TierCover が測って枠に渡す。積む面ではカードの中、ボタンの横に置く */
 .detail-foot {
   display: flex;
   align-items: stretch;
@@ -613,8 +614,22 @@ body {
   min-width: 0;
   margin-top: 0;
 }
-.detail-foot:has(.tier-cover) > .detail-foot-actions {
-  flex-direction: column;
+/* カードと最下段は右の余白 (14px) が同じなので、どちらも正方形 + 間 6px だけ右を空ける */
+.sheet-foot {
+  position: relative;
+}
+.sheet-foot:has(> .sheet-side .tier-cover) {
+  padding-right: calc(14px + 6px + var(--tc-sq, 0px));
+}
+:has(> .sheet-foot > .sheet-side .tier-cover) .detail-foot-actions {
+  margin-right: calc(6px + var(--tc-sq, 0px));
+}
+.sheet-side {
+  position: absolute;
+  right: 14px;
+  /* .panel-foot の下の余白と同じ。最下段のボタンの下端に揃える */
+  bottom: 12px;
+  display: flex;
 }
 /* ティアカバー: 読みの格子に語の経路 (TierCover.tsx)。語の行より控えめに */
 .tier-cover {
