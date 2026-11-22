@@ -643,8 +643,16 @@ body {
   border: 1px solid var(--border);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
   pointer-events: none;
-  /* left / top はミニ表示の右上。自分の幅・高さ分だけ左上へ */
-  transform: translate(-100%, -100%);
+  /* スマホの横幅の 8 割で画面の中央に (D-0102)。top はミニ表示の上端で、自分の高さ分だけ上へ */
+  left: 10vw;
+  width: 80vw;
+  box-sizing: border-box;
+  transform: translateY(-100%);
+}
+/* 図は枠の幅いっぱいに拡大する (viewBox の比率のまま) */
+.tier-cover-pop svg {
+  width: 100%;
+  height: auto;
 }
 :is(.tier-cover, .tier-cover-pop) svg {
   display: block;
