@@ -646,7 +646,7 @@ body {
 :is(.tier-cover, .tier-cover-pop) .tc-head,
 :is(.tier-cover, .tier-cover-pop) .tc-label {
   fill: var(--text2);
-  font-size: 8px;
+  font-size: 10px;
 }
 :is(.tier-cover, .tier-cover-pop) .tc-head {
   text-anchor: middle;

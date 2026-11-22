@@ -21,24 +21,31 @@ type Size = {
   labelW: number
   headH: number
   restGap: number
+  /** 余りの列の幅。たいてい 1 文字 (ん) なので桁の列より細く */
+  restW: number
   arrowW: number
   lane: number
   stroke: number
+  /** かなの大きさ (px) */
+  font: number
   /** かな・見出しを描くか */
   hasText: boolean
 }
 
-// 通常: かなは 2 文字 (てぃ) まで読める幅。並走の間隔は線の太さ (2px) より少し広く
+// 長押しで出す拡大表示: 指を離すまで見る前提なので大きめ。かなは 2 文字 (てぃ) が収まる幅。
+// 行ラベル (2 / c / s / b) と余りの列は最小限の幅。並走の間隔は線の太さより少し広く
 const FULL: Size = {
-  cellW: 26,
-  cellH: 18,
-  gap: 3,
-  labelW: 26,
-  headH: 12,
+  cellW: 42,
+  cellH: 30,
+  gap: 4,
+  labelW: 14,
+  headH: 16,
   restGap: 8,
+  restW: 26,
   arrowW: 10,
-  lane: 2.5,
-  stroke: 2,
+  lane: 4,
+  stroke: 3,
+  font: 16,
   hasText: true,
 }
 // ミニ: ★ / 編集 のボタン (高さ約 38px) の横に収まる大きさ。かなは読めないので描かない
@@ -49,9 +56,11 @@ const MINI: Size = {
   labelW: 0,
   headH: 0,
   restGap: 4,
+  restW: 7,
   arrowW: 4,
   lane: 1.5,
   stroke: 1.5,
+  font: 0,
   hasText: false,
 }
 // 長押しとみなす長さ。iOS の文字選択 (約 500ms) より先に出す
@@ -60,11 +69,11 @@ const LONG_PRESS_MS = 350
 const POP_GAP = 8
 
 const ROW_LABEL: Record<CoverRow, string> = {
-  d0: '2桁',
-  d1: '2桁',
-  core: 'core',
-  sub: 'sub',
-  bad: 'bad',
+  d0: '2',
+  d1: '2',
+  core: 'c',
+  sub: 's',
+  bad: 'b',
 }
 
 type Point = { x: number; y: number }
@@ -74,7 +83,7 @@ function geometry(rows: CoverRow[], s: Size) {
   const restX = colX(DIGIT_COUNT) + s.restGap - s.gap
   const rowY = (row: CoverRow) =>
     s.headH + rows.indexOf(row) * (s.cellH + s.gap)
-  const width = restX + s.cellW + s.arrowW
+  const width = restX + s.restW + s.arrowW
   const height = s.headH + rows.length * (s.cellH + s.gap) - s.gap
   const cellBox = (cell: { row: CoverRow; col: number; span: number }) => ({
     x: colX(cell.col),
@@ -118,7 +127,7 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
     })
     if (w.rest) {
       const last = pts[pts.length - 1]
-      pts.push({ x: g.restX + s.cellW + s.arrowW - 1, y: last.y })
+      pts.push({ x: g.restX + s.restW + s.arrowW - 1, y: last.y })
     }
     const d = pts.map((p, k) => `${k ? 'L' : 'M'}${p.x} ${p.y}`).join(' ')
     return (
@@ -142,7 +151,8 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
       key={key}
       class={'tc-kana' + (isOn ? ' on' : '')}
       x={x}
-      y={y + s.cellH / 2 + 4}
+      y={y + s.cellH / 2 + s.font * 0.36}
+      font-size={s.font}
     >
       {kana}
     </text>
@@ -158,19 +168,24 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
       {s.hasText ? (
         <>
           {[...cover.num].map((digit, col) => (
-            <text key={col} class="tc-head" x={g.colX(col) + s.cellW / 2} y={9}>
+            <text
+              key={col}
+              class="tc-head"
+              x={g.colX(col) + s.cellW / 2}
+              y={11}
+            >
               {digit}
             </text>
           ))}
-          <text class="tc-head" x={g.restX + s.cellW / 2} y={9}>
-            余り
+          <text class="tc-head" x={g.restX + s.restW / 2} y={11}>
+            +
           </text>
           {cover.rows.map((row) => (
             <text
               key={row}
               class="tc-label"
-              x={s.labelW - 4}
-              y={g.rowY(row) + s.cellH / 2 + 3}
+              x={s.labelW - 3}
+              y={g.rowY(row) + s.cellH / 2 + 4}
             >
               {ROW_LABEL[row]}
             </text>
@@ -199,7 +214,7 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
           <rect
             x={g.restX}
             y={g.rowY(r.row)}
-            width={s.cellW}
+            width={s.restW}
             height={s.cellH}
             rx={radius}
           />
@@ -222,7 +237,7 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
             ...rests.map((r) =>
               kanaText(
                 'rt:' + r.row,
-                g.restX + s.cellW / 2,
+                g.restX + s.restW / 2,
                 g.rowY(r.row),
                 r.kana,
                 true
