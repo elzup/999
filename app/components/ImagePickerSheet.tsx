@@ -1,5 +1,6 @@
 // 画像ピッカーのボトムシート (D-0088: A-1 / B-2 / D-2)。
-// 開くと 1 枠の候補を取り、«今» + 候補 5 枚の 3×2 から選んで «✓ 確定» で採用してロックする (やり直すときは «解除»)。
+// 開くと 1 枠の候補を取り、«今» + 候補 5 枚の 3×2 から選んで «✓ 確定» で採用してロックする
+// (やり直すときは «解除»。確定済みの枠で «検索» を押すと解除してから探す)。
 // 検索ワードを直して取り直せる。候補タブと詳細パネルの画像から開く。
 // 選んだ画像は «⤢ 全体» (または選んだタイルをもう一度押す) で全画面の元画像を出し、
 // 切り抜きの寄せ・範囲を確かめて決めてから確定できる (CropEditor)。
@@ -293,6 +294,7 @@ export default function ImagePickerSheet({
     }
   }
 
+  /** 外せたら true。失敗はエラー欄に出す */
   const unlock = async () => {
     setIsSaving(true)
     setError('')
@@ -301,8 +303,10 @@ export default function ImagePickerSheet({
       onKeep?.(false)
       setIsLocked(false)
       setIsSaving(false)
+      return true
     } catch (err) {
       failed('unkeep', err)
+      return false
     }
   }
 
@@ -337,9 +341,11 @@ export default function ImagePickerSheet({
         </div>
         <form
           class="ip-query"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
-            if (isLoading || isLocked) return
+            if (isLoading || isSaving) return
+            // 確定済みの枠は Function が候補を取らないので、先に外す (閉じても未確定のまま、D-0106)
+            if (isLocked && !(await unlock())) return
             // 語から作った検索ワードのままなら «自動» として送る (Function がタグの最新の正式名で作り直す)
             const typed = query.trim()
             load(typed && typed !== autoQuery ? typed : undefined)
@@ -372,7 +378,7 @@ export default function ImagePickerSheet({
               key="search"
               class="filter-btn"
               type="submit"
-              disabled={isLocked}
+              disabled={isSaving}
             >
               {loaded ? '再検索' : '検索'}
             </button>
@@ -386,7 +392,7 @@ export default function ImagePickerSheet({
           </div>
         ) : isLocked ? (
           <div class="ip-status-note">
-            確定済みの枠です。«解除» すると選び直せます
+            確定済みの枠です。«検索» すると解除して選び直せます
           </div>
         ) : loaded?.reused ? (
           <div class="ip-status-note">
