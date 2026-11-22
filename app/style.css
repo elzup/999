@@ -600,7 +600,7 @@ body {
   color: var(--text);
   font-weight: bold;
 }
-/* 詳細カードの下端。左にティアカバーのミニ表示、右に ★ / 編集 を横 1 列 (D-0099)。
+/* 詳細カードの下端。★ / 編集 を横 1 列、その右にティアカバーのミニ表示 (D-0099 / D-0100)。
    ミニ表示はボタンの高さに収まるので、カードの高さは増えない */
 .detail-foot {
   display: flex;
@@ -636,8 +636,8 @@ body {
   border: 1px solid var(--border);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
   pointer-events: none;
-  /* top はミニ表示の上端。自分の高さ分だけ上へ */
-  transform: translateY(-100%);
+  /* left / top はミニ表示の右上。自分の幅・高さ分だけ左上へ */
+  transform: translate(-100%, -100%);
 }
 :is(.tier-cover, .tier-cover-pop) svg {
   display: block;

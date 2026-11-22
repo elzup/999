@@ -323,10 +323,9 @@ function NumDetailPanel(props: Props) {
         </ul>
       ) : null}
 
-      {/* 下端: ティアカバー (左) と ★ / 編集 (右、縦 2 段)。図が出ない番号はボタンを横 1 列に。
+      {/* 下端: ★ / 編集 (横 1 列) と、その右にティアカバーのミニ表示 (D-0100)。
           閉じる・前へ / 次へ は DetailSheet の最下段 */}
       <div class="detail-foot">
-        <TierCover d={d} />
         {onToggleBm || onEdit ? (
           <div class="detail-foot-actions">
             {onToggleBm && (
@@ -344,6 +343,7 @@ function NumDetailPanel(props: Props) {
             )}
           </div>
         ) : null}
+        <TierCover d={d} />
       </div>
     </div>
   )
