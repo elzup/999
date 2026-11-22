@@ -79,6 +79,31 @@ export function isCropRect(rect) {
   )
 }
 
+// 切り抜き直し用に残す元画像の長辺。全画面の切り抜き画面 (スマホ 3 倍密度で ~1200px) で粗く見えず、
+// 1 枚 数百 KB に収まる大きさ。範囲は割合で渡すので縮めても切り抜きの位置はずれない
+export const ORIGINAL_MAX_PX = 1600
+
+/**
+ * 切り抜き直し用の元画像を作る。元サイトは後から再 DL を拒否することがあるので (403)、
+ * 取得したときに自分のバケットへ残しておく。向きは先に直す (toWebpRect の範囲はその向きで測る)
+ * @param {Buffer} input
+ */
+export async function toOriginalWebp(input) {
+  return sharp(input)
+    .rotate()
+    .resize(ORIGINAL_MAX_PX, ORIGINAL_MAX_PX, {
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 85 })
+    .toBuffer()
+}
+
+/** 元画像のキー words/orig/<sha256先頭20hex>.webp (原本の一覧 words/<hash>.webp には混ざらない) */
+export function originalKey(webpBuffer) {
+  return `words/orig/${hashKey(webpBuffer).hash}.webp`
+}
+
 /** 上寄せで 400x400 にクロップ (顔が上にある画像の救済用) */
 export const toWebpTop = (input) => toWebpAt(input, 'top')
 

@@ -12,6 +12,7 @@ import { cropImageStyle } from '../lib/cropRect'
 import {
   fetchCandidates,
   CROP_BUTTONS,
+  cropSourceOf,
   isLockedError,
   pickImage,
   recropImage,
@@ -110,9 +111,9 @@ function Tile({
       aria-pressed={isSelected}
       onClick={onSelect}
     >
-      {image && rect && image.sourceImageUrl ? (
+      {image && rect && cropSourceOf(image) ? (
         <img
-          src={image.sourceImageUrl}
+          src={cropSourceOf(image)}
           alt=""
           referrerpolicy="no-referrer"
           style={cropImageStyle(rect)}
@@ -310,7 +311,7 @@ export default function ImagePickerSheet({
     ? (candidates.find((c) => c.hash === selected) ?? null)
     : currentImage
   // 確定済みでも切り抜きは見て直せる (確定のときに外して切り抜き直し、確定し直す)
-  const canEdit = Boolean(selectedImage?.sourceImageUrl)
+  const canEdit = Boolean(cropSourceOf(selectedImage))
   const select = (hash: string | null) => {
     // 選んだタイルをもう一度押すと全画面で切り抜きを見る
     if (hash === selected) {

@@ -12,7 +12,13 @@ export type SlotImage = {
   hash: string
   sourcePage?: string
   sourceImageUrl?: string
+  /** 取得したときに自分のバケットへ残した元画像 (元サイトが後から再取得を断ることがあるため) */
+  originalUrl?: string
 }
+
+/** 切り抜きに使う元画像。残してあればそれを、無ければ元サイトの画像を使う */
+export const cropSourceOf = (image: SlotImage | null | undefined) =>
+  image?.originalUrl ?? image?.sourceImageUrl ?? ''
 
 export type ImageTarget = {
   id: string
