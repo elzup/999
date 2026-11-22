@@ -307,8 +307,6 @@ function TierCover({ d }: Props) {
             <div
               class="tier-cover-pop"
               style={{
-                // ミニ表示は右端にあるので、右端を揃えて左上へ開く (CSS の transform)
-                left: `${rect.right}px`,
                 // 下端をミニ表示の上端に合わせる (innerHeight はブラウザ UI の出し入れでずれるので使わない)
                 top: `${rect.top - POP_GAP}px`,
               }}
