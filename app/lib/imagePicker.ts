@@ -257,6 +257,18 @@ export function setImageOverride(id: string, slot: string, image: SlotImage) {
 export const imageOverride = (id: string, slot: string) =>
   overrides[keyOf(id, slot)]
 
+/**
+ * 1 枠の今の画像 (切り抜き用の元画像つき) と確定済みか。詳細パネルは表示用の URL しか
+ * 持っていないので、ピッカーを開いたときにこれで取り直す。選び直した画像があればそれを優先
+ */
+export async function fetchSlotState(token: string, id: string, slot: string) {
+  const state = await fetchImageState(token)
+  return {
+    image: imageOverride(id, slot) ?? state.images[id]?.[slot] ?? null,
+    kept: Boolean(state.keep[keyOf(id, slot)]),
+  }
+}
+
 /** 選び直した画像があればそれを返す。無ければ undefined (配信データの画像を使う) */
 export function useImageOverride(id: string, slot: string) {
   const [image, setImage] = useState(() => imageOverride(id, slot))
