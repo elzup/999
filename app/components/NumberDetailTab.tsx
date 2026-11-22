@@ -51,6 +51,7 @@ import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
+import { IMAGE_SLOT_OF, useImageOverride } from '../lib/imagePicker'
 import { useNumberContext } from '../lib/numberContext'
 import { tagNameOf, useTagNames } from '../lib/tagNames'
 
@@ -583,6 +584,13 @@ function SlotCard({
   const suspicious =
     check?.status === 'mismatch' || check?.status === 'unreadable'
   const canMove = !pending
+  // 詳細パネルで選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
+  // タグ違いで分けた行の画像 (tagImages) は枠の画像と別物なので使わない
+  const override = useImageOverride(num, IMAGE_SLOT_OF[row.slot] ?? row.slot)
+  const picked = row.variant ? undefined : override
+  const imageUrl = picked?.url ?? row.imageUrl
+  // 選び直した画像は今の語で選んだもの
+  const isStale = !picked && row.imageStale
   return (
     <li
       class={
@@ -626,13 +634,13 @@ function SlotCard({
             </button>
           ) : null}
         </span>
-        {row.imageUrl ? (
+        {imageUrl ? (
           <img
-            class={'nd-img' + (row.imageStale ? ' stale' : '')}
+            class={'nd-img' + (isStale ? ' stale' : '')}
             loading="lazy"
-            {...wordImage(row.imageUrl, 40, row.word)}
+            {...wordImage(imageUrl, 40, row.word)}
             alt={row.word}
-            title={row.imageStale ? '確定時点の語と違う画像' : undefined}
+            title={isStale ? '確定時点の語と違う画像' : undefined}
           />
         ) : (
           <span class="nd-img empty" />
