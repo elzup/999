@@ -600,8 +600,8 @@ body {
   color: var(--text);
   font-weight: bold;
 }
-/* 詳細カードの下端。ティアカバーがあれば左に図、右に ★ / 編集 を縦 2 段 (D-0098)。
-   無ければ .detail-foot-actions が今まで通り横 1 列で幅いっぱいに並ぶ */
+/* 詳細カードの下端。左にティアカバーのミニ表示、右に ★ / 編集 を横 1 列 (D-0099)。
+   ミニ表示はボタンの高さに収まるので、カードの高さは増えない */
 .detail-foot {
   display: flex;
   align-items: stretch;
@@ -613,50 +613,67 @@ body {
   min-width: 0;
   margin-top: 0;
 }
-.detail-foot:has(.tier-cover) > .detail-foot-actions {
-  flex-direction: column;
-}
 /* ティアカバー: 読みの格子に語の経路 (TierCover.tsx)。語の行より控えめに */
 .tier-cover {
   flex-shrink: 0;
-  margin: 0;
-  overflow-x: auto;
+  align-self: center;
+  padding: 2px;
+  border-radius: 4px;
+  cursor: zoom-in;
+  /* 長押しで文字選択・メニューを出さない。縦スクロールはそのまま */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
-.tier-cover svg {
+/* 長押しの間だけ、ミニ表示の上に通常サイズを出す (TierCover.tsx が位置を決める) */
+.tier-cover-pop {
+  position: fixed;
+  z-index: 1000;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  /* top はミニ表示の上端。自分の高さ分だけ上へ */
+  transform: translateY(-100%);
+}
+:is(.tier-cover, .tier-cover-pop) svg {
   display: block;
   font-size: 10px;
 }
-.tier-cover .tc-head,
-.tier-cover .tc-label {
+:is(.tier-cover, .tier-cover-pop) .tc-head,
+:is(.tier-cover, .tier-cover-pop) .tc-label {
   fill: var(--text2);
   font-size: 8px;
 }
-.tier-cover .tc-head {
+:is(.tier-cover, .tier-cover-pop) .tc-head {
   text-anchor: middle;
   font-family: var(--font-mono);
 }
-.tier-cover .tc-label {
+:is(.tier-cover, .tier-cover-pop) .tc-label {
   text-anchor: end;
 }
-.tier-cover .tc-divider {
+:is(.tier-cover, .tier-cover-pop) .tc-divider {
   stroke: var(--border);
   stroke-dasharray: 2 2;
 }
-.tier-cover .tc-cell rect {
+:is(.tier-cover, .tier-cover-pop) .tc-cell rect {
   fill: var(--surface2);
   stroke: var(--border);
 }
-.tier-cover .tc-cell.none rect {
+:is(.tier-cover, .tier-cover-pop) .tc-cell.none rect {
   fill: none;
 }
-.tier-cover .tc-cell.on rect {
+:is(.tier-cover, .tier-cover-pop) .tc-cell.on rect {
   fill: color-mix(in srgb, var(--accent) 14%, var(--surface2));
   stroke: color-mix(in srgb, var(--accent) 55%, transparent);
 }
-.tier-cover .tc-cell.rest rect {
+:is(.tier-cover, .tier-cover-pop) .tc-cell.rest rect {
   stroke-dasharray: 3 2;
 }
-.tier-cover .tc-kana {
+:is(.tier-cover, .tier-cover-pop) .tc-kana {
   fill: var(--text2);
   opacity: 0.55;
   text-anchor: middle;
@@ -666,28 +683,28 @@ body {
   stroke-width: 2.5px;
   stroke-linejoin: round;
 }
-.tier-cover .tc-kana.on {
+:is(.tier-cover, .tier-cover-pop) .tc-kana.on {
   fill: var(--text);
   opacity: 1;
   font-weight: bold;
 }
-.tier-cover .tc-path path {
+:is(.tier-cover, .tier-cover-pop) .tc-path path {
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.9;
 }
-.tier-cover .tc-path.kind-h path {
+:is(.tier-cover, .tier-cover-pop) .tc-path.kind-h path {
   stroke: var(--kind-h);
 }
-.tier-cover .tc-path.kind-m path {
+:is(.tier-cover, .tier-cover-pop) .tc-path.kind-m path {
   stroke: var(--kind-m);
 }
-.tier-cover .tc-path.kind-h circle {
+:is(.tier-cover, .tier-cover-pop) .tc-path.kind-h circle {
   fill: var(--kind-h);
 }
-.tier-cover .tc-path.kind-m circle {
+:is(.tier-cover, .tier-cover-pop) .tc-path.kind-m circle {
   fill: var(--kind-m);
 }
 .detail-extras .dc-val.tappable {
