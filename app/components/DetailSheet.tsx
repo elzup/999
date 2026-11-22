@@ -10,6 +10,8 @@
 // 閉じると前後送りはここだけが持つ。
 import { h } from 'preact'
 import type { ComponentChildren } from 'preact'
+import { useState } from 'preact/hooks'
+import { SheetSideContext } from '../lib/sheetSide'
 import type { SelectionNav } from '../lib/useSelection'
 import { BookmarkButton, CloseButton, PanelCards } from './Screen'
 
@@ -39,6 +41,8 @@ function DetailSheet({
   nav,
   onClose,
 }: Props) {
+  const [side, setSide] = useState<HTMLDivElement | null>(null)
+  const hasSide = !stacked && !groupBookmark
   return (
     <>
       {head ? (
@@ -47,7 +51,9 @@ function DetailSheet({
           {head.sub ? <span class="panel-head-sub">{head.sub}</span> : null}
         </div>
       ) : null}
-      {stacked ? <PanelCards>{children}</PanelCards> : children}
+      <SheetSideContext.Provider value={hasSide ? side : null}>
+        {stacked ? <PanelCards>{children}</PanelCards> : children}
+      </SheetSideContext.Provider>
       {groupBookmark ? (
         <div class="panel-foot">
           <BookmarkButton
@@ -79,6 +85,7 @@ function DetailSheet({
             <span>{nav.nextLabel ? `${nav.nextLabel} ` : ''}›</span>
           </button>
         ) : null}
+        {hasSide ? <div ref={setSide} class="sheet-side" /> : null}
       </div>
     </>
   )

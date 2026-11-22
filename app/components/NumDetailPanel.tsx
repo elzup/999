@@ -323,7 +323,7 @@ function NumDetailPanel(props: Props) {
         </ul>
       ) : null}
 
-      {/* 下端: ★ / 編集 (横 1 列) と、その右にティアカバーのミニ表示 (D-0100)。
+      {/* 下端: ★ / 編集 (横 1 列)。ティアカバーは DetailSheet の最下段の右端へ portal (D-0103)。
           閉じる・前へ / 次へ は DetailSheet の最下段 */}
       <div class="detail-foot">
         {onToggleBm || onEdit ? (

@@ -1,10 +1,19 @@
 // ティアカバー: 番号の読みの格子に、登録語が通る経路を引く図 (詳細パネル用、D-0096〜D-0099)。
 // 経路は通るマスの中心を結ぶ折れ線。同じマスを通る語は上下に少しずらして並走させる (B-2)。
-// カードにはかな無しのミニ表示を ★ / 編集 の横に置き、長押ししている間だけ上に通常サイズを出す。
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
+// ミニ表示は ★ / 編集 の行と ‹ 前｜閉じる｜次 › の行をまたぐ右端の正方形に置き (D-0103)、
+// 長押ししている間だけ上に通常サイズを出す。
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks'
 import { createPortal } from 'preact/compat'
 import type { NumberEntry } from '../data/schema'
 import { useReadingTables } from '../lib/reading'
+import { SheetSideContext } from '../lib/sheetSide'
 import {
   buildTierCover,
   DIGIT_COUNT,
@@ -48,7 +57,7 @@ const FULL: Size = {
   font: 16,
   hasText: true,
 }
-// ミニ: ★ / 編集 を縦 2 行に積んだ高さ (約 82px) の正方形に収まる大きさ。かなは小さく、行ラベル・見出しは省く
+// ミニ: ボタン 2 行分 (約 86px) の正方形に収まる大きさ。かなは小さく、行ラベル・見出しは省く
 const MINI: Size = {
   cellW: 19,
   cellH: 14,
@@ -278,6 +287,42 @@ function usePressHold() {
   }
 }
 
+const SQ_VAR = '--tc-sq'
+
+/**
+ * 最下段の右端の枠に置くときの正方形の一辺: カードの ★ / 編集 の行の上端から
+ * 最下段のボタンの下端まで。ボタンの高さは文字の大きさで変わるので測る。
+ * 測った値は枠 (カードと最下段の共通の親) に CSS 変数で渡し、ボタンの右側を空けさせる
+ */
+function useSideSquare(side: HTMLElement | null, isShown: boolean) {
+  const [sq, setSq] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    const foot = side?.closest<HTMLElement>('.sheet-foot')
+    const box = foot?.parentElement
+    if (!side || !foot || !box || !isShown) return
+    const measure = () => {
+      const footRect = foot.getBoundingClientRect()
+      const pad = getComputedStyle(foot)
+      const actions = box.querySelector('.detail-foot-actions')
+      const top = actions
+        ? actions.getBoundingClientRect().top
+        : footRect.top + parseFloat(pad.paddingTop)
+      const size = Math.round(
+        footRect.bottom - parseFloat(pad.paddingBottom) - top
+      )
+      box.style.setProperty(SQ_VAR, `${size}px`)
+      setSq(size)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => {
+      window.removeEventListener('resize', measure)
+      box.style.removeProperty(SQ_VAR)
+    }
+  }, [side, isShown])
+  return sq
+}
+
 type Props = { d: NumberEntry }
 
 function TierCover({ d }: Props) {
@@ -288,15 +333,19 @@ function TierCover({ d }: Props) {
   )
   const { isHeld, handlers } = usePressHold()
   const anchor = useRef<HTMLDivElement>(null)
-  if (!cover || cover.words.length === 0) return null
+  const side = useContext(SheetSideContext)
+  const isShown = !!cover && cover.words.length > 0
+  const sq = useSideSquare(side, isShown)
+  if (!cover || !isShown) return null
 
   // 詳細パネルは overflow で切れるので、ポップアップは body に出して画面座標で置く
   const rect = isHeld ? anchor.current?.getBoundingClientRect() : null
   const label = `${cover.num} の読みを登録語がどれだけ通っているか (長押しで拡大)`
-  return (
+  const body = (
     <div
       ref={anchor}
       class="tier-cover"
+      style={side && sq ? { width: `${sq}px`, height: `${sq}px` } : undefined}
       aria-label={label}
       title={label}
       {...handlers}
@@ -318,6 +367,8 @@ function TierCover({ d }: Props) {
         : null}
     </div>
   )
+  // 詳細パネルの枠の中なら ★ / 編集 の行と最下段をまたぐ右端へ。積む面ではカードの中、ボタンの横
+  return side ? createPortal(body, side) : body
 }
 
 export default TierCover
