@@ -323,26 +323,28 @@ function NumDetailPanel(props: Props) {
         </ul>
       ) : null}
 
-      <TierCover d={d} />
-
-      {/* カードの操作は ★ / 編集 だけ。閉じる・前へ / 次へ は DetailSheet の最下段 */}
-      {onToggleBm || onEdit ? (
-        <div class="detail-foot-actions">
-          {onToggleBm && (
-            <BookmarkButton on={isBm} onToggle={() => onToggleBm(bmKey)} />
-          )}
-          {onEdit && (
-            <button
-              class="detail-act act-edit"
-              onClick={onEdit}
-              aria-label={`${d.num} を編集`}
-            >
-              <IconEdit />
-              <span>編集</span>
-            </button>
-          )}
-        </div>
-      ) : null}
+      {/* 下端: ティアカバー (左) と ★ / 編集 (右、縦 2 段)。図が出ない番号はボタンを横 1 列に。
+          閉じる・前へ / 次へ は DetailSheet の最下段 */}
+      <div class="detail-foot">
+        <TierCover d={d} />
+        {onToggleBm || onEdit ? (
+          <div class="detail-foot-actions">
+            {onToggleBm && (
+              <BookmarkButton on={isBm} onToggle={() => onToggleBm(bmKey)} />
+            )}
+            {onEdit && (
+              <button
+                class="detail-act act-edit"
+                onClick={onEdit}
+                aria-label={`${d.num} を編集`}
+              >
+                <IconEdit />
+                <span>編集</span>
+              </button>
+            )}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

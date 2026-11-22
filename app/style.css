@@ -600,9 +600,26 @@ body {
   color: var(--text);
   font-weight: bold;
 }
+/* 詳細カードの下端。ティアカバーがあれば左に図、右に ★ / 編集 を縦 2 段 (D-0098)。
+   無ければ .detail-foot-actions が今まで通り横 1 列で幅いっぱいに並ぶ */
+.detail-foot {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 10px;
+}
+.detail-foot > .detail-foot-actions {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-top: 0;
+}
+.detail-foot:has(.tier-cover) > .detail-foot-actions {
+  flex-direction: column;
+}
 /* ティアカバー: 読みの格子に語の経路 (TierCover.tsx)。語の行より控えめに */
 .tier-cover {
-  margin: 8px 0 0;
+  flex-shrink: 0;
+  margin: 0;
   overflow-x: auto;
 }
 .tier-cover svg {
