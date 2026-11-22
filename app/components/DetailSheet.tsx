@@ -1,7 +1,7 @@
 // 詳細パネルの枠。詳細を出す画面はすべてこれ 1 つで組む。
 //
 //   ┌ 見出し (任意: 年コード «12 → 3» / 2桁 «12_ 10件»)
-//   ├ カード (1 枚。積む面は PanelCards で先頭 1 枚分の高さにしてスクロール)
+//   ├ カード (1 枚。積む面は PanelCards で先頭 n 枚分の高さにしてスクロール)
 //   ├ グループの ★ (任意: 2桁)
 //   └ ‹ 前 ｜ 閉じる ｜ 次 ›   ← 全画面で同じ最下段 (親指の位置)
 //
@@ -9,7 +9,7 @@
 // 前へ / 次へ の段の位置も画面で違った。カードは ★ / 編集 だけを持ち、
 // 閉じると前後送りはここだけが持つ。
 import { h } from 'preact'
-import type { ComponentChildren } from 'preact'
+import { toChildArray, type ComponentChildren } from 'preact'
 import { useState } from 'preact/hooks'
 import { SheetSideContext } from '../lib/sheetSide'
 import type { SelectionNav } from '../lib/useSelection'
@@ -20,6 +20,8 @@ type Props = {
   children: ComponentChildren
   /** カードを複数枚積む (π の 2 枚、2桁の 10 枚) */
   stacked?: boolean
+  /** 積む面で一度に見せる枚数 (既定 1) */
+  stackVisible?: number
   /** カードの上に出す見出し。id は大きく、sub は補足 */
   head?: { id: ComponentChildren; sub?: ComponentChildren }
   /** カードとは別の単位の ★ (2桁グループ)。カードの ★ と区別できる文言を渡す */
@@ -36,13 +38,17 @@ type Props = {
 function DetailSheet({
   children,
   stacked,
+  stackVisible,
   head,
   groupBookmark,
   nav,
   onClose,
 }: Props) {
   const [side, setSide] = useState<HTMLDivElement | null>(null)
-  const hasSide = !stacked && !groupBookmark
+  // 右端の枠はカードが 1 枚のときだけ。年コードのようにカードが並ぶ面では、
+  // どの番号の図か分かるようにカードの中 (★ / 編集 の横) に置く
+  const hasSide =
+    !stacked && !groupBookmark && toChildArray(children).length === 1
   return (
     <>
       {head ? (
@@ -52,7 +58,11 @@ function DetailSheet({
         </div>
       ) : null}
       <SheetSideContext.Provider value={hasSide ? side : null}>
-        {stacked ? <PanelCards>{children}</PanelCards> : children}
+        {stacked ? (
+          <PanelCards visible={stackVisible}>{children}</PanelCards>
+        ) : (
+          children
+        )}
       </SheetSideContext.Provider>
       {groupBookmark ? (
         <div class="panel-foot">
