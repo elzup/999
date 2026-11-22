@@ -7,6 +7,7 @@ import { formatCardId } from '../data/cards'
 import { candidatesOf, type Candidate } from '../lib/choice'
 import { nameOf } from '../lib/numberDetail'
 import { wordImage } from '../lib/wordImage'
+import { IMAGE_SLOT_OF, useImageOverride } from '../lib/imagePicker'
 
 function scoreColor(score: number | null): string | null {
   if (score === null || score === undefined) return null
@@ -103,6 +104,11 @@ export function NumMdCard({
   selected: boolean
   onSelect: () => void
 }) {
+  // 詳細パネルで選び直した画像は次のデプロイまで配信データに無いので、詳細の語の行と同じく
+  // override で見せる。タグ違いで分けた語の画像 (tagImages) は枠の画像と別物なので使わない
+  const slot = cand ? (IMAGE_SLOT_OF[cand.slot] ?? cand.slot) : ''
+  const override = useImageOverride(num, slot)
+  const img = cand?.variant ? cand.img : (override?.url ?? cand?.img)
   if (!open) {
     return (
       <div
@@ -115,10 +121,10 @@ export function NumMdCard({
   }
   return (
     <div class={'md-card' + (selected ? ' selected' : '')} onClick={onSelect}>
-      {cand?.img ? (
+      {cand && img ? (
         <img
           class="md-card-img"
-          {...wordImage(cand.img, MD_CARD_PX, cand.word)}
+          {...wordImage(img, MD_CARD_PX, cand.word)}
           alt=""
           loading="lazy"
         />
