@@ -1,12 +1,12 @@
-// 画像ピッカーのボトムシート (D-0088: A-1 / B-2 / D-2)。
-// 開くと 1 枠の候補を取り、«今» + 候補 5 枚の 3×2 から選んで «✓ 確定» で採用してロックする
-// (やり直すときは «解除»。確定済みの枠で «検索» を押すと解除してから探す)。
-// 検索ワードを直して取り直せる。候補タブと詳細パネルの画像から開く。
-// 選んだ画像は «⤢ 全体» (または選んだタイルをもう一度押す) で全画面の元画像を出し、
-// 切り抜きの寄せ・範囲を確かめて決めてから確定できる (CropEditor)。
+// 画像ピッカーのボトムシート (D-0088: A-1 / B-2 / D-2、作り直し D-0109)。
+// «今» + 候補 5 枚の 3×2 から 1 枚を選び、その画像の切り抜きを決めて «保存» する。
+// 選んでいる画像と画像ごとの切り抜きは下書きで、保存するまで何も変わらない
+// (別の画像を選んでも切り抜きは消えない)。保存した枠は確定 (一括の取り直しで上書きされない) になる。
+// 何も変えずに今の画像で良ければ «✓ これで良い» で確定だけする。
+// 使い方と、状態ごとに押せるボタンは .metarc/image-picker-usecases.md。
 //
 // 画面の上半分に指を伸ばさない規約 (docs/screen-layout.md) に合わせ、シートは下端に出し、
-// 確定・閉じるは最下段に置く。
+// 保存・閉じるは最下段に置く。
 import { createPortal } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { cropImageStyle } from '../lib/cropRect'
@@ -95,14 +95,16 @@ function Tile({
   label,
   crop,
   isSelected,
+  isDisabled = false,
   onSelect,
 }: {
   image: SlotImage | null
   word: string
   label?: string
-  /** 決めた切り抜き (確定前)。元画像で範囲だけ見せる */
+  /** 決めた切り抜き (保存前の下書き)。元画像で範囲だけ見せる */
   crop?: CropChoice
   isSelected: boolean
+  isDisabled?: boolean
   onSelect: () => void
 }) {
   const rect = crop && 'rect' in crop ? crop.rect : null
@@ -111,6 +113,7 @@ function Tile({
       type="button"
       class={'ip-tile' + (isSelected ? ' is-selected' : '')}
       aria-pressed={isSelected}
+      disabled={isDisabled}
       onClick={onSelect}
     >
       {image && rect && cropSourceOf(image) ? (
@@ -131,29 +134,32 @@ function Tile({
   )
 }
 
+/** «今» のタイルの鍵 (候補は画像の hash。hash は空にならない) */
+const CURRENT = ''
+
+/**
+ * 画面の状態 (.metarc/image-picker-usecases.md の 状態×ボタン 表)。
+ * loading: 確定済みか・元画像をまだ取っている / searching: 候補を探している / saving: 保存している
+ */
+type Phase = 'loading' | 'idle' | 'searching' | 'saving'
+
 export default function ImagePickerSheet({
   token,
   id,
   slot,
   word,
   current,
-  kept = false,
+  kept,
   choices = 0,
   onClose,
   onPicked,
   onKeep,
 }: Props) {
-  // 確定済みの枠は候補を取らない (Function も断る)。解除すると選び直せる
   const [isLocked, setIsLocked] = useState(kept ?? false)
-  // 確定済みか分からずに開いた (詳細パネルから)。取り直すまで確定・解除・切り抜きを出さない
   const [isStateReady, setIsStateReady] = useState(kept !== undefined)
-  // 上寄せで切り抜き直したら «今» の画像が変わる
   const [currentImage, setCurrentImage] = useState(current)
-  // 開いた瞬間から検索ワードを出す (サーバが決めた検索ワードが返ってきたら差し替える)
-  // 検索は必ず正式名 (tagTitles = シートの title) で展開する。表示用の略称 (tagNames) は使わない。
-  // 正式名の無いタグは id のまま (略称で探すと別のものが出る)
+  // 検索は必ず正式名 (tagTitles = シートの title) で展開する。表示用の略称 (tagNames) は使わない
   const tagMap = useNumberContext()?.tagTitles ?? {}
-  // 語から作った検索ワード。自動の検索でもこれを送る (Function が古くても展開済みの語で探す)
   const autoQuery = buildSearchWord(word, tagMap)
   const [query, setQuery] = useState(autoQuery)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
@@ -161,19 +167,62 @@ export default function ImagePickerSheet({
   const [isStopped, setIsStopped] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
-  // null は «今» (変えない)
-  const [selected, setSelected] = useState<string | null>(null)
-  // 選んだ画像の切り抜き (確定のときに切り抜き直す)。null は今の切り抜き (自動) のまま
-  const [crop, setCrop] = useState<CropChoice>(null)
+  // ── 下書き: 選んでいる 1 枚と、画像ごとの切り抜き。別の画像を選んでも切り抜きは消さない ──
+  const [selected, setSelected] = useState<SlotImage | null>(null)
+  const [crops, setCrops] = useState<Record<string, CropChoice>>({})
   const [isEditing, setIsEditing] = useState(false)
   const stopRef = useRef<AbortController | null>(null)
+  // 押した瞬間に次の押下を止める (状態の反映は再描画の後なので、連打の 2 回目が通ってしまう)
+  const busyRef = useRef(false)
   // 検索中に検索ワードを打ち始めたら、返ってきた検索ワードで上書きしない
   const isEditedRef = useRef(false)
-  const isLoading = searching !== null
+
+  const phase: Phase = !isStateReady
+    ? 'loading'
+    : isSaving
+      ? 'saving'
+      : searching
+        ? 'searching'
+        : 'idle'
+  const selectedKey = selected?.hash ?? CURRENT
+  const selectedImage = selected ?? currentImage
+  const selectedCrop = crops[selectedKey] ?? null
+  /** 保存するもの: 今と違う画像を選んだ、または選んでいる画像の切り抜きを決めた */
+  const isDirty = selected !== null || selectedCrop !== null
+  /** 捨てると失うもの (閉じるときに確かめる) */
+  const hasDraft = isDirty || Object.values(crops).some(Boolean)
+  const canEdit =
+    (phase === 'idle' || phase === 'searching') &&
+    Boolean(cropSourceOf(selectedImage))
+
+  /** 押せる処理を 1 つだけ走らせる。走っている間の押下は無視 */
+  const runOnce = async (task: () => Promise<void>) => {
+    if (busyRef.current) return
+    busyRef.current = true
+    try {
+      await task()
+    } finally {
+      busyRef.current = false
+    }
+  }
+
+  const showError = (label: string, err: unknown) => {
+    console.error(label, id, slot, err)
+    setError(String((err as Error).message || err))
+  }
+
+  /** 確定を外す。確定済みの枠は Function が候補の取得・差し替えを断るので、探す前・保存の前に外す */
+  const unlockIfLocked = async () => {
+    if (!isLocked) return
+    await setKeep({ token, id, slot, on: false })
+    setIsLocked(false)
+    onKeep?.(false)
+  }
 
   /**
    * typed を省くと語から (サーバがタグの最新の正式名で) 検索ワードを作る。
-   * reuseOnly は前に取った候補を出すだけで、検索はしない (開いただけで検索の回数を使わない)
+   * reuseOnly は前に取った候補を出すだけで、検索はしない (開いただけで検索の回数を使わない)。
+   * 下書き (選んでいる画像・切り抜き) は残す
    */
   const load = async (typed?: string, reuseOnly = false) => {
     const stop = new AbortController()
@@ -186,8 +235,6 @@ export default function ImagePickerSheet({
     setIsStopped(false)
     isEditedRef.current = false
     setError('')
-    setSelected(null)
-    setCrop(null)
     try {
       const result = await fetchCandidates({
         token,
@@ -201,8 +248,7 @@ export default function ImagePickerSheet({
         reuseOnly,
         stop: stop.signal,
       })
-      // 前に取った候補が無い・今の検索ワードと違う (タグを展開できなかった頃の候補) ときは、
-      // 何も出さずに待つ。検索は «検索» を押したときだけ
+      // 前に取った候補が無い・今の検索ワードと違う (タグを展開できなかった頃の候補) ときは出さない
       if (reuseOnly && !result.reused) return
       if (
         result.reused &&
@@ -217,14 +263,9 @@ export default function ImagePickerSheet({
       })
       if (!isEditedRef.current && result.query) setQuery(result.query)
     } catch (err) {
-      if (err instanceof StoppedError) {
-        setIsStopped(true)
-      } else if (isLockedError(err)) {
-        setIsLocked(true)
-      } else {
-        console.error('candidates', id, slot, err)
-        setError(String((err as Error).message || err))
-      }
+      if (err instanceof StoppedError) setIsStopped(true)
+      else if (isLockedError(err)) setIsLocked(true)
+      else showError('candidates', err)
     } finally {
       if (stopRef.current === stop) {
         stopRef.current = null
@@ -232,6 +273,27 @@ export default function ImagePickerSheet({
       }
     }
   }
+
+  const search = () =>
+    runOnce(async () => {
+      if (phase !== 'idle') return
+      // 語から作った検索ワードのままなら «自動» として送る (Function がタグの最新の正式名で作り直す)
+      const typed = query.trim()
+      const sent = typed && typed !== autoQuery ? typed : undefined
+      // 確定を外している間も «検索中» にして、検索のボタンを押せなくする
+      setSearching({
+        query: sent ?? query,
+        isAuto: !sent,
+        startedAt: Date.now(),
+      })
+      try {
+        await unlockIfLocked()
+      } catch (err) {
+        setSearching(null)
+        return showError('unkeep', err)
+      }
+      await load(sent)
+    })
 
   useEffect(() => {
     if (isStateReady) return
@@ -244,8 +306,8 @@ export default function ImagePickerSheet({
         setIsStateReady(true)
       })
       .catch((err) => {
-        console.error('slot state', id, slot, err)
-        if (isAlive) setError('今の画像の情報を取れませんでした: ' + String(err))
+        if (!isAlive) return
+        showError('slot state', err)
       })
     return () => {
       isAlive = false
@@ -259,118 +321,120 @@ export default function ImagePickerSheet({
     return () => stopRef.current?.abort()
   }, [])
 
-  /** 失敗を出して、押せる状態に戻す */
-  const failed = (label: string, err: unknown) => {
-    console.error(label, id, slot, err)
-    setError(String((err as Error).message || err))
-    setIsSaving(false)
+  const adopt = (image: SlotImage) => {
+    setCurrentImage(image)
+    setImageOverride(id, slot, image)
+    onPicked?.(image)
   }
 
   /**
-   * 選んだ画像 («今» なら今の画像) で確定して閉じる。切り抜きを決めていれば、採用してから
-   * その範囲で切り抜き直す (/console/recrop は今の画像の元画像を切り抜く)。
-   * 確定済みの枠は、切り抜きを決めていれば外してから切り抜き直して確定し直す
-   * (Function はロック中の枠の切り抜き直しを断る。いちいち «解除» を押さなくてよいように)
+   * 下書き (選んだ画像と、その画像の切り抜き) を保存して閉じる。保存した枠は確定 (一括の取り直しで
+   * 上書きされない) にする。途中で失敗したら、そこまで済んだ分を «今» に反映して下書きは残す
    */
-  const decideAndKeep = async (choice: CropChoice = crop) => {
-    if (isLocked && !choice) return onClose()
-    setIsSaving(true)
-    setError('')
-    let isUnlocked = false
-    try {
-      if (isLocked) {
-        await setKeep({ token, id, slot, on: false })
-        isUnlocked = true
+  const save = () =>
+    runOnce(async () => {
+      if (phase !== 'idle' || !isDirty) return
+      setIsSaving(true)
+      setError('')
+      let crop = selectedCrop
+      try {
+        await unlockIfLocked()
+        if (selected) {
+          adopt(await pickImage({ token, id, slot, hash: selected.hash }))
+          // 採用した画像は «今» になる。切り抜きも «今» の分として持ち直す
+          setSelected(null)
+          setCrops((prev) => ({ ...prev, [CURRENT]: crop }))
+        }
+        if (crop) {
+          adopt(
+            await recropImage({
+              token,
+              id,
+              slot,
+              ...('rect' in crop
+                ? { rect: crop.rect }
+                : { position: crop.position }),
+            })
+          )
+          crop = null
+          setCrops((prev) => ({ ...prev, [CURRENT]: null }))
+        }
+        await setKeep({ token, id, slot, on: true })
+        setIsLocked(true)
+        onKeep?.(true)
+        onClose()
+      } catch (err) {
+        showError('save', err)
+      } finally {
+        setIsSaving(false)
       }
-      const adopt = (image: SlotImage) => {
-        setCurrentImage(image)
-        setImageOverride(id, slot, image)
-        onPicked?.(image)
+    })
+
+  /** 審査 (UC-1): 今の画像のまま «これで良い» と決める */
+  const approve = () =>
+    runOnce(async () => {
+      if (phase !== 'idle' || isDirty || isLocked) return
+      setIsSaving(true)
+      setError('')
+      try {
+        await setKeep({ token, id, slot, on: true })
+        setIsLocked(true)
+        onKeep?.(true)
+        onClose()
+      } catch (err) {
+        showError('keep', err)
+      } finally {
+        setIsSaving(false)
       }
-      if (selected) {
-        adopt(await pickImage({ token, id, slot, hash: selected }))
-        // 採用した画像は «今» になる (切り抜きで失敗しても、もう一度は «今» の切り抜き直し)
-        setSelected(null)
-      }
-      if (choice)
-        adopt(
-          await recropImage({
-            token,
-            id,
-            slot,
-            ...('rect' in choice
-              ? { rect: choice.rect }
-              : { position: choice.position }),
-          })
-        )
-      await setKeep({ token, id, slot, on: true })
-      onKeep?.(true)
-      onClose()
-    } catch (err) {
-      // 外したまま失敗した。画面も «未確定» に揃える (もう一度 «✓ 確定» を押せる)
-      if (isUnlocked) {
-        setIsLocked(false)
-        onKeep?.(false)
-      }
-      failed('keep', err)
-    }
+    })
+
+  const close = () => {
+    if (phase === 'saving') return
+    if (hasDraft && !confirm('選んだ画像・切り抜きを保存せずに閉じますか？'))
+      return
+    onClose()
   }
 
-  /** 外せたら true。失敗はエラー欄に出す */
-  const unlock = async () => {
-    setIsSaving(true)
-    setError('')
-    try {
-      await setKeep({ token, id, slot, on: false })
-      onKeep?.(false)
-      setIsLocked(false)
-      setIsSaving(false)
-      return true
-    } catch (err) {
-      failed('unkeep', err)
-      return false
-    }
-  }
-
-  const candidates = loaded?.candidates.slice(0, SHOWN_CANDIDATES) ?? []
-  const selectedImage = selected
-    ? (candidates.find((c) => c.hash === selected) ?? null)
-    : currentImage
-  // 確定済みでも切り抜きは見て直せる (確定のときに外して切り抜き直し、確定し直す)
-  const canEdit = isStateReady && Boolean(cropSourceOf(selectedImage))
-  const select = (hash: string | null) => {
-    // 選んだタイルをもう一度押すと全画面で切り抜きを見る
-    if (hash === selected) {
+  const listed = loaded?.candidates.slice(0, SHOWN_CANDIDATES) ?? []
+  // 選んでいる候補は、検索し直して一覧から外れても先頭に残す (下書きを消さない)
+  const candidates =
+    selected && !listed.some((c) => c.hash === selected.hash)
+      ? [selected, ...listed].slice(0, SHOWN_CANDIDATES)
+      : listed
+  const canPickTile = phase === 'idle' || phase === 'searching'
+  const select = (image: SlotImage | null) => {
+    if (!canPickTile) return
+    // 選んでいるタイルをもう一度押すと全画面で切り抜きを見る
+    if ((image?.hash ?? CURRENT) === selectedKey) {
       if (canEdit) setIsEditing(true)
       return
     }
-    setSelected(hash)
-    setCrop(null)
+    setSelected(image)
   }
-  const placeholders = isLoading
-    ? Array.from({ length: SHOWN_CANDIDATES }, (_, i) => i)
-    : []
+  const placeholders =
+    phase === 'searching'
+      ? Array.from(
+          { length: SHOWN_CANDIDATES - candidates.length },
+          (_, i) => i
+        )
+      : []
 
   return createPortal(
     <div class="ip-root">
-      <div class="ip-shade" onClick={onClose} />
+      <div class="ip-shade" onClick={close} />
       <div class="ip-sheet" role="dialog" aria-label={`${id} の画像を選ぶ`}>
         <div class="ip-head">
           <span class="ip-id">{id}</span>
           <span class="ip-word">
             <TaggedWord word={word} />
           </span>
+          {isLocked ? <span class="ip-kept">確定済み</span> : null}
         </div>
         <form
           class="ip-query"
-          onSubmit={async (e) => {
+          onSubmit={(e) => {
             e.preventDefault()
-            if (isLoading || isSaving) return
-            // 確定済みの枠は Function が候補を取らないので、先に外す (閉じても未確定のまま、D-0106)
-            if (isLocked && !(await unlock())) return
-            // 語から作った検索ワードのままなら «自動» として送る (Function がタグの最新の正式名で作り直す)
-            const typed = query.trim()
-            load(typed && typed !== autoQuery ? typed : undefined)
+            search()
           }}
         >
           <input
@@ -383,10 +447,9 @@ export default function ImagePickerSheet({
               setQuery((e.target as HTMLInputElement).value)
             }}
           />
-          {/* 検索中は同じ場所のボタンを «中断» にする (押せるのに何も起きないボタンを置かない)。
-              key を分けて別の要素にする: 同じ要素を使い回すと、中断で再描画された直後に
-              押した要素が送信ボタンに変わり、クリックの続きで再検索が走ってしまう */}
-          {isLoading ? (
+          {/* 検索中は同じ場所のボタンを «中断» にする。key を分けて別の要素にする: 同じ要素を
+              使い回すと、中断で再描画された直後に押した要素が送信ボタンに変わり、再検索が走る */}
+          {phase === 'searching' ? (
             <button
               key="stop"
               class="filter-btn ip-stop"
@@ -400,7 +463,7 @@ export default function ImagePickerSheet({
               key="search"
               class="filter-btn"
               type="submit"
-              disabled={isSaving}
+              disabled={phase !== 'idle'}
             >
               {loaded ? '再検索' : '検索'}
             </button>
@@ -412,17 +475,13 @@ export default function ImagePickerSheet({
           <div class="ip-status-note">
             検索を止めました。«再検索» で取り直せます
           </div>
-        ) : isLocked ? (
-          <div class="ip-status-note">
-            確定済みの枠です。«検索» すると解除して選び直せます
-          </div>
         ) : loaded?.reused ? (
           <div class="ip-status-note">
             前に取った候補です。«再検索» で新しく探せます
           </div>
         ) : !loaded ? (
           <div class="ip-status-note">
-            検索ワードを確かめて «検索» を押すと候補を探します
+            «今» を押して切り抜きを直すか、«検索» で別の画像を探します
           </div>
         ) : null}
         <div class="ip-grid">
@@ -430,8 +489,9 @@ export default function ImagePickerSheet({
             image={currentImage}
             word={word}
             label="今"
-            crop={selected === null ? crop : undefined}
+            crop={crops[CURRENT] ?? undefined}
             isSelected={selected === null}
+            isDisabled={!canPickTile}
             onSelect={() => select(null)}
           />
           {candidates.map((image) => (
@@ -439,61 +499,66 @@ export default function ImagePickerSheet({
               key={image.hash}
               image={image}
               word={word}
-              crop={selected === image.hash ? crop : undefined}
-              isSelected={selected === image.hash}
-              onSelect={() => select(image.hash)}
+              crop={crops[image.hash] ?? undefined}
+              isSelected={selected?.hash === image.hash}
+              isDisabled={!canPickTile}
+              onSelect={() => select(image)}
             />
           ))}
           {placeholders.map((i) => (
             <span key={i} class="ip-tile is-loading" />
           ))}
         </div>
-        {/* 選んだ画像の元画像を全画面で出して、切り抜きの寄せ・範囲を確かめて決める */}
-        {canEdit ? (
-          <div class="ip-tools">
-            <span class="ip-tools-label">
-              切り抜き: {crop ? cropLabel(crop) : '自動'}
-            </span>
-            <button
-              class="filter-btn"
-              type="button"
-              disabled={isSaving}
-              onClick={() => setIsEditing(true)}
-              title="元画像を全画面で出して、切り抜く範囲を確かめて決める"
-            >
-              ⤢ 全体を見て寄せる
-            </button>
-          </div>
-        ) : null}
+        {/* 選んでいる画像の元画像を全画面で出して、切り抜きの寄せ・範囲を決める */}
+        <div class="ip-tools">
+          <span class="ip-tools-label">
+            {selected ? '選んだ候補' : '今の画像'} の切り抜き:{' '}
+            {selectedCrop ? cropLabel(selectedCrop) : '自動'}
+          </span>
+          <button
+            class="filter-btn"
+            type="button"
+            disabled={!canEdit}
+            onClick={() => setIsEditing(true)}
+            title={
+              cropSourceOf(selectedImage)
+                ? '元画像を全画面で出して、切り抜く範囲を決める'
+                : '元画像が残っていない画像は切り抜けません'
+            }
+          >
+            ⤢ 切り抜き
+          </button>
+        </div>
         {error ? <div class="ip-error">{error}</div> : null}
         <div class="ip-foot">
-          <button class="filter-btn" type="button" onClick={onClose}>
+          <button
+            class="filter-btn"
+            type="button"
+            disabled={phase === 'saving'}
+            onClick={close}
+          >
             閉じる
           </button>
-          {!isStateReady ? (
-            <span class="ip-status-note">読み込み中…</span>
-          ) : isLocked ? (
+          {isDirty ? (
             <button
-              class="filter-btn"
+              class="filter-btn ip-decide"
               type="button"
-              disabled={isSaving}
-              onClick={unlock}
+              disabled={phase !== 'idle'}
+              onClick={save}
+              title="選んだ画像と切り抜きを保存する。保存した枠は一括の取り直しで上書きされない"
             >
-              {isSaving && !crop ? '保存中…' : '解除'}
+              {phase === 'saving' ? '保存中…' : '保存'}
             </button>
-          ) : null}
-          {isStateReady && (!isLocked || crop || selected) ? (
-            <>
-              <button
-                class="filter-btn ip-decide"
-                type="button"
-                disabled={isSaving || (!selected && !currentImage)}
-                onClick={() => decideAndKeep()}
-                title="選んだ画像 («今» なら今の画像) で確定する。確定した枠は一括の取り直しで上書きされない"
-              >
-                {isSaving ? '保存中…' : '✓ 確定'}
-              </button>
-            </>
+          ) : !isLocked ? (
+            <button
+              class="filter-btn ip-decide"
+              type="button"
+              disabled={phase !== 'idle' || !currentImage}
+              onClick={approve}
+              title="今の画像のまま確定する。確定した枠は一括の取り直しで上書きされない"
+            >
+              {phase === 'saving' ? '保存中…' : '✓ これで良い'}
+            </button>
           ) : null}
         </div>
       </div>
@@ -501,16 +566,11 @@ export default function ImagePickerSheet({
         <CropEditor
           image={selectedImage}
           title={`${id} ${word}`}
-          choice={crop}
-          isSaving={isSaving}
+          choice={selectedCrop}
           onCancel={() => setIsEditing(false)}
           onApply={(choice) => {
-            setCrop(choice)
+            setCrops((prev) => ({ ...prev, [selectedKey]: choice }))
             setIsEditing(false)
-          }}
-          onDecide={(choice) => {
-            setCrop(choice)
-            decideAndKeep(choice)
           }}
         />
       ) : null}

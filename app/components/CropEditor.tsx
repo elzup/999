@@ -2,7 +2,7 @@
 // 400x400 に切り抜く範囲 (正方形の枠) を重ねる。枠はドラッグで動かし、ピンチ・ホイール・
 // スライダーで大きさを変える。寄せ方のボタン (上・下・左・右・中央) は枠をそこへ置く。
 //
-// 決めた範囲は ImagePickerSheet が確定のときに /console/recrop の rect で送る。
+// 決めた範囲は ImagePickerSheet の下書きに戻すだけで、保存はピッカーの «保存» 1 か所 (D-0109)。
 // 画面の上半分に指を伸ばさない規約 (docs/screen-layout.md) に合わせ、操作はすべて下段に置く。
 import { createPortal } from 'preact/compat'
 import { useEffect, useRef, useState } from 'preact/hooks'
@@ -36,11 +36,8 @@ type Props = {
   image: SlotImage
   title: string
   choice: CropChoice
-  isSaving: boolean
-  /** 決めた切り抜きで戻る (まだ保存しない) */
+  /** 決めた切り抜きでピッカーへ戻る (まだ保存しない) */
   onApply: (choice: CropChoice) => void
-  /** 決めた切り抜きでそのまま確定する */
-  onDecide: (choice: CropChoice) => void
   onCancel: () => void
 }
 
@@ -52,9 +49,7 @@ export default function CropEditor({
   image,
   title,
   choice: initial,
-  isSaving,
   onApply,
-  onDecide,
   onCancel,
 }: Props) {
   const source = cropSourceOf(image)
@@ -326,20 +321,11 @@ export default function CropEditor({
             やめる
           </button>
           <button
-            class="filter-btn"
+            class="filter-btn ip-decide"
             type="button"
-            disabled={isSaving}
             onClick={() => onApply(choice)}
           >
             決めて戻る
-          </button>
-          <button
-            class="filter-btn ip-decide"
-            type="button"
-            disabled={isSaving}
-            onClick={() => onDecide(choice)}
-          >
-            {isSaving ? '保存中…' : '✓ 確定'}
           </button>
         </div>
       </div>
