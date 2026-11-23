@@ -23,6 +23,7 @@ import {
   repPickOp,
   slotRows,
   slotsFromRows,
+  splitRows,
   type SlotRow,
   withDeliveredImages,
 } from '../lib/numberDetail'
@@ -38,10 +39,12 @@ import { collectNumberTags } from '../lib/tags'
 import {
   addLabel,
   addTag,
+  baseText,
   LABELS,
   parseWord,
   removeLabel,
   removeTag,
+  setBase,
   suggestTags,
   type TagSuggestion,
 } from '../lib/wordTags'
@@ -196,6 +199,14 @@ export default function NumberDetailTab({
   const rows: SlotRow[] = doc
     ? withDeliveredImages(mergeDraftRows(slotRows(doc), drafts), entry)
     : []
+  // カードは出典タグごとに分ける (美咲#bang#ml → 美咲 #bang / 美咲 #ml、D-0133)。
+  // DB と下書きは枠 (rows) のまま持ち、カードの操作は枠の語への書き換えに直して当てる
+  const cards: SlotRow[] = doc
+    ? withDeliveredImages(
+        splitRows(mergeDraftRows(slotRows(doc), drafts), doc),
+        entry
+      )
+    : []
   const picks = doc?.rep?.picks ?? []
   const repState = doc ? repStatus(doc) : 'open'
   const pendingCount = queue.pendingCount(num)
@@ -310,65 +321,98 @@ export default function NumberDetailTab({
   // 候補は優先順に下から積む (先頭が親指側)
   const main = doc ? (
     <ul class="nd-cards stack-up" style={{ '--stack-gap': '8px' }}>
-      {rows.map((row, index) => (
-        <SlotCard
-          key={row.slot}
-          row={row}
-          index={index}
-          num={doc.num}
-          tables={tables}
-          knownTags={knownTags}
-          moveOpen={moving === row.slot}
-          onToggleMove={() =>
-            setMoving((prev) => (prev === row.slot ? null : row.slot))
-          }
-          onMove={(to) => moveWord(row, to)}
-          focused={row.slot === focusSlot}
-          repMark={queue.mark(doc.num, 'rep')}
-          rateMark={queue.mark(doc.num, `rating:${row.kana}|${row.word}`)}
-          isSaved={Boolean(doc.slots?.[row.slot])}
-          changed={changed.includes(row.slot)}
-          dragging={dragFrom === index}
-          onDragStart={() => setDragFrom(index)}
-          onDragEnd={() => setDragFrom(null)}
-          onDropAt={() => {
-            if (dragFrom === null || dragFrom === index) return
-            saveSlots(
-              moveItem(rows, dragFrom, index),
-              dirty ? '並べ替え、未保存の変更も保存しました' : '並べ替えました'
-            )
-            setDragFrom(null)
-          }}
-          onEdit={(patch) => editRow(row, patch)}
-          onDelete={() => {
-            // 足しただけの枠は手元で消すだけ (サーバに送るものが無い)
-            if (!doc.slots?.[row.slot]) {
-              setDrafts(({ [row.slot]: _, ...rest }) => rest)
-              return
+      {cards.map((card) => {
+        const index = rows.findIndex((other) => other.slot === card.slot)
+        const row = rows[index]
+        return (
+          <SlotCard
+            key={card.key}
+            row={card}
+            slotWord={row.word}
+            index={index}
+            num={doc.num}
+            tables={tables}
+            knownTags={knownTags}
+            moveOpen={moving === card.key}
+            onToggleMove={() =>
+              setMoving((prev) => (prev === card.key ? null : card.key))
             }
-            // slots は最終形を送るので、他の枠の未保存の編集も一緒に保存される
-            saveSlots(
-              rows.filter((other) => other.slot !== row.slot),
-              dirty ? '削除し、未保存の変更も保存しました' : '削除しました'
-            )
-          }}
-          onPickRep={(rank) => {
-            const op = repPickOp(doc, row.slot, rank)
-            send(op, op.confirmed ? '代表を確定しました' : '代表を外しました')
-          }}
-          onRate={(value) =>
-            send(
-              {
-                op: 'rating',
-                k: row.kana,
-                w: row.word,
-                v: nextRatingValue(row.rating, value),
-              },
-              '評価を保存しました'
-            )
-          }
-        />
-      ))}
+            onMove={(to) => moveWord(row, to)}
+            focused={
+              card.slot === focusSlot &&
+              cards.find((c) => c.slot === card.slot) === card
+            }
+            repMark={queue.mark(doc.num, 'rep')}
+            rateMark={queue.mark(doc.num, `rating:${card.kana}|${card.word}`)}
+            isSaved={Boolean(doc.slots?.[row.slot])}
+            changed={changed.includes(row.slot)}
+            dragging={dragFrom === index}
+            onDragStart={() => setDragFrom(index)}
+            onDragEnd={() => setDragFrom(null)}
+            onDropAt={() => {
+              if (dragFrom === null || dragFrom === index) return
+              saveSlots(
+                moveItem(rows, dragFrom, index),
+                dirty
+                  ? '並べ替え、未保存の変更も保存しました'
+                  : '並べ替えました'
+              )
+              setDragFrom(null)
+            }}
+            onEdit={(patch) => editRow(row, patch)}
+            onDelete={() => {
+              // タグ違いのカードは、そのタグだけ外す (枠には残りのタグの語が残る)
+              const variant = card.variant
+              if (variant) {
+                const word = removeTag(row.word, variant)
+                if (!doc.slots?.[row.slot]) {
+                  editRow(row, { word })
+                  return
+                }
+                saveSlots(
+                  rows.map((other) =>
+                    other.slot === row.slot ? { ...other, word } : other
+                  ),
+                  dirty
+                    ? `#${variant} を外し、未保存の変更も保存しました`
+                    : `#${variant} を外しました`
+                )
+                return
+              }
+              // 足しただけの枠は手元で消すだけ (サーバに送るものが無い)
+              if (!doc.slots?.[row.slot]) {
+                setDrafts(({ [row.slot]: _, ...rest }) => rest)
+                return
+              }
+              // slots は最終形を送るので、他の枠の未保存の編集も一緒に保存される
+              saveSlots(
+                rows.filter((other) => other.slot !== row.slot),
+                dirty ? '削除し、未保存の変更も保存しました' : '削除しました'
+              )
+            }}
+            onPickRep={(rank) => {
+              const op = repPickOp(
+                doc,
+                row.slot,
+                rank,
+                card.variant ? card.word : undefined
+              )
+              send(op, op.confirmed ? '代表を確定しました' : '代表を外しました')
+            }}
+            onRate={(value) =>
+              send(
+                {
+                  op: 'rating',
+                  k: card.kana,
+                  w: card.word,
+                  v: nextRatingValue(card.rating, value),
+                },
+                '評価を保存しました'
+              )
+            }
+          />
+        )
+      })}
     </ul>
   ) : null
 
@@ -527,6 +571,7 @@ export default function NumberDetailTab({
 
 function SlotCard({
   row,
+  slotWord,
   index,
   num,
   tables,
@@ -548,7 +593,10 @@ function SlotCard({
   onPickRep,
   onRate,
 }: {
+  /** カード 1 枚の行。タグ違いで分けたカードは variant と «本体#タグ 1 つ» の語を持つ */
   row: SlotRow
+  /** カードの元の枠の語 (美咲#bang#ml)。書き換えはこの語に当てる */
+  slotWord: string
   index: number
   /** この画面の番号。かながその読みになっているかを見る */
   num: string
@@ -583,7 +631,8 @@ function SlotCard({
     : null
   const suspicious =
     check?.status === 'mismatch' || check?.status === 'unreadable'
-  const canMove = !pending
+  // タグ違いのカードは枠ごと移すと他のタグの語まで動くので、ここからは移さない
+  const canMove = !pending && !row.variant
   // 詳細パネルで選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
   // タグ違いで分けた行の画像 (tagImages) は枠の画像と別物なので使わない
   const override = useImageOverride(num, IMAGE_SLOT_OF[row.slot] ?? row.slot)
@@ -648,10 +697,12 @@ function SlotCard({
         <div class="nd-fields">
           <input
             class="nd-input"
-            value={row.word}
+            value={baseText(row.word)}
             placeholder="語"
             autoFocus={focused}
-            onInput={(event) => onEdit({ word: event.currentTarget.value })}
+            onInput={(event) =>
+              onEdit({ word: setBase(slotWord, event.currentTarget.value) })
+            }
           />
           <input
             class="nd-input kana"
@@ -665,18 +716,31 @@ function SlotCard({
           disabled={!canMove}
           onClick={onToggleMove}
           aria-expanded={moveOpen}
-          title={pending ? '保存してから移せます' : '別の番号へ移す'}
+          title={
+            row.variant
+              ? 'タグ違いの語は移せません (枠ごと移すと他のタグの語も動く)'
+              : pending
+                ? '保存してから移せます'
+                : '別の番号へ移す'
+          }
         >
           ⇄
         </button>
-        <button class="nd-del" onClick={onDelete} title="この候補を削除">
+        <button
+          class="nd-del"
+          onClick={onDelete}
+          title={
+            row.variant ? `#${row.variant} の語だけ外す` : 'この候補を削除'
+          }
+        >
           ×
         </button>
       </div>
       <TagRow
         word={row.word}
+        lockedTag={row.variant}
         knownTags={knownTags}
-        onChange={(word) => onEdit({ word })}
+        onApply={(change) => onEdit({ word: change(slotWord) })}
       />
       {moveOpen ? (
         <MovePanel
@@ -816,12 +880,17 @@ function MovePanel({
  */
 function TagRow({
   word,
+  lockedTag,
   knownTags,
-  onChange,
+  onApply,
 }: {
+  /** 見せる語。タグ違いのカードでは «本体#そのタグ» */
   word: string
+  /** タグ違いのカードの出典タグ。外すとカードそのものが消えるので × を出さない */
+  lockedTag?: string
   knownTags: TagSuggestion[]
-  onChange: (word: string) => void
+  /** 書き換えを枠の語に当てる (分けたカードでも枠の語全体に効く) */
+  onApply: (change: (word: string) => string) => void
 }) {
   const names = useTagNames()
   const [adding, setAdding] = useState(false)
@@ -832,7 +901,7 @@ function TagRow({
     LABELS.find((label) => label.id === id)?.meaning ?? ''
 
   const commit = (tag: string) => {
-    onChange(addTag(word, tag))
+    onApply((current) => addTag(current, tag))
     setQuery('')
   }
 
@@ -850,13 +919,15 @@ function TagRow({
         {parsed.tags.map((tag) => (
           <span key={'t' + tag} class="nd-tag" title={`#${tag}`}>
             {tagNameOf(tag, names)}
-            <button
-              class="nd-tag-x"
-              aria-label={`タグ ${tag} を外す`}
-              onClick={() => onChange(removeTag(word, tag))}
-            >
-              ×
-            </button>
+            {tag === lockedTag ? null : (
+              <button
+                class="nd-tag-x"
+                aria-label={`タグ ${tag} を外す`}
+                onClick={() => onApply((current) => removeTag(current, tag))}
+              >
+                ×
+              </button>
+            )}
           </span>
         ))}
         {parsed.labels.map((label) => (
@@ -866,7 +937,7 @@ function TagRow({
             <button
               class="nd-tag-x"
               aria-label={`ラベル ${label} を外す`}
-              onClick={() => onChange(removeLabel(word, label))}
+              onClick={() => onApply((current) => removeLabel(current, label))}
             >
               ×
             </button>
@@ -928,10 +999,10 @@ function TagRow({
                   aria-pressed={on}
                   title={label.meaning}
                   onClick={() =>
-                    onChange(
+                    onApply((current) =>
                       on
-                        ? removeLabel(word, label.id)
-                        : addLabel(word, label.id)
+                        ? removeLabel(current, label.id)
+                        : addLabel(current, label.id)
                     )
                   }
                 >

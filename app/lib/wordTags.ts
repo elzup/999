@@ -31,6 +31,30 @@ export function parseWord(word: string): ParsedWord {
   return { base, tags, labels }
 }
 
+/** 本体の終わり (最初のタグ «#» かラベル « -a» の手前)。注釈の括弧は本体に含む */
+function baseEnd(word: string): number {
+  const tag = word.indexOf('#')
+  const label = word.search(/\s-[a-z](?=\s|#|$)/)
+  const ends = [tag, label].filter((at) => at >= 0)
+  return ends.length ? Math.min(...ends) : word.length
+}
+
+/**
+ * 編集欄に出す本体 (タグ・ラベルの手前まで、書かれたまま)。
+ * parseWord の base と違い空白を詰めないので、打った字がそのまま欄に残る
+ */
+export function baseText(word: string): string {
+  return word.slice(0, baseEnd(word))
+}
+
+/**
+ * 本体だけを書き換える。タグ・ラベルは元の並びのまま残す。
+ * 欄で «#» を打ってもタグにはしない (タグはチップでだけ付け外す: D-0133)
+ */
+export function setBase(word: string, base: string): string {
+  return base.replace(/#/g, '') + word.slice(baseEnd(word))
+}
+
 /** タグとして入れてよい文字列か。区切り文字を含むと別のタグに割れる */
 export function normalizeTag(input: string): string {
   return input
