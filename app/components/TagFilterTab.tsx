@@ -14,6 +14,7 @@ import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockBar } from './Screen'
 import DetailSheet from './DetailSheet'
 import { useSelection } from '../lib/useSelection'
+import { useBackGuard } from '../lib/useBackGuard'
 import { useMdReveal } from '../lib/useMdReveal'
 import { MdRevealToggle } from './MdRevealToggle'
 
@@ -122,6 +123,9 @@ function TagFilterTab({ numbers }: Props) {
     reveal.setMode('num')
     setTag(next)
   }
+  // タグを開いた画面で端末の «戻る» を押すとアプリごと閉じていた。
+  // 戻るはタグ一覧へ戻す (詳細パネルが開いていれば、そちらが先に閉じる)
+  useBackGuard(tag !== null, () => pickTag(null))
 
   const panel = selectedEntry ? (
     <DetailSheet nav={nav} onClose={clear}>
