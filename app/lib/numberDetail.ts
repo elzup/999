@@ -101,8 +101,8 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
       imageUrl: value.imageUrl,
       imageStale: Boolean(
         value.imageUrl &&
-          value.confirmedFor &&
-          nameOf(value.confirmedFor) !== nameOf(value.word)
+        value.confirmedFor &&
+        nameOf(value.confirmedFor) !== nameOf(value.word)
       ),
       rankey: rankeyOf(value.kana, doc.num, value.word),
       pt: doc.derived?.ptBySlot?.[slot],
@@ -120,7 +120,15 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
  * どのタグの人のものか分からないので流用しない (別人の画像を出さない)。
  */
 export function candidateRows(doc: NumberDoc): SlotRow[] {
-  return slotRows(doc).flatMap((row) => {
+  return splitRows(slotRows(doc), doc)
+}
+
+/**
+ * スロット単位の行を、出典タグ 1 つずつの行に分ける。編集画面も分けて出す (D-0133)。
+ * 編集中の行 (下書き) も分けられるよう、行の語から分ける。代表・評価は doc の保存済みの値で引く
+ */
+export function splitRows(rows: SlotRow[], doc: NumberDoc): SlotRow[] {
+  return rows.flatMap((row) => {
     const words = splitVariants(row.word)
     if (words.length < 2) return [row]
     const tagImages = doc.slots?.[row.slot]?.tagImages ?? {}
@@ -210,13 +218,15 @@ export function nextRatingValue(
 export function setRepPick(
   doc: NumberDoc,
   slot: string,
-  rank: 1 | 2
+  rank: 1 | 2,
+  /** タグ違いで分けた行の語 (美咲#bang)。無ければ枠の語そのもの */
+  word?: string
 ): RepPick[] {
   const value = doc.slots?.[slot]
   const picks = doc.rep?.picks ?? []
   if (!value) return picks
 
-  const target = { k: value.kana, w: value.word }
+  const target = { k: value.kana, w: word ?? value.word }
   if (picks[rank - 1] && sameValue(picks[rank - 1], target)) {
     return picks.filter((_, i) => i !== rank - 1)
   }
@@ -233,9 +243,10 @@ export function setRepPick(
 export function repPickOp(
   doc: NumberDoc,
   slot: string,
-  rank: 1 | 2
+  rank: 1 | 2,
+  word?: string
 ): { op: 'rep'; picks: RepPick[]; confirmed: boolean } {
-  const picks = setRepPick(doc, slot, rank)
+  const picks = setRepPick(doc, slot, rank, word)
   return { op: 'rep', picks, confirmed: picks.length > 0 }
 }
 
@@ -535,6 +546,19 @@ export function carryOverOps(
     if (norm(prev.k.trim()) !== norm(after.k)) continue
     if (parseWord(prev.w).base !== parseWord(after.w).base) continue
     renames.push([prev, after])
+    // タグ違いで分けた語 (美咲#bang) に付いた代表・評価も、同じ出典タグの語へ付け直す
+    const afterByTag = new Map(
+      splitVariants(after.w).map((w) => [variantTag(w), w] as const)
+    )
+    for (const w of splitVariants(prev.w)) {
+      const tag = variantTag(w)
+      const next = tag ? afterByTag.get(tag) : undefined
+      if (tag && next && next !== w)
+        renames.push([
+          { k: prev.k, w },
+          { k: after.k, w: next },
+        ])
+    }
   }
   if (!renames.length) return []
 
