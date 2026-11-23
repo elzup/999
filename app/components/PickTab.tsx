@@ -7,6 +7,7 @@ import { loadSubTab, saveSubTab } from '../data/storage'
 import { visibleAnchorNum } from '../lib/pickPosition'
 import CandidateTab from './CandidateTab'
 import RepPickerTab from './RepPickerTab'
+import { Segmented } from './Segmented'
 
 const MODE_KEY = 'pick.mode'
 const MODES = ['rep', 'image'] as const
@@ -30,18 +31,13 @@ export default function PickTab({ token, numbers }: Props) {
   }
 
   const modeSwitch = (
-    <span class="pick-modes" role="group" aria-label="代表と画像の切り替え">
-      {MODES.map((m) => (
-        <button
-          key={m}
-          type="button"
-          class={'rp-seg pick-mode' + (mode === m ? ' active' : '')}
-          aria-pressed={mode === m}
-          onClick={() => switchTo(m)}
-        >
-          {MODE_LABELS[m]}
-        </button>
-      ))}
+    <span class="pick-modes">
+      <Segmented
+        ariaLabel="代表と画像の切り替え"
+        options={MODES.map((m) => ({ id: m, label: MODE_LABELS[m] }))}
+        value={mode}
+        onChange={switchTo}
+      />
     </span>
   )
 

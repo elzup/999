@@ -3,6 +3,7 @@
 // 複合は ①② まで / ① だけ を 1 セルに並べる (十の位の割合バーと同じ色)。
 // セルの濃さは決めた割合 (1 色の濃淡)。数はセルに書くので色だけに頼らない。
 import { useState } from 'preact/hooks'
+import { Segmented } from './Segmented'
 import type { NumberDoc } from '../lib/numberApi'
 import {
   allCount,
@@ -153,17 +154,15 @@ export default function RepStats({
         <h3 class="rs-title">
           複合 (①② / ① だけ)
           <span class="rs-axis">
-            {(['xy', 'yz'] as const).map((axis) => (
-              <button
-                key={axis}
-                type="button"
-                class={'rp-seg' + (levelsAxis === axis ? ' active' : '')}
-                aria-pressed={levelsAxis === axis}
-                onClick={() => setLevelsAxis(axis)}
-              >
-                {axis.toUpperCase()}
-              </button>
-            ))}
+            <Segmented
+              ariaLabel="軸"
+              options={(['xy', 'yz'] as const).map((axis) => ({
+                id: axis,
+                label: axis.toUpperCase(),
+              }))}
+              value={levelsAxis}
+              onChange={setLevelsAxis}
+            />
           </span>
         </h3>
         <p class="rs-legend">
