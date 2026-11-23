@@ -13,7 +13,7 @@ describe('rankey notation', () => {
     ['にいさ', '213', 'にいさん', 'AAA|n'],
     ['たま', '550', '環', 'wwv|v'],
     ['ふり', '261', 'フリックル', 'Bww|..'],
-    ['りんご', '615', 'りんご', 'ww!A|'],
+    ['りﾝご', '615', 'りんご', 'ww!A|'],
     ['れい', '001', 'れい', '_CA|'],
   ])('notates %s (%s) as %s', (kana, num, word, expected) => {
     expect(rankey(kana, num, word)).toBe(expected)
@@ -25,11 +25,12 @@ describe('rankey notation', () => {
     expect(rankey('しゅろ', '476', '')).toBe('AxA|')
   })
 
-  it('marks kana the reading silently skips from the word as an omission', () => {
-    // よみ いじす は イージス の ー を飛ばしている。記法が無くても語と突き合わせて ! にする
-    expect(rankey('いじす', '143', 'イージス')).toBe('A!Av|v')
-    // 飛ばした後ろの語のかな (ー) は余り
-    expect(rankey('ふなし', '274', 'ふなっしー')).toBe('BA!A|-')
+  it('marks an omission only where the reading writes one (D-0118)', () => {
+    // ー / っ を飛ばすよみは記法 (半角カナ) で書く。記法が無ければ語と突き合わせない
+    expect(rankey('いｰじす', '143', 'イージス')).toBe('A!Av|v')
+    expect(rankey('いじす', '143', 'イージス')).toBe('AAv|v')
+    // 記法の後ろに残った語のかな (ー) は余り
+    expect(rankey('ふなｯし', '274', 'ふなっしー')).toBe('BA!A|-')
     // 語の頭から読んでいるよみは今までどおり (余りだけ)
     expect(rankey('みっき', '399', 'ミッキー')).toBe('BtA|-')
   })
@@ -52,9 +53,11 @@ describe('rankey notation', () => {
   })
 
   it('appends m when the same digit is written with different kana', () => {
-    // とま: と=10 と ま=00 の両方が 0 を担う
-    expect(rankey('とま', '100', 'トマス')).toBe('wwv|v.m')
-    expect(rankey('とま', '100', '')).toBe('wwv|vm')
+    // れじん: れ と ん がどちらも 0 (1 桁読みどうし)
+    expect(rankey('れじん', '040', 'レジン')).toBe('CAA|m')
+    // 2 桁読みの中の数字は数えない: とま (と=10 / ま=00)、とい (と=10 / い=1)
+    expect(rankey('とま', '100', 'トマス')).toBe('wwv|v.')
+    expect(rankey('とい', '101', 'とい')).toBe('wwA|')
   })
 
   it('marks a reading that overflows past three digits', () => {

@@ -16,12 +16,14 @@ describe('skipNotationFor', () => {
     expect(skipNotationFor('りんご', '615')).toBe('りﾝご')
   })
 
-  it('書き直しても rankey は変わらない', () => {
+  it('書き直したよみは番号どおりに読め、rankey は記法の位置に ! を置く', () => {
     for (const [kana, num] of [
       ['さばんな', '387'],
       ['りんご', '615'],
     ]) {
-      expect(rankey(skipNotationFor(kana, num), num)).toBe(rankey(kana, num))
+      const next = skipNotationFor(kana, num)
+      expect(score(next).digits).toBe(num)
+      expect(rankey(next, num)).toContain('!')
     }
   })
 

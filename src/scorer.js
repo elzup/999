@@ -45,11 +45,15 @@ export function getLabelPenalty(label) {
   return { tags, penalty }
 }
 
-/** 同じ数字が異なるかなで表されているか判定（促音は除外） */
+/**
+ * 同じ数字が異なるかなで表されているか判定 (促音は除外)。
+ * 2 桁以上を読むかな (と=10、つ=23) の中の数字は数えない。とい=101 の と と い を
+ * «1 を別のかなで読んだ» と見て mix にしていた (2 桁読みは 1 つの読みとして覚える)
+ */
 function detectMix(details) {
   const digitToKana = {}
   for (const t of details) {
-    if (isSokuon(t.kana)) continue
+    if (isSokuon(t.kana) || t.value.length > 1) continue
     for (const d of t.value) {
       if (digitToKana[d] === undefined) {
         digitToKana[d] = t.kana

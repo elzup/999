@@ -106,9 +106,10 @@ describe('記法 半角カナ (読まないかな)', () => {
     expect(encode('スｳる').digits).toBe('36')
   })
 
-  it('rankey は自動で見つけた中間省略と同じ ! を、記法の位置に置く', () => {
-    expect(rankey('さばﾝな', '387')).toBe(rankey('さばんな', '387'))
+  it('rankey は記法の位置に ! を置く。記法の無いよみには付けない (D-0118)', () => {
     expect(rankey('さばﾝな', '387')).toBe('AA!A|')
+    // 記法が無ければ書いたとおりに読む (ん=0、な は余り)
+    expect(rankey('さばんな', '387')).toBe('AAA|.')
     expect(rankey('りﾝご', '615')).toBe('ww!A|')
   })
 
