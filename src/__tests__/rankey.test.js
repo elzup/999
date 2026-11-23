@@ -25,6 +25,12 @@ describe('rankey notation', () => {
     expect(rankey('しゅろ', '476', '')).toBe('AxA|')
   })
 
+  it('marks a small vowel (ぃ) as the x side like a youon', () => {
+    // てぃ(12) の ぃ は独立した音ではない。い (core) と見て AwA にしない
+    expect(rankey('さてぃ', '312', 'サティ')).toBe('Awx|')
+    expect(rankey('ふぃる', '216', 'フィルム')).toBe('BxB|.')
+  })
+
   it('keeps ん as a plain core digit inside the window', () => {
     // ん は single に 0(core) があるので、窓の中なら A、余りなら n
     expect(rankey('ばろん', '860', 'バロン')).toBe('AAA|')
