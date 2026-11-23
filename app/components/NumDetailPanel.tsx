@@ -132,6 +132,7 @@ function RowImage({ num, row }: { num: string; row: WordRow }) {
           // 選び直した画像は元画像つき。無ければ表示用の URL だけ渡し、ピッカーが取り直す
           current={override ?? (url ? { url, hash: '' } : null)}
           onClose={() => setIsOpen(false)}
+          onEditWord={ctx ? () => ctx.openEditor(num, row.slot) : undefined}
         />
       ) : null}
     </>

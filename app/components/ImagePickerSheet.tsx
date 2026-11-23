@@ -48,6 +48,8 @@ type Props = {
   onPicked?: (image: SlotImage) => void
   /** 確定を付け外した */
   onKeep?: (on: boolean) => void
+  /** 語の編集へ移る (見出しの «✎ 語»、B-1)。無ければボタンを出さない (語編集の中から開いたとき等) */
+  onEditWord?: () => void
 }
 
 type Loaded = { query: string; candidates: SlotImage[]; reused: boolean }
@@ -154,6 +156,7 @@ export default function ImagePickerSheet({
   onClose,
   onPicked,
   onKeep,
+  onEditWord,
 }: Props) {
   const [isLocked, setIsLocked] = useState(kept ?? false)
   const [isStateReady, setIsStateReady] = useState(kept !== undefined)
@@ -388,11 +391,13 @@ export default function ImagePickerSheet({
       }
     })
 
+  /** 閉じたら true。保存中・取りやめたら false (語の編集へ移るかをこれで決める) */
   const close = () => {
-    if (phase === 'saving') return
+    if (phase === 'saving') return false
     if (hasDraft && !confirm('選んだ画像・切り抜きを保存せずに閉じますか？'))
-      return
+      return false
     onClose()
+    return true
   }
 
   const listed = loaded?.candidates.slice(0, SHOWN_CANDIDATES) ?? []
@@ -429,6 +434,18 @@ export default function ImagePickerSheet({
             <TaggedWord word={word} />
           </span>
           {isLocked ? <span class="ip-kept">確定済み</span> : null}
+          {onEditWord ? (
+            <button
+              type="button"
+              class="filter-btn ip-edit-word"
+              onClick={() => {
+                if (close()) onEditWord()
+              }}
+              title="この語を直す (語の編集を開く)"
+            >
+              ✎ 語
+            </button>
+          ) : null}
         </div>
         <form
           class="ip-query"

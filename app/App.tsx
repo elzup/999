@@ -251,10 +251,18 @@ export function App() {
 
   // テストの結果ビューから開く編集。タブを切り替えると結果ビューごと消えるので、
   // 今のタブの上に重ねて開き、閉じたら結果ビューへ戻る
-  const [overlayEditNum, setOverlayEditNum] = useState<string | null>(null)
+  const [overlayEdit, setOverlayEdit] = useState<{
+    num: string
+    slot?: string
+  } | null>(null)
+  const overlayEditNum = overlayEdit?.num ?? null
+  const openOverlayEditor = useCallback(
+    (num: string, slot?: string) => setOverlayEdit({ num, slot }),
+    []
+  )
   const [editVersion, setEditVersion] = useState(0)
   const closeOverlayEditor = useCallback(() => {
-    setOverlayEditNum(null)
+    setOverlayEdit(null)
     setEditVersion((v) => v + 1)
   }, [])
   useBackGuard(Boolean(overlayEditNum), closeOverlayEditor)
@@ -269,13 +277,13 @@ export function App() {
       numbers: data?.numbers ?? [],
       bookmarks,
       onToggleBm: toggleBm,
-      openEditor: setOverlayEditNum,
+      openEditor: openOverlayEditor,
       editVersion,
       tagNames: data?.tagNames,
       tagTitles: data?.tagTitles,
       token,
     }),
-    [data, bookmarks, toggleBm, editVersion, token]
+    [data, bookmarks, toggleBm, openOverlayEditor, editVersion, token]
   )
 
   // サブタブを持たないグループのスライド用デッキ。kuku は applyData で注入済みの
@@ -454,6 +462,7 @@ export function App() {
               <NumberDetailTab
                 token={token}
                 initialNum={overlayEditNum}
+                focusSlot={overlayEdit?.slot}
                 numbers={data.numbers}
                 rules={data.rules}
                 onClose={closeOverlayEditor}

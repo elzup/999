@@ -59,6 +59,17 @@ export const IMAGE_SLOT_OF: Record<string, string> = {
   wm3: 'wm3',
 }
 
+/** 画像データの枠名 (w1_2#res) → アプリの枠名 (wh2)。番号でない対象の枠 (P / A / O) は null */
+export function appSlotOf(imageSlot: string): string | null {
+  const base = imageSlot.split('#')[0]
+  const hit = Object.entries(IMAGE_SLOT_OF).find(([, image]) => image === base)
+  return hit ? hit[0] : null
+}
+
+/** 画像の枠名。タグ違いで分けた語は «旧スロット#タグ» (D-0041) */
+export const imageSlotOf = (slot: string, variant?: string) =>
+  (IMAGE_SLOT_OF[slot] ?? slot) + (variant ? `#${variant}` : '')
+
 // 候補は検索と 10 枚の DL を待つので、番号の API (15 秒) より長く待つ。
 // Hosting から Function への転送が 60 秒で切れるので、それより少し長く
 const TIMEOUT_MS = 65_000

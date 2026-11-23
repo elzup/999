@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import {
   CANDIDATE_FILTERS,
+  appSlotOf,
   candidateItems,
   fetchImageState,
   keepOpened,
@@ -129,7 +130,8 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   })
 
   // 検索語の誤りの判定は、検索と同じく正式名 (title) で展開して比べる
-  const tagTitles = useNumberContext()?.tagTitles ?? {}
+  const ctx = useNumberContext()
+  const tagTitles = ctx?.tagTitles ?? {}
   const [bulk, setBulk] = useState('')
   const [isFlagging, setIsFlagging] = useState(false)
 
@@ -238,6 +240,13 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   }
 
   /** 選んだ画像を一覧に反映する (撮り直しの印は Function が外している) */
+  // 番号の語だけ語の編集へ移れる (日付・カードの語は編集画面が無い)
+  const editWordOf = (id: string, slot: string) => {
+    const appSlot = appSlotOf(slot)
+    if (!ctx || !appSlot || !/^\d{3}$/.test(id)) return undefined
+    return () => ctx.openEditor(id, appSlot)
+  }
+
   const picked = (item: CandidateItem, image: SlotImage) => {
     setState((prev) => {
       if (!prev) return prev
@@ -383,6 +392,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
           choices={open.choices}
           onPicked={(image) => picked(open, image)}
           onKeep={(on) => kept(open, on)}
+          onEditWord={editWordOf(open.id, open.slot)}
         />
       ) : null}
     </>

@@ -54,7 +54,8 @@ import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
-import { IMAGE_SLOT_OF, useImageOverride } from '../lib/imagePicker'
+import { imageSlotOf, useImageOverride } from '../lib/imagePicker'
+import ImagePickerSheet from './ImagePickerSheet'
 import { useNumberContext } from '../lib/numberContext'
 import { tagNameOf, useTagNames } from '../lib/tagNames'
 
@@ -327,6 +328,7 @@ export default function NumberDetailTab({
         return (
           <SlotCard
             key={card.key}
+            token={token}
             row={card}
             slotWord={row.word}
             index={index}
@@ -570,6 +572,7 @@ export default function NumberDetailTab({
 }
 
 function SlotCard({
+  token,
   row,
   slotWord,
   index,
@@ -593,6 +596,8 @@ function SlotCard({
   onPickRep,
   onRate,
 }: {
+  /** 画像のピッカーを開く通行証 */
+  token: string
   /** カード 1 枚の行。タグ違いで分けたカードは variant と «本体#タグ 1 つ» の語を持つ */
   row: SlotRow
   /** カードの元の枠の語 (美咲#bang#ml)。書き換えはこの語に当てる */
@@ -633,10 +638,13 @@ function SlotCard({
     check?.status === 'mismatch' || check?.status === 'unreadable'
   // タグ違いのカードは枠ごと移すと他のタグの語まで動くので、ここからは移さない
   const canMove = !pending && !row.variant
-  // 詳細パネルで選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
-  // タグ違いで分けた行の画像 (tagImages) は枠の画像と別物なので使わない
-  const override = useImageOverride(num, IMAGE_SLOT_OF[row.slot] ?? row.slot)
-  const picked = row.variant ? undefined : override
+  // 選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
+  // タグ違いのカードは «旧スロット#タグ» の枠の画像 (枠の画像とは別物)
+  const imageSlot = imageSlotOf(row.slot, row.variant)
+  const picked = useImageOverride(num, imageSlot)
+  const [isPicking, setIsPicking] = useState(false)
+  // 保存していない枠は画像の対象 (DB の語) に無いので選べない
+  const canPickImage = Boolean(token && isSaved && row.word)
   const imageUrl = picked?.url ?? row.imageUrl
   // 選び直した画像は今の語で選んだもの
   const isStale = !picked && row.imageStale
@@ -683,17 +691,47 @@ function SlotCard({
             </button>
           ) : null}
         </span>
-        {imageUrl ? (
-          <img
-            class={'nd-img' + (isStale ? ' stale' : '')}
-            loading="lazy"
-            {...wordImage(imageUrl, 40, row.word)}
-            alt={row.word}
-            title={isStale ? '確定時点の語と違う画像' : undefined}
+        {/* サムネを押すと画像のピッカー (A-1)。右下の ✎ で押せると分かるようにする */}
+        <button
+          type="button"
+          class="nd-img-btn"
+          disabled={!canPickImage}
+          onClick={() => setIsPicking(true)}
+          aria-label={`${row.word} の画像を選び直す`}
+          title={
+            canPickImage
+              ? isStale
+                ? '確定時点の語と違う画像 (押すと選び直す)'
+                : '画像を選び直す'
+              : '保存すると画像を選べます'
+          }
+        >
+          {imageUrl ? (
+            <img
+              class={'nd-img' + (isStale ? ' stale' : '')}
+              loading="lazy"
+              {...wordImage(imageUrl, 40, row.word)}
+              alt={row.word}
+            />
+          ) : (
+            <span class="nd-img empty" />
+          )}
+          {canPickImage ? (
+            <span class="nd-img-badge" aria-hidden="true">
+              ✎
+            </span>
+          ) : null}
+        </button>
+        {isPicking ? (
+          <ImagePickerSheet
+            token={token}
+            id={num}
+            slot={imageSlot}
+            word={row.word}
+            current={picked ?? (imageUrl ? { url: imageUrl, hash: '' } : null)}
+            onClose={() => setIsPicking(false)}
           />
-        ) : (
-          <span class="nd-img empty" />
-        )}
+        ) : null}
         <div class="nd-fields">
           <input
             class="nd-input"
