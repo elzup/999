@@ -25,12 +25,15 @@ done
 
 # sheet-layout は sheet-bisync がスロットの並びを引く。kana-notation は encoder が記法 [す] を読む。
 # words は app-entry が配信データの 1 件を組み立てる (/app/data に DB の語を重ねる)
-for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation words; do
+# date-keys は images/targets が日付の対象を見分けるのに使う
+for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation words date-keys; do
   cp "$root/src/$name.js" "$lib/$name.js"
 done
 
 # web 版の画像コンソール (console-route.js / index.js が読む)。印と、その場の取り直し (検索 → DL → webp → GCS)
-for name in slot-docs slot-store uploader fetch-one search ddg bing download process query; do
+# targets / tag-variants / live-targets は /console/state に DB の最新の語を重ねるのに使う
+for name in slot-docs slot-store uploader fetch-one search ddg bing download process query \
+  targets tag-variants live-targets; do
   cp "$root/src/images/$name.js" "$lib/images/$name.js"
 done
 

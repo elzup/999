@@ -141,8 +141,8 @@ export const api = onRequest(
           method: req.method,
           path,
           body: req.body || {},
-          state: await withLiveSearchTagNames(
-            readPrivateJson('console-state.json')
+          state: await withLiveTargets(
+            await withLiveSearchTagNames(readPrivateJson('console-state.json'))
           ),
           ...(await loadImageSlots()),
           now: new Date().toISOString(),
@@ -492,6 +492,27 @@ async function readNumberDocs() {
     pulledAt: now,
   }
   return numberDocs.docs
+}
+
+let liveTargetsLib = null
+const loadLiveTargetsLib = async () =>
+  (liveTargetsLib ??= await import('./lib/images/live-targets.js'))
+
+/**
+ * console の対象 (焼いた state.targets) の番号の分を、DB の最新の語で作り直す。
+ * アプリで足した語が、deploy を待たずに画像の候補タブに出るようにする。DB が読めなければ焼いたまま
+ */
+async function withLiveTargets(state) {
+  try {
+    const [docs, lib] = await Promise.all([
+      readNumberDocs(),
+      loadLiveTargetsLib(),
+    ])
+    return lib.withLiveNumberTargets(state, docs)
+  } catch (error) {
+    console.error('console(targets)', error)
+    return state
+  }
 }
 
 let appEntryLib = null
