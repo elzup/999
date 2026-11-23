@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>番号の悪い順</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --surface2: #eef0f4;
+        --border: #d9dde5;
+        --text: #1b1e24;
+        --text2: #5d6472;
+        --accent: #1f8a4c;
+        --m: #2563eb;
+        --h: #c2410c;
+        --bad: #b91c1c;
+        --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+        --font:
+          -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP',
+          sans-serif;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #0f1117;
+          --surface: #1a1d27;
+          --surface2: #22252f;
+          --border: #2a2d37;
+          --text: #e0e0e0;
+          --text2: #8a8f9c;
+          --accent: #4ade80;
+          --m: #60a5fa;
+          --h: #fb923c;
+          --bad: #f87171;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --surface2: #22252f;
+        --border: #2a2d37;
+        --text: #e0e0e0;
+        --text2: #8a8f9c;
+        --accent: #4ade80;
+        --m: #60a5fa;
+        --h: #fb923c;
+        --bad: #f87171;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        padding: 16px 16px 48px;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .lead,
+      .foot {
+        color: var(--text2);
+        font-size: 12px;
+        line-height: 1.7;
+        margin: 0;
+      }
+      .ctl {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .seg-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .seg-row > span {
+        font-size: 11px;
+        color: var(--text2);
+        width: 4em;
+      }
+      .seg {
+        display: inline-flex;
+        flex-wrap: wrap;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .seg button {
+        font: inherit;
+        font-size: 12px;
+        border: 0;
+        border-right: 1px solid var(--border);
+        background: none;
+        color: var(--text);
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      .seg button:last-child {
+        border-right: 0;
+      }
+      .seg button:hover {
+        background: var(--surface2);
+        color: var(--text);
+      }
+      .seg button[aria-checked='true'] {
+        background: var(--accent);
+        color: var(--bg);
+        font-weight: 700;
+      }
+      .seg button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+      }
+      .count {
+        font-size: 12px;
+        color: var(--text2);
+      }
+      ol {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      details {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+      summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 8px 10px;
+        display: grid;
+        grid-template-columns: 3.2em 4.5em 1fr 1fr;
+        gap: 8px;
+        align-items: baseline;
+      }
+      summary::-webkit-details-marker {
+        display: none;
+      }
+      summary:focus-visible {
+        outline: 2px solid var(--accent);
+      }
+      .num {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+      }
+      .fill {
+        font-size: 10px;
+        border-radius: 4px;
+        padding: 1px 4px;
+        text-align: center;
+        border: 1px solid var(--border);
+        color: var(--text2);
+      }
+      .fill.f0 {
+        color: var(--bad);
+        border-color: var(--bad);
+      }
+      .w {
+        min-width: 0;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .w b {
+        font-weight: 600;
+      }
+      .w .k {
+        color: var(--text2);
+      }
+      .w .p {
+        display: block;
+        font-size: 10px;
+        color: var(--text2);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .w.none {
+        color: var(--text2);
+      }
+      .tagm {
+        color: var(--m);
+        font-weight: 700;
+      }
+      .tagh {
+        color: var(--h);
+        font-weight: 700;
+      }
+      .rk {
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+      .detail {
+        padding: 4px 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .detail h3 {
+        font-size: 12px;
+        margin: 0;
+        color: var(--text2);
+        font-weight: 600;
+      }
+      .gridwrap {
+        overflow-x: auto;
+      }
+      table.cover {
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      table.cover th {
+        font-weight: 400;
+        color: var(--text2);
+        font-size: 10px;
+        padding: 2px 6px;
+        text-align: left;
+      }
+      table.cover td {
+        border: 1px solid var(--border);
+        padding: 3px 6px;
+        min-width: 3.4em;
+        text-align: center;
+        vertical-align: top;
+      }
+      table.cover td.empty {
+        color: var(--border);
+      }
+      table.cover td.um {
+        box-shadow: inset 0 -3px 0 var(--m);
+      }
+      table.cover td.uh {
+        box-shadow: inset 0 3px 0 var(--h);
+      }
+      table.cover td.um.uh {
+        box-shadow:
+          inset 0 -3px 0 var(--m),
+          inset 0 3px 0 var(--h);
+      }
+      table.cover .hd {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .legend {
+        font-size: 10px;
+        color: var(--text2);
+      }
+      ul.items {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        font-size: 12px;
+      }
+      ul.items li {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .pat {
+        font-size: 10px;
+        color: var(--text2);
+      }
+      .rankno {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text2);
+        width: 2.4em;
+      }
+      @media (max-width: 520px) {
+        summary {
+          grid-template-columns: 3em 4em 1fr;
+        }
+        summary .w.h {
+          grid-column: 3;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>番号の悪い順</h1>
+      <p class="lead">
+        番号を悪い順に並べています。開くと、ティアカバーの格子
+        (登録語の通るマス)
+        と、表から作った良い当て方が出ます。語の良し悪しは、その語に当たる型のうち一番悪い型の順位で比べます
+        (並べ替えページの 20 項目、D-0131)。順位が同じなら、1 桁の拍の格 (core 1
+        / sub 0.8 / bad 0.6 の平均)
+        が高い方を良いとします。点はまだ付けていないので仮の並びです。<span
+          class="tagm"
+          >物</span
+        >
+        と <span class="tagh">人</span> は、それぞれ一番良い語を出しています。
+      </p>
+      <div class="ctl">
+        <div class="seg-row">
+          <span>並べ方</span>
+          <div
+            class="seg"
+            role="radiogroup"
+            aria-label="並べ方"
+            id="sort"
+          ></div>
+        </div>
+        <div class="seg-row">
+          <span>埋まり方</span>
+          <div
+            class="seg"
+            role="radiogroup"
+            aria-label="埋まり方"
+            id="fill"
+          ></div>
+        </div>
+        <div class="count" id="count"></div>
+      </div>
+      <ol id="list"></ol>
+      <p class="foot" id="foot"></p>
+    </main>
+    <script>
+      /*@@DATA@@*/
+      const NAME = Object.fromEntries(
+        ORDER.map(([id, name], i) => [id, `${i + 1}. ${name}`])
+      )
+      const FILL = ['語なし', '人だけ', '物だけ', '両方']
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]
+        )
+      const BEST = 0
+      // 悪い方が先。無い語は一番悪い (順位 99) と見る
+      const worstOf = (w) => (w ? w.worst : 99)
+      const tierOf = (w) => (w ? w.tier : 0)
+      const SORTS = [
+        [
+          'fill',
+          '埋まり方 → 物 → 人',
+          (a, b) =>
+            a.fill - b.fill ||
+            worstOf(b.m) - worstOf(a.m) ||
+            tierOf(a.m) - tierOf(b.m) ||
+            worstOf(b.h) - worstOf(a.h),
+        ],
+        [
+          'm',
+          '物の型',
+          (a, b) =>
+            worstOf(b.m) - worstOf(a.m) ||
+            tierOf(a.m) - tierOf(b.m) ||
+            a.fill - b.fill,
+        ],
+        [
+          'h',
+          '人の型',
+          (a, b) =>
+            worstOf(b.h) - worstOf(a.h) ||
+            tierOf(a.h) - tierOf(b.h) ||
+            a.fill - b.fill,
+        ],
+        ['num', '番号順', (a, b) => a.num.localeCompare(b.num)],
+      ]
+      const FILTERS = [
+        ['all', 'すべて'],
+        ...FILL.map((label, i) => [String(i), label]),
+      ]
+      let sortId = 'fill'
+      let fillId = 'all'
+
+      function seg(el, options, get, set) {
+        el.innerHTML = ''
+        for (const [id, label] of options) {
+          const b = document.createElement('button')
+          b.type = 'button'
+          b.setAttribute('role', 'radio')
+          b.textContent = label
+          b.setAttribute('aria-checked', String(get() === id))
+          b.onclick = () => {
+            set(id)
+            render()
+          }
+          el.append(b)
+        }
+      }
+
+      function wordCell(w, kind) {
+        if (!w)
+          return `<span class="w ${kind} none"><span class="tag${kind}">${kind === 'm' ? '物' : '人'}</span> なし</span>`
+        return `<span class="w ${kind}"><span class="tag${kind}">${kind === 'm' ? '物' : '人'}</span> <b>${esc(w.word)}</b> <span class="k">${esc(w.kana)}</span> <span class="rk">${esc(w.rk)}</span><span class="p">${esc(NAME[w.ids.at(-1)] ?? '')}</span></span>`
+      }
+
+      /** 語の拍が格子のどのマスを通るか。row: d0 (桁 0-1 の 2 桁) / d1 (桁 1-2) / core / sub / bad */
+      function usedCells(w) {
+        const out = new Set()
+        if (!w) return out
+        for (const t of w.toks) {
+          if (t.kind === 'single')
+            out.add(`${{ A: 'core', B: 'sub', C: 'bad' }[t.tier]}:${t.col}`)
+          if (t.kind === 'double' || t.kind === 'youon')
+            out.add(`d${t.col}:${t.col}`)
+        }
+        return out
+      }
+
+      function coverTable(r) {
+        const um = usedCells(r.m),
+          uh = usedCells(r.h)
+        const ds = [...r.num]
+        const cls = (key) =>
+          (um.has(key) ? ' um' : '') + (uh.has(key) ? ' uh' : '')
+        const cell = (key, ks, span = 1) =>
+          `<td${span > 1 ? ` colspan="${span}"` : ''} class="${ks.length ? '' : 'empty'}${cls(key)}">${ks.length ? esc(ks.join(' / ')) : '-'}</td>`
+        const dbl = (x, y) => GRID.double[x]?.[y] ?? []
+        const rows = [
+          `<tr><th></th>${ds.map((d) => `<td class="hd">${d}</td>`).join('')}</tr>`,
+          `<tr><th>2桁</th>${cell('d0:0', dbl(ds[0], ds[1]), 2)}<td class="empty">·</td></tr>`,
+          `<tr><th>2桁</th><td class="empty">·</td>${cell('d1:1', dbl(ds[1], ds[2]), 2)}</tr>`,
+          ...['core', 'sub', 'bad'].map(
+            (t) =>
+              `<tr><th>${t}</th>${ds.map((d, i) => cell(`${t}:${i}`, GRID.single[d]?.[t] ?? [])).join('')}</tr>`
+          ),
+        ]
+        return `<div class="gridwrap"><table class="cover">${rows.join('')}</table></div><div class="legend">下線 = <span class="tagm">物</span> の一番良い語が通るマス、上線 = <span class="tagh">人</span> の一番良い語が通るマス</div>`
+      }
+
+      function itemList(items, withKind) {
+        if (!items.length) return '<p class="lead">なし</p>'
+        return `<ul class="items">${items.map((w) => `<li><span class="rankno">${w.worst}</span>${withKind ? `<span class="tag${w.kind}">${w.kind === 'm' ? '物' : '人'}</span>` : ''}<b>${esc(w.word ?? w.kana)}</b>${w.word ? ` <span class="k">${esc(w.kana)}</span>` : ''} <span class="rk">${esc(w.rk)}</span> <span class="pat">${w.ids.map((id) => esc(NAME[id])).join(' · ')} / 格 ${w.tier}</span></li>`).join('')}</ul>`
+      }
+
+      function detail(r) {
+        return `<div class="detail"><h3>ティアカバー</h3>${coverTable(r)}<h3>登録語 (良い順。左の数字は一番悪い型の順位)</h3>${itemList(r.words, true)}<h3>良い当て方 (表から作った読み。語ではない)</h3>${itemList(
+          r.ideas.map((x) => ({ ...x, word: null })),
+          false
+        )}</div>`
+      }
+
+      function render() {
+        seg(
+          document.getElementById('sort'),
+          SORTS,
+          () => sortId,
+          (v) => {
+            sortId = v
+          }
+        )
+        seg(
+          document.getElementById('fill'),
+          FILTERS,
+          () => fillId,
+          (v) => {
+            fillId = v
+          }
+        )
+        const cmp = SORTS.find((s) => s[0] === sortId)[2]
+        const rows = LIST.filter(
+          (r) => fillId === 'all' || String(r.fill) === fillId
+        ).sort((a, b) => cmp(a, b) || a.num.localeCompare(b.num))
+        document.getElementById('count').textContent = `${rows.length} 番号`
+        const list = document.getElementById('list')
+        list.innerHTML = rows
+          .map(
+            (r) =>
+              `<li><details data-num="${r.num}"><summary><span class="num">${r.num}</span><span class="fill f${r.fill}">${FILL[r.fill]}</span>${wordCell(r.m, 'm')}${wordCell(r.h, 'h')}</summary></details></li>`
+          )
+          .join('')
+        for (const d of list.querySelectorAll('details')) {
+          d.addEventListener('toggle', () => {
+            if (!d.open || d.dataset.done) return
+            d.dataset.done = '1'
+            d.insertAdjacentHTML(
+              'beforeend',
+              detail(LIST.find((r) => r.num === d.dataset.num))
+            )
+          })
+        }
+      }
+      document.getElementById('foot').textContent =
+        `生成 ${BUILT} / node scripts/worst-rank.mjs (テンプレート scripts/worst-rank.template.html) / 語: .metarc/rankey-catalog.data.json (DB から) / 表と概念タグ: functions/private/data.json`
+      render()
+    </script>
+  </body>
+</html>
