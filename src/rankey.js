@@ -5,7 +5,7 @@
 //
 //   A/B/C  1文字1桁の core/sub/bad          みかみ = BCB|
 //   w w    1文字2桁 (と=10 等) の2桁ぶん     きた   = Aww|
-//   x      2文字2桁(拗音)の小文字側          しゅろ = AxA|   (し は core なので A)
+//   x      2文字2桁の小書き側 (拗音・小書き母音) しゅろ = AxA| (し は core なので A) / さてぃ = Awx|
 //   t      促音                              ろっし = AtA|
 //   _      先頭0の省略 (2桁しか無い)         れい   = _CA|
 //   !      中間の省略                        りんご = ww!A|   (ん を飛ばす)
@@ -30,8 +30,10 @@ import { hasNotation, parseNotation, stripNotation } from './kana-notation.js'
 
 const TIER_MARK = { core: 'A', sub: 'B', bad: 'C' }
 const TARGET = 3
-// 小書きの拗音。2文字目がこれなら小書き側は独立した音を持たないので x を当てる
-const SMALL_YOUON = ['ゃ', 'ゅ', 'ょ', 'ャ', 'ュ', 'ョ']
+// 小書きのかな。2文字目がこれなら小書き側は独立した音を持たないので x を当てる。
+// 拗音 (しゅ) だけでなく小書き母音 (てぃ / ふぃ) も同じ。以前は ゃゅょ だけで、
+// てぃ の ぃ を い (core) と見て さてぃ = AwA になっていた
+const SMALL_KANA = [...'ぁぃぅぇぉゃゅょゎァィゥェォャュョヮ']
 
 const toHira = (s) => [...normalizeDakuten(s)].map(kataToHira).join('')
 
@@ -89,8 +91,8 @@ function tokenMarks(token) {
     const chars = [...token.kana]
     // 1文字2桁 (た=55): どちらの桁も1文字に紐づかないので w w
     if (chars.length !== 2) return Array(width).fill('w')
-    // 拗音 (しゅ=47): 小書き側は独立した音ではないので x
-    if (SMALL_YOUON.includes(chars[1])) return [charMark(chars[0]), 'x']
+    // 拗音・小書き母音 (しゅ=47 / てぃ=12): 小書き側は独立した音ではないので x
+    if (SMALL_KANA.includes(chars[1])) return [charMark(chars[0]), 'x']
     // それ以外 (しん=40, ろん=60, きー=91): 各文字がそれぞれ1桁を賄う
     return chars.map(charMark)
   }
