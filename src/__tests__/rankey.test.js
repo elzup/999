@@ -25,6 +25,15 @@ describe('rankey notation', () => {
     expect(rankey('しゅろ', '476', '')).toBe('AxA|')
   })
 
+  it('marks kana the reading silently skips from the word as an omission', () => {
+    // よみ いじす は イージス の ー を飛ばしている。記法が無くても語と突き合わせて ! にする
+    expect(rankey('いじす', '143', 'イージス')).toBe('A!Av|v')
+    // 飛ばした後ろの語のかな (ー) は余り
+    expect(rankey('ふなし', '274', 'ふなっしー')).toBe('BA!A|-')
+    // 語の頭から読んでいるよみは今までどおり (余りだけ)
+    expect(rankey('みっき', '399', 'ミッキー')).toBe('BtA|-')
+  })
+
   it('marks a small vowel (ぃ) as the x side like a youon', () => {
     // てぃ(12) の ぃ は独立した音ではない。い (core) と見て AwA にしない
     expect(rankey('さてぃ', '312', 'サティ')).toBe('Awx|')
