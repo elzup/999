@@ -42,15 +42,19 @@ import {
   scrollToNum,
 } from '../lib/pickPosition'
 import TaggedWord from './TaggedWord'
+import WorstRankView from './WorstRankView'
 
 const VIEW_KEY = 'rep.view'
-type View = 'rows' | 'cards' | 'stats'
-const VIEWS: View[] = ['rows', 'cards', 'stats']
+type View = 'rows' | 'cards' | 'stats' | 'worst'
+const VIEWS: View[] = ['rows', 'cards', 'stats', 'worst']
 const VIEW_LABELS: Record<View, string> = {
   rows: '行',
   cards: 'カード',
   stats: '統計',
+  worst: '悪い順',
 }
+/** 百の位・状態で絞らず、1000 番号まとめて見る表示 */
+const isWholeView = (view: View) => view === 'stats' || view === 'worst'
 const MARK = ['', '①', '②']
 
 type Props = {
@@ -329,7 +333,9 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
   }
 
   const main =
-    view === 'stats' ? (
+    view === 'worst' ? (
+      <WorstRankView numbers={numbers} />
+    ) : view === 'stats' ? (
       <RepStats docs={statsDocs} loadedHundreds={statsLoaded} />
     ) : !visible.length ? (
       <div class="screen-empty">{loading ? '読み込み中…' : '該当なし'}</div>
@@ -394,7 +400,7 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
           </span>
         </DockRow>
       ) : null}
-      {view === 'stats' ? null : (
+      {isWholeView(view) ? null : (
         <>
           <Segmented
             label="状態"
