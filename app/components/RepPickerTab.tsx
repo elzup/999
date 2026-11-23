@@ -32,6 +32,7 @@ import {
 import Screen, { DockBar, DockRow } from './Screen'
 import RepCard from './RepCard'
 import RepStats from './RepStats'
+import { Segmented } from './Segmented'
 import { wordImage } from '../lib/wordImage'
 import {
   DIGITS,
@@ -370,16 +371,12 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
         sub={`${doneCount}/${docs.length} 確定 · ${hundred}00-${hundred}99`}
       >
         <div class="rp-views">
-          {VIEWS.map((id) => (
-            <button
-              key={id}
-              class={'rp-seg' + (view === id ? ' active' : '')}
-              aria-pressed={view === id}
-              onClick={() => chooseView(id)}
-            >
-              {VIEW_LABELS[id]}
-            </button>
-          ))}
+          <Segmented
+            ariaLabel="表示"
+            options={VIEWS.map((id) => ({ id, label: VIEW_LABELS[id] }))}
+            value={view}
+            onChange={chooseView}
+          />
         </div>
       </DockBar>
       {pendingCount || errorCount ? (
@@ -399,18 +396,13 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
       ) : null}
       {view === 'stats' ? null : (
         <>
-          <div class="rp-filters">
-            {REP_FILTERS.map(([id, label]) => (
-              <button
-                key={id}
-                class={'rp-seg' + (filter === id ? ' active' : '')}
-                aria-pressed={filter === id}
-                onClick={() => setFilter(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="状態"
+            options={REP_FILTERS.map(([id, label]) => ({ id, label }))}
+            value={filter}
+            onChange={setFilter}
+            cols={4}
+          />
           <DockRow>
             <span class="dock-row-label">百</span>
             <div class="rp-digits">

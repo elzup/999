@@ -27,6 +27,7 @@ import {
 } from '../lib/pickPosition'
 import Screen, { DockBar, DockRow } from './Screen'
 import TaggedWord from './TaggedWord'
+import { Segmented } from './Segmented'
 import { useNumberContext } from '../lib/numberContext'
 
 const FILTER_KEY = 'cand.filter'
@@ -38,6 +39,7 @@ const KIND_LABELS: Record<Kind, string> = {
   date: '日付',
   card: 'カード',
 }
+const KIND_OPTIONS = KINDS.map((id) => ({ id, label: KIND_LABELS[id] }))
 const COLS = 3
 // 日付の «全部» は 2000 枠を超える。画像を一度に並べすぎないよう先頭だけ出す
 // (番号は百の位ごと = 最大 600 枠)
@@ -320,31 +322,19 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
                 </button>
               </DockRow>
             ) : null}
-            <div class="rp-filters">
-              {KINDS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  class={'rp-seg' + (kind === k ? ' active' : '')}
-                  aria-pressed={kind === k}
-                  onClick={() => chooseKind(k)}
-                >
-                  {KIND_LABELS[k]}
-                </button>
-              ))}
-              <span class="cand-filter-gap" aria-hidden="true" />
-              {CANDIDATE_FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  class={'rp-seg' + (filter === f.id ? ' active' : '')}
-                  aria-pressed={filter === f.id}
-                  onClick={() => choose(f.id)}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              label="対象"
+              options={KIND_OPTIONS}
+              value={kind}
+              onChange={chooseKind}
+            />
+            <Segmented
+              label="状態"
+              options={CANDIDATE_FILTERS}
+              value={filter}
+              onChange={choose}
+              cols={4}
+            />
             {kind === 'num' ? (
               <>
                 <DockRow>
