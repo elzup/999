@@ -2,15 +2,7 @@ import { h } from 'preact'
 import { DockRow } from './Screen'
 import type { MdRevealMode } from '../lib/useMdReveal'
 
-const OPTIONS: { mode: MdRevealMode; label: string }[] = [
-  { mode: 'num', label: '数字だけ' },
-  { mode: 'all', label: '全部見せる' },
-]
-
-/**
- * Dock の md カードの見せ方。ボタン 2 つ並びだと絞り込み (filter) に見えて
- * 何を切り替えるのか分かりにくかったので、見出し付きのラジオにする
- */
+/** Dock の «数字 | 全部» の切り替え (UI 候補 B-2) */
 export function MdRevealToggle({
   mode,
   onChange,
@@ -20,23 +12,20 @@ export function MdRevealToggle({
 }) {
   return (
     <DockRow>
-      <div class="md-reveal" role="radiogroup" aria-label="カードの見せ方">
-        <span class="dock-row-label">カード:</span>
-        {OPTIONS.map((opt) => (
-          <label
-            key={opt.mode}
-            class={'md-reveal-opt' + (mode === opt.mode ? ' active' : '')}
-          >
-            <input
-              type="radio"
-              name="md-reveal"
-              checked={mode === opt.mode}
-              onChange={() => onChange(opt.mode)}
-            />
-            {opt.label}
-          </label>
-        ))}
-      </div>
+      <button
+        class={'filter-btn' + (mode === 'num' ? ' active' : '')}
+        aria-pressed={mode === 'num'}
+        onClick={() => onChange('num')}
+      >
+        数字
+      </button>
+      <button
+        class={'filter-btn' + (mode === 'all' ? ' active' : '')}
+        aria-pressed={mode === 'all'}
+        onClick={() => onChange('all')}
+      >
+        全部
+      </button>
     </DockRow>
   )
 }
