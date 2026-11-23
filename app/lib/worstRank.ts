@@ -1,9 +1,12 @@
-// 番号の悪い順 (候補タブ 代表 > 悪い順)。語の良し悪しを «当たる型のうち一番悪い型の順位» で比べ、
-// 番号ごとに一番良い語を使う (D-0127)。人 / 物の別は見ない (物なしは後回しでよい: 2026-11-23)。
+// 番号の悪い順 (候補タブ 代表 > 悪い順)。語の良し悪しを «当たる型のうち一番悪い型の順位» で比べる。
+// 番号の良し悪しは、代表 ①② のうち良い方の語で決める。代表付けは途中なので、代表が無ければ
+// 語全部の中で一番良い語を使う (D-0127)。評価 -1 の語は数えず、-1 しか無ければ «語なし» の次に悪い。
+// 人 / 物の別は見ない (物なしは後回しでよい: D-0136)。
 // 型の並びは D-0126〜D-0131 の 20 項目 (.metarc/score-order.html v11)。点はまだ付けていない仮の並び。
 // scripts/worst-rank.mjs (分析ページ) と同じ判定。
-import type { NumberEntry, RulesData } from '../data/schema'
-import { slotCandidates } from './choice'
+import type { RulesData } from '../data/schema'
+import type { NumberDoc } from './numberApi'
+import { candidateRows } from './numberDetail'
 import { rankeyOf } from './rankey'
 
 /** 型の並び (上ほど良い) */
@@ -140,47 +143,79 @@ export const better = (a: Graded, b: Graded) =>
   b.tier - a.tier ||
   [...a.kana].length - [...b.kana].length
 
-export type GradedWord = Graded & { slot: string; word: string }
+export type GradedWord = Graded & {
+  key: string
+  word: string
+  /** 評価 (未評価は null) */
+  rating: number | null
+  /** 代表の順位。1=①, 2=②, 0=代表でない */
+  repRank: number
+}
+
+/** 番号の状態。小さいほど悪い (先に出す) */
+export const LEVEL = { none: 0, onlyBad: 1, graded: 2 } as const
+export type Level = (typeof LEVEL)[keyof typeof LEVEL]
 
 export type WorstRow = {
   num: string
-  entry: NumberEntry | undefined
-  /** 良い順。空なら語なし */
+  level: Level
+  /** 番号の良し悪しを決めた語 (代表の良い方、代表が無ければ一番良い語)。level が graded のときだけ */
+  basis: GradedWord | null
+  /** basis が代表か (代表が無くて語全部から選んだなら false) */
+  fromRep: boolean
+  /** 語を全部、良い順に */
   words: GradedWord[]
 }
 
-/** 番号の語を全部採点して良い順に並べる */
-export function gradeWords(entry: NumberEntry): GradedWord[] {
-  return slotCandidates(entry)
-    .flatMap((cand) => {
-      const rk = rankeyOf(cand.kana, entry.num, cand.word)
+/** 番号の語 (タグ違いは分けた語) を全部採点して良い順に並べる */
+export function gradeWords(doc: NumberDoc): GradedWord[] {
+  return candidateRows(doc)
+    .flatMap((row) => {
+      const rk = rankeyOf(row.kana, doc.num, row.word)
       if (!rk) return []
       return [
         {
-          ...grade(entry.num, cand.kana, rk, /#g\b/.test(cand.word)),
-          slot: cand.slot,
-          word: cand.word,
+          ...grade(doc.num, row.kana, rk, /#g\b/.test(row.word)),
+          key: row.key,
+          word: row.word,
+          rating: row.rating,
+          repRank: row.repRank,
         },
       ]
     })
     .sort(better)
 }
 
-/** 000〜999 を悪い順に。語なしが先、次に一番良い語が悪い順 */
-export function worstRows(numbers: NumberEntry[]): WorstRow[] {
-  const byNum = new Map(numbers.map((entry) => [entry.num, entry]))
-  const rows = Array.from({ length: 1000 }, (_, i) => {
+export function worstRowOf(num: string, doc: NumberDoc | undefined): WorstRow {
+  const words = doc ? gradeWords(doc) : []
+  const usable = words.filter((w) => w.rating !== -1)
+  const reps = usable.filter((w) => w.repRank > 0)
+  const pool = reps.length ? reps : usable
+  return {
+    num,
+    level: !words.length
+      ? LEVEL.none
+      : !usable.length
+        ? LEVEL.onlyBad
+        : LEVEL.graded,
+    basis: pool[0] ?? null,
+    fromRep: reps.length > 0,
+    words,
+  }
+}
+
+/** 000〜999 を悪い順に。語なし → 評価 -1 しか無い → 決めた語の型が悪い順 */
+export function worstRows(docs: NumberDoc[]): WorstRow[] {
+  const byNum = new Map(docs.map((doc) => [doc.num, doc]))
+  return Array.from({ length: 1000 }, (_, i) => {
     const num = String(i).padStart(3, '0')
-    const entry = byNum.get(num)
-    return { num, entry, words: entry ? gradeWords(entry) : [] }
-  })
-  const key = (row: WorstRow) => row.words[0]
-  return rows.sort((a, b) => {
-    const x = key(a)
-    const y = key(b)
-    if (!x || !y) return (x ? 1 : 0) - (y ? 1 : 0) || a.num.localeCompare(b.num)
-    return better(y, x) || a.num.localeCompare(b.num)
-  })
+    return worstRowOf(num, byNum.get(num))
+  }).sort(
+    (a, b) =>
+      a.level - b.level ||
+      (a.basis && b.basis ? better(b.basis, a.basis) : 0) ||
+      a.num.localeCompare(b.num)
+  )
 }
 
 /** 表 (1 桁の core/sub/bad と 2 桁) から番号を読む当て方を作り、良い順に。先頭桁の 0 の省略も含む */

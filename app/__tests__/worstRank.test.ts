@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { NumberEntry } from '../data/schema'
-import { grade, worstRows } from '../lib/worstRank'
-
-const entry = (num: string, slots: Record<string, string>) =>
-  ({ num, ...slots }) as unknown as NumberEntry
+import type { NumberDoc } from '../lib/numberApi'
+import { LEVEL, grade, worstRowOf, worstRows } from '../lib/worstRank'
 
 describe('grade (型の判定)', () => {
   it('rankey から当たる型と一番悪い型の順位を出す', () => {
@@ -22,25 +19,62 @@ describe('grade (型の判定)', () => {
   })
 })
 
+const doc = (num: string, over: Partial<NumberDoc>): NumberDoc => ({
+  num,
+  slots: {},
+  ...over,
+})
+
+describe('worstRowOf (番号の良し悪しを決める語)', () => {
+  const slots = {
+    wh1: { word: '異才', kana: 'いさい' },
+    wm1: { word: 'イージス', kana: 'いｰじす' },
+  }
+
+  it('代表があれば代表 ①② の良い方で決める (語全部の一番良い語ではなく)', () => {
+    const row = worstRowOf(
+      '131',
+      doc('131', {
+        slots,
+        rep: { picks: [{ k: 'いｰじす', w: 'イージス' }], confirmed: true },
+      })
+    )
+    expect(row).toMatchObject({ level: LEVEL.graded, fromRep: true })
+    expect(row.basis?.word).toBe('イージス')
+  })
+
+  it('代表が無ければ語全部の中で一番良い語', () => {
+    const row = worstRowOf('131', doc('131', { slots }))
+    expect(row.fromRep).toBe(false)
+    expect(row.basis?.word).toBe('異才')
+  })
+
+  it('評価 -1 の語は数えず、-1 しか無ければ «語なし» の次', () => {
+    const ratings = [
+      { k: 'いさい', w: '異才', v: -1 },
+      { k: 'いｰじす', w: 'イージス', v: -1 },
+    ]
+    expect(worstRowOf('131', doc('131', { slots, ratings })).level).toBe(
+      LEVEL.onlyBad
+    )
+    expect(worstRowOf('131', undefined).level).toBe(LEVEL.none)
+  })
+})
+
 describe('worstRows (悪い順)', () => {
-  it('語なしが先、次に一番良い語が悪い順。人 / 物は見ない', () => {
+  it('語なし → -1 しか無い → 決めた語の型が悪い順', () => {
     const rows = worstRows([
-      // 物だけ・良い語
-      entry('101', { wm1: 'トイ', wm1k: 'とい' }),
-      // 人だけ・型の悪い語
-      entry('143', { wh1: 'イージス', wh1k: 'いｰじす' }),
-      // 人と物 (良い方の 1 桁 × 3 拍で決まる)
-      entry('131', {
-        wh1: '異才',
-        wh1k: 'いさい',
-        wm1: 'イージス',
-        wm1k: 'いｰじす',
+      doc('101', { slots: { wm1: { word: 'トイ', kana: 'とい' } } }),
+      doc('143', { slots: { wh1: { word: 'イージス', kana: 'いｰじす' } } }),
+      doc('131', {
+        slots: { wh1: { word: '異才', kana: 'いさい' } },
+        ratings: [{ k: 'いさい', w: '異才', v: -1 }],
       }),
     ])
-    const nums = rows.map((row) => row.num)
-    // 語なしの番号 (000 など) が先頭に来て、その後に 143 → 131 → 101
-    expect(nums.indexOf('000')).toBeLessThan(nums.indexOf('143'))
-    expect(nums.slice(-3)).toEqual(['143', '131', '101'])
     expect(rows).toHaveLength(1000)
+    const nums = rows.map((row) => row.num)
+    // 語なしの 997 番号が先、次に -1 しか無い 131、その後に型の悪い 143 → 良い 101
+    expect(nums.slice(-3)).toEqual(['131', '143', '101'])
+    expect(rows[0].level).toBe(LEVEL.none)
   })
 })

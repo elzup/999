@@ -206,10 +206,10 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
     }
   }, [hundred, token])
 
-  // 統計を開いたときだけ、1000 番号ぶん (百の位 10 個) を読む。読んだ百の位は一覧と共有する
+  // 統計・悪い順を開いたときだけ、1000 番号ぶん (百の位 10 個) を読む。読んだ百の位は一覧と共有する
   const [statsLoaded, setStatsLoaded] = useState(0)
   useEffect(() => {
-    if (view !== 'stats' || !token) return
+    if (!isWholeView(view) || !token) return
     let alive = true
     const missing = DIGITS.filter((h) => !hundredCache.current.has(h))
     setStatsLoaded(DIGITS.length - missing.length)
@@ -226,12 +226,11 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
       alive = false
     }
   }, [view, token])
-  const statsDocs =
-    view === 'stats'
-      ? DIGITS.flatMap((h) => hundredCache.current.get(h) ?? [])
-          .map((num) => queue.view(num))
-          .filter((doc): doc is NumberDoc => doc !== null)
-      : []
+  const statsDocs = isWholeView(view)
+    ? DIGITS.flatMap((h) => hundredCache.current.get(h) ?? [])
+        .map((num) => queue.view(num))
+        .filter((doc): doc is NumberDoc => doc !== null)
+    : []
 
   const docs = nums
     .map((num) => queue.view(num))
@@ -334,7 +333,11 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
 
   const main =
     view === 'worst' ? (
-      <WorstRankView numbers={numbers} />
+      <WorstRankView
+        docs={statsDocs}
+        entries={entries}
+        loadedHundreds={statsLoaded}
+      />
     ) : view === 'stats' ? (
       <RepStats docs={statsDocs} loadedHundreds={statsLoaded} />
     ) : !visible.length ? (
