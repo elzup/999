@@ -5472,6 +5472,42 @@ button.activate-link {
 .nd-img.empty {
   background: var(--surface2);
 }
+/* サムネのボタン (押すと画像のピッカー)。押せないとき (未保存) は飾りと同じ見た目 */
+.nd-img-btn {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+.nd-img-btn:hover,
+.nd-img-btn:disabled {
+  background: none;
+}
+.nd-img-btn:disabled {
+  cursor: default;
+}
+.nd-img-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.nd-img-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  font-weight: 700;
+}
 /* 確定時点の語とずれた画像。消さずに目印だけ付ける (判断は人がする) */
 .nd-img.stale {
   outline: 2px solid var(--warn);
@@ -7092,6 +7128,15 @@ img[data-concept] {
   cursor: default;
 }
 /* 見出しの右端の «確定済み» (一括の取り直しで上書きされない枠) */
+/* 見出しの «✎ 語» (語の編集へ移る、B-1)。右端に寄せる */
+.ip-edit-word {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+/* 確定済みの印が右に寄せてあれば、その隣に並べる */
+.ip-kept + .ip-edit-word {
+  margin-left: 0;
+}
 .ip-kept {
   margin-left: auto;
   flex-shrink: 0;

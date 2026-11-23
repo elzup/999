@@ -11,7 +11,8 @@ export type NumberContextValue = {
   bookmarks: Set<string>
   onToggleBm: (key: string) => void
   /** 編集をオーバーレイで開く。今のタブ (テストの結果ビュー) は閉じない */
-  openEditor: (num: string) => void
+  /** slot を渡すとその枠のカードに入力を当てて開く (画像のピッカーの «✎ 語» から) */
+  openEditor: (num: string, slot?: string) => void
   /**
    * 編集を閉じるたびに 1 増える。配信データに無い値 (マップの代表①) を
    * API から読んでいる画面が、これを見て読み直す
