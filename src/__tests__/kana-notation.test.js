@@ -130,3 +130,37 @@ describe('記法 半角カナ (読まないかな)', () => {
     expect(rankey('さﾊﾞんな', '387')).toBe('A!AA|')
   })
 })
+
+describe('記法 語尾 (+ の後ろ、D-0122)', () => {
+  it('+ の後ろは数字にしない', () => {
+    expect(encode('ひふみ+ん').digits).toBe('123')
+    expect(encode('とま+す').digits).toBe('1000')
+  })
+
+  it('促音の直後が語尾なら、促音は語尾の頭の数字を写す', () => {
+    // ヒッチ: ひ=1、っ は ち (22) を写す。ち そのものは語尾
+    expect(encode('ひっ+ち').digits).toBe(encode('ひっち').digits.slice(0, 3))
+  })
+
+  it('rankey は語尾を余りにし、語は見ない', () => {
+    expect(rankey('ひふみ+ん', '123', '')).toBe('BBB|n')
+    expect(rankey('どび+ー', '101', 'ドビー')).toBe('wwB|-')
+    expect(rankey('とに+ーち', '102', 'トニーチョッパー')).toBe('wwA|..')
+    expect(rankey('とま+す', '100', '')).toBe('wwv|v.')
+  })
+
+  it('語尾はひらがな 2 文字まで、+ は最後に 1 つだけ', () => {
+    expect(() => encode('とに+ーちょ')).toThrow()
+    expect(() => encode('と+に+ん')).toThrow()
+    expect(() => encode('とに+ス')).toThrow()
+    const cell = new RegExp(KANA_CELL_PATTERN)
+    expect(cell.test('ひふみ+ん')).toBe(true)
+    expect(cell.test('ぶろｯこ+りー')).toBe(true)
+    expect(cell.test('とに+ーちょ')).toBe(false)
+  })
+
+  it('stripNotation は + を外して語尾も残す / readPart は語尾を落とす', () => {
+    expect(stripNotation('ひふみ+ん')).toBe('ひふみん')
+    expect(readPart('ひふみ+ん')).toBe('ひふみ')
+  })
+})

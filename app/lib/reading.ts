@@ -9,7 +9,11 @@
 import { createContext } from 'preact'
 import { useContext } from 'preact/hooks'
 import type { RulesData } from '../data/schema'
-import { hasNotation, parseNotation } from './kanaNotation'
+import {
+  hasNotation,
+  parseNotation,
+  type NotationSegment,
+} from './kanaNotation'
 
 export type ReadingTables = {
   single: Record<string, string>
@@ -176,13 +180,13 @@ export function readingTokens(
   const segments = parseNotation(input)
   if (!segments) return null
   const out: ReadingToken[] = []
-  for (const { hira, half, skip } of segments) {
-    // 読まないかな (さばﾝな の ﾝ) は数字にしない
+  for (const [at, { hira, half, skip }] of segments.entries()) {
+    // 読まないかな (さばﾝな の ﾝ) と語尾 (ひっ+ち の ち) は数字にしない
     if (skip) {
       out.push({ kana: hira, digits: '' })
       continue
     }
-    const tokens = plainTokens(t, hira)
+    const tokens = segmentTokens(t, hira, segments[at + 1])
     if (tokens === null) return null
     if (!half) {
       out.push(...tokens)
@@ -199,6 +203,30 @@ export function readingTokens(
 export const ReadingTablesContext = createContext<ReadingTables | null>(null)
 
 export const useReadingTables = () => useContext(ReadingTablesContext)
+
+/**
+ * 区間 1 つを読む。最後が促音なら、促音だけは次の区間の頭のかなの数字を写す
+ * (ヒッチ = ひっ+ち)。src/encoder.js#encodeSegment と同じ
+ */
+function segmentTokens(
+  t: ReadingTables,
+  hira: string,
+  next: NotationSegment | undefined
+): ReadingToken[] | null {
+  // 語尾 (+ の後ろ) の前だけ。src/encoder.js と同じ
+  if (!next?.tail || !isSokuon([...hira].at(-1) ?? ''))
+    return plainTokens(t, hira)
+  const joined = plainTokens(t, hira + next.hira)
+  if (!joined) return null
+  const own: ReadingToken[] = []
+  let used = 0
+  for (const token of joined) {
+    if (used >= [...hira].length) break
+    own.push(token)
+    used += [...token.kana].length
+  }
+  return own
+}
 
 function plainTokens(t: ReadingTables, input: string): ReadingToken[] | null {
   const y4 = youon4Tokens(t, input)

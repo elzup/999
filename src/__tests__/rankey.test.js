@@ -35,6 +35,16 @@ describe('rankey notation', () => {
     expect(rankey('みっき', '399', 'ミッキー')).toBe('BtA|-')
   })
 
+  it('marks a sokuon that copies a two-digit kana as t + w, and its source past the window as |w', () => {
+    // はっと: は8 っ10 と10。っ は と を丸ごと写す (D-0123)
+    expect(rankey('はっと', '810', 'ハット')).toBe('Atw|w')
+    expect(rankey('しっぺ', '489', 'しっぺ')).toBe('Atw|w')
+    // 写した元が語尾に書いてあっても同じ
+    expect(rankey('ひっ+ち', '122', 'ヒッチ')).toBe('Btw|w')
+    // 1 桁のかなを写す促音はそのまま t
+    expect(rankey('ろっし', '644', 'ロッシ')).toBe('AtA|')
+  })
+
   it('marks a small vowel (ぃ) as the x side like a youon', () => {
     // てぃ(12) の ぃ は独立した音ではない。い (core) と見て AwA にしない
     expect(rankey('さてぃ', '312', 'サティ')).toBe('Awx|')

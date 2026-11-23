@@ -85,8 +85,9 @@ function charMark(ch) {
 /** 1トークンが占める各桁の記号を返す (桁数ぶんの配列) */
 function tokenMarks(token) {
   const width = token.value.length
-  // 促音は後ろのかなの数字を写す。2 桁のかな (と=10) の前なら 2 桁ぶん t (はっと = Att|.)
-  if (token.type === 'sokuon') return Array(width).fill('t')
+  // 促音は後ろのかなの数字を丸ごと写す。2 桁のかな (と=10) を写したら頭の桁を t、残りを w
+  // (はっと = は8 っ10 と10 → Atw|w。写した元の と は接尾の w)
+  if (token.type === 'sokuon') return ['t', ...Array(width - 1).fill('w')]
   if (token.type === 'half') return ['h']
   if (token.type === 'single')
     return [TIER_MARK[token.tier ?? tierOf(token.kana)] ?? '?']
@@ -171,14 +172,30 @@ export function rankey(kana, _num, word = '') {
   let consumed = 0 // 記法に載せたかな数 (省略記号の挿入位置合わせ用)
   let overflowKana = '' // 3桁を完全に超えたかな。接尾で表す
 
-  for (const token of detail.tokens) {
+  // 促音が写した元のかなが 3 桁の外に出たとき (はっと の と) の接尾。余り (.) とは数えない (D-0123)
+  let sokuonSource = ''
+  detail.tokens.forEach((token, i) => {
+    const prev = detail.tokens[i - 1]
+    if (token.type === 'overflow' && prev?.type === 'sokuon' && !overflowKana) {
+      sokuonSource = 'w'
+      return
+    }
     if (token.type === 'overflow') {
       overflowKana += token.kana
-      continue
+      return
     }
     marks.push(...tokenMarks(token))
     consumed += [...token.kana].length
     if (omits.includes(consumed)) marks.push('!')
+  })
+
+  // 促音の直後が語尾 (ひっ+ち) なら、写した元は語尾の頭のかな。そこも接尾の w にして余りから外す
+  const lastRead = detail.tokens.filter((t) => t.type !== 'overflow').at(-1)
+  if (!sokuonSource && lastRead?.type === 'sokuon' && trailingSkip) {
+    sokuonSource = 'w'
+    const [, ...more] = [...trailingSkip]
+    const smallNext = SMALL_KANA.includes(more[0]) ? 1 : 0
+    trailingSkip = more.slice(smallNext).join('')
   }
 
   // 先頭0の省略: 3桁に足りない分を _ で埋める
@@ -198,8 +215,12 @@ export function rankey(kana, _num, word = '') {
 
   // 余りは2系統ある。読みが3桁を超えた分 (のるん の ん) と、語が読みより長い分
   // (ミッキー の ー)。どちらも「3桁に乗らなかったかな」なので繋げて1つの記号にする。
-  const rest = overflowKana + trailingSkip + (leftoverOf(word, kana) || '')
-  const suffix = tail + leftoverMark(rest) + (detail.mix ? 'm' : '')
+  // 語尾をよみに書いてあれば (ひふみ+ん) それが余り。語は見ない (D-0122)。
+  // 書いていないよみだけ、語がよみより長い分を余りに数える
+  const wordRest = kana.includes('+') ? '' : leftoverOf(word, kana) || ''
+  const rest = overflowKana + trailingSkip + wordRest
+  const suffix =
+    tail + sokuonSource + leftoverMark(rest) + (detail.mix ? 'm' : '')
 
   return `${body}|${suffix}`
 }
