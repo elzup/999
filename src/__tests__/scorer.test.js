@@ -72,13 +72,13 @@ describe('score', () => {
     expect(result.score).toBe(3.5)
   })
 
-  it('きゃく: double + sub, 3桁, mix(9)', () => {
+  it('きゃく: double + sub, 3桁。2 桁読み きゃ の中の 9 は mix に数えない', () => {
     const result = score('きゃく')
     expect(result.digits).toBe('989')
     expect(result.digitCount).toBe(3)
-    expect(result.mix).toBe(true)
-    // きゃ(double 3) + く(sub 0.8) + mix(-0.7) = 3.1
-    expect(result.score).toBe(3.1)
+    expect(result.mix).toBe(false)
+    // きゃ(double 3) + く(sub 0.8) = 3.8
+    expect(result.score).toBe(3.8)
   })
 
   it('tokens に type と tier が含まれる', () => {
@@ -133,12 +133,12 @@ describe('score', () => {
     expect(result.score).toBe(1.9)
   })
 
-  it('なの: 同じ数字7が な と の で mix減点', () => {
+  it('なの: 2 桁読み の(75) の中の 7 は mix に数えない', () => {
     const result = score('なの')
     expect(result.digits).toBe('775')
-    expect(result.mix).toBe(true)
-    // な(core 1) + の(double 3) + mix(-0.7) = 3.3
-    expect(result.score).toBe(3.3)
+    expect(result.mix).toBe(false)
+    // な(core 1) + の(double 3) = 4
+    expect(result.score).toBe(4)
   })
 
   it('きれい: mixなし', () => {

@@ -9,8 +9,9 @@
 //   t      促音                              ろっし = AtA|
 //   _      先頭0の省略 (2桁しか無い)         れい   = _CA|
 //   !      中間の省略                        りんご = ww!A|   (ん を飛ばす)
-//                                           記法 さばﾝな でも書ける。無ければ 1 文字飛ばして合う所を探す。
-//                                           語にあってよみに無いかな (イージス を いじす) も ! (イージス = A!Av|v)。
+//                                           よみの記法 (半角カナ さばﾝな / いｰじす) だけから付ける (D-0118)。
+//                                           1 字飛ばせば合う所を探したり、語と突き合わせたりはしない。
+//                                           記法の無い飛ばし (いじす) は、よみを記法で書き直す
 //                                           . は余り (接尾) と紛れるので使わない
 //   v      2桁トークンが3桁境界を跨ぐ        たま   = wwv|v
 //   h      記法 ス (カタカナ) の半指定 (す=33→3) スうる = hBB|
@@ -84,7 +85,8 @@ function charMark(ch) {
 /** 1トークンが占める各桁の記号を返す (桁数ぶんの配列) */
 function tokenMarks(token) {
   const width = token.value.length
-  if (token.type === 'sokuon') return ['t']
+  // 促音は後ろのかなの数字を写す。2 桁のかな (と=10) の前なら 2 桁ぶん t (はっと = Att|.)
+  if (token.type === 'sokuon') return Array(width).fill('t')
   if (token.type === 'half') return ['h']
   if (token.type === 'single')
     return [TIER_MARK[token.tier ?? tierOf(token.kana)] ?? '?']
@@ -141,38 +143,14 @@ function skipsOf(kana) {
 /**
  * 候補語 1 件の記法を組み立てる。
  * @param {string} kana 読み
- * @param {string} num  3桁の番号
+ * @param {string} _num 3桁の番号 (使わない。D-0118 からよみの記法だけで決める。呼び出し側の形を保つため残す)
  * @param {string} word 語 (余りの算出用。省略可)
  */
-/**
- * 語 (かなだけのとき) とよみを頭から突き合わせ、よみに書かれず飛ばされた語のかなの位置と、
- * よみの後ろに残った語のかな (余り) を返す。イージス / いじす → 飛ばし [1] (い の後ろの ー)。
- * 語の頭がよみと違う・よみが語の中に収まらないときは null (測れない)
- * @returns {{ skipsAt: number[], rest: string } | null}
- */
-export function alignWord(word, kana) {
-  const w = cleanWord(word)
-  if (!w || !/^[ぁ-んァ-ヶーゝゞ]+$/.test(w)) return null
-  const hw = [...toHira(w)]
-  const hk = [...toHira(stripNotation(kana))]
-  const skipsAt = []
-  let read = 0
-  let at = 0
-  for (; at < hw.length && read < hk.length; at++) {
-    if (hw[at] === hk[read]) read += 1
-    else if (read === 0) return null
-    else if (!skipsAt.includes(read)) skipsAt.push(read)
-  }
-  if (read < hk.length) return null
-  return { skipsAt, rest: hw.slice(at).join('') }
-}
-
-export function rankey(kana, num, word = '') {
-  let reading = kana
+export function rankey(kana, _num, word = '') {
   let omitAt = -1
   let detail
   try {
-    detail = score(reading, TARGET)
+    detail = score(kana, TARGET)
   } catch {
     return null
   }
@@ -185,26 +163,9 @@ export function rankey(kana, num, word = '') {
     trailingSkip = skips.trailing
   }
 
-  // 記法付きのよみは書いた人が読み方を決めているので、中間省略は探さない
-  if (detail.digits !== num && !hasNotation(kana)) {
-    const at = findOmission(kana, num)
-    if (at >= 0) {
-      omitAt = at
-      const chars = [...kana]
-      reading = [...chars.slice(0, at), ...chars.slice(at + 1)].join('')
-      detail = score(reading, TARGET)
-    }
-  }
-
-  // 語と突き合わせて、よみが黙って飛ばしたかな (イージス の ー) も中間省略にする。
-  // 記法付き・番号合わせの省略が見つかったよみは、書いた人 / 探索の位置を優先する
-  const aligned = alignWord(word, kana)
-  const omits =
-    omitAt >= 0
-      ? [omitAt]
-      : !hasNotation(kana) && aligned
-        ? aligned.skipsAt
-        : []
+  // 中間省略はよみの記法だけで決める (D-0118)。番号に合わないよみを 1 字飛ばして合わせる探索
+  // (findOmission) は、頭 3 桁で合うよみ (はっと=810) の っ まで «読まない» にしてしまっていた
+  const omits = omitAt >= 0 ? [omitAt] : []
 
   const marks = []
   let consumed = 0 // 記法に載せたかな数 (省略記号の挿入位置合わせ用)
@@ -237,8 +198,7 @@ export function rankey(kana, num, word = '') {
 
   // 余りは2系統ある。読みが3桁を超えた分 (のるん の ん) と、語が読みより長い分
   // (ミッキー の ー)。どちらも「3桁に乗らなかったかな」なので繋げて1つの記号にする。
-  const wordRest = aligned ? aligned.rest : leftoverOf(word, kana) || ''
-  const rest = overflowKana + trailingSkip + wordRest
+  const rest = overflowKana + trailingSkip + (leftoverOf(word, kana) || '')
   const suffix = tail + leftoverMark(rest) + (detail.mix ? 'm' : '')
 
   return `${body}|${suffix}`

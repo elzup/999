@@ -1,13 +1,13 @@
 // 読まないかなを記法 (半角カナ) で書く (nr kana:skip の規則)。3 種類ある。
 //
-//   middle  rankey が «1 文字飛ばせば番号に合う» を自動で探して ! を付けていたよみ
+//   middle  1 文字飛ばせば番号に合うよみ (以前は rankey が自動で探して ! を付けていた。D-0118 で記法のみに)
 //           さばんな → さばﾝな (どのかなを読まないかをよみに残す)
 //   tail    3 桁を超えて読まない語尾 (rankey の余り)
 //           にいさん → にいさﾝ
 //   restore よみから読まないかなを消してあるもの。語 (かなだけの語) と突き合わせて戻す
 //           サバンナ / さばな → さばﾝな、ミッキー / みっき → みっきｰ
 //
-// middle と tail は rankey が変わらないものだけ、restore は読む数字が変わらないものだけを候補にする
+// middle は飛ばした後に番号に合うものだけ、tail は rankey が変わらないもの、restore は読む数字が変わらないものだけを候補にする
 // (どれも読み方を変えない置き換え)。記法がもう付いているよみは触らない。
 
 import { SLOT_KEYS } from './sheet-layout.js'
@@ -46,8 +46,8 @@ const isTarget = (reading, num) =>
 export function skipNotationFor(kana, num) {
   const reading = text(kana)
   if (!isTarget(reading, num)) return null
-  const before = rankey(reading, num)
-  if (!before?.includes('!')) return null
+  // 番号にそのまま合うよみは省略ではない (rankey は記法だけで ! を付けるので、ここで探す)
+  if (digitsOf(reading) === num) return null
   const at = findOmission(reading, num)
   if (at < 0) return null
   const chars = [...reading]
@@ -58,7 +58,7 @@ export function skipNotationFor(kana, num) {
     toSkipKana(chars[at]),
     ...chars.slice(at + 1),
   ].join('')
-  return rankey(next, num) === before ? next : null
+  return digitsOf(next) === num ? next : null
 }
 
 /**
