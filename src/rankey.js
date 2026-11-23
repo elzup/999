@@ -9,7 +9,9 @@
 //   t      促音                              ろっし = AtA|
 //   _      先頭0の省略 (2桁しか無い)         れい   = _CA|
 //   !      中間の省略                        りんご = ww!A|   (ん を飛ばす)
-//                                           記法 さばﾝな でも書ける。無ければ 1 文字飛ばして合う所を探す
+//                                           記法 さばﾝな でも書ける。無ければ 1 文字飛ばして合う所を探す。
+//                                           語にあってよみに無いかな (イージス を いじす) も ! (イージス = A!Av|v)。
+//                                           . は余り (接尾) と紛れるので使わない
 //   v      2桁トークンが3桁境界を跨ぐ        たま   = wwv|v
 //   h      記法 ス (カタカナ) の半指定 (す=33→3) スうる = hBB|
 //
@@ -142,6 +144,29 @@ function skipsOf(kana) {
  * @param {string} num  3桁の番号
  * @param {string} word 語 (余りの算出用。省略可)
  */
+/**
+ * 語 (かなだけのとき) とよみを頭から突き合わせ、よみに書かれず飛ばされた語のかなの位置と、
+ * よみの後ろに残った語のかな (余り) を返す。イージス / いじす → 飛ばし [1] (い の後ろの ー)。
+ * 語の頭がよみと違う・よみが語の中に収まらないときは null (測れない)
+ * @returns {{ skipsAt: number[], rest: string } | null}
+ */
+export function alignWord(word, kana) {
+  const w = cleanWord(word)
+  if (!w || !/^[ぁ-んァ-ヶーゝゞ]+$/.test(w)) return null
+  const hw = [...toHira(w)]
+  const hk = [...toHira(stripNotation(kana))]
+  const skipsAt = []
+  let read = 0
+  let at = 0
+  for (; at < hw.length && read < hk.length; at++) {
+    if (hw[at] === hk[read]) read += 1
+    else if (read === 0) return null
+    else if (!skipsAt.includes(read)) skipsAt.push(read)
+  }
+  if (read < hk.length) return null
+  return { skipsAt, rest: hw.slice(at).join('') }
+}
+
 export function rankey(kana, num, word = '') {
   let reading = kana
   let omitAt = -1
@@ -171,6 +196,16 @@ export function rankey(kana, num, word = '') {
     }
   }
 
+  // 語と突き合わせて、よみが黙って飛ばしたかな (イージス の ー) も中間省略にする。
+  // 記法付き・番号合わせの省略が見つかったよみは、書いた人 / 探索の位置を優先する
+  const aligned = alignWord(word, kana)
+  const omits =
+    omitAt >= 0
+      ? [omitAt]
+      : !hasNotation(kana) && aligned
+        ? aligned.skipsAt
+        : []
+
   const marks = []
   let consumed = 0 // 記法に載せたかな数 (省略記号の挿入位置合わせ用)
   let overflowKana = '' // 3桁を完全に超えたかな。接尾で表す
@@ -182,19 +217,28 @@ export function rankey(kana, num, word = '') {
     }
     marks.push(...tokenMarks(token))
     consumed += [...token.kana].length
-    if (omitAt >= 0 && consumed === omitAt) marks.push('!')
+    if (omits.includes(consumed)) marks.push('!')
   }
 
   // 先頭0の省略: 3桁に足りない分を _ で埋める
   const shortBy = TARGET - detail.digits.length
   const head = shortBy > 0 ? '_'.repeat(shortBy) : ''
 
-  const body = head + marks.slice(0, TARGET + (omitAt >= 0 ? 1 : 0)).join('')
-  const tail = marks.slice(TARGET + (omitAt >= 0 ? 1 : 0)).join('')
+  // 3 桁 + 3 桁の中に置いた省略記号の数までが本体
+  let width = 0
+  let bodyLen = 0
+  for (const mark of marks) {
+    if (width >= TARGET && mark !== '!') break
+    if (mark !== '!') width += 1
+    bodyLen += 1
+  }
+  const body = head + marks.slice(0, bodyLen).join('')
+  const tail = marks.slice(bodyLen).join('')
 
   // 余りは2系統ある。読みが3桁を超えた分 (のるん の ん) と、語が読みより長い分
   // (ミッキー の ー)。どちらも「3桁に乗らなかったかな」なので繋げて1つの記号にする。
-  const rest = overflowKana + trailingSkip + (leftoverOf(word, kana) || '')
+  const wordRest = aligned ? aligned.rest : leftoverOf(word, kana) || ''
+  const rest = overflowKana + trailingSkip + wordRest
   const suffix = tail + leftoverMark(rest) + (detail.mix ? 'm' : '')
 
   return `${body}|${suffix}`
