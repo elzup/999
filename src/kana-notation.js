@@ -3,6 +3,7 @@
 //   すうる      ひらがな   対応表どおりに読む
 //   スうる=376  カタカナ   2 桁を読むかな (す=33) を 1 桁目だけで読む (半指定)
 //   さばﾝな     半角カナ   数字にしないかな (読まないかな)
+//   ひふみ+ん   + の後ろ   語尾 (3 桁を超えて数字にしない分)。ひらがな 2 文字まで (D-0122)
 //
 // 1 つの読み方に書き方を 1 通りにする。括弧などの囲みを使わないのは、囲みの中身の書き方
 // (かな / 数字 / 桁数) で意味を分けると見分けが付かなくなるから。字の種類だけで意味が決まる。
@@ -18,12 +19,16 @@ const HANKAKU = 'ｦ-ﾟ'
 const HALF_SOURCE = `[${KATA}][ァィゥェォャュョー]?`
 const SKIP_SOURCE = `[${HANKAKU}]+`
 const NOTATION = new RegExp(`(${HALF_SOURCE})|(${SKIP_SOURCE})`, 'g')
-const MARKS = new RegExp(`[${KATA}${HANKAKU}]`)
+const MARKS = new RegExp(`[${KATA}${HANKAKU}+]`)
+/** 語尾の書き方。+ の後ろにひらがな (と ー) を 2 文字まで。余りの記号 (n - . ..) を決めるのに 2 文字で足りる */
+export const TAIL_MAX = 2
+const TAIL_SOURCE = `\\+[ぁ-ゖー]{1,${TAIL_MAX}}`
+const TAIL = new RegExp(`^(.*)\\+([ぁ-ゖー]{1,${TAIL_MAX}})$`)
 // 括弧・英数字は記法に無い字 (旧記法 (ん) [す] の残りを読めないよみにする)。地のかなの読めない字は encoder が弾く
 const STRAY = /[\x00-\x7f（）［］]/
 
 /** シートの check 列 (REGEXMATCH) と同じ «かなセルとして正しい形» */
-export const KANA_CELL_PATTERN = `^([ぁ-ゖ]|${HALF_SOURCE}|[${HANKAKU}])+$`
+export const KANA_CELL_PATTERN = `^([ぁ-ゖ]|${HALF_SOURCE}|[${HANKAKU}])+(${TAIL_SOURCE})?$`
 
 /** カタカナ → ひらがな (ヴ など対応の無い字はそのまま) */
 const toHira = (text) =>
@@ -57,11 +62,16 @@ const toKata = (s) =>
 export const hasNotation = (kana) => MARKS.test(String(kana ?? ''))
 
 /** 記号を外したひらがなのかな (語との突き合わせ用)。半指定も読まないかなもひらがなにして残す */
-export const stripNotation = (kana) => hankakuToHira(String(kana ?? ''))
+export const stripNotation = (kana) =>
+  hankakuToHira(String(kana ?? '').replace('+', ''))
 
 /** 読むかなだけのひらがな (読まないかなを落とす)。語尾の一致などを見る用 */
 export const readPart = (kana) =>
-  toHira(String(kana ?? '').replace(new RegExp(SKIP_SOURCE, 'g'), ''))
+  toHira(
+    String(kana ?? '')
+      .replace(/\+.*$/, '')
+      .replace(new RegExp(SKIP_SOURCE, 'g'), '')
+  )
 
 /**
  * よみを 地のかな / 半指定 / 読まない の区間に分ける。
@@ -70,7 +80,14 @@ export const readPart = (kana) =>
  * @returns {{ text: string, hira: string, half: boolean, skip: boolean }[]}
  */
 export function parseNotation(kana) {
-  const input = String(kana ?? '')
+  const whole = String(kana ?? '')
+  // 語尾 (+ の後ろ) は読まないかなと同じく数字にしない区間。tail: true で見分ける
+  const tailMatch = whole.includes('+') ? whole.match(TAIL) : null
+  if (whole.includes('+') && !tailMatch)
+    throw new Error(
+      `語尾は «+» の後ろにひらがな ${TAIL_MAX} 文字まで (+ は 1 つ、最後に置く): "${whole}"`
+    )
+  const input = tailMatch ? tailMatch[1] : whole
   const segments = []
   let last = 0
   const plain = (text) => ({ text, hira: text, half: false, skip: false })
@@ -89,5 +106,10 @@ export function parseNotation(kana) {
     throw new Error(
       `よみに括弧・英数字がある (記法はひらがな / カタカナ / 半角カナだけ): "${input}"`
     )
-  return segments
+  if (!tailMatch) return segments
+  const tail = tailMatch[2]
+  return [
+    ...segments,
+    { text: `+${tail}`, hira: tail, half: false, skip: true, tail: true },
+  ]
 }

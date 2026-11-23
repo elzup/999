@@ -80,19 +80,36 @@ function lookup(token) {
  */
 export function encode(input) {
   if (!hasNotation(input)) return encodePlain(input)
-  const tokens = parseNotation(input).flatMap(({ text, hira, half, skip }) => {
-    // 読まないかな (さばﾝな の ﾝ) は数字にしない
+  const segments = parseNotation(input)
+  const tokens = segments.flatMap(({ text, hira, half, skip }, at) => {
+    // 読まないかな (さばﾝな の ﾝ) と語尾 (ひっ+ち の ち) は数字にしない
     if (skip) return []
-    const { tokens: inner } = encodePlain(hira)
+    const { tokens: inner } = encodeSegment(hira, segments[at + 1])
     if (!half) return inner
     if (inner.length !== 1 || String(inner[0].value).length !== 2) {
-      throw new Error(
-        `半指定 ${text} は 2 桁を読むかな 1 つだけ: "${input}"`
-      )
+      throw new Error(`半指定 ${text} は 2 桁を読むかな 1 つだけ: "${input}"`)
     }
     return [{ kana: hira, value: String(inner[0].value)[0], half: true }]
   })
   return { digits: tokens.map((t) => t.value).join(''), tokens, youon4: false }
+}
+
+/**
+ * 区間 1 つを読む。最後が促音なら、促音だけは次の区間の頭のかなの数字を写す
+ * (ヒッチ = ひっ+ち: っ は ち を写すが、ち そのものは語尾なので数字にしない)
+ */
+function encodeSegment(hira, next) {
+  // 語尾 (+ の後ろ) の前だけ。半指定・読まないかなの前の促音は今までどおり読めない
+  if (!next?.tail || !isSokuon([...hira].at(-1) ?? '')) return encodePlain(hira)
+  const joined = encodePlain(hira + next.hira)
+  let used = 0
+  const own = []
+  for (const token of joined.tokens) {
+    if (used >= [...hira].length) break
+    own.push(token)
+    used += [...token.kana].length
+  }
+  return { ...joined, tokens: own, digits: own.map((t) => t.value).join('') }
 }
 
 function encodePlain(input) {
