@@ -75,6 +75,8 @@ h2 {
   overflow: hidden;
   border: 1px solid #2a2d37;
   width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
 }
 .mode-switcher label {
   padding: 6px 16px;
@@ -518,7 +520,7 @@ h2 {
 }
 .rule-col {
   flex: 1;
-  min-width: 300px;
+  min-width: min(300px, 100%);
 }
 
 /* Kana usage grid */
@@ -756,7 +758,7 @@ h2 {
 /* ─── Rule Violations ─── */
 .vio-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
   gap: 16px;
   margin: 16px 0 32px;
 }
@@ -870,4 +872,14 @@ h2 {
 .vio-empty {
   color: #6b7280;
   padding: 12px;
+}
+
+/* スマホ幅 (アプリのその他タブの iframe) で横にはみ出さない */
+@media (max-width: 600px) {
+  body {
+    padding: 12px;
+  }
+  .rule-columns {
+    gap: 16px;
+  }
 }
