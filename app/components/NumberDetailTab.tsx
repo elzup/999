@@ -320,10 +320,28 @@ export default function NumberDetailTab({
     [rows]
   )
 
+  // ティアカバーの表は編集中の語 (下書き) で引く。打ったそばから線が変わる
+  const coverKey = rows
+    .map((row) => `${row.slot}\t${row.word}\t${row.kana}`)
+    .join('\n')
+  const coverEntry = useMemo(
+    () =>
+      Object.fromEntries([
+        ['num', num],
+        ...rows.flatMap((row) => [
+          [row.slot, row.word],
+          [row.slot + 'k', row.kana],
+        ]),
+      ]) as unknown as NumberEntry,
+    // rows は描くたびに作り直されるので、中身 (枠・語・かな) で比べる
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [num, coverKey]
+  )
+
   // 候補は優先順に下から積む (先頭が親指側)。悪い順の判定と良い当て方は上に出す
   const main = doc ? (
     <div class="nd-main">
-      <WorstIdeas num={doc.num} doc={doc} />
+      <WorstIdeas num={doc.num} doc={doc} entry={coverEntry} />
       <ul class="nd-cards stack-up" style={{ '--stack-gap': '8px' }}>
         {cards.map((card) => {
           const index = rows.findIndex((other) => other.slot === card.slot)

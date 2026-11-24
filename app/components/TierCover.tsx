@@ -371,4 +371,22 @@ function TierCover({ d }: Props) {
   return side ? createPortal(body, side) : body
 }
 
+/** 拡大表示の大きさでそのまま置く表 (編集画面の上)。語が無くても格子は出す */
+export function TierCoverTable({ d }: Props) {
+  const tables = useReadingTables()
+  const cover = useMemo(
+    () => (tables ? buildTierCover(tables, d) : null),
+    [tables, d]
+  )
+  if (!cover) return null
+  return (
+    <div
+      class="tier-cover-table"
+      aria-label={`${cover.num} の読みを登録語がどれだけ通っているか`}
+    >
+      <CoverSvg cover={cover} size={FULL} />
+    </div>
+  )
+}
+
 export default TierCover

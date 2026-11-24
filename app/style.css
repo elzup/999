@@ -673,7 +673,7 @@ body {
   width: 100%;
   height: auto;
 }
-:is(.tier-cover, .tier-cover-pop) svg {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) svg {
   display: block;
   font-size: 10px;
 }
@@ -683,37 +683,37 @@ body {
   max-height: calc(100% - 6px);
   height: auto;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-head,
-:is(.tier-cover, .tier-cover-pop) .tc-label {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-head,
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-label {
   fill: var(--text2);
   font-size: 10px;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-head {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-head {
   text-anchor: middle;
   font-family: var(--font-mono);
 }
-:is(.tier-cover, .tier-cover-pop) .tc-label {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-label {
   text-anchor: end;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-divider {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-divider {
   stroke: var(--border);
   stroke-dasharray: 2 2;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-cell rect {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-cell rect {
   fill: var(--surface2);
   stroke: var(--border);
 }
-:is(.tier-cover, .tier-cover-pop) .tc-cell.none rect {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-cell.none rect {
   fill: none;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-cell.on rect {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-cell.on rect {
   fill: color-mix(in srgb, var(--accent) 14%, var(--surface2));
   stroke: color-mix(in srgb, var(--accent) 55%, transparent);
 }
-:is(.tier-cover, .tier-cover-pop) .tc-cell.rest rect {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-cell.rest rect {
   stroke-dasharray: 3 2;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-kana {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-kana {
   fill: var(--text2);
   opacity: 0.55;
   text-anchor: middle;
@@ -723,28 +723,28 @@ body {
   stroke-width: 2.5px;
   stroke-linejoin: round;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-kana.on {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-kana.on {
   fill: var(--text);
   opacity: 1;
   font-weight: bold;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-path path {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-path path {
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.9;
 }
-:is(.tier-cover, .tier-cover-pop) .tc-path.kind-h path {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-path.kind-h path {
   stroke: var(--kind-h);
 }
-:is(.tier-cover, .tier-cover-pop) .tc-path.kind-m path {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-path.kind-m path {
   stroke: var(--kind-m);
 }
-:is(.tier-cover, .tier-cover-pop) .tc-path.kind-h circle {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-path.kind-h circle {
   fill: var(--kind-h);
 }
-:is(.tier-cover, .tier-cover-pop) .tc-path.kind-m circle {
+:is(.tier-cover, .tier-cover-pop, .tier-cover-table) .tc-path.kind-m circle {
   fill: var(--kind-m);
 }
 .detail-extras .dc-val.tappable {
@@ -7836,4 +7836,13 @@ img[data-concept] {
   font-size: 11px;
   font-weight: 600;
   color: var(--text2);
+}
+.tier-cover-table {
+  margin-top: 6px;
+  overflow-x: auto;
+}
+.tier-cover-table svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }

@@ -17,7 +17,7 @@ import {
   type WorstRow,
 } from '../lib/worstRank'
 import TaggedWord from './TaggedWord'
-import TierCover from './TierCover'
+import TierCover, { TierCoverTable } from './TierCover'
 
 /** 出す番号の数。直す相手を探す画面なので、悪い方から少しだけ */
 const SHOWN = 30
@@ -116,9 +116,12 @@ export function Summary({ row }: { row: WorstRow }) {
 export function WorstIdeas({
   num,
   doc,
+  entry,
 }: {
   num: string
   doc: NumberDoc | null
+  /** ティアカバーの表に引く語 (編集中の下書きを含む) */
+  entry: NumberEntry
 }) {
   const tables = useReadingTables()
   const row = useMemo(() => worstRowOf(num, doc ?? undefined), [num, doc])
@@ -132,6 +135,7 @@ export function WorstIdeas({
         <span class="wr-ideas-title">悪い順</span>
         <Summary row={row} />
       </summary>
+      <TierCoverTable d={entry} />
       <h4>良い当て方 (表から作った読み。語ではない)</h4>
       <ul class="wr-lines">
         {ideas.map((g) => (
