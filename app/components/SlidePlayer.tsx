@@ -25,6 +25,14 @@ import {
 } from '../lib/slideshow'
 import { deckHasBookmarks, type SlideDeck } from '../lib/slideDeck'
 import { vibrate } from '../lib/haptics'
+import {
+  primeSpeech,
+  speak,
+  speechSupported,
+  speechText,
+  stopSpeech,
+} from '../lib/slideSpeech'
+import { useWakeLock } from '../lib/wakeLock'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
 
 type Props = {
@@ -131,13 +139,45 @@ function SlidePlayer({ deck, bookmarks, onToggleBm, onQuit }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poolKey])
 
-  // 自動送り。playing 中は段階ごとの待ち時間で 1 段ずつ進む。
+  // 読み上げ。1 枚・1 段ごとに読み、読み終わるまで自動送りを待たせる。
+  const canSpeak = useMemo(speechSupported, [])
+  const speechOn = canSpeak && settings.speech
+  const [speaking, setSpeaking] = useState(false)
+  // 直前に問題面を読んだ 1 枚。答え面で問題面から読み直すかを決める。
+  const promptSpokenId = useRef<string | null>(null)
+  useEffect(() => {
+    if (!speechOn || !cur) {
+      setSpeaking(false)
+      return
+    }
+    const text = speechText(
+      cur.speech,
+      phase,
+      promptSpokenId.current === cur.id
+    )
+    promptSpokenId.current = phase === 'prompt' ? cur.id : null
+    if (!text) {
+      setSpeaking(false)
+      return
+    }
+    setSpeaking(true)
+    return speak(text, () => setSpeaking(false))
+    // cur は curId と byId から決まるので curId で見る
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speechOn, curId, phase])
+
+  // 画面を閉じたら読みかけも止める。
+  useEffect(() => stopSpeech, [])
+
+  useWakeLock(playing)
+
+  // 自動送り。playing 中は段階ごとの待ち時間で 1 段ずつ進む (読み上げ中は読み終わってから数える)。
   const delay = phaseDelay(phase, settings)
   useEffect(() => {
-    if (!playing || pool.length === 0) return
+    if (!playing || pool.length === 0 || speaking) return
     const id = setTimeout(step, delay)
     return () => clearTimeout(id)
-  }, [playing, pool.length, state, delay, step])
+  }, [playing, pool.length, state, delay, step, speaking])
 
   const setMode = (mode: SlideMode) => persist({ ...settings, mode })
 
@@ -222,6 +262,18 @@ function SlidePlayer({ deck, bookmarks, onToggleBm, onQuit }: Props) {
         >
           OK除外
         </button>
+        {canSpeak ? (
+          <button
+            class={'slide-chip-btn' + (settings.speech ? ' active' : '')}
+            onClick={() => {
+              if (!settings.speech) primeSpeech()
+              else stopSpeech()
+              persist({ ...settings, speech: !settings.speech })
+            }}
+          >
+            {settings.speech ? '🔊 読上' : '🔇 読上'}
+          </button>
+        ) : null}
         <DelaySlider
           label="答えまで"
           value={settings.promptMs}
@@ -266,7 +318,10 @@ function SlidePlayer({ deck, bookmarks, onToggleBm, onQuit }: Props) {
         <button
           class={'slide-btn play' + (playing ? ' active' : '')}
           disabled={pool.length === 0}
-          onClick={() => setPlaying((p) => !p)}
+          onClick={() => {
+            if (!playing && speechOn) primeSpeech()
+            setPlaying((p) => !p)
+          }}
         >
           {playing ? '⏸ 停止' : '▶ 再生'}
         </button>
