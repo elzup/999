@@ -385,6 +385,30 @@ describe('画像の補完', () => {
     expect(slotsFromRows(rows, doc).wh1.imageUrl).toBe('a.jpg')
   })
 
+  it('語を消して枠が詰まるときは、配信から補った画像も語と一緒に載せる (前の枠に置いていかない)', () => {
+    const two: NumberDoc = {
+      num: '051',
+      slots: {
+        wh1: { word: '鯉', kana: 'こい' },
+        wh2: { word: '恋', kana: 'こい' },
+      },
+    }
+    const rows = withDeliveredImages(slotRows(two), {
+      num: '051',
+      w1: '鯉',
+      w1Img: 'carp.webp',
+      w1_2: '恋',
+      w1_2Img: 'love.webp',
+    } as never)
+    const next = slotsFromRows(
+      rows.filter((row) => row.slot !== 'wh1'),
+      two
+    )
+    expect(next).toEqual({
+      wh1: { word: '恋', kana: 'こい', imageUrl: 'love.webp' },
+    })
+  })
+
   it('同じ語が 2 枠にあるとき、配信の画像は元の枠の 1 行にだけ付ける (コブラ / コブラ)', () => {
     const twin: NumberDoc = {
       num: '520',

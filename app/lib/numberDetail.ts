@@ -325,13 +325,17 @@ export function slotsFromRows(
     if (groups[family] > 3) continue // シートの枠は各 3 つまで
 
     const before = source.slots?.[row.slot]
-    next[`${family}${groups[family]}`] = {
+    const key = `${family}${groups[family]}`
+    // 配信データから補った画像は普段は載せない。ただ枠が詰まって位置が変わるなら載せる:
+    // 配信の画像は枠の位置で持つので、置いていくと次のデプロイで前の語の画像が付く
+    const moved = key !== row.slot
+    next[key] = {
       ...before,
       word,
       kana,
       imageUrl:
-        (row.imageDelivered ? undefined : row.imageUrl) ??
-        before?.imageUrl ??
+        (row.imageDelivered && !moved ? undefined : row.imageUrl) ||
+        before?.imageUrl ||
         '',
     }
   }

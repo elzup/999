@@ -1,6 +1,6 @@
 export const TEST_INPUT_METHODS = ['number', 'choice', 'advance'] as const
 
-export type TestInputMethod = typeof TEST_INPUT_METHODS[number]
+export type TestInputMethod = (typeof TEST_INPUT_METHODS)[number]
 
 export const TEST_INPUT_METHOD_LABEL: Record<TestInputMethod, string> = {
   number: '数字入力',

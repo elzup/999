@@ -268,17 +268,43 @@ export const isLockedError = (err: unknown) =>
 
 // ── この画面の中で選んだ画像 (次のデプロイまで配信データに無い) ──
 
-let overrides: Record<string, SlotImage> = {}
+/** 選んだ画像と、選んだときの語。枠は語を消すと詰まって位置が変わるので、語で確かめる */
+type Override = { image: SlotImage; word?: string }
+let overrides: Record<string, Override> = {}
 const listeners = new Set<() => void>()
 const keyOf = (id: string, slot: string) => `${id}:${slot}`
+const sameWord = (a: string, b: string) =>
+  a.normalize('NFC').trim() === b.normalize('NFC').trim()
 
-export function setImageOverride(id: string, slot: string, image: SlotImage) {
-  overrides = { ...overrides, [keyOf(id, slot)]: image }
+/** word は選んだときの語。渡すと、枠が詰まって別の語が来た枠には出さない */
+export function setImageOverride(
+  id: string,
+  slot: string,
+  image: SlotImage,
+  word?: string
+) {
+  overrides = { ...overrides, [keyOf(id, slot)]: { image, word } }
   listeners.forEach((fn) => fn())
 }
 
-export const imageOverride = (id: string, slot: string) =>
-  overrides[keyOf(id, slot)]
+/**
+ * 選び直した画像。word を渡すと語で確かめる: 同じ枠でも別の語の画像は出さず、
+ * 語を消して枠が詰まったなら、その語を選んだ前の枠の画像を出す (タグ違いの枠どうしは見ない)
+ */
+export function imageOverride(id: string, slot: string, word?: string) {
+  const own = overrides[keyOf(id, slot)]
+  if (!word) return own?.image
+  if (own && (!own.word || sameWord(own.word, word))) return own.image
+  const variant = slot.includes('#') ? slot.slice(slot.indexOf('#')) : ''
+  const moved = Object.entries(overrides).find(
+    ([key, entry]) =>
+      key.startsWith(id + ':') &&
+      entry.word !== undefined &&
+      sameWord(entry.word, word) &&
+      (key.includes('#') ? key.slice(key.indexOf('#')) : '') === variant
+  )
+  return moved?.[1].image
+}
 
 /**
  * 1 枠の今の画像 (切り抜き用の元画像つき) と確定済みか。詳細パネルは表示用の URL しか
@@ -293,16 +319,16 @@ export async function fetchSlotState(token: string, id: string, slot: string) {
 }
 
 /** 選び直した画像があればそれを返す。無ければ undefined (配信データの画像を使う) */
-export function useImageOverride(id: string, slot: string) {
-  const [image, setImage] = useState(() => imageOverride(id, slot))
+export function useImageOverride(id: string, slot: string, word?: string) {
+  const [image, setImage] = useState(() => imageOverride(id, slot, word))
   useEffect(() => {
-    const update = () => setImage(imageOverride(id, slot))
+    const update = () => setImage(imageOverride(id, slot, word))
     update()
     listeners.add(update)
     return () => {
       listeners.delete(update)
     }
-  }, [id, slot])
+  }, [id, slot, word])
   return image
 }
 
@@ -388,7 +414,7 @@ export function candidateItems(
           slotName: state.slotNames?.[slot.split('#')[0]] ?? slot,
           word,
           image:
-            imageOverride(target.id, slot) ??
+            imageOverride(target.id, slot, word) ??
             state.images[target.id]?.[slot] ??
             null,
           keep: Boolean(state.keep[key]),

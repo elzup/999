@@ -94,7 +94,7 @@ function wordRows(d: NumberEntry): WordRow[] {
 function RowImage({ num, row }: { num: string; row: WordRow }) {
   const ctx = useNumberContext()
   const slot = IMAGE_SLOT_OF[row.slot]
-  const override = useImageOverride(num, slot ?? row.slot)
+  const override = useImageOverride(num, slot ?? row.slot, row.word)
   const [isOpen, setIsOpen] = useState(false)
   const url = override?.url ?? row.img
   const canPick = Boolean(ctx?.token && slot)

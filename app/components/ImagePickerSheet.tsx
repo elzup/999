@@ -19,11 +19,14 @@ import {
   pickImage,
   recropImage,
   setKeep,
+  appSlotOf,
   setImageOverride,
   StoppedError,
   type SlotImage,
 } from '../lib/imagePicker'
 import { useNumberContext } from '../lib/numberContext'
+import { splitVariants } from '../lib/tagVariants'
+import { writeQueue } from '../lib/writeQueue'
 import { buildSearchWord } from '../lib/searchWord'
 import { wordImage } from '../lib/wordImage'
 import CropEditor, { type CropChoice } from './CropEditor'
@@ -326,8 +329,36 @@ export default function ImagePickerSheet({
 
   const adopt = (image: SlotImage) => {
     setCurrentImage(image)
-    setImageOverride(id, slot, image)
+    setImageOverride(id, slot, image, word)
+    saveToNumber(image)
     onPicked?.(image)
+  }
+
+  /**
+   * 選んだ画像を番号の文書 (numbers/{num} の枠の imageUrl) にも書く。画像の正本 (imageSlots) は
+   * 枠の位置で持つので、そこだけだと代表の画面に出ず、語を消して枠が詰まると別の語に付いてしまう。
+   * 文書の枠の画像は語と一緒に動く。読んだことのある番号で、枠の語がこの語のときだけ書く
+   */
+  const saveToNumber = (image: SlotImage) => {
+    const appSlot = appSlotOf(slot)
+    if (!appSlot || !image.url) return
+    const queue = writeQueue()
+    const doc = queue.view(id)
+    const slotWord = doc?.slots?.[appSlot]?.word
+    if (!slotWord) return
+    const tag = slot.includes('#') ? slot.slice(slot.indexOf('#') + 1) : ''
+    const matches = tag
+      ? splitVariants(slotWord).includes(word)
+      : slotWord.trim() === word.trim()
+    if (!matches) return
+    queue.enqueue(id, [
+      {
+        op: 'image',
+        slot: appSlot,
+        ...(tag ? { tag } : {}),
+        imageUrl: image.url,
+      },
+    ])
   }
 
   /**

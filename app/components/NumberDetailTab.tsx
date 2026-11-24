@@ -670,7 +670,7 @@ function SlotCard({
   // 選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
   // タグ違いのカードは «旧スロット#タグ» の枠の画像 (枠の画像とは別物)
   const imageSlot = imageSlotOf(row.slot, row.variant)
-  const picked = useImageOverride(num, imageSlot)
+  const picked = useImageOverride(num, imageSlot, row.word)
   const [isPicking, setIsPicking] = useState(false)
   // 保存していない枠は画像の対象 (DB の語) に無いので選べない
   const canPickImage = Boolean(token && isSaved && row.word)

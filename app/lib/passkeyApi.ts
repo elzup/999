@@ -78,23 +78,23 @@ export function guessDeviceName(): string {
   const device = /iPhone/.test(ua)
     ? 'iPhone'
     : /iPad/.test(ua)
-    ? 'iPad'
-    : /Android/.test(ua)
-    ? 'Android'
-    : /Windows/.test(ua)
-    ? 'Windows'
-    : /Mac/.test(ua)
-    ? 'Mac'
-    : '端末'
+      ? 'iPad'
+      : /Android/.test(ua)
+        ? 'Android'
+        : /Windows/.test(ua)
+          ? 'Windows'
+          : /Mac/.test(ua)
+            ? 'Mac'
+            : '端末'
   const browser = /Edg\//.test(ua)
     ? 'Edge'
     : /Chrome\//.test(ua)
-    ? 'Chrome'
-    : /Firefox\//.test(ua)
-    ? 'Firefox'
-    : /Safari\//.test(ua)
-    ? 'Safari'
-    : ''
+      ? 'Chrome'
+      : /Firefox\//.test(ua)
+        ? 'Firefox'
+        : /Safari\//.test(ua)
+          ? 'Safari'
+          : ''
   return browser ? `${device} ${browser}` : device
 }
 
