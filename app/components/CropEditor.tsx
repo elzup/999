@@ -26,9 +26,13 @@ import {
   type SlotImage,
 } from '../lib/imagePicker'
 
-/** 切り抜きの決め方。null は今の切り抜き (自動) のまま */
+/**
+ * 切り抜きの決め方。null は今の切り抜き (自動) のまま。
+ * base: 'current' の rect は元画像ではなく今の画像 (400px) に対する割合
+ * (元画像を読めないときの逃げ道。今の画像の中を拡大するだけ)
+ */
 export type CropChoice =
-  | { rect: CropRect; position?: CropPosition }
+  | { rect: CropRect; position?: CropPosition; base?: 'current' }
   | { position: CropPosition }
   | null
 
@@ -52,7 +56,12 @@ export default function CropEditor({
   onApply,
   onCancel,
 }: Props) {
-  const source = cropSourceOf(image)
+  const original = cropSourceOf(image)
+  // 元画像を読めない (元サイトが表示を断る・残していない) ときは今の画像の中で範囲を決める
+  const [isCurrent, setIsCurrent] = useState(
+    !original || Boolean(initial && 'base' in initial && initial.base)
+  )
+  const source = isCurrent ? image.url : original
   const [natural, setNatural] = useState<Size | null>(null)
   const [loadFailed, setLoadFailed] = useState(!source)
   const [box, setBox] = useState<Size | null>(null)
@@ -89,7 +98,8 @@ export default function CropEditor({
   }, [onCancel])
 
   const shown = natural && box ? containSize(box, natural) : null
-  const setRect = (next: CropRect) => setChoice({ rect: next })
+  const setRect = (next: CropRect) =>
+    setChoice(isCurrent ? { rect: next, base: 'current' } : { rect: next })
 
   /** 表示の画素 → 元画像に対する割合 */
   const toRatio = (e: PointerEvent, el: HTMLElement) => {
@@ -174,7 +184,13 @@ export default function CropEditor({
   // 元画像を読めないときは、寄せ方だけ選べる (範囲はサーバが決める)
   const pickPosition = (position: CropPosition) =>
     setChoice(
-      natural ? { rect: presetRect(natural, position), position } : { position }
+      natural
+        ? {
+            rect: presetRect(natural, position),
+            position,
+            ...(isCurrent ? { base: 'current' as const } : {}),
+          }
+        : { position }
     )
   const isPositionOn = (position: CropPosition) =>
     natural
@@ -195,11 +211,7 @@ export default function CropEditor({
         {loadFailed ? (
           <div class="ce-failed">
             <img src={image.url} alt="" class="ce-fallback" />
-            <div class="ce-note">
-              {source
-                ? '元画像を読み込めません (元のサイトが表示を断っている)。寄せ方だけ選べます'
-                : '元画像の URL がありません'}
-            </div>
+            <div class="ce-note">画像を読み込めません</div>
           </div>
         ) : (
           <div
@@ -227,7 +239,14 @@ export default function CropEditor({
                   height: img.naturalHeight,
                 })
               }}
-              onError={() => setLoadFailed(true)}
+              onError={() => {
+                // 元画像が読めなければ今の画像に切り替える (決めかけの範囲は元画像のものなので捨てる)
+                if (!isCurrent && image.url) {
+                  setIsCurrent(true)
+                  setNatural(null)
+                  setChoice(null)
+                } else setLoadFailed(true)
+              }}
             />
             {rect ? (
               <div
@@ -242,6 +261,11 @@ export default function CropEditor({
             ) : null}
           </div>
         )}
+        {isCurrent && !loadFailed ? (
+          <div class="ce-note ce-current">
+            元画像を読めないので、今の画像の中から切り抜きます (拡大だけ)
+          </div>
+        ) : null}
         {!loadFailed && !natural ? (
           <div class="ce-note ce-loading">元画像を読み込み中…</div>
         ) : null}

@@ -80,6 +80,64 @@ describe('元画像を残して切り抜き直す', () => {
     ).rejects.toThrow(SOURCE_REFUSED)
   })
 
+  it('元サイトがボット名の UA を断っても、ブラウザとして載っていたページから取り直す', async () => {
+    const { save } = bucket()
+    const calls = []
+    const got = await recropAt({
+      image: {
+        hash: 'old',
+        sourceImageUrl: 'https://src.test/hotlink.png',
+        sourcePage: 'https://src.test/page',
+      },
+      uploadWebp: save,
+      saveOriginal: save,
+      position: 'top',
+      download: async (url, opts) => {
+        calls.push(opts)
+        if (!opts?.asBrowser) throw new Error('HTTP 403 Forbidden')
+        return { buffer: await png(600, 300) }
+      },
+    })
+    expect(calls[1]).toEqual({
+      asBrowser: true,
+      referer: 'https://src.test/page',
+    })
+    expect(got.originalUrl).toMatch(/words\/orig\//)
+  })
+
+  it('base: current は元画像に触らず、今の画像の中の範囲で切り抜く (元サイトが断っても切れる)', async () => {
+    const { files, save, download } = bucket()
+    files.set('words/now.webp', await png(400, 400))
+    const got = await recropAt({
+      image: {
+        hash: 'old',
+        url: 'https://bucket.test/words/now.webp',
+        sourceImageUrl: 'https://src.test/gone.png',
+      },
+      uploadWebp: save,
+      saveOriginal: save,
+      rect: { x: 0.25, y: 0, w: 0.5, h: 0.5 },
+      base: 'current',
+      download,
+    })
+    expect(got.hash).not.toBe('old')
+    expect(got.originalUrl).toBeUndefined()
+    expect(got.sourceImageUrl).toBe('https://src.test/gone.png')
+  })
+
+  it('base: current は範囲が無ければ断る', async () => {
+    const { save, download } = bucket()
+    await expect(
+      recropAt({
+        image: { hash: 'old', url: 'https://bucket.test/words/now.webp' },
+        uploadWebp: save,
+        saveOriginal: save,
+        base: 'current',
+        download,
+      })
+    ).rejects.toThrow('範囲')
+  })
+
   it('元サイトから取れたら元画像を残し、次からはそれを使う', async () => {
     const { save } = bucket()
     const got = await recropAt({

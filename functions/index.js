@@ -338,7 +338,7 @@ function createImageFetcher() {
         saveOriginal,
       })
     },
-    async recrop({ image, position, rect }) {
+    async recrop({ image, position, rect, base }) {
       const { uploadWebp, saveOriginal, fetchOne } = await load()
       return fetchOne.recropAt({
         image,
@@ -346,6 +346,7 @@ function createImageFetcher() {
         saveOriginal,
         position,
         rect,
+        base,
       })
     },
   }

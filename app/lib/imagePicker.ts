@@ -16,9 +16,17 @@ export type SlotImage = {
   originalUrl?: string
 }
 
-/** 切り抜きに使う元画像。残してあればそれを、無ければ元サイトの画像を使う */
-export const cropSourceOf = (image: SlotImage | null | undefined) =>
-  image?.originalUrl ?? image?.sourceImageUrl ?? ''
+/**
+ * 切り抜きに使う元画像。残してあればそれを、無ければ元サイトの画像を使う。
+ * 今の画像の中で決めた切り抜き (base: 'current') なら今の画像
+ */
+export const cropSourceOf = (
+  image: SlotImage | null | undefined,
+  base?: 'current'
+) =>
+  base === 'current'
+    ? (image?.url ?? '')
+    : (image?.originalUrl ?? image?.sourceImageUrl ?? '')
 
 export type ImageTarget = {
   id: string
@@ -234,12 +242,15 @@ export const recropImage = async ({
   slot,
   position,
   rect,
+  base,
 }: {
   token: string
   id: string
   slot: string
   position?: CropPosition
   rect?: { x: number; y: number; w: number; h: number }
+  /** 'current': rect は元画像ではなく今の画像 (400px) に対する割合 */
+  base?: 'current'
 }) =>
   (
     await call<{ image: SlotImage }>('recrop', token, {
@@ -247,6 +258,7 @@ export const recropImage = async ({
       slot,
       ...(position ? { position } : {}),
       ...(rect ? { rect } : {}),
+      ...(base ? { base } : {}),
     })
   ).image
 

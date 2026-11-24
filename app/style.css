@@ -7299,6 +7299,15 @@ img[data-concept] {
   position: absolute;
   inset: auto 0 50% 0;
 }
+/* 元画像を読めず、今の画像の中から切り抜くときの知らせ (画像の下端に重ねる) */
+.ce-current {
+  position: absolute;
+  inset: auto 8px 8px 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
 .ce-panel {
   display: flex;
   flex-direction: column;

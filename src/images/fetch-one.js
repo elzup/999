@@ -138,7 +138,9 @@ export async function fetchCandidates({
 
 /**
  * 今の画像の元画像を、寄せ方を決めて切り抜き直す (上寄せ = 顔が上にある画像の救済)。
- * rect があれば寄せ方より優先し、その範囲で切り抜く (全画面プレビューで決めた範囲)
+ * rect があれば寄せ方より優先し、その範囲で切り抜く (全画面プレビューで決めた範囲)。
+ * base が 'current' なら元画像ではなく今の画像 (400px) の中の範囲 rect で切り抜く。
+ * 元画像を残す前に取った画像で、元サイトが再取得を断るときの逃げ道 (拡大しかできない)
  */
 export async function recropAt({
   image,
@@ -146,8 +148,16 @@ export async function recropAt({
   saveOriginal,
   position = 'top',
   rect,
+  base,
   download = downloadImage,
 }) {
+  if (base === 'current') {
+    if (!rect) throw new Error('今の画像から切り抜くには範囲が要る')
+    if (!image?.url) throw new Error('今の画像が無い')
+    const { buffer } = await download(image.url)
+    const next = await store(await toWebpRect(buffer, rect), image, uploadWebp)
+    return { ...image, ...next }
+  }
   const { buffer, originalUrl } = await loadOriginal(image, {
     saveOriginal,
     download,
@@ -161,7 +171,7 @@ export async function recropAt({
 
 /** 元サイトが再 DL を断ったときの文言。元画像を残す前に取った画像で起きる */
 export const SOURCE_REFUSED =
-  '元サイトが元画像の再取得を拒否しました。候補から取り直してください'
+  '元サイトが元画像の再取得を拒否しました。切り抜きの画面で今の画像から範囲を選ぶか、候補から取り直してください'
 
 /**
  * 切り抜き直す元画像を読む。残してある元画像 (originalUrl) を優先し、無ければ元サイトから取る。
@@ -176,11 +186,19 @@ async function loadOriginal(image, { saveOriginal, download }) {
   let buffer
   try {
     ;({ buffer } = await download(image.sourceImageUrl))
-  } catch (err) {
-    console.error('元画像の再取得に失敗', image.sourceImageUrl, err)
-    if (/^HTTP 40[13]\b/.test(String(err?.message)))
-      throw new Error(SOURCE_REFUSED)
-    throw err
+  } catch (first) {
+    // ボット名の UA・参照元なしを断るサイトがあるので、ブラウザとして載っていたページから取り直す
+    try {
+      ;({ buffer } = await download(image.sourceImageUrl, {
+        asBrowser: true,
+        referer: image.sourcePage || undefined,
+      }))
+    } catch (err) {
+      console.error('元画像の再取得に失敗', image.sourceImageUrl, first, err)
+      if (/^HTTP 40[13]\b/.test(String(err?.message)))
+        throw new Error(SOURCE_REFUSED)
+      throw err
+    }
   }
   return { buffer, originalUrl: await storeOriginal(buffer, saveOriginal) }
 }

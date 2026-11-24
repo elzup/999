@@ -177,7 +177,15 @@ async function handleImageRequest({
     try {
       if (path === '/console/recrop') {
         const { originalUrl, sourceImageUrl } = current?.image ?? {}
-        if (!originalUrl && !sourceImageUrl) return fail('元画像URLが無い')
+        // base: 'current' は今の画像 (400px) の中で範囲を決めた切り抜き。元画像は要らない
+        const base = body.base === 'current' ? 'current' : undefined
+        if (base && !body.rect)
+          return {
+            status: 400,
+            payload: { error: '今の画像から切り抜くには範囲が要る' },
+          }
+        if (!base && !originalUrl && !sourceImageUrl)
+          return fail('元画像URLが無い')
         const position = body.position ?? 'top'
         if (!CROP_POSITIONS.includes(position))
           return {
@@ -195,6 +203,7 @@ async function handleImageRequest({
           image: current.image,
           position,
           ...(rect ? { rect: { x, y, w, h } } : {}),
+          ...(base ? { base } : {}),
         })
       } else {
         let query

@@ -110,6 +110,7 @@ function Tile({
   onSelect: () => void
 }) {
   const rect = crop && 'rect' in crop ? crop.rect : null
+  const base = crop && 'rect' in crop ? crop.base : undefined
   return (
     <button
       type="button"
@@ -118,9 +119,9 @@ function Tile({
       disabled={isDisabled}
       onClick={onSelect}
     >
-      {image && rect && cropSourceOf(image) ? (
+      {image && rect && cropSourceOf(image, base) ? (
         <img
-          src={cropSourceOf(image)}
+          src={cropSourceOf(image, base)}
           alt=""
           referrerpolicy="no-referrer"
           style={cropImageStyle(rect)}
@@ -195,8 +196,7 @@ export default function ImagePickerSheet({
   /** 捨てると失うもの (閉じるときに確かめる) */
   const hasDraft = isDirty || Object.values(crops).some(Boolean)
   const canEdit =
-    (phase === 'idle' || phase === 'searching') &&
-    Boolean(cropSourceOf(selectedImage))
+    (phase === 'idle' || phase === 'searching') && Boolean(selectedImage?.url)
 
   /** 押せる処理を 1 つだけ走らせる。走っている間の押下は無視 */
   const runOnce = async (task: () => Promise<void>) => {
@@ -355,7 +355,7 @@ export default function ImagePickerSheet({
               id,
               slot,
               ...('rect' in crop
-                ? { rect: crop.rect }
+                ? { rect: crop.rect, base: crop.base }
                 : { position: crop.position }),
             })
           )
@@ -540,7 +540,7 @@ export default function ImagePickerSheet({
             title={
               cropSourceOf(selectedImage)
                 ? '元画像を全画面で出して、切り抜く範囲を決める'
-                : '元画像が残っていない画像は切り抜けません'
+                : '元画像が残っていないので、今の画像の中から切り抜く'
             }
           >
             ⤢ 切り抜き

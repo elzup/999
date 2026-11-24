@@ -85,8 +85,8 @@ function fakeFetcher() {
             sourceImageUrl: `https://src.test/${h}.jpg`,
           }))
     },
-    recrop: async ({ image, position, rect }) => {
-      calls.push({ op: 'recrop', image, position, rect })
+    recrop: async ({ image, position, rect, base }) => {
+      calls.push({ op: 'recrop', image, position, rect, base })
       return { ...image, ...img('top') }
     },
   }
@@ -376,6 +376,26 @@ describe('handleConsoleRequest: その場の取り直し', () => {
       })
       expect(r.status).toBe(400)
     }
+    expect(fetcher.calls).toHaveLength(1)
+  })
+
+  it('recrop は base: current (今の画像の中の範囲) を渡せる。範囲が無ければ断る', async () => {
+    const { request, fetcher } = setup(withImage())
+    const rect = { x: 0.25, y: 0, w: 0.5, h: 0.5 }
+    const res = await request('POST', '/console/recrop', {
+      id: '001',
+      slot: 'w2',
+      rect,
+      base: 'current',
+    })
+    expect(res.payload.ok).toBe(true)
+    expect(fetcher.calls[0]).toMatchObject({ rect, base: 'current' })
+    const bad = await request('POST', '/console/recrop', {
+      id: '001',
+      slot: 'w2',
+      base: 'current',
+    })
+    expect(bad.status).toBe(400)
     expect(fetcher.calls).toHaveLength(1)
   })
 
