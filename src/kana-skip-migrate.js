@@ -14,7 +14,7 @@ import { SLOT_KEYS } from './sheet-layout.js'
 import { KANA_CELL_PATTERN, hasNotation, toSkipKana } from './kana-notation.js'
 import { findOmission, rankey } from './rankey.js'
 import { score } from './scorer.js'
-import { extractName, isKanaOnly, toHiragana } from './words.js'
+import { extractName, isKanaOnly, toHiragana } from './word-name.js'
 
 const KANA_CELL = new RegExp(KANA_CELL_PATTERN)
 /** 読まないかなにできる字 (ひらがなと ー) */

@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { scoreWithLabel } from './scorer.js'
-import { kataToHira, normalizeDakuten, normalizeSmallVowel } from './table.js'
+import { extractName, isKanaOnly, toHiragana } from './word-name.js'
+import { normalizeDakuten, normalizeSmallVowel } from './table.js'
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), 'data')
 
@@ -141,26 +142,7 @@ export function normalizeWordEntry(raw) {
   }
 }
 
-/** w1/w2 から名前部分を抽出 (タグ・注釈を除去) */
-export function extractName(w) {
-  if (!w) return ''
-  const beforeTag = w.split('#')[0].trim()
-  const beforeSuffix = beforeTag.replace(/\s+-\w+$/g, '').trim()
-  const beforeComma = beforeSuffix.split(',')[0].trim()
-  const withoutParen = beforeComma.replace(/\([^)]*\)/g, '').trim()
-  return withoutParen
-}
-
-/** ひらがな・カタカナ・長音符・中黒のみか判定 */
-export function isKanaOnly(str) {
-  if (!str) return false
-  return /^[\u3040-\u309F\u30A0-\u30FF\u30FC\u30FB]+$/.test(str)
-}
-
-/** カタカナ混在文字列をひらがなに正規化 */
-export function toHiragana(str) {
-  return [...str].map((ch) => kataToHira(ch)).join('')
-}
+export { extractName, isKanaOnly, toHiragana }
 
 /** 比較用に正規化 (ひらがな化 + 濁音正規化 + 小文字母音正規化 + 記号除去) */
 export function normalizeForCompare(str) {

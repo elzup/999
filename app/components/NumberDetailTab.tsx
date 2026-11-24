@@ -51,6 +51,7 @@ import {
 import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
+import { restoreSkipFor } from '../../src/kana-skip-migrate.js'
 import { WorstIdeas } from './WorstRankView'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
@@ -661,6 +662,9 @@ function SlotCard({
     : null
   const suspicious =
     check?.status === 'mismatch' || check?.status === 'unreadable'
+  // かなだけの語なのに、よみから読まないかなを書かずに消している (コロンビーナ / ころん)。
+  // 読む数字は変えずに、消した字を読まないかな (半角カナ) で戻したよみを出す (nr kana:skip の restore)
+  const restored = restoreSkipFor(row.word, row.kana, num)
   // タグ違いのカードは枠ごと移すと他のタグの語まで動くので、ここからは移さない
   const canMove = !pending && !row.variant
   // 選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
@@ -699,6 +703,15 @@ function SlotCard({
           {row.slot}
           {pending ? (
             <span class="nd-draft-tag">{isSaved ? '未保存' : '新規'}</span>
+          ) : null}
+          {restored ? (
+            <button
+              class="nd-read-warn"
+              onClick={() => onEdit({ kana: restored })}
+              title={`語から消した字を読まないかなで書く: ${restored} (押すとよみを直す)`}
+            >
+              ⚠{restored}
+            </button>
           ) : null}
           {/* 読みルールで別の番号になるかなは目印を出す。押すと移動欄を開く */}
           {suspicious ? (

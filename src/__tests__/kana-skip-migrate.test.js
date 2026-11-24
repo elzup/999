@@ -134,6 +134,8 @@ describe('tailSkipFor (語尾)', () => {
 describe('restoreSkipFor (よみから消してあるかな)', () => {
   it('かなだけの語と突き合わせ、消してあるかなを ( ) で戻す', () => {
     expect(restoreSkipFor('サバンナ', 'さばな', '387')).toBe('さばﾝな')
+    // 語の後ろをまるごと読まないよみ (コロンビーナ / ころん)
+    expect(restoreSkipFor('コロンビーナ', 'ころん', '560')).toBe('ころんﾋﾞｰﾅ')
     expect(restoreSkipFor('ミッキー', 'みっき', '391')).toBe('みっきｰ')
     // タグ・ラベルは語から外して突き合わせる
     expect(restoreSkipFor('サバンナ#g -a', 'さばな', '387')).toBe('さばﾝな')
