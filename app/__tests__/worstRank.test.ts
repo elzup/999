@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { NumberDoc } from '../lib/numberApi'
-import { LEVEL, grade, worstRowOf, worstRows } from '../lib/worstRank'
+import {
+  LEVEL,
+  grade,
+  patternName,
+  worstRowOf,
+  worstRows,
+} from '../lib/worstRank'
 
 describe('grade (型の判定)', () => {
   it('rankey から当たる型と一番悪い型の順位を出す', () => {
@@ -16,6 +22,15 @@ describe('grade (型の判定)', () => {
       'zeroDouble',
       'concept',
     ])
+  })
+  it('最後の字の半指定 (個室 こしツ) は 語末の半指定 で、語中 (みツる) の 半指定 より良い', () => {
+    const tail = grade('542', 'こしツ', 'AAh|')
+    const mid = grade('326', 'みツる', 'BhB|')
+    expect(tail.ids).toEqual(['halfTail'])
+    expect(mid.ids).toEqual(['half'])
+    // 語末の余り 1 拍 (rest1) のすぐ上
+    expect(patternName('halfTail')).toBe('12. 語末の半指定')
+    expect(tail.worst).toBeLessThan(mid.worst)
   })
 })
 

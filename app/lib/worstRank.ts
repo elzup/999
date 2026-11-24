@@ -2,7 +2,7 @@
 // 番号の良し悪しは、代表 ①② のうち良い方の語で決める。代表付けは途中なので、代表が無ければ
 // 語全部の中で一番良い語を使う (D-0127)。評価 -1 の語は数えず、-1 しか無ければ «語なし» の次に悪い。
 // 人 / 物の別は見ない (物なしは後回しでよい: D-0136)。
-// 型の並びは D-0126〜D-0131 の 20 項目 (.metarc/score-order.html v11)。点はまだ付けていない仮の並び。
+// 型の並びは D-0126〜D-0131 の 20 項目 + 語末の半指定 (.metarc/score-order.html v11)。点はまだ付けていない仮の並び。
 // scripts/worst-rank.mjs (分析ページ) と同じ判定。
 import type { RulesData } from '../data/schema'
 import type { NumberDoc } from './numberApi'
@@ -22,6 +22,9 @@ export const PATTERN_ORDER = [
   ['jiDouble', '6X を ジの拗音 で読む'],
   ['restSoft', '語末の余り: 撥音 / 長音'],
   ['mix', '同じ数字を別の仮名で読む'],
+  // 最後の字を 1 桁目だけで読む (個室 = こしツ)。読み残すのは 1 桁で、語末の余りに近い。
+  // 語中の半指定 (みツる) は 半指定 のまま
+  ['halfTail', '語末の半指定'],
   ['rest1', '語末の余り: 1 拍'],
   ['omitSokuon', '語中の促音を読まない'],
   ['rest2', '語末の余り: 2 拍以上'],
@@ -103,7 +106,8 @@ export function grade(
     if (t.kind === 'sokuon') hits.add('sokuon')
     if (t.kind === 'sokuon2') hits.add('sokuon2')
     if (t.kind === 'cross') hits.add('halfOverflow')
-    if (t.kind === 'half') hits.add('half')
+    if (t.kind === 'half')
+      hits.add(t === toks[toks.length - 1] ? 'halfTail' : 'half')
   }
   if (zeros === 2) hits.add('zeroFill')
   if (zeros === 1) hits.add(num[1] === '0' ? 'zeroHalf' : 'zeroXY')
