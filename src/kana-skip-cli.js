@@ -13,38 +13,19 @@
 // 書き直す。古い式は記法 (半角カナ) を知らないので、さばﾝな を «かなが不正» と出してしまう。
 // 書き終えたら nr sync でローカルの words.tsv も取り直すこと。
 //
-// 認証:
-//   DB    FIRESTORE_ACCESS_TOKEN か、無ければ gcloud auth print-access-token
-//         (GCLOUD_ACCOUNT があればそのアカウント)
-//   シート google-sheets.js の既定 (GOOGLE_SERVICE_ACCOUNT_PATH など)
-import { execFileSync } from 'node:child_process'
-import { connectRest } from './firestore/rest.js'
-import { writeNumber } from './firestore/write.js'
-import { batchUpdateValues, getSheetValuesByTitle } from './google-sheets.js'
+// 認証と書く順は kana-write.js。
+import {
+  SHEET_TAB,
+  connectDb,
+  readMainSheet,
+  writeDbThenSheet,
+} from './kana-write.js'
 import {
   migrateKanaSkipInDoc,
   migrateKanaSkipInSheet,
 } from './kana-skip-migrate.js'
-import { MAIN_LAYOUT, checkColumnUpdates } from './sheet-layout.js'
-
-const PROJECT_ID = 'anoz-memosupo'
-const SPREADSHEET_ID = '1F2G4-6lqUPeYzHkpbhUtYKgDzrjNuUo8tbjXKyrzFHM'
-const SHEET_TAB = '999'
-/** check 列の式を書き直すタブ (どちらも MAIN_LAYOUT) */
-const FORMULA_TABS = ['999', '1231']
-const SOURCE = 'console'
 
 const APPLY = process.argv.slice(2).includes('--apply')
-
-function firestoreToken() {
-  if (process.env.FIRESTORE_ACCESS_TOKEN) {
-    return process.env.FIRESTORE_ACCESS_TOKEN
-  }
-  const account = process.env.GCLOUD_ACCOUNT
-  const gcloudArgs = ['auth', 'print-access-token']
-  if (account) gcloudArgs.push(`--account=${account}`)
-  return execFileSync('gcloud', gcloudArgs).toString().trim()
-}
 
 async function planDb(db) {
   const docs = await db.readAllNumbers()
@@ -57,11 +38,7 @@ async function planDb(db) {
 }
 
 async function planSheet() {
-  const values = await getSheetValuesByTitle({
-    spreadsheetId: SPREADSHEET_ID,
-    title: SHEET_TAB,
-  })
-  return migrateKanaSkipInSheet(values)
+  return migrateKanaSkipInSheet(await readMainSheet())
 }
 
 const KIND_LABELS = {
@@ -100,53 +77,8 @@ function printPlan(dbPlan, sheetPlan) {
   }
 }
 
-async function applyDb(db, dbPlan) {
-  const now = new Date().toISOString()
-  const failed = []
-  for (const { num, current, next } of dbPlan) {
-    const doc = { ...next, updatedAt: now, source: SOURCE }
-    delete doc.derived // サーバ所有。writeNumber が付け直す
-    const result = await writeNumber(db, {
-      num,
-      doc,
-      expectedUpdatedAt: current.updatedAt ?? null,
-      intent: ['slots'],
-    })
-    if (result?.error) failed.push(`${num}: ${result.error}`)
-  }
-  return failed
-}
-
-/** check 列の式を正本で書き直す (記法 (半角カナ) を通す式にする) */
-async function applyCheckFormulas() {
-  const data = []
-  for (const title of FORMULA_TABS) {
-    const values = await getSheetValuesByTitle({
-      spreadsheetId: SPREADSHEET_ID,
-      title,
-    })
-    if (values.length < 2) continue
-    data.push(...checkColumnUpdates(title, MAIN_LAYOUT, values.length))
-  }
-  await batchUpdateValues({
-    spreadsheetId: SPREADSHEET_ID,
-    data,
-    valueInputOption: 'USER_ENTERED',
-  })
-  console.log(`check 列の式を書き直した (${FORMULA_TABS.join(' / ')} タブ)`)
-}
-
-async function applySheet(sheetPlan) {
-  const data = sheetPlan.map(({ cell, after }) => ({
-    range: `'${SHEET_TAB}'!${cell}`,
-    values: [[after]],
-  }))
-  if (data.length === 0) return
-  await batchUpdateValues({ spreadsheetId: SPREADSHEET_ID, data })
-}
-
 async function main() {
-  const db = connectRest({ projectId: PROJECT_ID, token: firestoreToken() })
+  const db = connectDb()
   const dbPlan = await planDb(db)
   const sheetPlan = await planSheet()
   printPlan(dbPlan, sheetPlan)
@@ -155,15 +87,7 @@ async function main() {
     console.log('\n(dry-run。--apply で書き込む)')
     return
   }
-  const failed = await applyDb(db, dbPlan)
-  if (failed.length > 0) {
-    // DB が揃わないままシートだけ変えると、次の同期でシートの古いかなが DB へ戻りうる
-    throw new Error(
-      `DB の書き込みに失敗 (シートは未変更):\n${failed.join('\n')}`
-    )
-  }
-  await applyCheckFormulas()
-  await applySheet(sheetPlan)
+  await writeDbThenSheet(db, dbPlan, sheetPlan)
   console.log('\n書き込み完了。nr sync でローカルの words.tsv を取り直すこと')
 }
 

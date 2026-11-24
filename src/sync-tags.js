@@ -5,6 +5,7 @@
 import { writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { searchNameOf } from './firestore/tag-names.js'
 import { getSheetValuesByTitle } from './google-sheets.js'
 
 const SHEET_ID =
@@ -75,7 +76,9 @@ async function main() {
     const tag = (r[tagCol] || '').trim()
     const title = (r[titleCol] || '').trim()
     const short = shortCol === -1 ? '' : (r[shortCol] || '').trim()
-    if (tag && title && title !== '?') map[tag] = title
+    // title が空か ? なら short_title で代える (DB 経路の searchNamesOf と同じ)
+    const search = searchNameOf({ title, short })
+    if (tag && search) map[tag] = search
     if (tag && short) shortMap[tag] = short
   }
 

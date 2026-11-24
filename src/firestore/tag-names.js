@@ -42,14 +42,20 @@ export function displayNamesOf(names) {
 }
 
 /**
- * 検索に使う正式名の表 (tag → title)。Mac の sync-tags.js が書く src/data/tags.json と同じ規則で、
- * title が空か ? のタグは載せない (略語のまま検索するほうがまし)
+ * 検索に使う正式名の表 (tag → title)。Mac の sync-tags.js が書く src/data/tags.json と同じ規則。
+ * title が空か ? のタグは short_title で代える (半角カナは全角に直す: ﾑｼｮｸ → ムショク)。
+ * どちらも無いタグは載せない (略語のまま検索するほうがまし)
  */
+export function searchNameOf({ title = '', short = '' } = {}) {
+  if (title && title !== UNKNOWN_TITLE) return title
+  return short ? short.normalize('NFKC') : ''
+}
+
 export function searchNamesOf(names) {
   return Object.fromEntries(
     Object.entries(names ?? {})
-      .map(([tag, n]) => [tag, n.title])
-      .filter(([, title]) => title && title !== UNKNOWN_TITLE)
+      .map(([tag, n]) => [tag, searchNameOf(n)])
+      .filter(([, name]) => name)
   )
 }
 

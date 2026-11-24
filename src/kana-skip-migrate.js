@@ -162,7 +162,7 @@ export function migrateKanaSkipInDoc(doc) {
 }
 
 /** 0 始まりの列番号 → A1 表記の列名 (0 → A, 27 → AB) */
-function columnName(index) {
+export function columnName(index) {
   let n = index + 1
   let name = ''
   while (n > 0) {

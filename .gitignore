@@ -32,6 +32,8 @@ public/stats.html
 src/sheet-audit.out.json
 # nr label:n の削除検討候補 (語を含む私的データ)
 src/label-n.out.json
+# nr kana:long の LLM 依頼文と答え (語を含む私的データ)
+src/kana-long.out/
 
 # 生成物: 語呂/FF の歌詞テキスト (src/gen-words-lyrics.js が正本)
 lyrics/

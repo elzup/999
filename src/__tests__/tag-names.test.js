@@ -58,10 +58,22 @@ describe('displayNamesOf', () => {
 })
 
 describe('searchNamesOf', () => {
-  it('検索には正式名 (title) を使う。title が ? なら出さない (tags.json と同じ)', () => {
+  it('検索には正式名 (title) を使う。title が空か ? なら short_title (全角に直す)、どちらも無ければ出さない', () => {
     expect(searchNamesOf(tagNamesFromValues(VALUES))).toEqual({
       ipra: 'アイドリープライド',
       g: '概念',
+    })
+  })
+  it('short_title にしか名前が無いタグも展開できる (musyoku → 無職転生)', () => {
+    const values = [
+      ['tag', 'title', 'short_title'],
+      ['musyoku', '', '無職転生'],
+      ['trk', '?', 'ﾄﾘｯｶﾙ'],
+      ['none', '?', ''],
+    ]
+    expect(searchNamesOf(tagNamesFromValues(values))).toEqual({
+      musyoku: '無職転生',
+      trk: 'トリッカル',
     })
   })
 })
