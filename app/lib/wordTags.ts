@@ -114,6 +114,7 @@ export const LABELS: Array<{ id: string; meaning: string; retired?: boolean }> =
     { id: 's', meaning: 'サンド・中抜き' },
     { id: 'p', meaning: '0xx' },
     { id: 'j', meaning: '熟語' },
+    { id: 'f', meaning: 'お気に入り' },
   ]
 
 /** name はシートの tags タブの表示名 (res → アトリエ)。無いタグもある */

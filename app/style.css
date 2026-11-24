@@ -557,6 +557,11 @@ body {
   color: var(--label);
   font-style: italic;
 }
+/* -f お気に入り。ほかのラベルと見分けやすいよう星の色で */
+.tw-label.tw-fav {
+  color: #f5b301;
+  font-weight: 700;
+}
 /* ヨミはフリガナの位置。場所は常に取り、タップした行だけ見せる (出し入れでガタつかない) */
 .word-line {
   cursor: pointer;

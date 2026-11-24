@@ -53,7 +53,10 @@ function TaggedWord({
             </span>
           ))}
           {labels.map((l) => (
-            <span key={'l' + l} class="tw-label">
+            <span
+              key={'l' + l}
+              class={'tw-label' + (l === 'f' ? ' tw-fav' : '')}
+            >
               {l}
             </span>
           ))}
