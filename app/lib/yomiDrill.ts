@@ -21,7 +21,7 @@ export type YomiItem = {
 }
 
 export const YOMI_SCOPES = ['all', 'youon', 'long'] as const
-export type YomiScope = (typeof YOMI_SCOPES)[number]
+export type YomiScope = typeof YOMI_SCOPES[number]
 
 export const YOMI_SCOPE_LABEL: Record<YomiScope, string> = {
   all: '全部',

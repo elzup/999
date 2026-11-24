@@ -20,7 +20,7 @@ import {
 
 export type CoverRow = 'd0' | 'd1' | 'core' | 'sub' | 'bad'
 const SINGLE_TIERS = ['core', 'sub', 'bad'] as const
-type SingleTier = (typeof SINGLE_TIERS)[number]
+type SingleTier = typeof SINGLE_TIERS[number]
 
 export const DIGIT_COUNT = 3
 

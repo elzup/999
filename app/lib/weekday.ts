@@ -25,24 +25,8 @@ export type WeekdayQuestion = {
   result: WeekdayResult
 }
 
-export const WEEKDAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-] as const
-export const WEEKDAY_NAMES_JA = [
-  '日',
-  '月',
-  '火',
-  '水',
-  '木',
-  '金',
-  '土',
-] as const
+export const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+export const WEEKDAY_NAMES_JA = ['日', '月', '火', '水', '木', '金', '土'] as const
 
 export const MONTH_CODES: Record<number, number> = {
   1: 0,
@@ -77,9 +61,7 @@ export function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
 }
 
-function parseDate(
-  input: string
-): { year: number; month: number; day: number } | null {
+function parseDate(input: string): { year: number; month: number; day: number } | null {
   const trimmed = input.trim()
   const sep = trimmed.match(/^(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})$/)
   if (sep) {
@@ -104,11 +86,7 @@ function formatDate(year: number, month: number, day: number): string {
   return `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`
 }
 
-function isValidGregorianDate(
-  year: number,
-  month: number,
-  day: number
-): boolean {
+function isValidGregorianDate(year: number, month: number, day: number): boolean {
   if (year < 1500 || year > 2500) return false
   if (month < 1 || month > 12 || day < 1 || day > 31) return false
   const date = new Date(Date.UTC(year, month - 1, day))
@@ -143,8 +121,7 @@ export function calculateWeekday(input: string): WeekdayResult | null {
   const reducedYearDiv4 = ((yDiv4 % 7) + 7) % 7
   const reducedMonth = ((adjustedMonthCode % 7) + 7) % 7
   const reducedDay = ((day % 7) + 7) % 7
-  const sum =
-    reducedCentury + reducedYear + reducedYearDiv4 + reducedMonth + reducedDay
+  const sum = reducedCentury + reducedYear + reducedYearDiv4 + reducedMonth + reducedDay
   const weekdayIndex = sum % 7
 
   return {
@@ -153,38 +130,15 @@ export function calculateWeekday(input: string): WeekdayResult | null {
     month,
     day,
     steps: [
-      {
-        name: 'century',
-        label: '世紀コード',
-        value: centuryCode,
-        explain: `${centuryBase}年代 → ${centuryCode}`,
-      },
-      {
-        name: 'year',
-        label: '年下2桁',
-        value: y,
-        explain: `${year} の下2桁 → ${y}`,
-      },
-      {
-        name: 'yearDiv4',
-        label: 'floor(y/4)',
-        value: yDiv4,
-        explain: `floor(${y}/4) = ${yDiv4}`,
-      },
-      {
-        name: 'yearCode',
-        label: '年コード',
-        value: yearCode,
-        explain: `(${y} + ${yDiv4}) mod 7 = ${yearCode}`,
-      },
+      { name: 'century', label: '世紀コード', value: centuryCode, explain: `${centuryBase}年代 → ${centuryCode}` },
+      { name: 'year', label: '年下2桁', value: y, explain: `${year} の下2桁 → ${y}` },
+      { name: 'yearDiv4', label: 'floor(y/4)', value: yDiv4, explain: `floor(${y}/4) = ${yDiv4}` },
+      { name: 'yearCode', label: '年コード', value: yearCode, explain: `(${y} + ${yDiv4}) mod 7 = ${yearCode}` },
       {
         name: 'month',
         label: '月コード',
         value: adjustedMonthCode,
-        explain:
-          leapAdjust === 0
-            ? `${month}月 → ${monthCode}`
-            : `${month}月 → ${monthCode} に閏年補正 -1`,
+        explain: leapAdjust === 0 ? `${month}月 → ${monthCode}` : `${month}月 → ${monthCode} に閏年補正 -1`,
       },
       { name: 'day', label: '日', value: day, explain: `${day}` },
       {
@@ -193,12 +147,7 @@ export function calculateWeekday(input: string): WeekdayResult | null {
         value: sum,
         explain: `${reducedCentury} + ${reducedYear} + ${reducedYearDiv4} + ${reducedMonth} + ${reducedDay} = ${sum}`,
       },
-      {
-        name: 'mod7',
-        label: 'mod 7',
-        value: weekdayIndex,
-        explain: `${sum} mod 7 = ${weekdayIndex}`,
-      },
+      { name: 'mod7', label: 'mod 7', value: weekdayIndex, explain: `${sum} mod 7 = ${weekdayIndex}` },
     ],
     weekdayIndex,
     weekdayName: WEEKDAY_NAMES[weekdayIndex],
@@ -227,10 +176,7 @@ export function randomWeekdayQuestion(random = Math.random): WeekdayQuestion {
   }
 }
 
-export function createWeekdayQuiz(
-  count = 10,
-  random = Math.random
-): WeekdayQuestion[] {
+export function createWeekdayQuiz(count = 10, random = Math.random): WeekdayQuestion[] {
   const used = new Set<string>()
   const questions: WeekdayQuestion[] = []
   while (questions.length < count) {

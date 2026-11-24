@@ -24,7 +24,7 @@ const EXTRA_ORDER: Record<string, number> = { ゔ: GOJUON.indexOf('う') + 0.5 }
 
 const posOf = (ch: string) => {
   const i = GOJUON.indexOf(ch)
-  return i >= 0 ? i : (EXTRA_ORDER[ch] ?? Number.MAX_SAFE_INTEGER)
+  return i >= 0 ? i : EXTRA_ORDER[ch] ?? Number.MAX_SAFE_INTEGER
 }
 
 export type YomiRow = {
