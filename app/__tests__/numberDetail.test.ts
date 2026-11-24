@@ -385,6 +385,42 @@ describe('画像の補完', () => {
     expect(slotsFromRows(rows, doc).wh1.imageUrl).toBe('a.jpg')
   })
 
+  it('同じ語が 2 枠にあるとき、配信の画像は元の枠の 1 行にだけ付ける (コブラ / コブラ)', () => {
+    const twin: NumberDoc = {
+      num: '520',
+      slots: {
+        wh1: { word: 'コブラ', kana: 'こぶら' },
+        wm1: { word: 'コブラ', kana: 'こぶら' },
+      },
+    }
+    const rows = withDeliveredImages(slotRows(twin), {
+      num: '520',
+      wm1: 'コブラ',
+      wm1Img: 'cobra.webp',
+    } as never)
+    const bySlot = Object.fromEntries(rows.map((row) => [row.slot, row]))
+    expect(bySlot.wm1.imageUrl).toBe('cobra.webp')
+    expect(bySlot.wh1.imageUrl).toBeUndefined()
+  })
+
+  it('同じ語が 2 枠にあり、片方が自前の画像を持つなら、もう片方に同じ画像を付けない', () => {
+    const twin: NumberDoc = {
+      num: '520',
+      slots: {
+        wh1: { word: 'コブラ', kana: 'こぶら', imageUrl: 'cobra.webp' },
+        wm1: { word: 'コブラ', kana: 'こぶら' },
+      },
+    }
+    const rows = withDeliveredImages(slotRows(twin), {
+      num: '520',
+      w1: 'コブラ',
+      w1Img: 'cobra.webp',
+    } as never)
+    const bySlot = Object.fromEntries(rows.map((row) => [row.slot, row]))
+    expect(bySlot.wh1.imageUrl).toBe('cobra.webp')
+    expect(bySlot.wm1.imageUrl).toBeUndefined()
+  })
+
   it('タグだけ違う語には、それぞれの画像を付ける (082 の ハブ#ｳｼｼﾞﾏ / ハブ)', () => {
     const hub: NumberDoc = {
       num: '082',

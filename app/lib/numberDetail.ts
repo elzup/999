@@ -169,30 +169,62 @@ export function withDeliveredImages(
   if (!entry) return rows
   // 語の全文で当てるのを先にする。本体 (タグ抜き) だけで当てると、
   // ハブ#ｳｼｼﾞﾏ と ハブ、カレン#res と カレン#ｺｰﾄﾞｷﾞｱｽ が同じ画像になる
-  const byWord = new Map<string, string>()
+  const byWord = new Map<string, string[]>()
   const byName = new Map<string, Set<string>>()
+  /** 枠 + 語の全文 → 画像。同じ語が 2 枠にあるとき、元の枠の画像を元の枠に返す */
+  const bySlotWord = new Map<string, string>()
+  const slotWordKey = (slot: string, word: string) =>
+    slot + '\t' + norm(word).trim()
   // 分けた語の候補に加え、分ける前の語 (編集フォームの行) の画像も引けるようにする
   for (const cand of [...candidatesOf(entry), ...slotCandidates(entry)]) {
     if (!cand.img) continue
     const word = norm(cand.word).trim()
-    if (word && !byWord.has(word)) byWord.set(word, cand.img)
+    if (word) {
+      const list = byWord.get(word) ?? []
+      if (!list.includes(cand.img)) byWord.set(word, [...list, cand.img])
+      const key = slotWordKey(cand.slot, cand.word)
+      if (!bySlotWord.has(key)) bySlotWord.set(key, cand.img)
+    }
     const name = nameOf(cand.word)
     if (name) {
       byName.set(name, new Set([...(byName.get(name) ?? []), cand.img]))
     }
   }
+  // 配信の画像 1 枚は 1 行にだけ付ける。同じ語 (コブラ と コブラ) が 2 枠にあると、
+  // 語で当てるだけでは画像の無い方にも同じ画像が付いてしまう
+  const used = new Set(
+    rows.flatMap((row) => (row.imageUrl ? [row.imageUrl] : []))
+  )
+  const free = (img: string | undefined) =>
+    img && !used.has(img) ? img : undefined
   const imageFor = (row: SlotRow) => {
-    const exact = byWord.get(norm(row.word).trim())
+    const exact = (byWord.get(norm(row.word).trim()) ?? []).find(
+      (img) => !used.has(img)
+    )
     if (exact) return exact
     // タグ違いで分けた行は全文が当たったときだけ (別人の画像を出さない)
     if (row.variant) return undefined
     // 本体での照合は、画像が 1 つに決まるときだけ (タグを付け替えた後など)
     const byBase = byName.get(nameOf(row.word))
-    return byBase?.size === 1 ? [...byBase][0] : undefined
+    return byBase?.size === 1 ? free([...byBase][0]) : undefined
   }
-  return rows.map((row) => {
-    if (row.imageUrl) return row
-    const img = imageFor(row)
+  const found = new Map<number, string>()
+  const take = (index: number, img: string | undefined) => {
+    if (!img) return
+    found.set(index, img)
+    used.add(img)
+  }
+  // 先に、配信データでも同じ枠にいた語へ (位置も語も同じなら、その画像で間違いない)
+  rows.forEach((row, index) => {
+    if (row.imageUrl) return
+    take(index, free(bySlotWord.get(slotWordKey(row.slot, row.word))))
+  })
+  rows.forEach((row, index) => {
+    if (row.imageUrl || found.has(index)) return
+    take(index, imageFor(row))
+  })
+  return rows.map((row, index) => {
+    const img = found.get(index)
     return img ? { ...row, imageUrl: img, imageDelivered: true } : row
   })
 }
