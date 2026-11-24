@@ -10,6 +10,7 @@ import {
   LEVEL,
   patternName,
   readingIdeas,
+  worstRowOf,
   worstRows,
   type Graded,
   type GradedWord,
@@ -91,7 +92,7 @@ function Detail({
   )
 }
 
-function Summary({ row }: { row: WorstRow }) {
+export function Summary({ row }: { row: WorstRow }) {
   if (row.level === LEVEL.none) return <span class="wr-best none">語なし</span>
   if (row.level === LEVEL.onlyBad)
     return <span class="wr-best none">評価 -1 の語しか無い</span>
@@ -105,6 +106,39 @@ function Summary({ row }: { row: WorstRow }) {
       </span>
       <span class="wr-pat">{worstOf(basis)}</span>
     </span>
+  )
+}
+
+/**
+ * 編集画面の上に出す、悪い順の判定と良い当て方 (表から作った読み)。
+ * 語を足すときの候補として見る
+ */
+export function WorstIdeas({
+  num,
+  doc,
+}: {
+  num: string
+  doc: NumberDoc | null
+}) {
+  const tables = useReadingTables()
+  const row = useMemo(() => worstRowOf(num, doc ?? undefined), [num, doc])
+  const ideas = useMemo(
+    () => (tables ? readingIdeas(tables.rules, num) : []),
+    [tables, num]
+  )
+  return (
+    <details class="wr-ideas" open>
+      <summary>
+        <span class="wr-ideas-title">悪い順</span>
+        <Summary row={row} />
+      </summary>
+      <h4>良い当て方 (表から作った読み。語ではない)</h4>
+      <ul class="wr-lines">
+        {ideas.map((g) => (
+          <GradeLine key={g.kana} g={g} />
+        ))}
+      </ul>
+    </details>
   )
 }
 

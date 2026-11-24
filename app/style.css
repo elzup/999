@@ -7806,3 +7806,34 @@ img[data-concept] {
   font-size: 12px;
   color: var(--text2);
 }
+
+/* 編集画面の上: 悪い順の判定と良い当て方 (WorstIdeas) */
+.nd-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wr-ideas {
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.wr-ideas > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+}
+.wr-ideas-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.wr-ideas h4 {
+  margin: 6px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+}

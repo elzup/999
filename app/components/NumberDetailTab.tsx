@@ -51,6 +51,7 @@ import {
 import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
+import { WorstIdeas } from './WorstRankView'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
@@ -319,103 +320,109 @@ export default function NumberDetailTab({
     [rows]
   )
 
-  // 候補は優先順に下から積む (先頭が親指側)
+  // 候補は優先順に下から積む (先頭が親指側)。悪い順の判定と良い当て方は上に出す
   const main = doc ? (
-    <ul class="nd-cards stack-up" style={{ '--stack-gap': '8px' }}>
-      {cards.map((card) => {
-        const index = rows.findIndex((other) => other.slot === card.slot)
-        const row = rows[index]
-        return (
-          <SlotCard
-            key={card.key}
-            token={token}
-            row={card}
-            slotWord={row.word}
-            index={index}
-            num={doc.num}
-            tables={tables}
-            knownTags={knownTags}
-            moveOpen={moving === card.key}
-            onToggleMove={() =>
-              setMoving((prev) => (prev === card.key ? null : card.key))
-            }
-            onMove={(to) => moveWord(row, to)}
-            focused={
-              card.slot === focusSlot &&
-              cards.find((c) => c.slot === card.slot) === card
-            }
-            repMark={queue.mark(doc.num, 'rep')}
-            rateMark={queue.mark(doc.num, `rating:${card.kana}|${card.word}`)}
-            isSaved={Boolean(doc.slots?.[row.slot])}
-            changed={changed.includes(row.slot)}
-            dragging={dragFrom === index}
-            onDragStart={() => setDragFrom(index)}
-            onDragEnd={() => setDragFrom(null)}
-            onDropAt={() => {
-              if (dragFrom === null || dragFrom === index) return
-              saveSlots(
-                moveItem(rows, dragFrom, index),
-                dirty
-                  ? '並べ替え、未保存の変更も保存しました'
-                  : '並べ替えました'
-              )
-              setDragFrom(null)
-            }}
-            onEdit={(patch) => editRow(row, patch)}
-            onDelete={() => {
-              // タグ違いのカードは、そのタグだけ外す (枠には残りのタグの語が残る)
-              const variant = card.variant
-              if (variant) {
-                const word = removeTag(row.word, variant)
-                if (!doc.slots?.[row.slot]) {
-                  editRow(row, { word })
+    <div class="nd-main">
+      <WorstIdeas num={doc.num} doc={doc} />
+      <ul class="nd-cards stack-up" style={{ '--stack-gap': '8px' }}>
+        {cards.map((card) => {
+          const index = rows.findIndex((other) => other.slot === card.slot)
+          const row = rows[index]
+          return (
+            <SlotCard
+              key={card.key}
+              token={token}
+              row={card}
+              slotWord={row.word}
+              index={index}
+              num={doc.num}
+              tables={tables}
+              knownTags={knownTags}
+              moveOpen={moving === card.key}
+              onToggleMove={() =>
+                setMoving((prev) => (prev === card.key ? null : card.key))
+              }
+              onMove={(to) => moveWord(row, to)}
+              focused={
+                card.slot === focusSlot &&
+                cards.find((c) => c.slot === card.slot) === card
+              }
+              repMark={queue.mark(doc.num, 'rep')}
+              rateMark={queue.mark(doc.num, `rating:${card.kana}|${card.word}`)}
+              isSaved={Boolean(doc.slots?.[row.slot])}
+              changed={changed.includes(row.slot)}
+              dragging={dragFrom === index}
+              onDragStart={() => setDragFrom(index)}
+              onDragEnd={() => setDragFrom(null)}
+              onDropAt={() => {
+                if (dragFrom === null || dragFrom === index) return
+                saveSlots(
+                  moveItem(rows, dragFrom, index),
+                  dirty
+                    ? '並べ替え、未保存の変更も保存しました'
+                    : '並べ替えました'
+                )
+                setDragFrom(null)
+              }}
+              onEdit={(patch) => editRow(row, patch)}
+              onDelete={() => {
+                // タグ違いのカードは、そのタグだけ外す (枠には残りのタグの語が残る)
+                const variant = card.variant
+                if (variant) {
+                  const word = removeTag(row.word, variant)
+                  if (!doc.slots?.[row.slot]) {
+                    editRow(row, { word })
+                    return
+                  }
+                  saveSlots(
+                    rows.map((other) =>
+                      other.slot === row.slot ? { ...other, word } : other
+                    ),
+                    dirty
+                      ? `#${variant} を外し、未保存の変更も保存しました`
+                      : `#${variant} を外しました`
+                  )
                   return
                 }
+                // 足しただけの枠は手元で消すだけ (サーバに送るものが無い)
+                if (!doc.slots?.[row.slot]) {
+                  setDrafts(({ [row.slot]: _, ...rest }) => rest)
+                  return
+                }
+                // slots は最終形を送るので、他の枠の未保存の編集も一緒に保存される
                 saveSlots(
-                  rows.map((other) =>
-                    other.slot === row.slot ? { ...other, word } : other
-                  ),
-                  dirty
-                    ? `#${variant} を外し、未保存の変更も保存しました`
-                    : `#${variant} を外しました`
+                  rows.filter((other) => other.slot !== row.slot),
+                  dirty ? '削除し、未保存の変更も保存しました' : '削除しました'
                 )
-                return
+              }}
+              onPickRep={(rank) => {
+                const op = repPickOp(
+                  doc,
+                  row.slot,
+                  rank,
+                  card.variant ? card.word : undefined
+                )
+                send(
+                  op,
+                  op.confirmed ? '代表を確定しました' : '代表を外しました'
+                )
+              }}
+              onRate={(value) =>
+                send(
+                  {
+                    op: 'rating',
+                    k: card.kana,
+                    w: card.word,
+                    v: nextRatingValue(card.rating, value),
+                  },
+                  '評価を保存しました'
+                )
               }
-              // 足しただけの枠は手元で消すだけ (サーバに送るものが無い)
-              if (!doc.slots?.[row.slot]) {
-                setDrafts(({ [row.slot]: _, ...rest }) => rest)
-                return
-              }
-              // slots は最終形を送るので、他の枠の未保存の編集も一緒に保存される
-              saveSlots(
-                rows.filter((other) => other.slot !== row.slot),
-                dirty ? '削除し、未保存の変更も保存しました' : '削除しました'
-              )
-            }}
-            onPickRep={(rank) => {
-              const op = repPickOp(
-                doc,
-                row.slot,
-                rank,
-                card.variant ? card.word : undefined
-              )
-              send(op, op.confirmed ? '代表を確定しました' : '代表を外しました')
-            }}
-            onRate={(value) =>
-              send(
-                {
-                  op: 'rating',
-                  k: card.kana,
-                  w: card.word,
-                  v: nextRatingValue(card.rating, value),
-                },
-                '評価を保存しました'
-              )
-            }
-          />
-        )
-      })}
-    </ul>
+            />
+          )
+        })}
+      </ul>
+    </div>
   ) : null
 
   const bmKey = 'n:' + num
