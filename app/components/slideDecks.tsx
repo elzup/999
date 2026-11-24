@@ -3,12 +3,14 @@ import Yomi from './Yomi'
 import type { ComponentChildren } from 'preact'
 import type { CardEntry, NumberEntry } from '../data/schema'
 import { D3_LIST, PI_1000_DIGITS, YEAR_DATA } from '../data/constants'
-import { cardValues, formatCardId } from '../data/cards'
+import { cardPao, cardValues, formatCardId } from '../data/cards'
 import { candidateAt } from '../lib/choice'
 import { ETYMOLOGY_DATA } from '../data/etymology'
 import { getFfRows, isValidFfRow } from '../lib/ffQuiz'
 import { exprLeft, getKukuItems } from '../lib/kukuQuiz'
 import type { SlideDeck } from '../lib/slideDeck'
+import { spellOut, wordSpeech } from '../lib/slideSpeech'
+import { parseWord } from '../lib/wordTags'
 import { wordImage } from '../lib/wordImage'
 import TaggedWord from './TaggedWord'
 
@@ -96,6 +98,30 @@ function NumberAnswer({ d }: { d: NumberEntry }) {
   )
 }
 
+// 数字 1 件ぶんの答え面の読み (代表語 2 つ)。
+function numberAnswerSpeech(d: NumberEntry): string {
+  return [candidateAt(d, 'wh1'), candidateAt(d, 'wm1')]
+    .flatMap((c) => (c ? [wordSpeech(c.word, c.kana)] : []))
+    .filter(Boolean)
+    .join('、')
+}
+
+const SUIT_SPEECH: Record<string, string> = {
+  S: 'スペード',
+  H: 'ハート',
+  C: 'クラブ',
+  D: 'ダイヤ',
+}
+const RANK_SPEECH: Record<string, string> = {
+  A: 'エース',
+  T: '10',
+  J: 'ジャック',
+  Q: 'クイーン',
+  K: 'キング',
+}
+const cardSpeech = (card: CardEntry) =>
+  `${SUIT_SPEECH[card.suit] ?? ''}の${RANK_SPEECH[card.rank] ?? card.rank}`
+
 const labeledRows = (rows: [label: string, value: ComponentChildren][]) => (
   <div class="slide-rows">
     {rows.map(([label, value]) => (
@@ -116,6 +142,7 @@ export function numberDeck(numbers: NumberEntry[]): SlideDeck {
       prompt: codeFace(d.num),
       answer: <NumberAnswer d={d} />,
       bmKey: 'n:' + d.num,
+      speech: { prompt: spellOut(d.num), answer: numberAnswerSpeech(d) },
     })),
   }
 }
@@ -131,6 +158,13 @@ export function cardDeck(cards: CardEntry[]): SlideDeck {
         cardValues(card).map(([label, value]) => [label, value])
       ),
       bmKey: 'c:' + card.suit + card.rank,
+      speech: {
+        prompt: cardSpeech(card),
+        answer: [...cardPao(card)]
+          .sort((a, b) => b.score - a.score)
+          .map((item) => parseWord(item.word).base)
+          .join('、'),
+      },
     })),
   }
 }
@@ -159,6 +193,12 @@ export function piDeck(numbers: NumberEntry[]): SlideDeck {
           </>
         ),
         bmKey: 'n:' + digits,
+        speech: {
+          prompt: `${start + 1}から${start + PI_CHUNK}桁`,
+          answer: [spellOut(digits), entry ? numberAnswerSpeech(entry) : '']
+            .filter(Boolean)
+            .join('。'),
+        },
       }
     }),
   }
@@ -174,6 +214,7 @@ export function yearDeck(): SlideDeck {
         id: String(item.no),
         prompt: textFace(item.event, item.desc),
         answer: codeFace(item.year),
+        speech: { prompt: item.event, answer: `${item.year}年` },
       })),
   }
 }
@@ -186,6 +227,7 @@ export function yearCodeDeck(): SlideDeck {
       id: xyz,
       prompt: codeFace(xyz.slice(0, 2)),
       answer: codeFace(xyz[2]),
+      speech: { prompt: spellOut(xyz.slice(0, 2)), answer: xyz[2] },
     })),
   }
 }
@@ -198,6 +240,10 @@ export function kukuDeck(): SlideDeck {
       id: item.expr,
       prompt: codeFace(exprLeft(item.expr)),
       answer: textFace(item.prob, item.yomi),
+      speech: {
+        prompt: exprLeft(item.expr).replace('×', 'かける'),
+        answer: item.prob,
+      },
     })),
   }
 }
@@ -210,6 +256,7 @@ export function gogenDeck(): SlideDeck {
       id: item.word,
       prompt: textFace(item.word, item.kana),
       answer: <div class="slide-text slide-gogen">{item.origin}</div>,
+      speech: { prompt: item.kana || item.word, answer: item.origin },
     })),
   }
 }
@@ -224,6 +271,10 @@ export function ffDeck(): SlideDeck {
         id: row.hex,
         prompt: codeFace(row.hex),
         answer: textFace(row.word || row.kana, `${row.read}・${row.bin}`),
+        speech: {
+          prompt: spellOut(row.hex),
+          answer: wordSpeech(row.word, row.kana),
+        },
       })),
   }
 }

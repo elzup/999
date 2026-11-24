@@ -218,6 +218,7 @@ const SlideSettingsSchema = z.object({
   answerMs: z.number().positive().default(DEFAULT_ANSWER_MS),
   bmOnly: z.boolean().default(false),
   skipOk: z.boolean().default(false),
+  speech: z.boolean().default(false),
 })
 
 export type SlideSettings = z.infer<typeof SlideSettingsSchema>
@@ -229,6 +230,7 @@ export function loadSlideSettings(): SlideSettings {
     answerMs: DEFAULT_ANSWER_MS,
     bmOnly: false,
     skipOk: false,
+    speech: false,
   })
 }
 

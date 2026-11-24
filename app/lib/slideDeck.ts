@@ -1,4 +1,5 @@
 import type { ComponentChildren } from 'preact'
+import type { SlideSpeech } from './slideSpeech'
 
 // スライドショーに流す 1 枚。問題面 (prompt) を先に見せ、少し置いて答え面 (answer) を出す。
 export type SlideItem = {
@@ -8,6 +9,8 @@ export type SlideItem = {
   answer: ComponentChildren
   // ブックマークと連動させる場合のキー ('n:123' / 'c:SA' など)。無ければ ★ を出さない。
   bmKey?: string
+  // 読み上げる文 (問題面 / 答え面)。無い面は読まない。
+  speech?: SlideSpeech
 }
 
 // グループごとの出題セット。SlidePlayer はデッキの中身を知らずに再生する。
