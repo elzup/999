@@ -12,6 +12,7 @@
     "tag:rename": "node src/tag-rename-cli.js",
     "label:n": "node src/label-n-migrate-cli.js",
     "kana:skip": "node src/kana-skip-cli.js",
+    "kana:long": "node src/kana-long-cli.js",
     "kana:canonical": "node src/kana-canonical-cli.js",
     "backup:data": "bash scripts/backup-data.sh",
     "images:search": "node src/search-word-images.js",
