@@ -132,6 +132,7 @@ export default function NumberDetailTab({
   // タグ追加の候補。配信データの人・物の一覧で使われているタグを回数順に
   const ctx = useNumberContext()
   const tagNames = ctx?.tagNames
+  const tagTitles = ctx?.tagTitles
   const knownTags = useMemo<TagSuggestion[]>(
     () =>
       numbers
@@ -139,9 +140,10 @@ export default function NumberDetailTab({
             tag,
             count,
             name: tagNames?.[tag],
+            title: tagTitles?.[tag],
           }))
         : [],
-    [numbers, tagNames]
+    [numbers, tagNames, tagTitles]
   )
 
   /**

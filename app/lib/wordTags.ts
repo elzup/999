@@ -117,15 +117,33 @@ export const LABELS: Array<{ id: string; meaning: string; retired?: boolean }> =
     { id: 'f', meaning: 'お気に入り' },
   ]
 
-/** name はシートの tags タブの表示名 (res → アトリエ)。無いタグもある */
-export type TagSuggestion = { tag: string; count: number; name?: string }
+/**
+ * name はシートの tags タブの表示名 (short_title、res → アトリエ)、title は正式名 (title)。
+ * どちらも無いタグもある
+ */
+export type TagSuggestion = {
+  tag: string
+  count: number
+  name?: string
+  title?: string
+}
 
-// 半角カナ・全角英数・大文字小文字の違いで当たらないことが無いようにそろえる
-const foldForSearch = (text: string) => text.normalize('NFKC').toLowerCase()
+// 半角カナ・全角英数・大文字小文字・ひらがなとカタカナ・空白と中黒の違いで
+// 当たらないことが無いようにそろえる (正式名は «Bang Dream!» «ラブライブ!サンシャイン!!» のように長い)
+const foldForSearch = (text: string) =>
+  text
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[ァ-ヶ]/g, (ch) =>
+      ch === 'ヵ' || ch === 'ヶ' || ch === 'ヴ'
+        ? ch
+        : String.fromCharCode(ch.charCodeAt(0) - 0x60)
+    )
+    .replace(/[\s・･]/g, '')
 
 /**
- * 入力中の文字に合うタグ候補。タグ (id) と表示名のどちらにも当てる
- * («アトリエ» と打って #res を出せるように)。前方一致を先に、その中は使われている
+ * 入力中の文字に合うタグ候補。タグ (id)・表示名・正式名のどれにも当てる
+ * («アトリエ» と打って #res を出せるように。略称しか表示しないタグも正式名で引ける)。前方一致を先に、その中は使われている
  * 回数の多い順。既に付いているタグは出さない
  */
 export function suggestTags(
@@ -138,7 +156,9 @@ export function suggestTags(
   const pool = known.filter((item) => !exclude.includes(item.tag))
   if (!q) return pool.slice(0, limit)
   const keysOf = (item: TagSuggestion) =>
-    [item.tag, item.name ?? ''].filter(Boolean).map(foldForSearch)
+    [item.tag, item.name ?? '', item.title ?? '']
+      .filter(Boolean)
+      .map(foldForSearch)
   const head = pool.filter((item) => keysOf(item).some((k) => k.startsWith(q)))
   const mid = pool.filter(
     (item) => !head.includes(item) && keysOf(item).some((k) => k.includes(q))

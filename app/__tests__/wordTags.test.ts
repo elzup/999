@@ -107,3 +107,27 @@ describe('suggestTags の表示名での検索', () => {
     ])
   })
 })
+
+describe('suggestTags の正式名 (ロングネーム) での検索', () => {
+  const known = [
+    {
+      tag: 'bang',
+      count: 9,
+      name: 'バンドリ',
+      title: 'BanG Dream! ガールズバンドパーティ',
+    },
+    { tag: 'res', count: 15, name: 'アトリエ', title: 'ライザのアトリエ' },
+  ]
+  it('表示名に無い正式名の言葉でも引ける', () => {
+    expect(suggestTags(known, 'ガールズ', []).map((s) => s.tag)).toEqual([
+      'bang',
+    ])
+    expect(suggestTags(known, 'ライザ', []).map((s) => s.tag)).toEqual(['res'])
+  })
+  it('空白・大文字小文字・ひらがなとカタカナの違いは見ない', () => {
+    expect(suggestTags(known, 'bang dream', []).map((s) => s.tag)).toEqual([
+      'bang',
+    ])
+    expect(suggestTags(known, 'らいざ', []).map((s) => s.tag)).toEqual(['res'])
+  })
+})
