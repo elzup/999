@@ -42,8 +42,10 @@ export type ImageSaveApi = {
 
 type Deps = {
   api: ImageSaveApi
-  /** サーバが返した画像 (切り抜き後の URL) を画面へ反映する */
-  onImage: (id: string, slot: string, image: SlotImage) => void
+  /** サーバが返した画像 (切り抜き後の URL) を画面へ反映する。job.word で «どの語の画像か» が分かる */
+  onImage: (job: ImageSaveJob, image: SlotImage) => void
+  /** 送り直しても通らなかった保存。画面に先に出した画像を取り下げる */
+  onFatal?: (job: ImageSaveJob) => void
   onChange?: () => void
   /** 送り直しても通らないか (4xx)。既定は «送り直す» */
   isFatal?: (error: unknown) => boolean
@@ -87,6 +89,12 @@ export class ImageSaveQueue {
     this.lanes.set(key, [...head, { ...job, stage: undefined }])
     this.marks.set(key, { state: 'pending' })
     this.attempts.delete(key)
+    // 前の保存の送り直しを待っていたら、待たずに新しい保存から送る
+    const timer = this.timers.get(key)
+    if (timer) {
+      clearTimeout(timer)
+      this.timers.delete(key)
+    }
     this.persist()
     this.changed()
     this.kick(key)
@@ -94,6 +102,11 @@ export class ImageSaveQueue {
 
   mark(id: string, slot: string): ImageSaveMark | undefined {
     return this.marks.get(keyOf(id, slot))
+  }
+
+  /** 送り終えていない保存の数 */
+  pendingCount(): number {
+    return [...this.lanes.values()].reduce((sum, lane) => sum + lane.length, 0)
   }
 
   /** 全部の枠の状態 (ストアへ写す。毎回新しいオブジェクト) */
@@ -142,6 +155,7 @@ export class ImageSaveQueue {
       if (this.deps.isFatal?.(error)) {
         // 通らない保存は捨てる (同じ枠の後ろの保存は続けて送る)。赤にして理由を残す
         this.lanes.set(key, (this.lanes.get(key) ?? []).slice(1))
+        this.deps.onFatal?.(job)
         const message =
           error instanceof Error ? error.message : '保存できません'
         this.marks.set(key, { state: 'error', message })
@@ -176,14 +190,10 @@ export class ImageSaveQueue {
         await api.setKeep(job.id, job.slot, false)
         return
       case 'pick':
-        onImage(
-          job.id,
-          job.slot,
-          await api.pick(job.id, job.slot, job.pick!.hash)
-        )
+        onImage(job, await api.pick(job.id, job.slot, job.pick!.hash))
         return
       case 'crop':
-        onImage(job.id, job.slot, await api.recrop(job.id, job.slot, job.crop!))
+        onImage(job, await api.recrop(job.id, job.slot, job.crop!))
         return
       case 'keep':
         await api.setKeep(job.id, job.slot, true)

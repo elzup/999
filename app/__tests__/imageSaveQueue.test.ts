@@ -28,8 +28,7 @@ function setup(api: Partial<Record<'setKeep' | 'pick' | 'recrop', any>> = {}) {
           return img('cropped')
         }),
     },
-    onImage: (_id: string, _slot: string, image: SlotImage) =>
-      shown.push(image.url),
+    onImage: (_job: unknown, image: SlotImage) => shown.push(image.url),
     isFatal: (err: unknown) => (err as Error).message === 'fatal',
     storage: {
       load: () => store.text,

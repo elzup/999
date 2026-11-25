@@ -14,14 +14,19 @@ import { parseTaggedItems } from '../lib/tags'
 import { nameOf, REP_STATUS_LABEL } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
-import { writeQueue } from '../lib/writeQueue'
+import { listenWriteQueue, writeQueue } from '../lib/writeQueue'
+import { baseWord, imageStore, slotKeyOf } from '../lib/imageStore'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
 import { useLongTagNames } from '../lib/tagNames'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
 import { rankeyOf } from '../lib/rankey'
-import { IMAGE_SLOT_OF, useImageOverride } from '../lib/imagePicker'
+import {
+  IMAGE_SLOT_OF,
+  useImageOverride,
+  useImageSave,
+} from '../lib/imagePicker'
 import ImagePickerSheet from './ImagePickerSheet'
 import TierCover from './TierCover'
 
@@ -98,10 +103,22 @@ function RowImage({ num, row }: { num: string; row: WordRow }) {
   const override = useImageOverride(num, slot ?? row.slot, row.word)
   const [isOpen, setIsOpen] = useState(false)
   const url = override?.url ?? row.img
+  // 保存キューの変化 (並べ替え・移動の送信) で描き直す
+  const [, bump] = useState(0)
+  useEffect(() => listenWriteQueue({ onChange: () => bump((v) => v + 1) }), [])
+  const queue = writeQueue()
+  // この行の枠の位置は配信データの並び。DB で並べ替えた後はずれていることがあるので、
+  // DB (保存キューが読んだ文書) か画像の正本で、その枠に今この語がいるときだけ選ばせる
+  const savedWord =
+    queue.view(num)?.slots?.[row.slot]?.word ??
+    imageStore.getState().server[slotKeyOf(num, slot ?? row.slot)]?.word
+  const inPlace =
+    savedWord === undefined || baseWord(savedWord) === baseWord(row.word)
   // 並べ替え・移動を送り終えるまでは枠が決まらないので選ばせない (画像は枠の位置で持つ)
   const canPick = Boolean(
-    ctx?.token && slot && writeQueue().pendingCount(num) === 0
+    ctx?.token && slot && inPlace && queue.pendingCount(num) === 0
   )
+  const save = useImageSave(num, slot ?? row.slot)
   const image = url ? (
     <img
       class="wl-img"
@@ -117,7 +134,7 @@ function RowImage({ num, row }: { num: string; row: WordRow }) {
     <>
       <button
         type="button"
-        class="wl-img-btn"
+        class={'wl-img-btn' + (save ? ' save-' + save.state : '')}
         aria-label={`${row.word} の画像を選び直す`}
         onClick={(e) => {
           // 行のタップ (ヨミの出し入れ) と分ける

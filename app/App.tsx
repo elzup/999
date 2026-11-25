@@ -54,7 +54,11 @@ import type { KukuItem } from './lib/kukuQuiz'
 import { isBookmarkReviewDue } from './lib/bookmarkReview'
 import { useBackGuard } from './lib/useBackGuard'
 import { listenWriteQueue } from './lib/writeQueue'
-import { ensureServerImages, refreshServerImages } from './lib/imagePicker'
+import {
+  ensureServerImages,
+  imageSaveQueue,
+  refreshServerImages,
+} from './lib/imagePicker'
 import { parseNumberEntry, withNumberEntry } from './lib/liveEntry'
 import { NumberContext, type NumberContextValue } from './lib/numberContext'
 import {
@@ -207,6 +211,8 @@ export function App() {
     if (!token) return
     // 画像の正本 (imageSlots) も読み込み、どの画面も同じ画像を出す (imageStore.ts)
     ensureServerImages(token)
+    // 端末に残った画像の保存は、画像の画面を開かなくても起動した時点で送り始める
+    imageSaveQueue()
     return listenWriteQueue({
       onSettled: (num) => {
         // 並べ替え・移動はサーバが画像を語と同じ枠へ動かすので読み直す

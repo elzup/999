@@ -119,6 +119,8 @@ function ItemCard({
 }
 
 const FILTER_IDS = CANDIDATE_FILTERS.map((f) => f.id)
+/** 正式名がまだ無いとき (毎回新しい {} にすると items の useMemo が効かない) */
+const NO_TITLES: Record<string, string> = {}
 
 export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   const [state, setState] = useState<ImageState | null>(null)
@@ -152,7 +154,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
 
   // 検索語の誤りの判定は、検索と同じく正式名 (title) で展開して比べる
   const ctx = useNumberContext()
-  const tagTitles = ctx?.tagTitles ?? {}
+  const tagTitles = ctx?.tagTitles ?? NO_TITLES
   const [bulk, setBulk] = useState('')
   const [isFlagging, setIsFlagging] = useState(false)
 
@@ -214,7 +216,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
               (kind !== 'num' || it.id[0] === hundred)
           )
         : [],
-    [state, filter, kind, hundred, kindOf, opened]
+    [state, filter, kind, hundred, kindOf, opened, tagTitles]
   )
   const shown = items.slice(0, MAX_SHOWN)
 

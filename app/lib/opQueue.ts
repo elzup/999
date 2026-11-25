@@ -84,6 +84,32 @@ export function opKey(op: PatchOp): string {
 }
 
 const COALESCE = (key: string) => key === 'rep' || key.startsWith('rating:')
+/** 移動先の列が空くのを待つ間隔 */
+const LANE_WAIT_MS = 50
+const LANE_WAIT_LIMIT_MS = 5_000
+
+/** 移す計画が立たない (サーバは何も変わっていない) */
+class PlanError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PlanError'
+  }
+}
+
+/** 時刻の新しさ (ISO の文字列は辞書順で比べられる)。時刻の無い文書は古いとみなさない */
+const isOlder = (doc: NumberDoc, than: NumberDoc) =>
+  Boolean(doc.updatedAt && than.updatedAt && doc.updatedAt < than.updatedAt)
+
+/** 移す語 (移動先に入った値) */
+const movedValue = (plan: OkPlan) => {
+  const slot = plan.targetSlots[plan.targetSlot]
+  return { k: slot?.kana ?? '', w: slot?.word ?? '' }
+}
+
+const hasValue = (doc: NumberDoc, value: { k: string; w: string }) =>
+  Object.values(doc.slots ?? {}).some((slot) =>
+    sameValue({ k: slot.kana, w: slot.word }, value)
+  )
 // 同時に送る番号の数。まとめて確定した数十件を一度に投げない
 const MAX_LANES = 6
 const defaultBackoff = (attempt: number) =>
@@ -166,6 +192,10 @@ export class NumberOpQueue {
 
   /** 読み込んだ文書を受け取る。送っていない操作がある番号は、その前提 (時刻) を変えない */
   setBase(doc: NumberDoc) {
+    // 読み込みが返るのが遅れて、送った後の文書より古い文書が届くことがある。古い方で上書きしない
+    // (上書きすると画面が押す前に戻り、次の保存が古い時刻を前提に送られて 409 になる)
+    const current = this.base.get(doc.num)
+    if (current && isOlder(doc, current)) return
     const busy = this.pending.some((entry) => entry.num === doc.num)
     if (!busy || !this.base.has(doc.num)) this.base.set(doc.num, doc)
     if (!busy || !this.expected.has(doc.num)) {
@@ -251,19 +281,23 @@ export class NumberOpQueue {
     if (last && message) last.message = message
     this.persist()
     this.deps.onChange()
-    this.kick()
+    // 送り直しを待っている番号は待たせたまま、通っている番号だけ送る
+    // (押すたびに失敗中の全番号を送り直さない)
+    this.kick({ keepRetry: true })
   }
 
   // ---- 送る ----
 
-  private kick() {
-    if (this.retryTimer) {
+  private kick({ keepRetry = false }: { keepRetry?: boolean } = {}) {
+    if (this.retryTimer && !keepRetry) {
       clearTimeout(this.retryTimer)
       this.retryTimer = null
     }
     for (const entry of this.pending) {
       if (this.lanes.size >= MAX_LANES) break
-      if (!this.lanes.has(entry.num)) void this.runLane(entry.num)
+      if (this.lanes.has(entry.num)) continue
+      if (keepRetry && (this.attempts.get(entry.num) ?? 0) > 0) continue
+      void this.runLane(entry.num)
     }
   }
 
@@ -312,6 +346,17 @@ export class NumberOpQueue {
         }
       } catch (error) {
         head.sending = false
+        if (error instanceof PlanError) {
+          // 移す計画が立たない (移動先の枠が埋まっている等)。サーバは何も変わっていないので、
+          // この移動だけを外す。同じ番号の後ろに積んだ操作は捨てない
+          this.remove(head)
+          this.setMark(num, head.key, 'error')
+          this.deps.onError(num, error.message)
+          failed = true
+          this.persist()
+          this.deps.onChange()
+          continue
+        }
         if (isRetryable(error)) {
           // 捨てない。黄のまま積んでおき、間隔を空けて送り直す
           this.attempts.set(num, (this.attempts.get(num) ?? 0) + 1)
@@ -353,65 +398,133 @@ export class NumberOpQueue {
   }
 
   private async runMove(num: string, move: MoveSpec) {
-    if (!move.plan) {
-      const source = this.base.get(num) ?? (await this.deps.read(num))
-      const target = await this.deps.read(move.to)
-      const plan = planMove(source, move.row, target)
-      if (!plan.ok) throw new ApiError(plan.error, 400, false)
-      move.plan = plan
-      move.targetAt = target.updatedAt ?? null
-      move.stage = 'target'
-      this.persist()
+    // 移動先にも書くので、移動先の番号の列が送っている間は待ち、その間は移動先の列を止める
+    // (番号ごとに 1 列で送る決まりを、移動でも崩さない)
+    const holdsTarget = move.to !== num
+    if (holdsTarget) await this.acquireLane(move.to)
+    try {
+      if (!move.plan) {
+        // 計画は移動先の列を止めてから、両方を読み直して立てる (先読みした古い文書で立てない)
+        const source = await this.deps.read(num)
+        this.accept(source)
+        const target = await this.deps.read(move.to)
+        const plan = planMove(source, move.row, target)
+        if (!plan.ok) throw new PlanError(plan.error)
+        this.updateMove(move, {
+          plan,
+          targetAt: target.updatedAt ?? null,
+          stage: 'target',
+        })
+      }
+      const plan = move.plan!
+      const moved = movedValue(plan)
+      if (move.stage === 'target') {
+        const saved = await this.sendOrApplied(
+          move.to,
+          {
+            op: 'slots',
+            slots: plan.targetSlots,
+            // 画像 (imageSlots) は枠の位置で持っているので、どこから来た語かをサーバに伝えて運ばせる
+            carry: [
+              { slot: plan.targetSlot, from: { num, slot: move.row.slot } },
+            ],
+          },
+          move.targetAt ?? null,
+          (doc) => hasValue(doc, moved)
+        )
+        if (this.base.has(move.to)) this.accept(saved)
+        this.updateMove(move, {
+          targetAt: saved.updatedAt ?? null,
+          stage: plan.rating ? 'rating' : 'source',
+        })
+      }
+      if (move.stage === 'rating' && plan.rating) {
+        const op: PatchOp = { op: 'rating', ...plan.rating }
+        const saved = await this.sendOrApplied(
+          move.to,
+          op,
+          move.targetAt ?? null,
+          (doc) => alreadyApplied(doc, op)
+        )
+        if (this.base.has(move.to)) this.accept(saved)
+        this.updateMove(move, {
+          targetAt: saved.updatedAt ?? null,
+          stage: 'source',
+        })
+      }
+    } finally {
+      if (holdsTarget) this.releaseLane(move.to)
     }
-    const plan = move.plan
-    if (move.stage === 'target') {
-      const saved = await this.deps.send(
-        move.to,
-        {
-          op: 'slots',
-          slots: plan.targetSlots,
-          // 画像 (imageSlots) は枠の位置で持っているので、どこから来た語かをサーバに伝えて運ばせる
-          carry: [
-            { slot: plan.targetSlot, from: { num, slot: move.row.slot } },
-          ],
-        },
-        move.targetAt ?? null
-      )
-      move.targetAt = saved.updatedAt ?? null
-      if (this.base.has(move.to)) this.accept(saved)
-      move.stage = plan.rating ? 'rating' : 'source'
-      this.persist()
-    }
-    if (move.stage === 'rating' && plan.rating) {
-      const saved = await this.deps.send(
-        move.to,
-        { op: 'rating', ...plan.rating },
-        move.targetAt ?? null
-      )
-      if (this.base.has(move.to)) this.accept(saved)
-      move.stage = 'source'
-      this.persist()
-    }
+    const plan = move.plan!
+    const moved = movedValue(plan)
     if (move.stage === 'source') {
       this.accept(
-        await this.deps.send(
+        await this.sendOrApplied(
           num,
           { op: 'slots', slots: plan.sourceSlots },
-          this.expected.get(num) ?? null
+          this.expected.get(num) ?? null,
+          (doc) => !hasValue(doc, moved)
         )
       )
-      move.stage = plan.sourceRep ? 'rep' : 'done'
-      this.persist()
+      this.updateMove(move, { stage: plan.sourceRep ? 'rep' : 'done' })
     }
     if (move.stage === 'rep' && plan.sourceRep) {
+      const op: PatchOp = { op: 'rep', ...plan.sourceRep }
       this.accept(
-        await this.deps.send(
+        await this.sendOrApplied(
           num,
-          { op: 'rep', ...plan.sourceRep },
-          this.expected.get(num) ?? null
+          op,
+          this.expected.get(num) ?? null,
+          (doc) => alreadyApplied(doc, op)
         )
       )
-      move.stage = 'done'
+      this.updateMove(move, { stage: 'done' })
+    }
+  }
+
+  /**
+   * 送る。送り直しても通らない失敗 (409 等) でも、読み直してすでにそのとおりなら成功とみなす
+   * (前の送信が届いていて返事だけ落ちた。移動の段を送り直したときに起きる)
+   */
+  private async sendOrApplied(
+    num: string,
+    op: PatchOp,
+    at: string | null,
+    applied: (doc: NumberDoc) => boolean
+  ): Promise<NumberDoc> {
+    try {
+      return await this.deps.send(num, op, at)
+    } catch (error) {
+      if (isRetryable(error)) throw error
+      const fresh = await this.deps.read(num).catch(() => null)
+      if (fresh && applied(fresh)) return fresh
+      throw error
+    }
+  }
+
+  /** 移動の段の進みは新しいオブジェクトで持ち直す (列の項目を差し替え、画面にも知らせる) */
+  private updateMove(move: MoveSpec, patch: Partial<MoveSpec>) {
+    Object.assign(move, patch)
+    this.persist()
+    this.deps.onChange()
+  }
+
+  /** 番号の列を借りる。その番号が送っている間は待つ */
+  private async acquireLane(num: string) {
+    for (let waited = 0; this.lanes.has(num); waited += LANE_WAIT_MS) {
+      // 互いに相手の番号へ移していると待ち合ってしまう。待ちすぎたら送り直しに回して列を空ける
+      if (waited >= LANE_WAIT_LIMIT_MS) {
+        throw new ApiError(`${num} の保存を待っています`, 0, true)
+      }
+      await new Promise((resolve) => setTimeout(resolve, LANE_WAIT_MS))
+    }
+    this.lanes.add(num)
+  }
+
+  private releaseLane(num: string) {
+    this.lanes.delete(num)
+    if (this.pending.some((entry) => entry.num === num)) {
+      this.kick({ keepRetry: true })
     }
   }
 

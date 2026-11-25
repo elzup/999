@@ -545,7 +545,11 @@ export function imageSaveQueue(): ImageSaveQueue {
         recrop: (id, slot, crop) =>
           recropImage({ token: loadEditorToken(), id, slot, ...crop }),
       },
-      onImage: (id, slot, image) => setImageOverride(id, slot, image),
+      onImage: (job, image) =>
+        imageStore.getState().pick(job.id, job.slot, image, job.word),
+      onFatal: (job) => {
+        if (job.pick) imageStore.getState().unpick(job.id, job.slot)
+      },
       onChange: () =>
         imageStore.getState().setSaves(saveQueue?.allMarks() ?? {}),
       isFatal: (err) => err instanceof ImageApiError && err.fatal,

@@ -37,6 +37,8 @@ export type ImageStoreActions = {
     images: Record<string, Record<string, SlotImage>>,
     words?: Record<SlotKey, { word?: string } | undefined>
   ) => void
+  /** 選んだ画像を取り下げる (保存が通らなかった) */
+  unpick: (id: string, slot: string) => void
   /** 保存キューの状態を写す */
   setSaves: (saves: Record<SlotKey, ImageSaveMark>) => void
 }
@@ -75,6 +77,11 @@ export const createImageStore = () =>
         }
         return { server, serverLoaded: true }
       }),
+    unpick: (id, slot) =>
+      set((state) => {
+        const { [slotKeyOf(id, slot)]: _gone, ...picked } = state.picked
+        return { picked }
+      }),
     setSaves: (saves) => set(() => ({ saves })),
   }))
 
@@ -90,8 +97,14 @@ export const baseWord = (word: string) =>
     .replace(/\s+-\w+/g, '')
     .trim()
 
-const sameWord = (a: string | undefined, b: string | undefined) =>
-  a === undefined || b === undefined || baseWord(a) === baseWord(b)
+/**
+ * 画像を覚えた語と、出したい語が同じか。覚えた語が分からなければ当てない
+ * (画像は枠の位置で持つので、語の分からない画像を当てると詰め直しで来た別の語に付く)。
+ * 呼び出し側が語を渡さない (語を問わない) ときだけ、語の分からない画像も当てる
+ */
+const sameWord = (stored: string | undefined, wanted: string | undefined) =>
+  wanted === undefined ||
+  (stored !== undefined && baseWord(stored) === baseWord(wanted))
 
 /**
  * 1 枠に出す画像。どの画面もこの順で引く:
