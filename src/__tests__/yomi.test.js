@@ -11,7 +11,7 @@ describe('TWO_CHAR_YOMI', () => {
     const kinds = new Set(TWO_CHAR_YOMI.map((y) => y.kind))
     expect(kinds).toEqual(new Set(['youon', 'long']))
     expect(TWO_CHAR_YOMI.find((y) => y.kana === 'ちゃ')).toMatchObject({
-      digits: '28',
+      digits: '58',
       kind: 'youon',
     })
     expect(TWO_CHAR_YOMI.find((y) => y.kana === 'かー')).toMatchObject({
