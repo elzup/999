@@ -12,51 +12,13 @@
 import { SLOT_KEYS } from '../sheet-layout.js'
 import { sheetFormOfDoc } from './sheet-bisync.js'
 import { categoryScore, normalizeWordEntry } from '../words.js'
-import { scoreWithLabel } from '../scorer.js'
+import { scoreFields } from '../entry-score.js'
 
 const text = (value) =>
   value === null || value === undefined ? '' : String(value).trim()
 
-/** トークン種別を短縮記号に変換 (w1Pattern 用) */
-export function tokenLabel(t) {
-  const labels = {
-    single: 'D',
-    double: 'DD',
-    sokuon: 'っ',
-    half: 'h',
-    halfOverflow: 'H',
-    overflow: 'X',
-  }
-  return labels[t.type] ?? '?'
-}
-
-/** 本命語 (w1) と対抗語 (w2) のスコア。generate-viz.js の buildData と同じ値を出す */
-export function scoreFields(entry) {
-  const out = {
-    w1Score: null,
-    w1Error: false,
-    w1Pattern: '',
-    w2Score: null,
-    w2Error: false,
-  }
-  if (entry.w1k) {
-    try {
-      const s = scoreWithLabel(entry.w1k, entry.w1)
-      out.w1Score = s.score
-      out.w1Pattern = s.tokens.map(tokenLabel).join('+')
-    } catch {
-      out.w1Error = true
-    }
-  }
-  if (entry.w2k) {
-    try {
-      out.w2Score = scoreWithLabel(entry.w2k, entry.w2).score
-    } catch {
-      out.w2Error = true
-    }
-  }
-  return out
-}
+// 端末でも同じ計算を使うため entry-score.js へ移した
+export { tokenLabel, scoreFields } from '../entry-score.js'
 
 const slotOf = (doc, slot) => ({
   word: text(doc?.slots?.[slot]?.word),

@@ -26,7 +26,8 @@ done
 # sheet-layout は sheet-bisync がスロットの並びを引く。kana-notation は encoder が記法 [す] を読む。
 # words は app-entry が配信データの 1 件を組み立てる (/app/data に DB の語を重ねる)
 # date-keys は images/targets が日付の対象を見分けるのに使う
-for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation words date-keys; do
+# entry-score は app-entry と words がスコアの計算を読む (端末と共用するため words から分けた)
+for name in rankey scorer encoder table rule-tsv sheet-layout kana-notation words date-keys entry-score; do
   cp "$root/src/$name.js" "$lib/$name.js"
 done
 
