@@ -11,7 +11,7 @@ const isTwoChar = (kana) => [...kana].length === 2
 
 /**
  * かな2文字の読み一覧。
- *   youon = 拗音・外来音 (ちゃ=28, ふぁ=58 …) / long = 長音 (かー=98, いー=11 …)
+ *   youon = 拗音・外来音 (ちゃ=58, ふぁ=28 …) / long = 長音 (かー=98, いー=11 …)
  */
 export const TWO_CHAR_YOMI = [
   ...Object.entries(DOUBLE_DIGIT)
@@ -27,7 +27,7 @@ const TWO_CHAR_KEYS = new Set(TWO_CHAR_YOMI.map((y) => y.kana))
 /**
  * encode が返すトークンのかな → 表のキー。表に無ければ null。
  * encoder の lookup と同じ順で正規化を辿る (生 → 濁点畳み込み → ひらがな化 → 小書き母音)。
- * 順序を変えると じゃ (68) が ちゃ (28) に潰れるなど、意味が変わる。
+ * 順序を変えると じゃ (68) が ちゃ (58) に潰れるなど、意味が変わる。
  */
 export function toYomiKey(token) {
   const hira = [...token].map(kataToHira).join('')
