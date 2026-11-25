@@ -558,10 +558,58 @@ let appEntryLib = null
 const loadAppEntryLib = async () =>
   (appEntryLib ??= await import('./lib/firestore/app-entry.js'))
 
+let v2AssembleLib = null
+const loadV2AssembleLib = async () =>
+  (v2AssembleLib ??= await import('./lib/firestore/v2-assemble.js'))
+
+/**
+ * v2_ から番号文書を組み立てる (V2_READ=1 のときだけ使う)。
+ * 1 回で v2_ の 3 コレクションを全部読む (約 3,100 文書)。旧 numbers の差分読み
+ * (readNumberDocs) より読み取りが多いので、既定は無効のまま
+ */
+async function readV2NumberDocs() {
+  const [{ db }, lib] = await Promise.all([
+    loadFirestoreLib(),
+    loadV2AssembleLib(),
+  ])
+  const readCollection = async (name) =>
+    (await db.raw.collection(name).get()).docs.map((d) => ({
+      _id: d.id,
+      ...d.data(),
+    }))
+  const [words, heads, ratings] = await Promise.all(
+    ['v2_words', 'v2_numbers', 'v2_ratings'].map(readCollection)
+  )
+  return lib.assembleAll({ words, heads, ratings })
+}
+
+/** v2_ から番号 1 件を組み立てる (保存の直後の差し替え用。全件は読まない) */
+async function readV2NumberDoc(num) {
+  const [{ db }, lib] = await Promise.all([
+    loadFirestoreLib(),
+    loadV2AssembleLib(),
+  ])
+  const rowsOf = (snap) => snap.docs.map((d) => ({ _id: d.id, ...d.data() }))
+  const [words, head, ratings] = await Promise.all([
+    db.raw.collection('v2_words').where('num', '==', num).get().then(rowsOf),
+    db.raw.collection('v2_numbers').doc(num).get(),
+    db.raw.collection('v2_ratings').where('num', '==', num).get().then(rowsOf),
+  ])
+  if (!head.exists) return undefined
+  return lib.assembleAll({
+    words,
+    heads: [{ _id: num, ...head.data() }],
+    ratings,
+  })[num]
+}
+
+const readLiveDocs = async () =>
+  (await loadV2AssembleLib()).isV2Read() ? readV2NumberDocs() : readNumberDocs()
+
 /** 配信データの番号に、DB の最新の語・かな (とスコア) を重ねる。DB が読めなければ配信データのまま */
 async function withLiveNumbers(data) {
   try {
-    const [docs, lib] = await Promise.all([readNumberDocs(), loadAppEntryLib()])
+    const [docs, lib] = await Promise.all([readLiveDocs(), loadAppEntryLib()])
     const { numbers, changed } = lib.numbersWithDocs(data.numbers ?? [], docs)
     if (changed) console.log('app/data(numbers)', changed)
     return { ...data, numbers }
@@ -581,7 +629,10 @@ async function liveNumberEntry(num) {
     loadSheetSync(),
     loadAppEntryLib(),
   ])
-  const doc = (await store.readNumbers([num]))[num]
+  const v2 = await loadV2AssembleLib()
+  const doc = v2.isV2Read()
+    ? await readV2NumberDoc(num)
+    : (await store.readNumbers([num]))[num]
   if (doc && numberDocs) numberDocs.docs = { ...numberDocs.docs, [num]: doc }
   return lib.entryWithDoc(delivered, doc)
 }

@@ -11,6 +11,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { isV2DualWrite, v2WritesFor } from './v2-project.js'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
@@ -84,13 +85,26 @@ export function connect({ projectId = defaultProjectId() } = {}) {
 
     async runTransaction(fn) {
       return store.runTransaction(async (tx) => {
+        // writeNumber は set の前に必ず get する。前の文書は v2_ の消す id を決めるのに要る
+        let readDocs = {}
         return fn({
           get: async (num) => {
             const snap = await tx.get(store.collection(NUMBERS).doc(num))
-            return snap.exists ? snap.data() : undefined
+            const doc = snap.exists ? snap.data() : undefined
+            readDocs = { ...readDocs, [num]: doc }
+            return doc
           },
           set: async (num, doc) => {
             tx.set(store.collection(NUMBERS).doc(num), doc)
+            // 同じトランザクションで v2_ も書く (片方だけ書けた状態を作らない)
+            if (!isV2DualWrite()) return
+            const { sets, deletes } = v2WritesFor(num, readDocs[num], doc)
+            sets.forEach((d) =>
+              tx.set(store.collection(d.collection).doc(d.id), d.data)
+            )
+            deletes.forEach((d) =>
+              tx.delete(store.collection(d.collection).doc(d.id))
+            )
           },
         })
       })

@@ -106,6 +106,31 @@ function joinSide(words) {
   return placed.join(',')
 }
 
+const groupByNum = (rows) =>
+  rows.reduce((acc, r) => ({ ...acc, [r.num]: [...(acc[r.num] ?? []), r] }), {})
+
+/**
+ * v2_ の 3 コレクションの全行から、番号 → 旧の形の文書 を作る。
+ * 行は { _id, ...fields } (_id は文書 ID)。heads が無い番号は作らない
+ */
+export function assembleAll({ words, heads, ratings }) {
+  const wordsByNum = groupByNum(words)
+  const ratingsByNum = groupByNum(ratings)
+  return Object.fromEntries(
+    heads.map((head) => [
+      head._id,
+      assembleNumberDoc(head._id, {
+        words: wordsByNum[head._id] ?? [],
+        head,
+        ratings: ratingsByNum[head._id] ?? [],
+      }),
+    ])
+  )
+}
+
+/** 読み込み先を v2_ にするか。既定は旧 numbers (切り替えの段取りは .metarc/db-redesign-v3.md) */
+export const isV2Read = () => process.env.V2_READ === '1'
+
 const idSeq = (id) =>
   Number(
     String(id ?? '')

@@ -6,6 +6,8 @@
 // 別物で、ADC だけ別プロジェクトのアカウントを指していることがある。
 // REST なら Bearer トークンをそのまま渡せる。
 
+import { isV2DualWrite, v2WritesFor } from './v2-project.js'
+
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
 
@@ -94,12 +96,30 @@ export function connectRest({ projectId, token, fetchImpl = fetch }) {
       const transaction = begun.transaction
       const writes = []
 
+      // writeNumber は set の前に必ず get する。前の文書は v2_ の消す id を決めるのに要る
+      const readDocs = new Map()
       const result = await fn({
-        get: (num) => readDoc(NUMBERS, num, transaction),
+        get: async (num) => {
+          const doc = await readDoc(NUMBERS, num, transaction)
+          readDocs.set(num, doc)
+          return doc
+        },
         set: async (num, doc) => {
           writes.push({
             update: { name: docName(NUMBERS, num), fields: toFields(doc) },
           })
+          // 同じ commit で v2_ も書く (db.js と同じ。片方だけ書けた状態を作らない)
+          if (!isV2DualWrite()) return
+          const { sets, deletes } = v2WritesFor(num, readDocs.get(num), doc)
+          writes.push(
+            ...sets.map((d) => ({
+              update: {
+                name: docName(d.collection, d.id),
+                fields: toFields(d.data),
+              },
+            })),
+            ...deletes.map((d) => ({ delete: docName(d.collection, d.id) }))
+          )
         },
       })
 

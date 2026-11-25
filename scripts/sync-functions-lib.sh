@@ -19,7 +19,8 @@ rm -rf "$lib"
 mkdir -p "$lib/firestore" "$lib/data" "$lib/images"
 
 for name in number-doc write derived console-writes db \
-  sheet-bisync sheet-bisync-run sheet-io bisync-store sync-status fingerprint tag-names app-entry; do
+  sheet-bisync sheet-bisync-run sheet-io bisync-store sync-status fingerprint tag-names app-entry \
+  v2-project v2-assemble; do
   cp "$root/src/firestore/$name.js" "$lib/firestore/$name.js"
 done
 
