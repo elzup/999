@@ -144,7 +144,7 @@ const CURRENT = ''
  * 画面の状態 (.metarc/image-picker-usecases.md の 状態×ボタン 表)。
  * loading: 確定済みか・元画像をまだ取っている / searching: 候補を探している / saving: 保存している
  */
-type Phase = 'loading' | 'idle' | 'searching' | 'saving'
+type Phase = 'loading' | 'idle' | 'searching'
 
 export default function ImagePickerSheet({
   token,
@@ -170,8 +170,9 @@ export default function ImagePickerSheet({
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [searching, setSearching] = useState<Searching | null>(null)
   const [isStopped, setIsStopped] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const saveMark = useImageSave(id, slot)
+  // この枠の前の保存を送っている間は検索しない (検索は確定を外すので、送っている保存とぶつかる)
+  const isSending = saveMark?.state === 'pending'
   const [error, setError] = useState('')
   // ── 下書き: 選んでいる 1 枚と、画像ごとの切り抜き。別の画像を選んでも切り抜きは消さない ──
   const [selected, setSelected] = useState<SlotImage | null>(null)
@@ -185,11 +186,10 @@ export default function ImagePickerSheet({
 
   const phase: Phase = !isStateReady
     ? 'loading'
-    : isSaving
-      ? 'saving'
-      : searching
-        ? 'searching'
-        : 'idle'
+    : searching
+      ? 'searching'
+      : 'idle'
+  const canSearch = phase === 'idle' && !isSending
   const selectedKey = selected?.hash ?? CURRENT
   const selectedImage = selected ?? currentImage
   const selectedCrop = crops[selectedKey] ?? null
@@ -230,8 +230,11 @@ export default function ImagePickerSheet({
    * reuseOnly は前に取った候補を出すだけで、検索はしない (開いただけで検索の回数を使わない)。
    * 下書き (選んでいる画像・切り抜き) は残す
    */
-  const load = async (typed?: string, reuseOnly = false) => {
-    const stop = new AbortController()
+  const load = async (
+    typed?: string,
+    reuseOnly = false,
+    stop = new AbortController()
+  ) => {
     stopRef.current = stop
     setSearching({
       query: typed ?? query,
@@ -282,11 +285,14 @@ export default function ImagePickerSheet({
 
   const search = () =>
     runOnce(async () => {
-      if (phase !== 'idle') return
+      if (!canSearch) return
       // 語から作った検索ワードのままなら «自動» として送る (Function がタグの最新の正式名で作り直す)
       const typed = query.trim()
       const sent = typed && typed !== autoQuery ? typed : undefined
-      // 確定を外している間も «検索中» にして、検索のボタンを押せなくする
+      // 確定を外している間も «検索中» にして «中断» を効かせる (中断の相手を先に作っておく)
+      const stop = new AbortController()
+      stopRef.current = stop
+      setIsStopped(false)
       setSearching({
         query: sent ?? query,
         isAuto: !sent,
@@ -295,16 +301,23 @@ export default function ImagePickerSheet({
       try {
         await unlockIfLocked()
       } catch (err) {
+        stopRef.current = null
         setSearching(null)
         return showError('unkeep', err)
       }
-      await load(sent)
+      if (stop.signal.aborted) {
+        stopRef.current = null
+        setSearching(null)
+        setIsStopped(true)
+        return
+      }
+      await load(sent, false, stop)
     })
 
   useEffect(() => {
     if (isStateReady) return
     let isAlive = true
-    fetchSlotState(token, id, slot)
+    fetchSlotState(token, id, slot, word)
       .then((state) => {
         if (!isAlive) return
         if (state.image) setCurrentImage(state.image)
@@ -338,6 +351,7 @@ export default function ImagePickerSheet({
     queueImageSave({
       id,
       slot,
+      word,
       ...(selected ? { pick: selected } : {}),
       ...(crop
         ? {
@@ -366,9 +380,8 @@ export default function ImagePickerSheet({
     onClose()
   }
 
-  /** 閉じたら true。保存中・取りやめたら false (語の編集へ移るかをこれで決める) */
+  /** 閉じたら true。取りやめたら false (語の編集へ移るかをこれで決める)。保存は待たないので、いつでも閉じられる */
   const close = () => {
-    if (phase === 'saving') return false
     if (hasDraft && !confirm('選んだ画像・切り抜きを保存せずに閉じますか？'))
       return false
     onClose()
@@ -462,7 +475,10 @@ export default function ImagePickerSheet({
               key="search"
               class="filter-btn"
               type="submit"
-              disabled={phase !== 'idle'}
+              disabled={!canSearch}
+              title={
+                isSending ? '前の保存を送り終えると検索できます' : undefined
+              }
             >
               {loaded ? '再検索' : '検索'}
             </button>
@@ -530,12 +546,7 @@ export default function ImagePickerSheet({
         </div>
         {error ? <div class="ip-error">{error}</div> : null}
         <div class="ip-foot">
-          <button
-            class="filter-btn"
-            type="button"
-            disabled={phase === 'saving'}
-            onClick={close}
-          >
+          <button class="filter-btn" type="button" onClick={close}>
             閉じる
           </button>
           {isDirty ? (
@@ -546,7 +557,7 @@ export default function ImagePickerSheet({
               onClick={save}
               title="選んだ画像と切り抜きを保存する。保存した枠は一括の取り直しで上書きされない"
             >
-              {phase === 'saving' ? '保存中…' : '保存'}
+              保存
             </button>
           ) : !isLocked ? (
             <button
@@ -556,7 +567,7 @@ export default function ImagePickerSheet({
               onClick={approve}
               title="今の画像のまま確定する。確定した枠は一括の取り直しで上書きされない"
             >
-              {phase === 'saving' ? '保存中…' : '✓ これで良い'}
+              ✓ これで良い
             </button>
           ) : null}
         </div>

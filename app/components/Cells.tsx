@@ -107,7 +107,7 @@ export function NumMdCard({
   // 詳細パネルで選び直した画像は次のデプロイまで配信データに無いので、詳細の語の行と同じく
   // override で見せる。タグ違いで分けた語の画像 (tagImages) は枠の画像と別物なので使わない
   const slot = cand ? (IMAGE_SLOT_OF[cand.slot] ?? cand.slot) : ''
-  const override = useImageOverride(num, slot)
+  const override = useImageOverride(num, slot, cand?.word)
   const img = cand?.variant ? cand.img : (override?.url ?? cand?.img)
   if (!open) {
     return (

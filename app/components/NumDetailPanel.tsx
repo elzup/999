@@ -14,6 +14,7 @@ import { parseTaggedItems } from '../lib/tags'
 import { nameOf, REP_STATUS_LABEL } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
+import { writeQueue } from '../lib/writeQueue'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
 import { useLongTagNames } from '../lib/tagNames'
@@ -94,10 +95,13 @@ function wordRows(d: NumberEntry): WordRow[] {
 function RowImage({ num, row }: { num: string; row: WordRow }) {
   const ctx = useNumberContext()
   const slot = IMAGE_SLOT_OF[row.slot]
-  const override = useImageOverride(num, slot ?? row.slot)
+  const override = useImageOverride(num, slot ?? row.slot, row.word)
   const [isOpen, setIsOpen] = useState(false)
   const url = override?.url ?? row.img
-  const canPick = Boolean(ctx?.token && slot)
+  // 並べ替え・移動を送り終えるまでは枠が決まらないので選ばせない (画像は枠の位置で持つ)
+  const canPick = Boolean(
+    ctx?.token && slot && writeQueue().pendingCount(num) === 0
+  )
   const image = url ? (
     <img
       class="wl-img"

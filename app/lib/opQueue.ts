@@ -367,7 +367,14 @@ export class NumberOpQueue {
     if (move.stage === 'target') {
       const saved = await this.deps.send(
         move.to,
-        { op: 'slots', slots: plan.targetSlots },
+        {
+          op: 'slots',
+          slots: plan.targetSlots,
+          // 画像 (imageSlots) は枠の位置で持っているので、どこから来た語かをサーバに伝えて運ばせる
+          carry: [
+            { slot: plan.targetSlot, from: { num, slot: move.row.slot } },
+          ],
+        },
         move.targetAt ?? null
       )
       move.targetAt = saved.updatedAt ?? null

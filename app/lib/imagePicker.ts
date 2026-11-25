@@ -293,26 +293,61 @@ export const isLockedError = (err: unknown) =>
 
 // ── この画面の中で選んだ画像 (次のデプロイまで配信データに無い) ──
 
-let overrides: Record<string, SlotImage> = {}
+// 画像は «番号:枠の位置» で持つので、語を並べ替え・移動すると同じ枠に別の語が来る。
+// 選んだときの語も覚え、語が違えば当てない (ジェシーで選んだ画像を、詰めて来たエクシアに付けない)
+let overrides: Record<string, { image: SlotImage; word?: string }> = {}
 const listeners = new Set<() => void>()
 const keyOf = (id: string, slot: string) => `${id}:${slot}`
 
-export function setImageOverride(id: string, slot: string, image: SlotImage) {
-  overrides = { ...overrides, [keyOf(id, slot)]: image }
+/** word を省くと、その枠で前に覚えた語のまま画像だけ差し替える (サーバの切り抜き後の画像) */
+export function setImageOverride(
+  id: string,
+  slot: string,
+  image: SlotImage,
+  word?: string
+) {
+  const key = keyOf(id, slot)
+  overrides = {
+    ...overrides,
+    [key]: { image, word: word ?? overrides[key]?.word },
+  }
   listeners.forEach((fn) => fn())
 }
 
-export const imageOverride = (id: string, slot: string) =>
-  overrides[keyOf(id, slot)]
+/** 語の本体 (タグ・ラベルを落とす)。画面によってタグの持ち方が違っても同じ語として比べる */
+const baseWord = (word: string) =>
+  word
+    .split('#')[0]
+    .replace(/\s+-\w+/g, '')
+    .trim()
+
+/** 選び直した画像。word を渡すと、その語で選んだものだけ返す */
+export const imageOverride = (id: string, slot: string, word?: string) => {
+  const hit = overrides[keyOf(id, slot)]
+  if (!hit) return undefined
+  if (
+    word !== undefined &&
+    hit.word !== undefined &&
+    baseWord(hit.word) !== baseWord(word)
+  ) {
+    return undefined
+  }
+  return hit.image
+}
 
 /**
  * 1 枠の今の画像 (切り抜き用の元画像つき) と確定済みか。詳細パネルは表示用の URL しか
  * 持っていないので、ピッカーを開いたときにこれで取り直す。選び直した画像があればそれを優先
  */
-export async function fetchSlotState(token: string, id: string, slot: string) {
+export async function fetchSlotState(
+  token: string,
+  id: string,
+  slot: string,
+  word?: string
+) {
   const state = await fetchImageState(token)
   return {
-    image: imageOverride(id, slot) ?? state.images[id]?.[slot] ?? null,
+    image: imageOverride(id, slot, word) ?? state.images[id]?.[slot] ?? null,
     kept: Boolean(state.keep[keyOf(id, slot)]),
   }
 }
@@ -323,14 +358,23 @@ export async function fetchSlotState(token: string, id: string, slot: string) {
  * 画像タブで選び直した画像が次のデプロイまで出ない
  */
 export function withImageOverrides<
-  T extends { slot: string; variant?: string; imageUrl?: string },
+  T extends {
+    slot: string
+    variant?: string
+    imageUrl?: string
+    word?: string
+  },
 >(
   rows: T[],
   num: string,
-  lookup: (id: string, slot: string) => SlotImage | undefined = imageOverride
+  lookup: (
+    id: string,
+    slot: string,
+    word?: string
+  ) => SlotImage | undefined = imageOverride
 ): T[] {
   return rows.map((row) => {
-    const picked = lookup(num, imageSlotOf(row.slot, row.variant))
+    const picked = lookup(num, imageSlotOf(row.slot, row.variant), row.word)
     return picked?.url && picked.url !== row.imageUrl
       ? { ...row, imageUrl: picked.url }
       : row
@@ -349,17 +393,20 @@ export function useImageOverrides() {
   }, [])
 }
 
-/** 選び直した画像があればそれを返す。無ければ undefined (配信データの画像を使う) */
-export function useImageOverride(id: string, slot: string) {
-  const [image, setImage] = useState(() => imageOverride(id, slot))
+/**
+ * 選び直した画像があればそれを返す。無ければ undefined (配信データの画像を使う)。
+ * word を渡すと、その語で選んだ画像だけ返す (並べ替えで同じ枠に来た別の語には出さない)
+ */
+export function useImageOverride(id: string, slot: string, word?: string) {
+  const [image, setImage] = useState(() => imageOverride(id, slot, word))
   useEffect(() => {
-    const update = () => setImage(imageOverride(id, slot))
+    const update = () => setImage(imageOverride(id, slot, word))
     update()
     listeners.add(update)
     return () => {
       listeners.delete(update)
     }
-  }, [id, slot])
+  }, [id, slot, word])
   return image
 }
 
@@ -445,7 +492,7 @@ export function candidateItems(
           slotName: state.slotNames?.[slot.split('#')[0]] ?? slot,
           word,
           image:
-            imageOverride(target.id, slot) ??
+            imageOverride(target.id, slot, word) ??
             state.images[target.id]?.[slot] ??
             null,
           keep: Boolean(state.keep[key]),
@@ -531,7 +578,7 @@ export function imageSaveQueue(): ImageSaveQueue {
  * 呼んだ側はすぐ閉じてよい
  */
 export function queueImageSave(job: ImageSaveJob) {
-  if (job.pick) setImageOverride(job.id, job.slot, job.pick)
+  if (job.pick) setImageOverride(job.id, job.slot, job.pick, job.word)
   imageSaveQueue().enqueue(job)
 }
 

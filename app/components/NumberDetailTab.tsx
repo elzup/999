@@ -347,6 +347,7 @@ export default function NumberDetailTab({
             repMark={queue.mark(doc.num, 'rep')}
             rateMark={queue.mark(doc.num, `rating:${card.kana}|${card.word}`)}
             isSaved={Boolean(doc.slots?.[row.slot])}
+            settling={queue.pendingCount(doc.num) > 0}
             changed={changed.includes(row.slot)}
             dragging={dragFrom === index}
             onDragStart={() => setDragFrom(index)}
@@ -586,6 +587,7 @@ function SlotCard({
   repMark,
   rateMark,
   isSaved,
+  settling,
   changed,
   dragging,
   onDragStart,
@@ -616,6 +618,11 @@ function SlotCard({
   rateMark?: SaveMark
   /** サーバに保存済みの枠か。追加しただけの候補は代表・評価の対象にできない */
   isSaved: boolean
+  /**
+   * この番号に送り終えていない保存 (並べ替え・移動など) がある。画像は «番号:枠の位置» で持つので、
+   * 枠が決まるまで画像を選ばせない (選んだ画像が詰め直しで別の語に付くのを防ぐ)
+   */
+  settling: boolean
   /** 保存済みの内容から書き換えた (または新しく足した) 枠 */
   changed: boolean
   dragging: boolean
@@ -641,10 +648,10 @@ function SlotCard({
   // 選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
   // タグ違いのカードは «旧スロット#タグ» の枠の画像 (枠の画像とは別物)
   const imageSlot = imageSlotOf(row.slot, row.variant)
-  const picked = useImageOverride(num, imageSlot)
+  const picked = useImageOverride(num, imageSlot, row.word)
   const [isPicking, setIsPicking] = useState(false)
   // 保存していない枠は画像の対象 (DB の語) に無いので選べない
-  const canPickImage = Boolean(token && isSaved && row.word)
+  const canPickImage = Boolean(token && isSaved && row.word && !settling)
   const imageUrl = picked?.url ?? row.imageUrl
   // 選び直した画像は今の語で選んだもの
   const isStale = !picked && row.imageStale
@@ -703,7 +710,9 @@ function SlotCard({
               ? isStale
                 ? '確定時点の語と違う画像 (押すと選び直す)'
                 : '画像を選び直す'
-              : '保存すると画像を選べます'
+              : settling
+                ? '保存待ちの変更を送り終えると画像を選べます'
+                : '保存すると画像を選べます'
           }
         >
           {imageUrl ? (

@@ -32,6 +32,7 @@ import Screen, { DockBar, DockRow } from './Screen'
 import TaggedWord from './TaggedWord'
 import { Segmented } from './Segmented'
 import { useNumberContext } from '../lib/numberContext'
+import { writeQueue } from '../lib/writeQueue'
 
 const FILTER_KEY = 'cand.filter'
 const KIND_KEY = 'cand.kind'
@@ -65,7 +66,7 @@ function ItemCard({
   onOpen: () => void
 }) {
   // 保存キューが裏で送っている間も、選んだ画像 (届いたら切り抜き後の画像) を出す
-  const picked = useImageOverride(item.id, item.slot)
+  const picked = useImageOverride(item.id, item.slot, item.word)
   const save = useImageSave(item.id, item.slot)
   const image = picked ?? item.image
   return (
@@ -130,6 +131,13 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   // 切り替えるか読み直すまでは同じ位置に残す (確定した直後に開き直して切り抜きを直せるように)
   const [opened, setOpened] = useState<Set<string>>(() => new Set())
   const openItem = (item: CandidateItem) => {
+    // 画像は «番号:枠の位置» で持つ。並べ替え・移動を送り終えるまでは枠が決まらないので開かない
+    if (writeQueue().pendingCount(item.id) > 0) {
+      setError(
+        `${item.id} は語の並べ替え・移動を保存中です。送り終えてから選んでください`
+      )
+      return
+    }
     setOpened((prev) => new Set(prev).add(`${item.id}:${item.slot}`))
     setOpen(item)
   }

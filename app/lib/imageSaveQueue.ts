@@ -17,6 +17,8 @@ export type ImageCrop = { rect: CropRect } | { position: CropPosition }
 export type ImageSaveJob = {
   id: string
   slot: string
+  /** 選んだときの語 (画面の上書きを、その語にだけ当てるため) */
+  word?: string
   /** 候補から選んだ画像。今の画像のままなら無し */
   pick?: SlotImage
   /** 決めた切り抜き。自動のままなら無し */
