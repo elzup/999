@@ -7,7 +7,7 @@
 // 計画の規則は app/lib/ruleMigrate.ts (移し方はアプリの «別の番号へ移す» と同じ)。
 // 既定は dry-run (計画を出すだけ)。--apply で DB に書く。
 //
-// 既定の --from は 28=ちゃ / 58=ふぁ を 28=ふぁ / 58=ちゃ に入れ替える前の main。
+// 既定の --from は ち行の拗音 (ちょ/ちゅ/ちゃ/ちぇ) と ふ行の外来音 (ふぉ/ふぁ/ふぇ) を入れ替える前の main。
 // 2 桁表 (double_digit.tsv) 以外の表を変えたときは、この読み込みも広げること。
 //
 // 書くのは DB (numbers/*) だけ。シートは sheetSync (5 分おき) が DB から写す (アプリの移動と同じ経路)。
@@ -42,7 +42,7 @@ import {
 } from '../src/table.js'
 
 const PROJECT_ID = 'anoz-memosupo'
-/** 28 / 58 を入れ替える前の main */
+/** ち行 / ふ行 の 2 桁読みを入れ替える前の main */
 const DEFAULT_FROM = '2588c16'
 const SOURCE = 'console'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
