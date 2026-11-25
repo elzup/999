@@ -170,26 +170,8 @@ export function normalizeForCompare(str) {
   return noSmall.replace(/[・ー]/g, '')
 }
 
-/** カンマ区切りの項目数を数える (空文字は0) */
-export function countItems(str) {
-  if (!str) return 0
-  return str.split(',').filter((s) => s.trim() !== '').length
-}
-
-const CATEGORY_WEIGHTS = { hito: 8, mono: 10, gainen: 4 }
-
-/** 人/物/概念 のカテゴリスコアを計算 */
-export function categoryScore(entry) {
-  const hitoCnt = countItems(entry.hito)
-  const monoCnt = countItems(entry.mono)
-  const gainenCnt = countItems(entry.gainen)
-  const catScore =
-    hitoCnt * CATEGORY_WEIGHTS.hito +
-    monoCnt * CATEGORY_WEIGHTS.mono +
-    gainenCnt * CATEGORY_WEIGHTS.gainen
-
-  return { hitoCnt, monoCnt, gainenCnt, catScore }
-}
+// 端末でも同じ計算を使うため entry-score.js へ移した (このファイルは node:fs を読む)
+export { countItems, categoryScore } from './entry-score.js'
 
 export function scoreEntry(entry) {
   const results = { num: entry.num, w1: entry.w1, w2: entry.w2 }
