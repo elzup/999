@@ -4,6 +4,7 @@ import {
   addTag,
   normalizeTag,
   parseWord,
+  plainWord,
   removeLabel,
   removeTag,
   suggestTags,
@@ -105,5 +106,14 @@ describe('suggestTags の表示名での検索', () => {
     expect(suggestTags(known, 'spl', []).map((s) => s.tag)).toEqual([
       'splatoon',
     ])
+  })
+})
+
+describe('plainWord', () => {
+  it('# と id を出さず、タグを名前にして本体の後ろに並べる', () => {
+    expect(plainWord('チャクチ#ｽﾌﾟﾗ#g', { ｽﾌﾟﾗ: 'スプラトゥーン' })).toBe(
+      'チャクチ スプラトゥーン 概念'
+    )
+    expect(plainWord('鯉')).toBe('鯉')
   })
 })

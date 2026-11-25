@@ -32,8 +32,9 @@ done
 
 # web 版の画像コンソール (console-route.js / index.js が読む)。印と、その場の取り直し (検索 → DL → webp → GCS)
 # targets / tag-variants / live-targets は /console/state に DB の最新の語を重ねるのに使う
+# slot-moves は番号の語を並べ替え・移動したときに画像を語に付いて回らせる (/numbers/:num の slots)
 for name in slot-docs slot-store uploader fetch-one search ddg bing download process query \
-  targets tag-variants live-targets; do
+  targets tag-variants live-targets slot-moves; do
   cp "$root/src/images/$name.js" "$lib/images/$name.js"
 done
 

@@ -11,6 +11,8 @@ import {
   fetchImageState,
   keepOpened,
   setRedo,
+  useImageOverride,
+  useImageSave,
   type CandidateFilter,
   type CandidateItem,
   type ImageState,
@@ -30,6 +32,7 @@ import Screen, { DockBar, DockRow } from './Screen'
 import TaggedWord from './TaggedWord'
 import { Segmented } from './Segmented'
 import { useNumberContext } from '../lib/numberContext'
+import { writeQueue } from '../lib/writeQueue'
 
 const FILTER_KEY = 'cand.filter'
 const KIND_KEY = 'cand.kind'
@@ -62,17 +65,22 @@ function ItemCard({
   item: CandidateItem
   onOpen: () => void
 }) {
+  // 保存キューが裏で送っている間も、選んだ画像 (届いたら切り抜き後の画像) を出す
+  const picked = useImageOverride(item.id, item.slot, item.word)
+  const save = useImageSave(item.id, item.slot)
+  const image = picked ?? item.image
   return (
     <button
       type="button"
-      class="cand-card"
+      class={'cand-card' + (save ? ' save-' + save.state : '')}
+      title={save?.state === 'error' ? save.message : undefined}
       onClick={onOpen}
       data-num={/^\d{3}$/.test(item.id) ? item.id : undefined}
     >
       <span class="cand-thumb">
-        {item.image ? (
+        {image ? (
           <img
-            {...wordImage(item.image.url, THUMB_PX, item.word)}
+            {...wordImage(image.url, THUMB_PX, item.word)}
             alt=""
             loading="lazy"
           />
@@ -80,6 +88,12 @@ function ItemCard({
           <span class="cand-thumb-empty">未取得</span>
         )}
         <span class="cand-badges">
+          {save?.state === 'pending' ? (
+            <span class="cand-badge is-saving">保存待ち</span>
+          ) : null}
+          {save?.state === 'error' ? (
+            <span class="cand-badge is-save-error">保存できません</span>
+          ) : null}
           {item.keep ? <span class="cand-badge is-keep">確定</span> : null}
           {item.redo ? <span class="cand-badge is-redo">撮り直し</span> : null}
           {item.changed ? (
@@ -98,13 +112,15 @@ function ItemCard({
         <span class="cand-slot">{item.slotName}</span>
       </span>
       <span class="cand-word">
-        <TaggedWord word={item.word} />
+        <TaggedWord word={item.word} short />
       </span>
     </button>
   )
 }
 
 const FILTER_IDS = CANDIDATE_FILTERS.map((f) => f.id)
+/** 正式名がまだ無いとき (毎回新しい {} にすると items の useMemo が効かない) */
+const NO_TITLES: Record<string, string> = {}
 
 export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   const [state, setState] = useState<ImageState | null>(null)
@@ -117,6 +133,13 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
   // 切り替えるか読み直すまでは同じ位置に残す (確定した直後に開き直して切り抜きを直せるように)
   const [opened, setOpened] = useState<Set<string>>(() => new Set())
   const openItem = (item: CandidateItem) => {
+    // 画像は «番号:枠の位置» で持つ。並べ替え・移動を送り終えるまでは枠が決まらないので開かない
+    if (writeQueue().pendingCount(item.id) > 0) {
+      setError(
+        `${item.id} は語の並べ替え・移動を保存中です。送り終えてから選んでください`
+      )
+      return
+    }
     setOpened((prev) => new Set(prev).add(`${item.id}:${item.slot}`))
     setOpen(item)
   }
@@ -131,7 +154,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
 
   // 検索語の誤りの判定は、検索と同じく正式名 (title) で展開して比べる
   const ctx = useNumberContext()
-  const tagTitles = ctx?.tagTitles ?? {}
+  const tagTitles = ctx?.tagTitles ?? NO_TITLES
   const [bulk, setBulk] = useState('')
   const [isFlagging, setIsFlagging] = useState(false)
 
@@ -193,7 +216,7 @@ export default function CandidateTab({ token, modeSwitch, anchor }: Props) {
               (kind !== 'num' || it.id[0] === hundred)
           )
         : [],
-    [state, filter, kind, hundred, kindOf, opened]
+    [state, filter, kind, hundred, kindOf, opened, tagTitles]
   )
   const shown = items.slice(0, MAX_SHOWN)
 

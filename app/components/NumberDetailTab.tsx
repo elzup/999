@@ -54,7 +54,8 @@ import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
-import { imageSlotOf, useImageOverride } from '../lib/imagePicker'
+import { imageSlotOf, useImageOverride, useImageSave } from '../lib/imagePicker'
+import { useImageStore } from '../lib/imageStore'
 import ImagePickerSheet from './ImagePickerSheet'
 import { useNumberContext } from '../lib/numberContext'
 import { tagNameOf, useTagNames } from '../lib/tagNames'
@@ -126,6 +127,17 @@ export default function NumberDetailTab({
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   // 別の番号へ移す欄を開いている枠
   const [moving, setMoving] = useState<string | null>(null)
+  // この番号に送り終えていない画像の保存がある。画像は «番号:枠の位置» で保存するので、
+  // その間に並べ替え・移動・削除で枠を詰め直すと、届いた画像が別の語に付く
+  const imageBusy = useImageStore((state) =>
+    Object.entries(state.saves).some(
+      ([key, mark]) => key.startsWith(`${num}:`) && mark.state === 'pending'
+    )
+  )
+  const IMAGE_BUSY = {
+    status: '画像の保存を送り終えてから並べ替え・移動・削除してください',
+    failed: true,
+  }
   const tables = useMemo(() => (rules ? tablesFromRules(rules) : null), [rules])
   // タグ追加の候補。配信データの人・物の一覧で使われているタグを回数順に
   const ctx = useNumberContext()
@@ -280,6 +292,10 @@ export default function NumberDetailTab({
    */
   const moveWord = (row: SlotRow, to: string) => {
     if (!doc) return
+    if (imageBusy) {
+      setNote(IMAGE_BUSY)
+      return
+    }
     if (changed.includes(row.slot)) {
       setNote({
         status: 'この候補の変更を先に保存してください',
@@ -347,12 +363,19 @@ export default function NumberDetailTab({
             repMark={queue.mark(doc.num, 'rep')}
             rateMark={queue.mark(doc.num, `rating:${card.kana}|${card.word}`)}
             isSaved={Boolean(doc.slots?.[row.slot])}
+            settling={queue.pendingCount(doc.num) > 0}
+            imageBusy={imageBusy}
             changed={changed.includes(row.slot)}
             dragging={dragFrom === index}
             onDragStart={() => setDragFrom(index)}
             onDragEnd={() => setDragFrom(null)}
             onDropAt={() => {
               if (dragFrom === null || dragFrom === index) return
+              if (imageBusy) {
+                setNote(IMAGE_BUSY)
+                setDragFrom(null)
+                return
+              }
               saveSlots(
                 moveItem(rows, dragFrom, index),
                 dirty
@@ -363,6 +386,10 @@ export default function NumberDetailTab({
             }}
             onEdit={(patch) => editRow(row, patch)}
             onDelete={() => {
+              if (imageBusy) {
+                setNote(IMAGE_BUSY)
+                return
+              }
               // タグ違いのカードは、そのタグだけ外す (枠には残りのタグの語が残る)
               const variant = card.variant
               if (variant) {
@@ -586,6 +613,8 @@ function SlotCard({
   repMark,
   rateMark,
   isSaved,
+  settling,
+  imageBusy,
   changed,
   dragging,
   onDragStart,
@@ -616,6 +645,13 @@ function SlotCard({
   rateMark?: SaveMark
   /** サーバに保存済みの枠か。追加しただけの候補は代表・評価の対象にできない */
   isSaved: boolean
+  /**
+   * この番号に送り終えていない保存 (並べ替え・移動など) がある。画像は «番号:枠の位置» で持つので、
+   * 枠が決まるまで画像を選ばせない (選んだ画像が詰め直しで別の語に付くのを防ぐ)
+   */
+  settling: boolean
+  /** この番号の画像の保存を送っている (その間は並べ替え・移動を止める) */
+  imageBusy: boolean
   /** 保存済みの内容から書き換えた (または新しく足した) 枠 */
   changed: boolean
   dragging: boolean
@@ -637,14 +673,19 @@ function SlotCard({
   const suspicious =
     check?.status === 'mismatch' || check?.status === 'unreadable'
   // タグ違いのカードは枠ごと移すと他のタグの語まで動くので、ここからは移さない
-  const canMove = !pending && !row.variant
+  const canMove = !pending && !row.variant && !imageBusy
   // 選び直した画像は配信データにまだ無いので、詳細の語の行と同じく override で見せる。
   // タグ違いのカードは «旧スロット#タグ» の枠の画像 (枠の画像とは別物)
   const imageSlot = imageSlotOf(row.slot, row.variant)
-  const picked = useImageOverride(num, imageSlot)
+  const picked = useImageOverride(num, imageSlot, row.word)
   const [isPicking, setIsPicking] = useState(false)
+  // カードは枠 (wh1) を key にしているので、詰め直しで別の語がこのカードに来ることがある。
+  // そのときは開いていたピッカーを閉じる (前の語のピッカーで別の語の画像を選ばせない)
+  const savedWord = isSaved ? row.word : ''
+  useEffect(() => setIsPicking(false), [savedWord])
+  const imageSave = useImageSave(num, imageSlot)
   // 保存していない枠は画像の対象 (DB の語) に無いので選べない
-  const canPickImage = Boolean(token && isSaved && row.word)
+  const canPickImage = Boolean(token && isSaved && row.word && !settling)
   const imageUrl = picked?.url ?? row.imageUrl
   // 選び直した画像は今の語で選んだもの
   const isStale = !picked && row.imageStale
@@ -694,7 +735,7 @@ function SlotCard({
         {/* サムネを押すと画像のピッカー (A-1)。右下の ✎ で押せると分かるようにする */}
         <button
           type="button"
-          class="nd-img-btn"
+          class={'nd-img-btn' + (imageSave ? ' save-' + imageSave.state : '')}
           disabled={!canPickImage}
           onClick={() => setIsPicking(true)}
           aria-label={`${row.word} の画像を選び直す`}
@@ -703,7 +744,9 @@ function SlotCard({
               ? isStale
                 ? '確定時点の語と違う画像 (押すと選び直す)'
                 : '画像を選び直す'
-              : '保存すると画像を選べます'
+              : settling
+                ? '保存待ちの変更を送り終えると画像を選べます'
+                : '保存すると画像を選べます'
           }
         >
           {imageUrl ? (
@@ -724,6 +767,7 @@ function SlotCard({
         </button>
         {isPicking ? (
           <ImagePickerSheet
+            key={`${num}:${imageSlot}:${row.word}`}
             token={token}
             id={num}
             slot={imageSlot}
@@ -757,9 +801,11 @@ function SlotCard({
           title={
             row.variant
               ? 'タグ違いの語は移せません (枠ごと移すと他のタグの語も動く)'
-              : pending
-                ? '保存してから移せます'
-                : '別の番号へ移す'
+              : imageBusy
+                ? '画像の保存を送り終えると移せます'
+                : pending
+                  ? '保存してから移せます'
+                  : '別の番号へ移す'
           }
         >
           ⇄

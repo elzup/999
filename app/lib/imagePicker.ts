@@ -4,8 +4,17 @@
 //
 // 配信データ (data.json) の画像は nr deploy の時点のもの。ピッカーで選んだ画像は
 // 次のデプロイまで配信データに載らないので、この画面の中では overrides で上書きして見せる。
-import { useEffect, useState } from 'preact/hooks'
 import { buildSearchWord } from './searchWord'
+import { loadEditorToken } from './editorAuth'
+import { ImageSaveQueue, type ImageSaveJob } from './imageSaveQueue'
+import {
+  imageStore,
+  slotImageFull,
+  slotImageOf,
+  useImageStore,
+  useSlotSave,
+  type ImageStoreState,
+} from './imageStore'
 
 export type SlotImage = {
   url: string
@@ -74,6 +83,29 @@ export const imageSlotOf = (slot: string, variant?: string) =>
 // Hosting から Function への転送が 60 秒で切れるので、それより少し長く
 const TIMEOUT_MS = 65_000
 
+/**
+ * 画像 API の失敗。status 0 は通信できなかった (圏外・タイムアウト)。
+ * 送り直しても通らないのは 4xx (408 / 429 を除く) と、サーバが ok: false で断ったもの
+ */
+export class ImageApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message)
+    this.name = 'ImageApiError'
+  }
+  get fatal() {
+    return (
+      this.status === -1 ||
+      (this.status >= 400 &&
+        this.status < 500 &&
+        this.status !== 408 &&
+        this.status !== 429)
+    )
+  }
+}
+
 /** 画面の «止める» で打ち切った (失敗ではない) */
 export class StoppedError extends Error {
   constructor() {
@@ -106,19 +138,30 @@ async function call<T>(
   } catch (err) {
     if (stop?.aborted) throw new StoppedError()
     console.error('image api', path, err)
-    throw new Error('通信できません (圏外・タイムアウト)')
+    throw new ImageApiError('通信できません (圏外・タイムアウト)', 0)
   } finally {
     clearTimeout(timer)
     stop?.removeEventListener('abort', onStop)
   }
   const data = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(data?.error || `失敗しました (${res.status})`)
-  if (data && data.ok === false) throw new Error(data.error || '失敗しました')
+  if (!res.ok) {
+    throw new ImageApiError(
+      data?.error || `失敗しました (${res.status})`,
+      res.status
+    )
+  }
+  if (data && data.ok === false) {
+    throw new ImageApiError(data.error || '失敗しました', -1)
+  }
   return data as T
 }
 
-export const fetchImageState = (token: string) =>
-  call<ImageState>('state', token)
+/** 画像タブの状態。読めた画像はストアにも入れる (どの画面も同じ画像を出すため) */
+export const fetchImageState = async (token: string) => {
+  const state = await call<ImageState>('state', token)
+  imageStore.getState().loadServer(state.images ?? {}, state.candidates ?? {})
+  return state
+}
 
 /** 撮り直しの印を付け外す。印の付いた枠は Mac の nr images:redo-flagged がまとめて取り直す */
 export const setRedo = async ({
@@ -254,45 +297,111 @@ export const recropImage = async ({
 export const isLockedError = (err: unknown) =>
   String((err as Error)?.message ?? err).startsWith('ロック中')
 
-// ── この画面の中で選んだ画像 (次のデプロイまで配信データに無い) ──
+// ── 画面に出す画像 (状態は imageStore.ts に 1 つ) ──
 
-let overrides: Record<string, SlotImage> = {}
-const listeners = new Set<() => void>()
-const keyOf = (id: string, slot: string) => `${id}:${slot}`
-
-export function setImageOverride(id: string, slot: string, image: SlotImage) {
-  overrides = { ...overrides, [keyOf(id, slot)]: image }
-  listeners.forEach((fn) => fn())
+/** この端末で選んだ画像をストアへ入れる。word を省くと前に覚えた語のまま画像だけ差し替える */
+export function setImageOverride(
+  id: string,
+  slot: string,
+  image: SlotImage,
+  word?: string
+) {
+  imageStore.getState().pick(id, slot, image, word)
 }
 
-export const imageOverride = (id: string, slot: string) =>
-  overrides[keyOf(id, slot)]
+/** 選んだ画像か imageSlots の画像 (その語のもの)。無ければ undefined */
+export const imageOverride = (id: string, slot: string, word?: string) =>
+  slotImageFull(imageStore.getState(), id, slot, word)
 
 /**
  * 1 枠の今の画像 (切り抜き用の元画像つき) と確定済みか。詳細パネルは表示用の URL しか
- * 持っていないので、ピッカーを開いたときにこれで取り直す。選び直した画像があればそれを優先
+ * 持っていないので、ピッカーを開いたときにこれで取り直す。この端末で選んだ画像があればそれを優先
  */
-export async function fetchSlotState(token: string, id: string, slot: string) {
+export async function fetchSlotState(
+  token: string,
+  id: string,
+  slot: string,
+  word?: string
+) {
   const state = await fetchImageState(token)
   return {
-    image: imageOverride(id, slot) ?? state.images[id]?.[slot] ?? null,
+    image: imageOverride(id, slot, word) ?? state.images[id]?.[slot] ?? null,
     kept: Boolean(state.keep[keyOf(id, slot)]),
   }
 }
 
-/** 選び直した画像があればそれを返す。無ければ undefined (配信データの画像を使う) */
-export function useImageOverride(id: string, slot: string) {
-  const [image, setImage] = useState(() => imageOverride(id, slot))
-  useEffect(() => {
-    const update = () => setImage(imageOverride(id, slot))
-    update()
-    listeners.add(update)
-    return () => {
-      listeners.delete(update)
-    }
-  }, [id, slot])
-  return image
+const keyOf = (id: string, slot: string) => `${id}:${slot}`
+
+let serverLoading: Promise<unknown> | null = null
+
+/**
+ * 画像の正本 (imageSlots) をストアへ読み込む。起動後に 1 度だけ (画像タブを開けば読み直す)。
+ * 読む前は配信データの画像で出し、読めたら全画面が同じ画像に揃う
+ */
+export function ensureServerImages(token: string) {
+  if (!token || imageStore.getState().serverLoaded || serverLoading) return
+  serverLoading = fetchImageState(token)
+    .catch((err) => console.error('image state', err))
+    .finally(() => {
+      serverLoading = null
+    })
 }
+
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 番号の語の並べ替え・移動を送り終えたら、imageSlots を読み直す (サーバが画像を語と同じ枠へ動かしている)。
+ * 続けて何件も終わるので、少し待ってまとめて 1 度だけ読む
+ */
+export function refreshServerImages(token: string, waitMs = 1500) {
+  if (!token) return
+  if (refreshTimer) clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null
+    fetchImageState(token).catch((err) => console.error('image state', err))
+  }, waitMs)
+}
+
+/**
+ * 行の画像を、ストアの画像 (選んだ画像 → imageSlots → 行の画像の順) で差し替える。
+ * 代表の一覧・カードは DB の語と配信データの画像で行を作るので、ここを通して他の画面と揃える
+ */
+export function withImageOverrides<
+  T extends {
+    slot: string
+    variant?: string
+    imageUrl?: string
+    word?: string
+  },
+>(rows: T[], num: string, state: ImageStoreState = imageStore.getState()): T[] {
+  return rows.map((row) => {
+    const hit = slotImageOf(
+      state,
+      num,
+      imageSlotOf(row.slot, row.variant),
+      row.word,
+      row.imageUrl
+    )
+    return hit && hit.url !== row.imageUrl ? { ...row, imageUrl: hit.url } : row
+  })
+}
+
+/** ストアの画像の部分 (一覧のように枠が多い画面で、行ごとに購読しないため)。withImageOverrides に渡す */
+export const useImageOverrides = (): ImageStoreState =>
+  useImageStore(
+    (state) => state,
+    (a, b) =>
+      a.picked === b.picked &&
+      a.server === b.server &&
+      a.serverLoaded === b.serverLoaded
+  )
+
+/**
+ * 選んだ画像か imageSlots の画像 (切り抜き用の元画像つき)。無ければ undefined (呼び出し側の画像を使う)。
+ * word を渡すと、その語の画像だけ返す (並べ替えで同じ枠に来た別の語には出さない)
+ */
+export const useImageOverride = (id: string, slot: string, word?: string) =>
+  useImageStore((state) => slotImageFull(state, id, slot, word))
 
 // ── 候補タブの一覧 ──
 
@@ -376,7 +485,7 @@ export function candidateItems(
           slotName: state.slotNames?.[slot.split('#')[0]] ?? slot,
           word,
           image:
-            imageOverride(target.id, slot) ??
+            imageOverride(target.id, slot, word) ??
             state.images[target.id]?.[slot] ??
             null,
           keep: Boolean(state.keep[key]),
@@ -417,4 +526,64 @@ export function keepOpened(
   const keyOf = (it: CandidateItem) => `${it.id}:${it.slot}`
   const keys = new Set(matched.map(keyOf))
   return all.filter((it) => keys.has(keyOf(it)) || opened.has(keyOf(it)))
+}
+
+// ── 保存キュー (押したら閉じて、裏で送る) ──
+
+const SAVE_QUEUE_KEY = 'imageSaveQueue999'
+let saveQueue: ImageSaveQueue | null = null
+
+/** アプリで 1 本だけ持つ画像の保存キュー。送るときの認証は端末に保存したトークン */
+export function imageSaveQueue(): ImageSaveQueue {
+  if (!saveQueue) {
+    saveQueue = new ImageSaveQueue({
+      api: {
+        setKeep: (id, slot, on) =>
+          setKeep({ token: loadEditorToken(), id, slot, on }),
+        pick: (id, slot, hash) =>
+          pickImage({ token: loadEditorToken(), id, slot, hash }),
+        recrop: (id, slot, crop) =>
+          recropImage({ token: loadEditorToken(), id, slot, ...crop }),
+      },
+      onImage: (job, image) =>
+        imageStore.getState().pick(job.id, job.slot, image, job.word),
+      onFatal: (job) => {
+        if (job.pick) imageStore.getState().unpick(job.id, job.slot)
+      },
+      onChange: () =>
+        imageStore.getState().setSaves(saveQueue?.allMarks() ?? {}),
+      isFatal: (err) => err instanceof ImageApiError && err.fatal,
+      storage: {
+        load: () => {
+          try {
+            return localStorage.getItem(SAVE_QUEUE_KEY)
+          } catch {
+            return null
+          }
+        },
+        save: (text) => localStorage.setItem(SAVE_QUEUE_KEY, text),
+      },
+    })
+    // 端末に残っていた保存の状態 (作った時点で送り始めている) を画面へ
+    imageStore.getState().setSaves(saveQueue.allMarks())
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => saveQueue?.retryNow())
+    }
+  }
+  return saveQueue
+}
+
+/**
+ * 保存を積む。選んだ画像はその場で画面に出し (サーバの切り抜き後の画像は届いたら差し替わる)、
+ * 呼んだ側はすぐ閉じてよい
+ */
+export function queueImageSave(job: ImageSaveJob) {
+  if (job.pick) setImageOverride(job.id, job.slot, job.pick, job.word)
+  imageSaveQueue().enqueue(job)
+}
+
+/** 枠の保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
+export const useImageSave = (id: string, slot: string) => {
+  imageSaveQueue() // 端末に残った保存を、どの画面からでも開いた時点で送り始める
+  return useSlotSave(id, slot)
 }

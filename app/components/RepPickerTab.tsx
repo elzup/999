@@ -34,6 +34,7 @@ import RepCard from './RepCard'
 import RepStats from './RepStats'
 import { Segmented } from './Segmented'
 import { wordImage } from '../lib/wordImage'
+import { useImageOverrides, withImageOverrides } from '../lib/imagePicker'
 import {
   DIGITS,
   anchorTarget,
@@ -89,7 +90,7 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       )}
       <span class="rp-word">
         <Yomi class="rp-kana" kana={row.kana} />
-        <TaggedWord word={row.word} />
+        <TaggedWord word={row.word} short />
       </span>
       {row.repRank ? <span class="rp-mark">{MARK[row.repRank]}</span> : null}
     </button>
@@ -110,7 +111,12 @@ function RepRow({
   onPick: (key: string) => void
   onOpen?: () => void
 }) {
-  const rows = withDeliveredImages(candidateRows(doc), entry)
+  const images = useImageOverrides()
+  const rows = withImageOverrides(
+    withDeliveredImages(candidateRows(doc), entry),
+    doc.num,
+    images
+  )
   const kinds = [
     rows.filter((row) => row.slot.startsWith('wh')),
     rows.filter((row) => row.slot.startsWith('wm')),

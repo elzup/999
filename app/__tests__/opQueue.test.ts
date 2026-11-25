@@ -155,6 +155,57 @@ describe('NumberOpQueue: 待たせない・捨てない保存', () => {
   })
 })
 
+describe('NumberOpQueue: 移動と読み込みの順序', () => {
+  it('遅れて届いた古い読み込みで、送った後の文書を上書きしない', async () => {
+    const { q, server } = setup()
+    // 時刻は ISO の文字列のように辞書順で新しさが分かる値にする (サーバは s1, s2 … と進める)
+    server.set('051', base('051', 'r0'))
+    q.setBase(base('051', 'r0'))
+    q.enqueue('051', [rep('鯉')])
+    await until(() => q.pendingCount() === 0)
+    const saved = q.view('051')!
+    expect(saved.updatedAt).toBe('s1')
+    q.setBase(base('051', 'r0'))
+    expect(q.view('051')?.updatedAt).toBe(saved.updatedAt)
+    expect(q.view('051')?.rep?.picks).toEqual([{ k: 'こい', w: '鯉' }])
+  })
+
+  it('移す計画が立たなくても、同じ番号の後ろに積んだ操作は捨てない', async () => {
+    const { q, server, errors } = setup()
+    q.setBase(base('051'))
+    // 移動先に同じ語があるので移せない
+    server.set('052', base('052'))
+    q.enqueueMove('051', { row: { slot: 'wm1' }, to: '052' })
+    q.enqueue('051', [rep('鯉太郎')])
+    await until(() => q.pendingCount() === 0)
+    expect(errors).toEqual(['051:052 に同じ語があります'])
+    expect(server.get('051')?.rep?.picks).toEqual([{ k: 'こい', w: '鯉太郎' }])
+    expect(q.mark('051', 'slots')).toBe('error')
+  })
+
+  it('移動先に足す段の返事だけ落ちても、送り直しの 409 を成功とみなして続ける', async () => {
+    const { q, server, send } = setup()
+    q.setBase(base('051'))
+    server.set('052', { ...base('052'), slots: {} })
+    let dropped = false
+    const real = send.getMockImplementation()!
+    send.mockImplementation(async (num, op, at) => {
+      const result = await real(num, op, at)
+      // 移動先には届いたが返事が落ちた
+      if (num === '052' && !dropped) {
+        dropped = true
+        throw offline()
+      }
+      return result
+    })
+    q.enqueueMove('051', { row: { slot: 'wm1' }, to: '052' })
+    await until(() => q.pendingCount() === 0)
+    expect(q.mark('051', 'slots')).toBe('saved')
+    expect(Object.values(server.get('052')?.slots ?? {})).toHaveLength(1)
+    expect(server.get('051')?.slots?.wm1).toBeUndefined()
+  })
+})
+
 describe('alreadyApplied', () => {
   it('評価は値で比べ、null は無いこと', () => {
     const rated = applyOpLocally(base(), {

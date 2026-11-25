@@ -32,7 +32,12 @@ export type PatchOp =
   | { op: 'rep'; picks: RepPick[]; confirmed: boolean }
   | { op: 'rating'; k: string; w: string; v: number | null }
   // 語・かなの編集、並べ替え、追加、削除。どれも slots の最終形を送る
-  | { op: 'slots'; slots: Record<string, NumberSlot> }
+  // carry は別の番号から移ってきた語 (画像を運ぶため。移動先の枠 → 移動元の番号と枠)
+  | {
+      op: 'slots'
+      slots: Record<string, NumberSlot>
+      carry?: { slot: string; from: { num: string; slot: string } }[]
+    }
   // tag 付きはタグ違いで分けた語の画像 (D-0039)
   | { op: 'image'; slot: string; tag?: string; imageUrl: string }
 

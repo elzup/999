@@ -213,6 +213,15 @@ export const api = onRequest(
       const numberMatch = path.match(/^\/numbers\/(\d{3})$/)
       if (numberMatch) {
         const { db, writes } = await loadFirestoreLib()
+        // 語の並べ替え・削除・移動は、画像 (imageSlots) を語に付いて回らせるため書く前の slots を覚える
+        const isSlots = req.method === 'PATCH' && req.body?.op === 'slots'
+        const before = isSlots
+          ? await handleNumbersRequest({
+              method: 'GET',
+              num: numberMatch[1],
+              db,
+            })
+          : null
         const { status, payload } = await handleNumbersRequest({
           method: req.method,
           num: numberMatch[1],
@@ -234,6 +243,20 @@ export const api = onRequest(
             num: numberMatch[1],
             db,
           })
+          // 即時反映が枠を詰め直すこともあるので、詰めた後の slots と突き合わせる
+          if (isSlots && before?.status === 200) {
+            await moveImageSlots({
+              num: numberMatch[1],
+              before: before.payload?.number?.slots ?? {},
+              after:
+                (latest.status === 200
+                  ? latest.payload?.number?.slots
+                  : payload?.number?.slots) ?? {},
+              carry: Array.isArray(req.body.carry) ? req.body.carry : [],
+            }).catch((error) =>
+              console.error('moveImageSlots', numberMatch[1], error)
+            )
+          }
           res
             .status(status)
             .json(latest.status === 200 ? latest.payload : payload)
@@ -293,6 +316,22 @@ async function loadImageSlots() {
     imageSlots = { slots, docs, fetcher: createImageFetcher() }
   }
   return imageSlots
+}
+
+/**
+ * 番号の slots を書いた後に、画像の文書を語と同じ枠へ動かす (src/images/slot-moves.js)。
+ * 失敗しても語の保存は巻き戻さない (画像が前の枠に残るだけ)
+ */
+async function moveImageSlots({ num, before, after, carry }) {
+  const { slots } = await loadImageSlots()
+  const moves = await import('./lib/images/slot-moves.js')
+  const plan = moves.planSlotMoves(num, before, after, carry)
+  if (plan.length === 0) return
+  const now = new Date().toISOString()
+  const docs = await slots.listSlots({ now })
+  for (const write of moves.slotMoveWrites(num, plan, docs, now)) {
+    await slots.update(write.id, write.slot, () => ({ doc: write.doc }))
+  }
 }
 
 // 取り直し (検索 → DL → webp → GCS) の口。sharp を読むのは取り直しを叩いたときだけ。
