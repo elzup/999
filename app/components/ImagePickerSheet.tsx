@@ -16,11 +16,10 @@ import {
   CROP_BUTTONS,
   cropSourceOf,
   isLockedError,
-  pickImage,
-  recropImage,
+  queueImageSave,
   setKeep,
-  setImageOverride,
   StoppedError,
+  useImageSave,
   type SlotImage,
 } from '../lib/imagePicker'
 import { useNumberContext } from '../lib/numberContext'
@@ -172,6 +171,7 @@ export default function ImagePickerSheet({
   const [searching, setSearching] = useState<Searching | null>(null)
   const [isStopped, setIsStopped] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const saveMark = useImageSave(id, slot)
   const [error, setError] = useState('')
   // ── 下書き: 選んでいる 1 枚と、画像ごとの切り抜き。別の画像を選んでも切り抜きは消さない ──
   const [selected, setSelected] = useState<SlotImage | null>(null)
@@ -327,72 +327,44 @@ export default function ImagePickerSheet({
     return () => stopRef.current?.abort()
   }, [])
 
-  const adopt = (image: SlotImage) => {
-    setCurrentImage(image)
-    setImageOverride(id, slot, image)
-    onPicked?.(image)
-  }
-
   /**
    * 下書き (選んだ画像と、その画像の切り抜き) を保存して閉じる。保存した枠は確定 (一括の取り直しで
-   * 上書きされない) にする。途中で失敗したら、そこまで済んだ分を «今» に反映して下書きは残す
+   * 上書きされない) にする。通信は待たない: 選んだ画像をその場で画面に出して閉じ、保存キューが裏で送る
+   * (圏外でも捨てずに送り直す。通らなければ枠に赤の印が付く)
    */
-  const save = () =>
-    runOnce(async () => {
-      if (phase !== 'idle' || !isDirty) return
-      setIsSaving(true)
-      setError('')
-      let crop = selectedCrop
-      try {
-        await unlockIfLocked()
-        if (selected) {
-          adopt(await pickImage({ token, id, slot, hash: selected.hash }))
-          // 採用した画像は «今» になる。切り抜きも «今» の分として持ち直す
-          setSelected(null)
-          setCrops((prev) => ({ ...prev, [CURRENT]: crop }))
-        }
-        if (crop) {
-          adopt(
-            await recropImage({
-              token,
-              id,
-              slot,
-              ...('rect' in crop
+  const save = () => {
+    if (phase !== 'idle' || !isDirty) return
+    const crop = selectedCrop
+    queueImageSave({
+      id,
+      slot,
+      ...(selected ? { pick: selected } : {}),
+      ...(crop
+        ? {
+            crop:
+              'rect' in crop
                 ? { rect: crop.rect }
-                : { position: crop.position }),
-            })
-          )
-          crop = null
-          setCrops((prev) => ({ ...prev, [CURRENT]: null }))
-        }
-        await setKeep({ token, id, slot, on: true })
-        setIsLocked(true)
-        onKeep?.(true)
-        onClose()
-      } catch (err) {
-        showError('save', err)
-      } finally {
-        setIsSaving(false)
-      }
+                : { position: crop.position },
+          }
+        : {}),
     })
+    if (selected) {
+      setCurrentImage(selected)
+      onPicked?.(selected)
+    }
+    setIsLocked(true)
+    onKeep?.(true)
+    onClose()
+  }
 
-  /** 審査 (UC-1): 今の画像のまま «これで良い» と決める */
-  const approve = () =>
-    runOnce(async () => {
-      if (phase !== 'idle' || isDirty || isLocked) return
-      setIsSaving(true)
-      setError('')
-      try {
-        await setKeep({ token, id, slot, on: true })
-        setIsLocked(true)
-        onKeep?.(true)
-        onClose()
-      } catch (err) {
-        showError('keep', err)
-      } finally {
-        setIsSaving(false)
-      }
-    })
+  /** 審査 (UC-1): 今の画像のまま «これで良い» と決める。これも待たずに閉じる */
+  const approve = () => {
+    if (phase !== 'idle' || isDirty || isLocked) return
+    queueImageSave({ id, slot, keepOnly: true })
+    setIsLocked(true)
+    onKeep?.(true)
+    onClose()
+  }
 
   /** 閉じたら true。保存中・取りやめたら false (語の編集へ移るかをこれで決める) */
   const close = () => {
@@ -435,7 +407,15 @@ export default function ImagePickerSheet({
           <span class="ip-word">
             <TaggedWord word={word} />
           </span>
-          {isLocked ? <span class="ip-kept">確定済み</span> : null}
+          {saveMark?.state === 'pending' ? (
+            <span class="ip-kept is-pending">保存待ち</span>
+          ) : saveMark?.state === 'error' ? (
+            <span class="ip-kept is-error" title={saveMark.message}>
+              保存できません
+            </span>
+          ) : isLocked ? (
+            <span class="ip-kept">確定済み</span>
+          ) : null}
           {onEditWord ? (
             <button
               type="button"

@@ -11,6 +11,8 @@ import {
   fetchImageState,
   keepOpened,
   setRedo,
+  useImageOverride,
+  useImageSave,
   type CandidateFilter,
   type CandidateItem,
   type ImageState,
@@ -62,17 +64,22 @@ function ItemCard({
   item: CandidateItem
   onOpen: () => void
 }) {
+  // 保存キューが裏で送っている間も、選んだ画像 (届いたら切り抜き後の画像) を出す
+  const picked = useImageOverride(item.id, item.slot)
+  const save = useImageSave(item.id, item.slot)
+  const image = picked ?? item.image
   return (
     <button
       type="button"
-      class="cand-card"
+      class={'cand-card' + (save ? ' save-' + save.state : '')}
+      title={save?.state === 'error' ? save.message : undefined}
       onClick={onOpen}
       data-num={/^\d{3}$/.test(item.id) ? item.id : undefined}
     >
       <span class="cand-thumb">
-        {item.image ? (
+        {image ? (
           <img
-            {...wordImage(item.image.url, THUMB_PX, item.word)}
+            {...wordImage(image.url, THUMB_PX, item.word)}
             alt=""
             loading="lazy"
           />
@@ -80,6 +87,12 @@ function ItemCard({
           <span class="cand-thumb-empty">未取得</span>
         )}
         <span class="cand-badges">
+          {save?.state === 'pending' ? (
+            <span class="cand-badge is-saving">保存待ち</span>
+          ) : null}
+          {save?.state === 'error' ? (
+            <span class="cand-badge is-save-error">保存できません</span>
+          ) : null}
           {item.keep ? <span class="cand-badge is-keep">確定</span> : null}
           {item.redo ? <span class="cand-badge is-redo">撮り直し</span> : null}
           {item.changed ? (

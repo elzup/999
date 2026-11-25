@@ -6700,12 +6700,14 @@ button.is-failed {
 /* 代表の保存状態 (RepSaveQueue)。押した瞬間に黄、保存できたら緑、失敗は赤。
    どの状態でも押せなくはしない (待機を作らない) */
 .rep-card.save-pending,
-.rp-row.save-pending {
+.rp-row.save-pending,
+.cand-card.save-pending {
   border-color: var(--warn);
   box-shadow: inset 0 0 0 1px var(--warn);
 }
 .rep-card.save-saved,
-.rp-row.save-saved {
+.rp-row.save-saved,
+.cand-card.save-saved {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
   transition:
@@ -6713,7 +6715,8 @@ button.is-failed {
     border-color 0.4s;
 }
 .rep-card.save-error,
-.rp-row.save-error {
+.rp-row.save-error,
+.cand-card.save-error {
   border-color: var(--bad);
   box-shadow: inset 0 0 0 1px var(--bad);
 }
@@ -7142,6 +7145,14 @@ img[data-concept] {
   border-radius: 4px;
   padding: 1px 6px;
 }
+.ip-kept.is-pending {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+.ip-kept.is-error {
+  color: var(--bad);
+  border-color: var(--bad);
+}
 .ip-tile.is-loading {
   background: var(--surface2);
   animation: ip-pulse 1.2s ease-in-out infinite;
@@ -7541,6 +7552,12 @@ img[data-concept] {
 }
 .cand-badge.is-choices {
   color: var(--text);
+}
+.cand-badge.is-saving {
+  color: var(--warn);
+}
+.cand-badge.is-save-error {
+  color: var(--bad);
 }
 .cand-head {
   display: flex;

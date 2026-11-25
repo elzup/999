@@ -6,6 +6,13 @@
 // 次のデプロイまで配信データに載らないので、この画面の中では overrides で上書きして見せる。
 import { useEffect, useState } from 'preact/hooks'
 import { buildSearchWord } from './searchWord'
+import { loadEditorToken } from './editorAuth'
+import {
+  ImageSaveQueue,
+  notifyImageSave,
+  useImageSaveMark,
+  type ImageSaveJob,
+} from './imageSaveQueue'
 
 export type SlotImage = {
   url: string
@@ -74,6 +81,29 @@ export const imageSlotOf = (slot: string, variant?: string) =>
 // Hosting から Function への転送が 60 秒で切れるので、それより少し長く
 const TIMEOUT_MS = 65_000
 
+/**
+ * 画像 API の失敗。status 0 は通信できなかった (圏外・タイムアウト)。
+ * 送り直しても通らないのは 4xx (408 / 429 を除く) と、サーバが ok: false で断ったもの
+ */
+export class ImageApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message)
+    this.name = 'ImageApiError'
+  }
+  get fatal() {
+    return (
+      this.status === -1 ||
+      (this.status >= 400 &&
+        this.status < 500 &&
+        this.status !== 408 &&
+        this.status !== 429)
+    )
+  }
+}
+
 /** 画面の «止める» で打ち切った (失敗ではない) */
 export class StoppedError extends Error {
   constructor() {
@@ -106,14 +136,21 @@ async function call<T>(
   } catch (err) {
     if (stop?.aborted) throw new StoppedError()
     console.error('image api', path, err)
-    throw new Error('通信できません (圏外・タイムアウト)')
+    throw new ImageApiError('通信できません (圏外・タイムアウト)', 0)
   } finally {
     clearTimeout(timer)
     stop?.removeEventListener('abort', onStop)
   }
   const data = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(data?.error || `失敗しました (${res.status})`)
-  if (data && data.ok === false) throw new Error(data.error || '失敗しました')
+  if (!res.ok) {
+    throw new ImageApiError(
+      data?.error || `失敗しました (${res.status})`,
+      res.status
+    )
+  }
+  if (data && data.ok === false) {
+    throw new ImageApiError(data.error || '失敗しました', -1)
+  }
   return data as T
 }
 
@@ -450,3 +487,54 @@ export function keepOpened(
   const keys = new Set(matched.map(keyOf))
   return all.filter((it) => keys.has(keyOf(it)) || opened.has(keyOf(it)))
 }
+
+// ── 保存キュー (押したら閉じて、裏で送る) ──
+
+const SAVE_QUEUE_KEY = 'imageSaveQueue999'
+let saveQueue: ImageSaveQueue | null = null
+
+/** アプリで 1 本だけ持つ画像の保存キュー。送るときの認証は端末に保存したトークン */
+export function imageSaveQueue(): ImageSaveQueue {
+  if (!saveQueue) {
+    saveQueue = new ImageSaveQueue({
+      api: {
+        setKeep: (id, slot, on) =>
+          setKeep({ token: loadEditorToken(), id, slot, on }),
+        pick: (id, slot, hash) =>
+          pickImage({ token: loadEditorToken(), id, slot, hash }),
+        recrop: (id, slot, crop) =>
+          recropImage({ token: loadEditorToken(), id, slot, ...crop }),
+      },
+      onImage: (id, slot, image) => setImageOverride(id, slot, image),
+      onChange: notifyImageSave,
+      isFatal: (err) => err instanceof ImageApiError && err.fatal,
+      storage: {
+        load: () => {
+          try {
+            return localStorage.getItem(SAVE_QUEUE_KEY)
+          } catch {
+            return null
+          }
+        },
+        save: (text) => localStorage.setItem(SAVE_QUEUE_KEY, text),
+      },
+    })
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => saveQueue?.retryNow())
+    }
+  }
+  return saveQueue
+}
+
+/**
+ * 保存を積む。選んだ画像はその場で画面に出し (サーバの切り抜き後の画像は届いたら差し替わる)、
+ * 呼んだ側はすぐ閉じてよい
+ */
+export function queueImageSave(job: ImageSaveJob) {
+  if (job.pick) setImageOverride(job.id, job.slot, job.pick)
+  imageSaveQueue().enqueue(job)
+}
+
+/** 枠の保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
+export const useImageSave = (id: string, slot: string) =>
+  useImageSaveMark(imageSaveQueue(), id, slot)
