@@ -1,7 +1,7 @@
 // ティアカバー: 番号の読みの格子に、登録語が通る経路を引く図 (詳細パネル用、D-0096〜D-0099)。
 // 経路は通るマスの中心を結ぶ折れ線。同じマスを通る語は上下に少しずらして並走させる (B-2)。
 // ミニ表示は ★ / 編集 の行と ‹ 前｜閉じる｜次 › の行をまたぐ右端の正方形に置き (D-0103)、
-// 長押ししている間だけ上に通常サイズを出す。
+// タップ (または長押しの間) で上に通常サイズを出す。
 import {
   useContext,
   useEffect,
@@ -258,29 +258,77 @@ function CoverSvg({ cover, size: s }: { cover: Cover; size: Size }) {
   )
 }
 
-/** 長押ししている間だけ true。スクロールに変わったら (pointercancel) 閉じる */
-function usePressHold() {
-  const [isHeld, setIsHeld] = useState(false)
+type PressMode = 'off' | 'hold' | 'pin'
+
+/**
+ * 拡大表示を出している間だけ isOpen が true。スマホで使う前提で 2 通り:
+ * - タップ: 開いたままにする (もう一度タップ・外をタップ・スクロールで閉じる)
+ * - 長押し: 指を離すまで出す
+ * マウスのホバーには頼らない (title だけだとスマホでは何も起きない)
+ */
+function usePressHold(anchor: { current: HTMLElement | null }) {
+  const [mode, setMode] = useState<PressMode>('off')
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 開いている状態で押し始めたら、離したときに閉じる
+  const isClosing = useRef(false)
   const clear = () => {
     if (timer.current) clearTimeout(timer.current)
     timer.current = null
   }
-  const release = () => {
-    clear()
-    setIsHeld(false)
-  }
   useEffect(() => clear, [])
+
+  // タップで開いたら、外のタップ・スクロール・回転で閉じる
+  useEffect(() => {
+    if (mode !== 'pin') return
+    const close = () => setMode('off')
+    const onDown = (e: PointerEvent) => {
+      if (!anchor.current?.contains(e.target as Node)) close()
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [mode])
+
+  const cancel = () => {
+    clear()
+    isClosing.current = false
+    setMode((m) => (m === 'hold' ? 'off' : m))
+  }
   return {
-    isHeld,
+    isOpen: mode !== 'off',
     handlers: {
-      onPointerDown: () => {
+      onPointerDown: (e: PointerEvent) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return
         clear()
-        timer.current = setTimeout(() => setIsHeld(true), LONG_PRESS_MS)
+        if (mode === 'pin') {
+          isClosing.current = true
+          return
+        }
+        isClosing.current = false
+        timer.current = setTimeout(() => {
+          timer.current = null
+          setMode('hold')
+        }, LONG_PRESS_MS)
       },
-      onPointerUp: release,
-      onPointerCancel: release,
-      onPointerLeave: release,
+      onPointerUp: () => {
+        const isTap = timer.current !== null
+        clear()
+        if (isClosing.current) {
+          isClosing.current = false
+          setMode('off')
+        } else if (isTap) setMode('pin')
+        else setMode((m) => (m === 'hold' ? 'off' : m))
+      },
+      onPointerCancel: cancel,
+      // タッチでは指が少しずれても閉じない (離すまで出す)。マウスは枠の外へ出たら長押しをやめる
+      onPointerLeave: (e: PointerEvent) => {
+        if (e.pointerType === 'mouse') cancel()
+      },
       // 長押しで出る iOS / Android のメニューを出さない
       onContextMenu: (e: Event) => e.preventDefault(),
     },
@@ -331,16 +379,16 @@ function TierCover({ d }: Props) {
     () => (tables ? buildTierCover(tables, d) : null),
     [tables, d]
   )
-  const { isHeld, handlers } = usePressHold()
   const anchor = useRef<HTMLDivElement>(null)
+  const { isOpen, handlers } = usePressHold(anchor)
   const side = useContext(SheetSideContext)
   const isShown = !!cover && cover.words.length > 0
   const sq = useSideSquare(side, isShown)
   if (!cover || !isShown) return null
 
   // 詳細パネルは overflow で切れるので、ポップアップは body に出して画面座標で置く
-  const rect = isHeld ? anchor.current?.getBoundingClientRect() : null
-  const label = `${cover.num} の読みを登録語がどれだけ通っているか (長押しで拡大)`
+  const rect = isOpen ? anchor.current?.getBoundingClientRect() : null
+  const label = `${cover.num} の読みを登録語がどれだけ通っているか (タップで拡大)`
   const body = (
     <div
       ref={anchor}
