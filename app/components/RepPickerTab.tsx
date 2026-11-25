@@ -34,6 +34,7 @@ import RepCard from './RepCard'
 import RepStats from './RepStats'
 import { Segmented } from './Segmented'
 import { wordImage } from '../lib/wordImage'
+import { useImageOverrides, withImageOverrides } from '../lib/imagePicker'
 import {
   DIGITS,
   anchorTarget,
@@ -110,7 +111,11 @@ function RepRow({
   onPick: (key: string) => void
   onOpen?: () => void
 }) {
-  const rows = withDeliveredImages(candidateRows(doc), entry)
+  useImageOverrides()
+  const rows = withImageOverrides(
+    withDeliveredImages(candidateRows(doc), entry),
+    doc.num
+  )
   const kinds = [
     rows.filter((row) => row.slot.startsWith('wh')),
     rows.filter((row) => row.slot.startsWith('wm')),

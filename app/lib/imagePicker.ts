@@ -280,6 +280,38 @@ export async function fetchSlotState(token: string, id: string, slot: string) {
   }
 }
 
+/**
+ * 行の画像を、この画面の中で選び直した画像 (override) で差し替える。
+ * 代表の一覧・カードは DB の語と配信データの画像で行を作るので、そのままでは
+ * 画像タブで選び直した画像が次のデプロイまで出ない
+ */
+export function withImageOverrides<
+  T extends { slot: string; variant?: string; imageUrl?: string },
+>(
+  rows: T[],
+  num: string,
+  lookup: (id: string, slot: string) => SlotImage | undefined = imageOverride
+): T[] {
+  return rows.map((row) => {
+    const picked = lookup(num, imageSlotOf(row.slot, row.variant))
+    return picked?.url && picked.url !== row.imageUrl
+      ? { ...row, imageUrl: picked.url }
+      : row
+  })
+}
+
+/** 選び直した画像が変わったら描き直す (一覧のように枠が多い画面で、行ごとに購読しないため) */
+export function useImageOverrides() {
+  const [, bump] = useState(0)
+  useEffect(() => {
+    const update = () => bump((v) => v + 1)
+    listeners.add(update)
+    return () => {
+      listeners.delete(update)
+    }
+  }, [])
+}
+
 /** 選び直した画像があればそれを返す。無ければ undefined (配信データの画像を使う) */
 export function useImageOverride(id: string, slot: string) {
   const [image, setImage] = useState(() => imageOverride(id, slot))

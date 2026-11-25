@@ -20,6 +20,7 @@ import TaggedWord from './TaggedWord'
 import { IconEdit } from './Icons'
 import type { SaveMark } from '../lib/opQueue'
 import { wordImage } from '../lib/wordImage'
+import { useImageOverrides, withImageOverrides } from '../lib/imagePicker'
 
 const MARK = ['', '①', '②']
 const SAVE_LABEL: Record<SaveMark, string> = {
@@ -40,7 +41,11 @@ type Props = {
 
 function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
   const status = repStatus(doc)
-  const rows = withDeliveredImages(candidateRows(doc), entry)
+  useImageOverrides()
+  const rows = withImageOverrides(
+    withDeliveredImages(candidateRows(doc), entry),
+    doc.num
+  )
   const hasPicks = rows.some((row) => row.repRank > 0)
   // 代表が空なら、確定で入る既定の枠を薄く見せる
   const ghost = hasPicks ? [] : defaultPickSlots(doc)
