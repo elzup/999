@@ -108,6 +108,11 @@ export function App() {
     _setTab(t)
   }, [])
   const [data, setData] = useState<AppData | null>(null)
+  // 保存の購読は描画の外で動くので、最新の辞書データを ref で読めるようにする
+  const dataRef = useRef<AppData | null>(null)
+  useEffect(() => {
+    dataRef.current = data
+  }, [data])
   const [locked, setLocked] = useState(false)
   const [progress, setProgress] = useState<AppDataProgress>({
     phase: 'connecting',
@@ -221,7 +226,14 @@ export function App() {
           .then((raw) => {
             const entry = parseNumberEntry(raw)
             if (!entry) return
-            setData((prev) => (prev ? withNumberEntry(prev, entry) : prev))
+            const current = dataRef.current
+            if (!current) return
+            const next = withNumberEntry(current, entry)
+            if (next === current) return
+            dataRef.current = next
+            // 差し替えた中身もキャッシュへ書く。書かないと、次の起動で保存前の語に戻って見える
+            saveAppDataCache(JSON.stringify(next))
+            setData(next)
           })
           // 差し替えられなくても保存は済んでいる。次に開いたときサーバが最新を重ねて返す
           .catch((error) => console.error('app/numbers', num, error))
@@ -528,19 +540,19 @@ function LoadingScreen({ progress }: { progress: AppDataProgress }) {
     progress.phase === 'downloading' && progress.totalBytes
       ? progress.loadedBytes / progress.totalBytes
       : progress.phase === 'parsing'
-        ? 1
-        : null
+      ? 1
+      : null
 
   const label =
     progress.phase === 'connecting'
       ? 'サーバーに接続中…'
       : progress.phase === 'downloading'
-        ? progress.totalBytes
-          ? `辞書データを受信中… ${Math.round(
-              (progress.loadedBytes / progress.totalBytes) * 100
-            )}%`
-          : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
-        : '辞書データを展開中…'
+      ? progress.totalBytes
+        ? `辞書データを受信中… ${Math.round(
+            (progress.loadedBytes / progress.totalBytes) * 100
+          )}%`
+        : `辞書データを受信中… ${formatKb(progress.loadedBytes)}`
+      : '辞書データを展開中…'
 
   return (
     <div class="loading-screen">
