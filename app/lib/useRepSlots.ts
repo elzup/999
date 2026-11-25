@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
-import { fetchHundred, type NumberDoc, type RepPick } from './numberApi'
+import { fetchHundred, type RepPick } from './numberApi'
 import { livePicks, nameOf, repStatus, type RepStatus } from './numberDetail'
 import { slotOfPick, type Slot } from './choice'
 import { loadEditorToken } from './editorAuth'
-import { useNumberContext } from './numberContext'
 import { writeQueue } from './writeQueue'
+import { useNumberDoc, useNumberDocs } from './symbolStore'
 
 export type RepSlotsState = 'loading' | 'ready' | 'error'
 
@@ -13,77 +13,73 @@ export type RepSlotsState = 'loading' | 'ready' | 'error'
  * 代表 (①②) と確定状態は配信データ (data.json) に無いので、編集画面と同じ
  * API (REQ-NAPI-008) で百の位 1 つぶんずつ Firestore から読む。
  *
- * マップと詳細カードが同じ百の位を何度も引かないよう、ここで共有する。
- * 編集画面を閉じるたび (NumberContext の editVersion) に読み直すので、
- * 編集で代表を変えればマップにも詳細カードにもそのまま出る。
+ * 読んだ文書は保存キューに入れ (setBases)、画面はストア (symbolStore.ts) から読む。
+ * 編集・候補タブで代表を変えると、保存を待たずにマップと詳細カードにも出る
+ * (以前は自前の写しを持ち、編集画面を閉じるたびに読み直していた)。
+ * 百の位はこのセッションで 1 回だけ読む。自分の保存はキューが返事の文書で差し替える。
  */
-const cache = new Map<string, Promise<NumberDoc[]>>()
+const loads = new Map<number, Promise<void>>()
 
-function loadHundred(hundred: number, version: number): Promise<NumberDoc[]> {
+function loadHundred(hundred: number): Promise<void> {
   const token = loadEditorToken()
   if (!token) return Promise.reject(new Error('no token'))
-  const key = `${hundred}:${version}`
-  let hit = cache.get(key)
-  if (!hit) {
-    hit = fetchHundred(hundred, token)
-    // 編集画面にも渡しておく (詳細カードから «編集» を開いたとき待たない)
-    hit.then((docs) => writeQueue().seed(docs)).catch(() => {})
-    // 失敗は覚えない (次に開いたとき読み直す)
-    hit.catch(() => cache.delete(key))
-    cache.set(key, hit)
-  }
-  return hit
+  const hit = loads.get(hundred)
+  if (hit) return hit
+  const queue = writeQueue()
+  // 古い文書と保存待ちの番号は上書きしない (opQueue.ts の putBase)
+  const load = fetchHundred(hundred, token).then((docs) => {
+    queue.setBases(docs)
+  })
+  // 失敗は覚えない (次に開いたとき読み直す)
+  load.catch(() => loads.delete(hundred))
+  loads.set(hundred, load)
+  return load
 }
 
-/** 百の位 1 つぶんの番号ドキュメント (num → doc)。読めなければ null */
-function useHundredDocs(hundred: number | null) {
-  const ctx = useNumberContext()
-  const version = ctx?.editVersion ?? 0
-  const [docs, setDocs] = useState<Map<string, NumberDoc> | null>(null)
+/** 百の位 1 つぶんを読み込む。読み込み済みならすぐ ready */
+function useHundredLoad(hundred: number | null): RepSlotsState {
   const [state, setState] = useState<RepSlotsState>('loading')
-
   useEffect(() => {
     if (hundred === null) {
-      setDocs(null)
       setState('error')
       return
     }
     let alive = true
     setState('loading')
-    loadHundred(hundred, version)
-      .then((list) => {
-        if (!alive) return
-        setDocs(new Map(list.map((doc) => [doc.num, doc])))
-        setState('ready')
-      })
-      .catch(() => {
-        if (alive) setState('error')
-      })
+    loadHundred(hundred)
+      .then(() => alive && setState('ready'))
+      .catch(() => alive && setState('error'))
     return () => {
       alive = false
     }
-  }, [hundred, version])
-
-  return { docs, state }
+  }, [hundred])
+  return state
 }
+
+const numsOfHundred = (hundred: number) =>
+  Array.from({ length: 100 }, (_, i) =>
+    String(hundred * 100 + i).padStart(3, '0')
+  )
 
 /**
  * マップのタイルに出す «代表①» (num → スロット) と、番号ごとの確定状態。
  * 読めないときは空のまま (= 最初の候補) で描く。
  */
 export function useRepSlots(hundred: number, numbers: NumberEntry[]) {
-  const { docs, state } = useHundredDocs(hundred)
+  const state = useHundredLoad(hundred)
+  const nums = useMemo(() => numsOfHundred(hundred), [hundred])
+  const docs = useNumberDocs(nums)
 
   return useMemo(() => {
     const byNum = new Map(numbers.map((n) => [n.num, n]))
     const slots: Record<string, Slot> = {}
     const status: Record<string, RepStatus> = {}
-    for (const [num, doc] of docs ?? []) {
-      status[num] = repStatus(doc)
+    for (const doc of docs) {
+      status[doc.num] = repStatus(doc)
       const first = livePicks(doc)[0]
-      const entry = byNum.get(num)
+      const entry = byNum.get(doc.num)
       const slot = first && entry ? slotOfPick(entry, first) : null
-      if (slot) slots[num] = slot
+      if (slot) slots[doc.num] = slot
     }
     return { slots, status, state }
   }, [docs, numbers, state])
@@ -101,8 +97,8 @@ export type RepInfo = {
  */
 export function useRepInfo(num: string): RepInfo | null {
   const hundred = /^\d{3}$/.test(num) ? Number(num[0]) : null
-  const { docs } = useHundredDocs(hundred)
-  const doc = docs?.get(num)
+  useHundredLoad(hundred)
+  const doc = useNumberDoc(num)
   return useMemo(
     () => (doc ? { status: repStatus(doc), picks: livePicks(doc) } : null),
     [doc]

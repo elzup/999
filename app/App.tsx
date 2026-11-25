@@ -287,11 +287,8 @@ export function App() {
     (num: string, slot?: string) => setOverlayEdit({ num, slot }),
     []
   )
-  const [editVersion, setEditVersion] = useState(0)
-  const closeOverlayEditor = useCallback(() => {
-    setOverlayEdit(null)
-    setEditVersion((v) => v + 1)
-  }, [])
+  // 編集を閉じたときの読み直しはもう要らない (マップ・詳細カードはストアから読む: symbolStore.ts)
+  const closeOverlayEditor = useCallback(() => setOverlayEdit(null), [])
   useBackGuard(Boolean(overlayEditNum), closeOverlayEditor)
 
   const readingTables = useMemo(
@@ -305,12 +302,11 @@ export function App() {
       bookmarks,
       onToggleBm: toggleBm,
       openEditor: openOverlayEditor,
-      editVersion,
       tagNames: data?.tagNames,
       tagTitles: data?.tagTitles,
       token,
     }),
-    [data, bookmarks, toggleBm, openOverlayEditor, editVersion, token]
+    [data, bookmarks, toggleBm, openOverlayEditor, token]
   )
 
   // サブタブを持たないグループのスライド用デッキ。kuku は applyData で注入済みの

@@ -14,7 +14,7 @@ import { parseTaggedItems } from '../lib/tags'
 import { nameOf, REP_STATUS_LABEL } from '../lib/numberDetail'
 import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
-import { listenWriteQueue, writeQueue } from '../lib/writeQueue'
+import { useNumberDoc, usePendingCount } from '../lib/symbolStore'
 import { baseWord, imageStore, slotKeyOf } from '../lib/imageStore'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
@@ -103,21 +103,18 @@ function RowImage({ num, row }: { num: string; row: WordRow }) {
   const override = useImageOverride(num, slot ?? row.slot, row.word)
   const [isOpen, setIsOpen] = useState(false)
   const url = override?.url ?? row.img
-  // 保存キューの変化 (並べ替え・移動の送信) で描き直す
-  const [, bump] = useState(0)
-  useEffect(() => listenWriteQueue({ onChange: () => bump((v) => v + 1) }), [])
-  const queue = writeQueue()
+  // 保存キューの変化 (並べ替え・移動の送信) はストアの購読で描き直す
+  const doc = useNumberDoc(num)
+  const pendingCount = usePendingCount(num)
   // この行の枠の位置は配信データの並び。DB で並べ替えた後はずれていることがあるので、
   // DB (保存キューが読んだ文書) か画像の正本で、その枠に今この語がいるときだけ選ばせる
   const savedWord =
-    queue.view(num)?.slots?.[row.slot]?.word ??
+    doc?.slots?.[row.slot]?.word ??
     imageStore.getState().server[slotKeyOf(num, slot ?? row.slot)]?.word
   const inPlace =
     savedWord === undefined || baseWord(savedWord) === baseWord(row.word)
   // 並べ替え・移動を送り終えるまでは枠が決まらないので選ばせない (画像は枠の位置で持つ)
-  const canPick = Boolean(
-    ctx?.token && slot && inPlace && queue.pendingCount(num) === 0
-  )
+  const canPick = Boolean(ctx?.token && slot && inPlace && pendingCount === 0)
   const save = useImageSave(num, slot ?? row.slot)
   const image = url ? (
     <img

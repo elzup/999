@@ -9,7 +9,7 @@
 //   saves   … 保存キューの状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)
 // 書き換えはここの action だけが行い、画面は selector で読むだけにする (一方向のデータの流れ)。
 import { createStore } from 'zustand/vanilla'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useStoreSelector } from './storeHook'
 import type { SlotImage } from './imagePicker'
 import type { ImageSaveMark } from './imageSaveQueue'
 
@@ -148,35 +148,11 @@ export function slotImageFull(
 
 // ── Preact から読む ──
 
-/**
- * ストアの一部を購読する。selector の結果が変わったときだけ描き直す
- * (zustand の React 用フックは react を要るので、Preact の hooks で同じことをする)
- */
-export function useImageStore<T>(
+/** ストアの一部を購読する。selector の結果が変わったときだけ描き直す */
+export const useImageStore = <T>(
   selector: (state: ImageStore) => T,
   equal: (a: T, b: T) => boolean = Object.is
-): T {
-  const selectorRef = useRef(selector)
-  selectorRef.current = selector
-  const [value, setValue] = useState(() => selector(imageStore.getState()))
-  const valueRef = useRef(value)
-  valueRef.current = value
-  useEffect(() => {
-    const check = (state: ImageStore) => {
-      const next = selectorRef.current(state)
-      if (!equal(valueRef.current, next)) {
-        valueRef.current = next
-        setValue(() => next)
-      }
-    }
-    // 描画から購読までの間に変わった分も拾う
-    check(imageStore.getState())
-    return imageStore.subscribe(check)
-  }, [])
-  // selector の引数 (id / slot / word) が変わった描画では、その場で読み直す
-  const now = selector(imageStore.getState())
-  return equal(value, now) ? value : now
-}
+): T => useStoreSelector(imageStore, selector, equal)
 
 const sameImage = (
   a: ReturnType<typeof slotImageOf>,
