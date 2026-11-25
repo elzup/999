@@ -56,7 +56,7 @@ function CellWords({ numbers, selected, onPickNum }: Props) {
             >
               <span class="cellwords-num">{w.num}</span>
               <span class="cellwords-word">
-                <TaggedWord word={w.word} />
+                <TaggedWord word={w.word} short />
               </span>
               <span class="cellwords-slot">{w.slot}</span>
             </button>

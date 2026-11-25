@@ -16,7 +16,7 @@ import { candidateAt } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
-import { useTagNames } from '../lib/tagNames'
+import { useLongTagNames } from '../lib/tagNames'
 import { repRankOf, useRepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
 import { rankeyOf } from '../lib/rankey'
@@ -184,7 +184,7 @@ function extraItems(raw: string, shownNames: Set<string>): ExtraItem[] {
 function NumDetailPanel(props: Props) {
   const { d } = props
   const ctx = useNumberContext()
-  const tagNames = useTagNames()
+  const tagNames = useLongTagNames()
   const bookmarks = props.bookmarks ?? ctx?.bookmarks
   const onToggleBm = props.onToggleBm ?? ctx?.onToggleBm
   const onEdit = props.onEdit ?? (ctx ? () => ctx.openEditor(d.num) : undefined)

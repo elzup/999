@@ -6,7 +6,7 @@
 // (概念 #g と 馴染みがない -n) は語そのものの見た目でも分かるようにする。
 import { h } from 'preact'
 import { parseWord } from '../lib/wordTags'
-import { tagNameOf, useTagNames } from '../lib/tagNames'
+import { tagNameOf, useLongTagNames, useTagNames } from '../lib/tagNames'
 
 /** 語の見た目を変えるタグ・ラベル。ほかは右肩の文字だけ */
 const STYLE_OF_TAG: Record<string, string> = { g: 'tw-concept' }
@@ -18,23 +18,24 @@ export function hasMarks(word: string): boolean {
 }
 
 /**
- * 右肩のタグは id ではなく表示名で出す (ipra → ｱｲﾄﾞﾘｰﾌﾟﾗｲﾄﾞ)。
- * 表示名はシートの short_title (省略表示用)、無ければ title (正式名)。どちらも無いタグだけ id。
+ * 右肩のタグは id ではなく表示名で出す (ipra → アイドリープライド)。
+ * 表示名はシートの title (正式名)、無ければ short_title (略称)。short の所だけ略称を先に引く。どちらも無いタグだけ id。
  * showNames={false} は id のまま出す (使う所は無くした。比べたいときの逃げ道)
  */
 function TaggedWord({
   word,
   showNames = true,
-  names: given,
+  short = false,
 }: {
   word: string
   showNames?: boolean
-  /** 表示名の表を差し替える (画像のピッカーは正式名 = シートの title で出す) */
-  names?: Record<string, string>
+  /** 表示が狭い所 (一覧のマス・代表のチップ等) だけ略称 (short_title) で出す。既定は正式名 (title) */
+  short?: boolean
 }) {
   const { base, tags, labels } = parseWord(word)
-  const context = useTagNames()
-  const names = given ?? context
+  const shortNames = useTagNames()
+  const longNames = useLongTagNames()
+  const names = short ? shortNames : longNames
   const cls = [
     'tw-base',
     ...tags.map((t) => STYLE_OF_TAG[t]),

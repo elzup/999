@@ -98,7 +98,7 @@ function ItemCard({
         <span class="cand-slot">{item.slotName}</span>
       </span>
       <span class="cand-word">
-        <TaggedWord word={item.word} />
+        <TaggedWord word={item.word} short />
       </span>
     </button>
   )

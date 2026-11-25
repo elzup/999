@@ -90,7 +90,7 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       )}
       <span class="rp-word">
         <Yomi class="rp-kana" kana={row.kana} />
-        <TaggedWord word={row.word} />
+        <TaggedWord word={row.word} short />
       </span>
       {row.repRank ? <span class="rp-mark">{MARK[row.repRank]}</span> : null}
     </button>
