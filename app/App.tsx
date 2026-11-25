@@ -17,17 +17,9 @@ import type { AppData } from './data/schema'
 import type { TabId } from './data/constants'
 import { BAR_TAB_LABELS, VALID_TABS } from './data/constants'
 import type { TabVisibility } from './data/storage'
+import { lazy, Suspense } from 'preact/compat'
 import NumGroupTab from './components/NumGroupTab'
-import DateTab from './components/DateTab'
-import CardTab from './components/CardTab'
-import PiTab from './components/PiTab'
-import YearTab from './components/YearTab'
-import WeekdayTab from './components/WeekdayTab'
-import MiscTab from './components/MiscTab'
-import KukuTab from './components/KukuTab'
-import SlideshowTab from './components/SlideshowTab'
 import SlideTestGroup from './components/SlideTestGroup'
-import GogenTab from './components/GogenTab'
 import {
   cardDeck,
   gogenDeck,
@@ -35,10 +27,7 @@ import {
   piDeck,
   yearDeck,
 } from './components/slideDecks'
-import BookmarkTab from './components/BookmarkTab'
-import FFTab from './components/FFTab'
 import NumberDetailTab from './components/NumberDetailTab'
-import PickTab from './components/PickTab'
 import LockedScreen from './components/LockedScreen'
 import { consumeEditorTokenFromUrl } from './lib/editorAuth'
 import { refreshSessionToken } from './lib/passkeyApi'
@@ -79,6 +68,21 @@ import {
 } from './components/Icons'
 import { TagNamesContext, TagTitlesContext } from './lib/tagNames'
 import { ReadingTablesContext, tablesFromRules } from './lib/reading'
+
+// 起動直後に開かないタブは別ファイルに分け、開いたときに読む (初回の JS を減らす)。
+// 既定の num と、どの画面からも開く編集 (NumberDetailTab) は先に読んでおく
+const DateTab = lazy(() => import('./components/DateTab'))
+const CardTab = lazy(() => import('./components/CardTab'))
+const PiTab = lazy(() => import('./components/PiTab'))
+const YearTab = lazy(() => import('./components/YearTab'))
+const WeekdayTab = lazy(() => import('./components/WeekdayTab'))
+const MiscTab = lazy(() => import('./components/MiscTab'))
+const KukuTab = lazy(() => import('./components/KukuTab'))
+const SlideshowTab = lazy(() => import('./components/SlideshowTab'))
+const GogenTab = lazy(() => import('./components/GogenTab'))
+const BookmarkTab = lazy(() => import('./components/BookmarkTab'))
+const FFTab = lazy(() => import('./components/FFTab'))
+const PickTab = lazy(() => import('./components/PickTab'))
 
 // 配信データにタグ名が無いとき用。毎描画で新しい {} を作ると context の購読側が全部描き直すので固定する
 const NO_TAG_NAMES: Record<string, string> = {}
@@ -341,131 +345,136 @@ export function App() {
         <TagTitlesContext.Provider value={data.tagTitles ?? NO_TAG_NAMES}>
           <ReadingTablesContext.Provider value={readingTables}>
             {revalidating && <div class="revalidating-note">更新を確認中…</div>}
-            {tab === 'num' && (
-              <NumGroupTab
-                numbers={data.numbers}
-                bookmarks={bookmarks}
-                onToggleBm={toggleBm}
-                rules={data.rules}
-                yomiUse={data.yomiUse}
-                onEditWord={openEditor}
-              />
-            )}
-            {tab === 'date' && (
-              <DateTab
-                numbers={data.numbers}
-                dates={data.dates}
-                bookmarks={bookmarks}
-                onToggleBm={toggleBm}
-              />
-            )}
-            {tab === 'card' && (
-              <SlideTestGroup
-                group="card"
-                mainLabel="カード"
-                deck={slideDecks.card}
-                bookmarks={bookmarks}
-                onToggleBm={toggleBm}
-              >
-                <CardTab
+            {/* 遅延タブの読み込み中も Tab Bar は出したままにする (fallback は空) */}
+            <Suspense fallback={null}>
+              {tab === 'num' && (
+                <NumGroupTab
+                  numbers={data.numbers}
+                  bookmarks={bookmarks}
+                  onToggleBm={toggleBm}
+                  rules={data.rules}
+                  yomiUse={data.yomiUse}
+                  onEditWord={openEditor}
+                />
+              )}
+              {tab === 'date' && (
+                <DateTab
+                  numbers={data.numbers}
+                  dates={data.dates}
+                  bookmarks={bookmarks}
+                  onToggleBm={toggleBm}
+                />
+              )}
+              {tab === 'card' && (
+                <SlideTestGroup
+                  group="card"
+                  mainLabel="カード"
+                  deck={slideDecks.card}
+                  bookmarks={bookmarks}
+                  onToggleBm={toggleBm}
+                >
+                  <CardTab
+                    cards={data.cards}
+                    bookmarks={bookmarks}
+                    onToggleBm={toggleBm}
+                  />
+                </SlideTestGroup>
+              )}
+              {tab === 'pi' && (
+                <SlideTestGroup
+                  group="pi"
+                  mainLabel="π"
+                  deck={slideDecks.pi}
+                  bookmarks={bookmarks}
+                  onToggleBm={toggleBm}
+                >
+                  <PiTab
+                    numbers={data.numbers}
+                    bookmarks={bookmarks}
+                    onToggleBm={toggleBm}
+                  />
+                </SlideTestGroup>
+              )}
+              {tab === 'year' && (
+                <SlideTestGroup
+                  group="year"
+                  mainLabel="年号"
+                  deck={slideDecks.year}
+                >
+                  <YearTab
+                    numbers={data.numbers}
+                    bookmarks={bookmarks}
+                    onToggleBm={toggleBm}
+                  />
+                </SlideTestGroup>
+              )}
+              {tab === 'weekday' && (
+                <WeekdayTab
+                  numbers={data.numbers}
+                  bookmarks={bookmarks}
+                  onToggleBm={toggleBm}
+                />
+              )}
+              {tab === 'kuku' && (
+                <SlideTestGroup
+                  group="kuku"
+                  mainLabel="九九"
+                  deck={slideDecks.kuku}
+                >
+                  <KukuTab />
+                </SlideTestGroup>
+              )}
+              {tab === 'gogen' && (
+                <SlideTestGroup
+                  group="gogen"
+                  mainLabel="語源"
+                  deck={slideDecks.gogen}
+                >
+                  <GogenTab />
+                </SlideTestGroup>
+              )}
+              {tab === 'slide' && (
+                <SlideshowTab
+                  numbers={data.numbers}
+                  bookmarks={bookmarks}
+                  onToggleBm={toggleBm}
+                />
+              )}
+              {tab === 'bm' && (
+                <BookmarkTab
+                  numbers={data.numbers}
                   cards={data.cards}
                   bookmarks={bookmarks}
                   onToggleBm={toggleBm}
+                  onView={recordBookmarkView}
                 />
-              </SlideTestGroup>
-            )}
-            {tab === 'pi' && (
-              <SlideTestGroup
-                group="pi"
-                mainLabel="π"
-                deck={slideDecks.pi}
-                bookmarks={bookmarks}
-                onToggleBm={toggleBm}
-              >
-                <PiTab
+              )}
+              {tab === 'hex' && <FFTab />}
+              {tab === 'edit' && (
+                <NumberDetailTab
+                  token={token}
+                  initialNum={editTarget?.num}
+                  focusSlot={editTarget?.slot}
                   numbers={data.numbers}
-                  bookmarks={bookmarks}
-                  onToggleBm={toggleBm}
+                  rules={data.rules}
+                  // 戻る (popstate) が実際の状態遷移を行う。ここで直接閉じると
+                  // 積んだ履歴が 1 つ残り、次の «戻る» が空振りする
+                  onClose={editTarget ? closeEditor : undefined}
                 />
-              </SlideTestGroup>
-            )}
-            {tab === 'year' && (
-              <SlideTestGroup
-                group="year"
-                mainLabel="年号"
-                deck={slideDecks.year}
-              >
-                <YearTab
+              )}
+              {tab === 'cand' && (
+                <PickTab token={token} numbers={data.numbers} />
+              )}
+              {tab === 'misc' && (
+                <MiscTab
                   numbers={data.numbers}
-                  bookmarks={bookmarks}
-                  onToggleBm={toggleBm}
+                  rules={data.rules}
+                  visibility={visibility}
+                  onVisibilityChange={updateVisibility}
+                  onSelectTab={setTab}
                 />
-              </SlideTestGroup>
-            )}
-            {tab === 'weekday' && (
-              <WeekdayTab
-                numbers={data.numbers}
-                bookmarks={bookmarks}
-                onToggleBm={toggleBm}
-              />
-            )}
-            {tab === 'kuku' && (
-              <SlideTestGroup
-                group="kuku"
-                mainLabel="九九"
-                deck={slideDecks.kuku}
-              >
-                <KukuTab />
-              </SlideTestGroup>
-            )}
-            {tab === 'gogen' && (
-              <SlideTestGroup
-                group="gogen"
-                mainLabel="語源"
-                deck={slideDecks.gogen}
-              >
-                <GogenTab />
-              </SlideTestGroup>
-            )}
-            {tab === 'slide' && (
-              <SlideshowTab
-                numbers={data.numbers}
-                bookmarks={bookmarks}
-                onToggleBm={toggleBm}
-              />
-            )}
-            {tab === 'bm' && (
-              <BookmarkTab
-                numbers={data.numbers}
-                cards={data.cards}
-                bookmarks={bookmarks}
-                onToggleBm={toggleBm}
-                onView={recordBookmarkView}
-              />
-            )}
-            {tab === 'hex' && <FFTab />}
-            {tab === 'edit' && (
-              <NumberDetailTab
-                token={token}
-                initialNum={editTarget?.num}
-                focusSlot={editTarget?.slot}
-                numbers={data.numbers}
-                rules={data.rules}
-                // 戻る (popstate) が実際の状態遷移を行う。ここで直接閉じると
-                // 積んだ履歴が 1 つ残り、次の «戻る» が空振りする
-                onClose={editTarget ? closeEditor : undefined}
-              />
-            )}
-            {tab === 'cand' && <PickTab token={token} numbers={data.numbers} />}
-            {tab === 'misc' && (
-              <MiscTab
-                numbers={data.numbers}
-                rules={data.rules}
-                visibility={visibility}
-                onVisibilityChange={updateVisibility}
-                onSelectTab={setTab}
-              />
-            )}
+              )}
+            </Suspense>
             <div class="bottom-bar">
               {VALID_TABS.filter((id) => visibility[id] || tab === id).map(
                 (id) => (
