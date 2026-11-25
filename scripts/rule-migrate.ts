@@ -1,6 +1,6 @@
 // 規則表を変えたとき、登録済みの語を新しい規則で読める番号へ移す。
 //
-//   npx -y tsx scripts/rule-migrate.ts [--from <rev>] [--apply]
+//   npx -y tsx scripts/rule-migrate.ts [--from <rev>] [--keep <番号:語>]... [--apply]
 //
 // --from の版の src/data/double_digit.tsv を «旧規則»、手元の src/data/*.tsv を «新規則» として、
 // 旧規則で番号どおりに読めて新規則では読めなくなった語を、新規則で読める番号へ移す。
@@ -53,7 +53,15 @@ const { values: args } = parseArgs({
   options: {
     from: { type: 'string', default: DEFAULT_FROM },
     apply: { type: 'boolean', default: false },
+    // 移さずに残す語。«番号:語» で何度でも (--keep '288:茶葉')
+    keep: { type: 'string', multiple: true, default: [] },
   },
+})
+
+const keep = (args.keep ?? []).map((spec) => {
+  const at = spec.indexOf(':')
+  if (at < 0) throw new Error(`--keep は «番号:語»: ${spec}`)
+  return { num: spec.slice(0, at), word: spec.slice(at + 1) }
 })
 
 function firestoreToken(): string {
@@ -211,7 +219,7 @@ async function main() {
 
   const db = connectRest({ projectId: PROJECT_ID, token: firestoreToken() })
   const docs = (await db.readAllNumbers()) as Record<string, NumberDoc>
-  const { moves, manual } = planRuleMigration(docs, oldTables, newTables)
+  const { moves, manual } = planRuleMigration(docs, oldTables, newTables, keep)
 
   console.log(`旧規則: ${args.from} の double_digit.tsv / 新規則: 手元の表`)
   console.log(`\n移す語: ${moves.length} 個`)

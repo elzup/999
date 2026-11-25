@@ -85,71 +85,87 @@ export function applyMovePlan(
   }
 }
 
+/** 移さずに残す語 (番号 + 語)。枠が足りないとき、どれを入れるかを人が選ぶのに使う */
+export type RuleKeep = { num: string; word: string }
+
 /**
  * @param docs      numbers/* の全文書 (番号 → 文書)
  * @param oldTables 変える前の規則表
  * @param newTables 変えた後の規則表
+ * @param keep      移さずに残す語。手で直す一覧に «残すと指定» として出す
+ *
+ * 番号順に 1 周してもまだ移せる語があれば (後の番号から語が抜けて枠が空いた等)、移せる語が無くなるまで回し直す
  */
 export function planRuleMigration(
   docs: Record<string, NumberDoc>,
   oldTables: ReadingTables,
-  newTables: ReadingTables
+  newTables: ReadingTables,
+  keep: RuleKeep[] = []
 ): RuleMigrationPlan {
   const state: Record<string, NumberDoc> = { ...docs }
   const moves: RuleMove[] = []
-  const manual: RuleManual[] = []
+  let manual: RuleManual[] = []
 
-  for (const num of Object.keys(docs).sort()) {
-    // 手で直す語は同じ番号に残るので、2 度目は飛ばす ({k, w} で覚える)
-    const skipped: { k: string; w: string }[] = []
-    for (;;) {
-      const source = state[num]
-      const row = slotRows(source).find((r) => {
-        if (!r.kana.trim()) return false
-        if (skipped.some((s) => sameValue(s, { k: r.kana, w: r.word })))
-          return false
-        return brokenBy(oldTables, newTables, r.kana, num) !== null
-      })
-      if (!row) break
+  for (let progressed = true; progressed; ) {
+    progressed = false
+    manual = []
+    for (const num of Object.keys(state).sort()) {
+      // 手で直す語は同じ番号に残るので、2 度目は飛ばす ({k, w} で覚える)
+      const skipped: { k: string; w: string }[] = []
+      for (;;) {
+        const source = state[num]
+        const row = slotRows(source).find((r) => {
+          if (!r.kana.trim()) return false
+          if (skipped.some((s) => sameValue(s, { k: r.kana, w: r.word })))
+            return false
+          return brokenBy(oldTables, newTables, r.kana, num) !== null
+        })
+        if (!row) break
 
-      const leave = (reason: string) => {
-        skipped.push({ k: row.kana, w: row.word })
-        manual.push({
-          num,
+        const leave = (reason: string) => {
+          skipped.push({ k: row.kana, w: row.word })
+          manual.push({
+            num,
+            slot: row.slot,
+            word: row.word,
+            kana: row.kana,
+            reason,
+          })
+        }
+
+        if (keep.some((k) => k.num === num && k.word === row.word)) {
+          leave('残すと指定した')
+          continue
+        }
+        if (brokenBy(oldTables, newTables, row.kana, num)?.viaOmission) {
+          leave('旧規則では中間省略 (1 字飛ばし) で合っていた')
+          continue
+        }
+        const to = readingOf(newTables, row.kana).num
+        if (!to || !NUM.test(to)) {
+          leave('新規則で 3 桁の番号に読めない')
+          continue
+        }
+        const target = state[to] ?? { num: to, slots: {} }
+        const plan = planMove(source, row, target)
+        if (!plan.ok) {
+          leave(`${to} へ移せない: ${plan.error}`)
+          continue
+        }
+
+        const next = applyMovePlan(source, target, plan)
+        state[num] = next.source
+        state[to] = next.target
+        progressed = true
+        moves.push({
+          from: num,
           slot: row.slot,
           word: row.word,
           kana: row.kana,
-          reason,
+          to,
+          targetSlot: plan.targetSlot,
         })
       }
-
-      if (brokenBy(oldTables, newTables, row.kana, num)?.viaOmission) {
-        leave('旧規則では中間省略 (1 字飛ばし) で合っていた')
-        continue
-      }
-      const to = readingOf(newTables, row.kana).num
-      if (!to || !NUM.test(to)) {
-        leave('新規則で 3 桁の番号に読めない')
-        continue
-      }
-      const target = state[to] ?? { num: to, slots: {} }
-      const plan = planMove(source, row, target)
-      if (!plan.ok) {
-        leave(`${to} へ移せない: ${plan.error}`)
-        continue
-      }
-
-      const next = applyMovePlan(source, target, plan)
-      state[num] = next.source
-      state[to] = next.target
-      moves.push({
-        from: num,
-        slot: row.slot,
-        word: row.word,
-        kana: row.kana,
-        to,
-        targetSlot: plan.targetSlot,
-      })
     }
   }
 

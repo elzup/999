@@ -128,4 +128,41 @@ describe('planRuleMigration', () => {
       ['満杯', '583 へ移せない: 583 の物の枠が埋まっています'],
     ])
   })
+
+  it('後の番号から語が抜けて空いた枠にも、回し直して移す', () => {
+    const result = plan([
+      { num: '283', slots: { wh1: slot('茶', 'ちゃみ') } },
+      {
+        num: '583',
+        slots: {
+          wh1: slot('a', 'ちゃみ'),
+          wh2: slot('b', 'ちゃみ'),
+          wh3: slot('出る', 'ふぁみ'),
+        },
+      },
+    ])
+    expect(result.moves.map((m) => [m.from, m.word, m.to])).toEqual([
+      ['583', '出る', '283'],
+      ['283', '茶', '583'],
+    ])
+    expect(result.manual).toEqual([])
+  })
+
+  it('残すと指定した語は移さない', () => {
+    const result = planRuleMigration(
+      {
+        '283': {
+          num: '283',
+          slots: { wm1: slot('葉', 'ちゃみ'), wm2: slot('茶', 'ちゃみい') },
+        },
+      },
+      oldTables,
+      newTables,
+      [{ num: '283', word: '葉' }]
+    )
+    expect(result.manual.map((m) => [m.word, m.reason])).toEqual([
+      ['葉', '残すと指定した'],
+    ])
+    expect(result.moves.map((m) => [m.word, m.to])).toEqual([['茶', '583']])
+  })
 })
