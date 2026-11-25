@@ -5,8 +5,10 @@
 // 今の形 (配信データの平たい 1 件・番号の文書・カード) を知っているのはこのファイルだけにする。
 //
 // 形 (保存はしない。端末のメモリの中の形):
-//   word   = { id, category, text, tags }            tags は書かれた順 (出典・属性の両方)
-//   link   = { wordId, order, kana?, labels }         order = 一覧の何番目か (空きも数える)
+//   word   = { id, category, text, source }          語そのもの (どの記号でも同じ)
+//   link   = { wordId, order, tags, labels, kana? }  その記号での書き方と値。order = 一覧の何番目か (空きも数える)
+// タグ (出典・属性) とラベルは結び付き側に持つ。同じ語でも記号によって属性タグが違う
+// (三田: #i 付きと無し) ので、語に持たせると、ある記号の表記を別の記号の書き方で上書きしてしまう。
 //   symbol = { id, kind, links, extras }              extras = まだ構造にしていない欄 (そのまま戻す)
 // 語の役割 (人/物/行動) は word.category で決まる (番号の人・物、カードの P・O・A と 1 対 1)。
 
@@ -85,25 +87,36 @@ const wordOf = (category, parsed) => ({
   id: wordIdOf(category, parsed.text, parsed.tags),
   category,
   text: parsed.text,
-  tags: parsed.tags,
+  source: sourceOf(parsed.tags),
 })
 
 const byId = (words) => Object.fromEntries(words.map((w) => [w.id, w]))
 
-/** 同じ id の語が違う中身で来たら、先に来た方を使い、食い違いとして返す */
+/**
+ * 記号ごとの語を 1 つの表にまとめる。語は id (種別 + 本体 + 出典) から中身が決まるので、
+ * 同じ id なら中身も同じ。違ったら id の作り方の誤りなので、食い違いとして返す
+ */
 export function mergeWords(lists) {
+  const sameWord = (a, b) =>
+    a.category === b.category && a.text === b.text && a.source === b.source
   return lists.flat().reduce(
     (acc, word) => {
       const seen = acc.words[word.id]
       if (!seen) return { ...acc, words: { ...acc.words, [word.id]: word } }
-      const same = JSON.stringify(seen.tags) === JSON.stringify(word.tags)
-      return same
+      return sameWord(seen, word)
         ? acc
         : { ...acc, conflicts: [...acc.conflicts, [seen, word]] }
     },
     { words: {}, conflicts: [] }
   )
 }
+
+/** 結び付き 1 つを、表記に戻せる形 (本体 + その記号でのタグ・ラベル) にする */
+const notationOf = (link, words) => ({
+  text: words[link.wordId]?.text ?? '',
+  tags: link.tags,
+  labels: link.labels,
+})
 
 // ── 番号 (と日付): 一覧の文字列 ⇔ 結び付き ──
 
@@ -131,6 +144,7 @@ function linksFromLists(lists, slotOf) {
       link: {
         wordId: wordIdOf(category, part.text, part.tags),
         order,
+        tags: part.tags,
         labels: part.labels,
         ...(slot
           ? { kana: slot.kana, ...(slot.filled ? {} : { slotted: false }) }
@@ -161,7 +175,7 @@ function listsFromLinks(links, words, listLengths = {}) {
       const cells = Array.from({ length }, (_, order) => {
         const parts = own
           .filter((l) => l.order === order)
-          .map((l) => ({ ...words[l.wordId], labels: l.labels }))
+          .map((l) => notationOf(l, words))
         return parts.length ? formatNotation(mergeSources(parts), category) : ''
       })
       return [category, cells.join(',')]
@@ -178,9 +192,7 @@ function slotFromLinks(links, words, category, order) {
   if (parts.every((l) => l.slotted === false)) {
     return { word: '', kana: parts[0].kana ?? '' }
   }
-  const merged = mergeSources(
-    parts.map((l) => ({ ...words[l.wordId], labels: l.labels }))
-  )
+  const merged = mergeSources(parts.map((l) => notationOf(l, words)))
   return { word: formatNotation(merged, category), kana: parts[0].kana ?? '' }
 }
 
@@ -393,6 +405,7 @@ export function fromCard(card) {
     const link = {
       wordId: word.id,
       order: 0,
+      tags: parsed.tags,
       labels: parsed.labels,
       ...(role.act ? { act: card[role.act] ?? '' } : {}),
       rating: card[role.score] ?? null,
@@ -432,13 +445,9 @@ export function toCard(symbol, wordsById) {
       (l) => wordsById[l.wordId]?.category === role.category
     )
     if (!link) return acc
-    const word = wordsById[link.wordId]
     return {
       ...acc,
-      [role.word]: formatNotation(
-        { ...word, labels: link.labels },
-        role.category
-      ),
+      [role.word]: formatNotation(notationOf(link, wordsById), role.category),
       ...(role.act ? { [role.act]: link.act ?? '' } : {}),
       [role.score]: link.rating ?? null,
     }
@@ -459,13 +468,13 @@ export function toCard(symbol, wordsById) {
 export function resolveRefs(symbol, wordsById) {
   const candidates = symbol.links.map((l) => {
     const word = wordsById[l.wordId]
-    const own = formatNotation({ ...word, labels: l.labels }, word.category)
+    const own = formatNotation(notationOf(l, wordsById), word.category)
     const sameItem = symbol.links
       .filter(
         (o) =>
           o.order === l.order && wordsById[o.wordId]?.category === word.category
       )
-      .map((o) => ({ ...wordsById[o.wordId], labels: o.labels }))
+      .map((o) => notationOf(o, wordsById))
     const item = formatNotation(mergeSources(sameItem), word.category)
     return { wordId: l.wordId, kana: l.kana, notations: new Set([own, item]) }
   })
