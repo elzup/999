@@ -166,3 +166,17 @@ export function marksMeaning(
     }),
   ]
 }
+
+/**
+ * 語を «本体 + タグの名前» の文字にする (チャクチ#ｽﾌﾟﾗ#g → チャクチ スプラトゥーン 概念)。
+ * id や # は出さない。名前は names → 組み込みの意味 → id の順に引く (marksMeaning と同じ)
+ */
+export function plainWord(
+  word: string,
+  names: Record<string, string> = {}
+): string {
+  const { base, tags } = parseWord(word)
+  return [base, ...tags.map((t) => names[t] ?? TAG_MEANINGS[t] ?? t)]
+    .filter(Boolean)
+    .join(' ')
+}

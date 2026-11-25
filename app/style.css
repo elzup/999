@@ -7060,14 +7060,10 @@ img[data-concept] {
   gap: 8px;
   min-width: 0;
 }
-.ip-id {
-  font: 800 20px var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
 .ip-word {
-  color: var(--text2);
-  font-size: 13px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

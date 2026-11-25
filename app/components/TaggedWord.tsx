@@ -25,12 +25,16 @@ export function hasMarks(word: string): boolean {
 function TaggedWord({
   word,
   showNames = true,
+  names: given,
 }: {
   word: string
   showNames?: boolean
+  /** 表示名の表を差し替える (画像のピッカーは正式名 = シートの title で出す) */
+  names?: Record<string, string>
 }) {
   const { base, tags, labels } = parseWord(word)
-  const names = useTagNames()
+  const context = useTagNames()
+  const names = given ?? context
   const cls = [
     'tw-base',
     ...tags.map((t) => STYLE_OF_TAG[t]),

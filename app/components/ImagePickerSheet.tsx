@@ -8,7 +8,7 @@
 // 画面の上半分に指を伸ばさない規約 (docs/screen-layout.md) に合わせ、シートは下端に出し、
 // 保存・閉じるは最下段に置く。
 import { createPortal } from 'preact/compat'
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { cropImageStyle } from '../lib/cropRect'
 import {
   fetchCandidates,
@@ -25,6 +25,8 @@ import {
 } from '../lib/imagePicker'
 import { useNumberContext } from '../lib/numberContext'
 import { buildSearchWord } from '../lib/searchWord'
+import { useTagNames } from '../lib/tagNames'
+import { plainWord } from '../lib/wordTags'
 import { wordImage } from '../lib/wordImage'
 import CropEditor, { type CropChoice } from './CropEditor'
 import TaggedWord from './TaggedWord'
@@ -164,6 +166,12 @@ export default function ImagePickerSheet({
   // 検索は必ず正式名 (tagTitles = シートの title) で展開する。表示用の略称 (tagNames) は使わない
   const tagMap = useNumberContext()?.tagTitles ?? {}
   const autoQuery = buildSearchWord(word, tagMap)
+  // 選ぶときはタグを正式名で出す (略称より何の語か分かる)。正式名の無いタグは略称
+  const shortNames = useTagNames()
+  const longNames = useMemo(
+    () => ({ ...shortNames, ...tagMap }),
+    [shortNames, tagMap]
+  )
   const [query, setQuery] = useState(autoQuery)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [searching, setSearching] = useState<Searching | null>(null)
@@ -429,9 +437,8 @@ export default function ImagePickerSheet({
       <div class="ip-shade" onClick={close} />
       <div class="ip-sheet" role="dialog" aria-label={`${id} の画像を選ぶ`}>
         <div class="ip-head">
-          <span class="ip-id">{id}</span>
           <span class="ip-word">
-            <TaggedWord word={word} />
+            <TaggedWord word={word} names={longNames} />
           </span>
           {isLocked ? <span class="ip-kept">確定済み</span> : null}
           {onEditWord ? (
@@ -582,7 +589,7 @@ export default function ImagePickerSheet({
       {isEditing && selectedImage ? (
         <CropEditor
           image={selectedImage}
-          title={`${id} ${word}`}
+          title={plainWord(word, longNames)}
           choice={selectedCrop}
           onCancel={() => setIsEditing(false)}
           onApply={(choice) => {
