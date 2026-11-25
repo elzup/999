@@ -111,9 +111,11 @@ export const LABELS: Array<{ id: string; meaning: string; retired?: boolean }> =
     { id: 'u', meaning: '愛称・ユニーク' },
     { id: 'a', meaning: '余りあり' },
     { id: 'm', meaning: '同数異音混在' },
-    { id: 's', meaning: 'サンド・中抜き' },
+    // -s は廃止 (D-0143)。scorer.js の減点は旧データの採点を変えないため残す
+    { id: 's', meaning: 'サンド・中抜き', retired: true },
     { id: 'p', meaning: '0xx' },
     { id: 'j', meaning: '熟語' },
+    { id: 'f', meaning: 'お気に入り' },
   ]
 
 /** name はシートの tags タブの表示名 (res → アトリエ)。無いタグもある */
