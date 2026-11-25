@@ -111,10 +111,11 @@ function RepRow({
   onPick: (key: string) => void
   onOpen?: () => void
 }) {
-  useImageOverrides()
+  const images = useImageOverrides()
   const rows = withImageOverrides(
     withDeliveredImages(candidateRows(doc), entry),
-    doc.num
+    doc.num,
+    images
   )
   const kinds = [
     rows.filter((row) => row.slot.startsWith('wh')),

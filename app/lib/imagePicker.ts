@@ -4,15 +4,17 @@
 //
 // 配信データ (data.json) の画像は nr deploy の時点のもの。ピッカーで選んだ画像は
 // 次のデプロイまで配信データに載らないので、この画面の中では overrides で上書きして見せる。
-import { useEffect, useState } from 'preact/hooks'
 import { buildSearchWord } from './searchWord'
 import { loadEditorToken } from './editorAuth'
+import { ImageSaveQueue, type ImageSaveJob } from './imageSaveQueue'
 import {
-  ImageSaveQueue,
-  notifyImageSave,
-  useImageSaveMark,
-  type ImageSaveJob,
-} from './imageSaveQueue'
+  imageStore,
+  slotImageFull,
+  slotImageOf,
+  useImageStore,
+  useSlotSave,
+  type ImageStoreState,
+} from './imageStore'
 
 export type SlotImage = {
   url: string
@@ -154,8 +156,12 @@ async function call<T>(
   return data as T
 }
 
-export const fetchImageState = (token: string) =>
-  call<ImageState>('state', token)
+/** 画像タブの状態。読めた画像はストアにも入れる (どの画面も同じ画像を出すため) */
+export const fetchImageState = async (token: string) => {
+  const state = await call<ImageState>('state', token)
+  imageStore.getState().loadServer(state.images ?? {}, state.candidates ?? {})
+  return state
+}
 
 /** 撮り直しの印を付け外す。印の付いた枠は Mac の nr images:redo-flagged がまとめて取り直す */
 export const setRedo = async ({
@@ -291,53 +297,25 @@ export const recropImage = async ({
 export const isLockedError = (err: unknown) =>
   String((err as Error)?.message ?? err).startsWith('ロック中')
 
-// ── この画面の中で選んだ画像 (次のデプロイまで配信データに無い) ──
+// ── 画面に出す画像 (状態は imageStore.ts に 1 つ) ──
 
-// 画像は «番号:枠の位置» で持つので、語を並べ替え・移動すると同じ枠に別の語が来る。
-// 選んだときの語も覚え、語が違えば当てない (ジェシーで選んだ画像を、詰めて来たエクシアに付けない)
-let overrides: Record<string, { image: SlotImage; word?: string }> = {}
-const listeners = new Set<() => void>()
-const keyOf = (id: string, slot: string) => `${id}:${slot}`
-
-/** word を省くと、その枠で前に覚えた語のまま画像だけ差し替える (サーバの切り抜き後の画像) */
+/** この端末で選んだ画像をストアへ入れる。word を省くと前に覚えた語のまま画像だけ差し替える */
 export function setImageOverride(
   id: string,
   slot: string,
   image: SlotImage,
   word?: string
 ) {
-  const key = keyOf(id, slot)
-  overrides = {
-    ...overrides,
-    [key]: { image, word: word ?? overrides[key]?.word },
-  }
-  listeners.forEach((fn) => fn())
+  imageStore.getState().pick(id, slot, image, word)
 }
 
-/** 語の本体 (タグ・ラベルを落とす)。画面によってタグの持ち方が違っても同じ語として比べる */
-const baseWord = (word: string) =>
-  word
-    .split('#')[0]
-    .replace(/\s+-\w+/g, '')
-    .trim()
-
-/** 選び直した画像。word を渡すと、その語で選んだものだけ返す */
-export const imageOverride = (id: string, slot: string, word?: string) => {
-  const hit = overrides[keyOf(id, slot)]
-  if (!hit) return undefined
-  if (
-    word !== undefined &&
-    hit.word !== undefined &&
-    baseWord(hit.word) !== baseWord(word)
-  ) {
-    return undefined
-  }
-  return hit.image
-}
+/** 選んだ画像か imageSlots の画像 (その語のもの)。無ければ undefined */
+export const imageOverride = (id: string, slot: string, word?: string) =>
+  slotImageFull(imageStore.getState(), id, slot, word)
 
 /**
  * 1 枠の今の画像 (切り抜き用の元画像つき) と確定済みか。詳細パネルは表示用の URL しか
- * 持っていないので、ピッカーを開いたときにこれで取り直す。選び直した画像があればそれを優先
+ * 持っていないので、ピッカーを開いたときにこれで取り直す。この端末で選んだ画像があればそれを優先
  */
 export async function fetchSlotState(
   token: string,
@@ -352,10 +330,41 @@ export async function fetchSlotState(
   }
 }
 
+const keyOf = (id: string, slot: string) => `${id}:${slot}`
+
+let serverLoading: Promise<unknown> | null = null
+
 /**
- * 行の画像を、この画面の中で選び直した画像 (override) で差し替える。
- * 代表の一覧・カードは DB の語と配信データの画像で行を作るので、そのままでは
- * 画像タブで選び直した画像が次のデプロイまで出ない
+ * 画像の正本 (imageSlots) をストアへ読み込む。起動後に 1 度だけ (画像タブを開けば読み直す)。
+ * 読む前は配信データの画像で出し、読めたら全画面が同じ画像に揃う
+ */
+export function ensureServerImages(token: string) {
+  if (!token || imageStore.getState().serverLoaded || serverLoading) return
+  serverLoading = fetchImageState(token)
+    .catch((err) => console.error('image state', err))
+    .finally(() => {
+      serverLoading = null
+    })
+}
+
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 番号の語の並べ替え・移動を送り終えたら、imageSlots を読み直す (サーバが画像を語と同じ枠へ動かしている)。
+ * 続けて何件も終わるので、少し待ってまとめて 1 度だけ読む
+ */
+export function refreshServerImages(token: string, waitMs = 1500) {
+  if (!token) return
+  if (refreshTimer) clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null
+    fetchImageState(token).catch((err) => console.error('image state', err))
+  }, waitMs)
+}
+
+/**
+ * 行の画像を、ストアの画像 (選んだ画像 → imageSlots → 行の画像の順) で差し替える。
+ * 代表の一覧・カードは DB の語と配信データの画像で行を作るので、ここを通して他の画面と揃える
  */
 export function withImageOverrides<
   T extends {
@@ -364,51 +373,35 @@ export function withImageOverrides<
     imageUrl?: string
     word?: string
   },
->(
-  rows: T[],
-  num: string,
-  lookup: (
-    id: string,
-    slot: string,
-    word?: string
-  ) => SlotImage | undefined = imageOverride
-): T[] {
+>(rows: T[], num: string, state: ImageStoreState = imageStore.getState()): T[] {
   return rows.map((row) => {
-    const picked = lookup(num, imageSlotOf(row.slot, row.variant), row.word)
-    return picked?.url && picked.url !== row.imageUrl
-      ? { ...row, imageUrl: picked.url }
-      : row
+    const hit = slotImageOf(
+      state,
+      num,
+      imageSlotOf(row.slot, row.variant),
+      row.word,
+      row.imageUrl
+    )
+    return hit && hit.url !== row.imageUrl ? { ...row, imageUrl: hit.url } : row
   })
 }
 
-/** 選び直した画像が変わったら描き直す (一覧のように枠が多い画面で、行ごとに購読しないため) */
-export function useImageOverrides() {
-  const [, bump] = useState(0)
-  useEffect(() => {
-    const update = () => bump((v) => v + 1)
-    listeners.add(update)
-    return () => {
-      listeners.delete(update)
-    }
-  }, [])
-}
+/** ストアの画像の部分 (一覧のように枠が多い画面で、行ごとに購読しないため)。withImageOverrides に渡す */
+export const useImageOverrides = (): ImageStoreState =>
+  useImageStore(
+    (state) => state,
+    (a, b) =>
+      a.picked === b.picked &&
+      a.server === b.server &&
+      a.serverLoaded === b.serverLoaded
+  )
 
 /**
- * 選び直した画像があればそれを返す。無ければ undefined (配信データの画像を使う)。
- * word を渡すと、その語で選んだ画像だけ返す (並べ替えで同じ枠に来た別の語には出さない)
+ * 選んだ画像か imageSlots の画像 (切り抜き用の元画像つき)。無ければ undefined (呼び出し側の画像を使う)。
+ * word を渡すと、その語の画像だけ返す (並べ替えで同じ枠に来た別の語には出さない)
  */
-export function useImageOverride(id: string, slot: string, word?: string) {
-  const [image, setImage] = useState(() => imageOverride(id, slot, word))
-  useEffect(() => {
-    const update = () => setImage(imageOverride(id, slot, word))
-    update()
-    listeners.add(update)
-    return () => {
-      listeners.delete(update)
-    }
-  }, [id, slot, word])
-  return image
-}
+export const useImageOverride = (id: string, slot: string, word?: string) =>
+  useImageStore((state) => slotImageFull(state, id, slot, word))
 
 // ── 候補タブの一覧 ──
 
@@ -553,7 +546,8 @@ export function imageSaveQueue(): ImageSaveQueue {
           recropImage({ token: loadEditorToken(), id, slot, ...crop }),
       },
       onImage: (id, slot, image) => setImageOverride(id, slot, image),
-      onChange: notifyImageSave,
+      onChange: () =>
+        imageStore.getState().setSaves(saveQueue?.allMarks() ?? {}),
       isFatal: (err) => err instanceof ImageApiError && err.fatal,
       storage: {
         load: () => {
@@ -566,6 +560,8 @@ export function imageSaveQueue(): ImageSaveQueue {
         save: (text) => localStorage.setItem(SAVE_QUEUE_KEY, text),
       },
     })
+    // 端末に残っていた保存の状態 (作った時点で送り始めている) を画面へ
+    imageStore.getState().setSaves(saveQueue.allMarks())
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => saveQueue?.retryNow())
     }
@@ -583,5 +579,7 @@ export function queueImageSave(job: ImageSaveJob) {
 }
 
 /** 枠の保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗) */
-export const useImageSave = (id: string, slot: string) =>
-  useImageSaveMark(imageSaveQueue(), id, slot)
+export const useImageSave = (id: string, slot: string) => {
+  imageSaveQueue() // 端末に残った保存を、どの画面からでも開いた時点で送り始める
+  return useSlotSave(id, slot)
+}

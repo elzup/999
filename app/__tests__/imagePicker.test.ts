@@ -17,25 +17,34 @@ describe('枠名の対応 (語編集 ⇄ 画像のピッカー)', () => {
 
 describe('withImageOverrides', () => {
   const rows = [
-    { slot: 'wh1', imageUrl: 'old.jpg' },
-    { slot: 'wm1', variant: 'g', imageUrl: '' },
-    { slot: 'wm2', imageUrl: 'keep.jpg' },
+    { slot: 'wh1', word: '鯉', imageUrl: 'old.jpg' },
+    { slot: 'wm1', variant: 'g', word: '恋#g', imageUrl: '' },
+    { slot: 'wm2', word: '池', imageUrl: 'keep.jpg' },
   ]
-  const picked: Record<string, { url: string }> = {
-    '283:w1': { url: 'new.jpg' },
-    '283:w2#g': { url: 'tag.jpg' },
+  const state = {
+    picked: {
+      '283:w1': { image: { url: 'new.jpg', hash: 'n' }, word: '鯉' },
+      '283:w2#g': { image: { url: 'tag.jpg', hash: 't' }, word: '恋' },
+    },
+    server: {},
+    serverLoaded: false,
+    saves: {},
   }
-  const lookup = (id: string, slot: string) => picked[`${id}:${slot}`] as never
 
-  it('画像タブで選び直した画像を、枠 (タグ違いは «枠#タグ») で当てて差し替える', () => {
+  it('この端末で選んだ画像を、枠 (タグ違いは «枠#タグ») で当てて差し替える', () => {
     expect(
-      withImageOverrides(rows, '283', lookup).map((r) => r.imageUrl)
+      withImageOverrides(rows, '283', state).map((r) => r.imageUrl)
     ).toEqual(['new.jpg', 'tag.jpg', 'keep.jpg'])
   })
 
   it('別の番号の選び直しは当てない', () => {
     expect(
-      withImageOverrides(rows, '284', lookup).map((r) => r.imageUrl)
+      withImageOverrides(rows, '284', state).map((r) => r.imageUrl)
     ).toEqual(['old.jpg', '', 'keep.jpg'])
+  })
+
+  it('同じ枠でも別の語で選んだ画像は当てない (詰め直しで来た語)', () => {
+    const moved = [{ slot: 'wh1', word: 'エクシア', imageUrl: 'exia.jpg' }]
+    expect(withImageOverrides(moved, '283', state)[0].imageUrl).toBe('exia.jpg')
   })
 })

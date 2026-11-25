@@ -54,6 +54,7 @@ import type { KukuItem } from './lib/kukuQuiz'
 import { isBookmarkReviewDue } from './lib/bookmarkReview'
 import { useBackGuard } from './lib/useBackGuard'
 import { listenWriteQueue } from './lib/writeQueue'
+import { ensureServerImages, refreshServerImages } from './lib/imagePicker'
 import { parseNumberEntry, withNumberEntry } from './lib/liveEntry'
 import { NumberContext, type NumberContextValue } from './lib/numberContext'
 import {
@@ -204,8 +205,12 @@ export function App() {
   // 辞書データは deploy のときの写しなので、差し替えないと次の起動まで古い語のまま出る
   useEffect(() => {
     if (!token) return
+    // 画像の正本 (imageSlots) も読み込み、どの画面も同じ画像を出す (imageStore.ts)
+    ensureServerImages(token)
     return listenWriteQueue({
       onSettled: (num) => {
+        // 並べ替え・移動はサーバが画像を語と同じ枠へ動かすので読み直す
+        refreshServerImages(token)
         fetchAppNumberEntry(num, token)
           .then((raw) => {
             const entry = parseNumberEntry(raw)

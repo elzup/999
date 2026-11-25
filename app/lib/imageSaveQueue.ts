@@ -7,7 +7,6 @@
 // - 積んだ保存は端末 (localStorage) にも書き、閉じても再読み込みしても続きから送る
 // - 送り直しても通らないもの (4xx) だけ赤 (失敗) にして残す
 // - 同じ枠は 1 列に並べ、違う枠は同時に送る
-import { useEffect, useState } from 'preact/hooks'
 import type { CropPosition, SlotImage } from './imagePicker'
 import type { CropRect } from './cropRect'
 
@@ -97,6 +96,11 @@ export class ImageSaveQueue {
     return this.marks.get(keyOf(id, slot))
   }
 
+  /** 全部の枠の状態 (ストアへ写す。毎回新しいオブジェクト) */
+  allMarks(): Record<string, ImageSaveMark> {
+    return Object.fromEntries(this.marks)
+  }
+
   /** 待っている送り直しを今すぐ送る (オンラインに戻ったとき) */
   retryNow() {
     for (const [key, timer] of this.timers) {
@@ -127,7 +131,8 @@ export class ImageSaveQueue {
     if (at < 0) at = 0
     try {
       for (; at < stages.length; at++) {
-        job.stage = stages[at]
+        // 進んだ段は列の先頭を新しいオブジェクトに置き換えて覚える (積んだ側の job は書き換えない)
+        this.setHeadStage(key, stages[at])
         this.persist()
         await this.send(job, stages[at])
       }
@@ -157,6 +162,11 @@ export class ImageSaveQueue {
       )
       this.changed()
     }
+  }
+
+  private setHeadStage(key: string, stage: Stage) {
+    const [head, ...rest] = this.lanes.get(key) ?? []
+    if (head) this.lanes.set(key, [{ ...head, stage }, ...rest])
   }
 
   private async send(job: ImageSaveJob, stage: Stage) {
@@ -227,34 +237,9 @@ export class ImageSaveQueue {
     for (const job of jobs) {
       if (!job?.id || !job?.slot) continue
       const key = keyOf(job.id, job.slot)
-      this.lanes.set(key, [...(this.lanes.get(key) ?? []), job])
+      this.lanes.set(key, [...(this.lanes.get(key) ?? []), { ...job }])
       this.marks.set(key, { state: 'pending' })
     }
     for (const key of this.lanes.keys()) this.kick(key)
   }
-}
-
-// ── アプリで 1 本だけ持つ ──
-
-// 共有のキューは imagePicker.ts#imageSaveQueue が作る (API を持つのは向こう)
-const listeners = new Set<() => void>()
-
-export const notifyImageSave = () => listeners.forEach((fn) => fn())
-
-/** 枠の保存の状態 (黄 = 保存待ち / 緑 = 保存済み / 赤 = 失敗)。無ければ undefined */
-export function useImageSaveMark(
-  queue: ImageSaveQueue | null,
-  id: string,
-  slot: string
-) {
-  const [mark, setMark] = useState(() => queue?.mark(id, slot))
-  useEffect(() => {
-    const update = () => setMark(queue?.mark(id, slot))
-    update()
-    listeners.add(update)
-    return () => {
-      listeners.delete(update)
-    }
-  }, [queue, id, slot])
-  return mark
 }

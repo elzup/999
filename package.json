@@ -86,6 +86,7 @@
   },
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
-    "preact": "^10.29.0"
+    "preact": "^10.29.0",
+    "zustand": "5.0.3"
   }
 }

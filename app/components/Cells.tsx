@@ -7,7 +7,7 @@ import { formatCardId } from '../data/cards'
 import { candidatesOf, type Candidate } from '../lib/choice'
 import { nameOf } from '../lib/numberDetail'
 import { wordImage } from '../lib/wordImage'
-import { IMAGE_SLOT_OF, useImageOverride } from '../lib/imagePicker'
+import { imageSlotOf, useImageOverride } from '../lib/imagePicker'
 
 function scoreColor(score: number | null): string | null {
   if (score === null || score === undefined) return null
@@ -104,11 +104,11 @@ export function NumMdCard({
   selected: boolean
   onSelect: () => void
 }) {
-  // 詳細パネルで選び直した画像は次のデプロイまで配信データに無いので、詳細の語の行と同じく
-  // override で見せる。タグ違いで分けた語の画像 (tagImages) は枠の画像と別物なので使わない
-  const slot = cand ? (IMAGE_SLOT_OF[cand.slot] ?? cand.slot) : ''
+  // 画像はどの画面とも同じ順 (この端末で選んだ画像 → imageSlots → 配信データ) で引く (imageStore.ts)。
+  // タグ違いで分けた語は «枠#タグ» の画像 (枠の画像とは別物)
+  const slot = cand ? imageSlotOf(cand.slot, cand.variant) : ''
   const override = useImageOverride(num, slot, cand?.word)
-  const img = cand?.variant ? cand.img : (override?.url ?? cand?.img)
+  const img = override?.url ?? cand?.img
   if (!open) {
     return (
       <div

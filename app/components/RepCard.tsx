@@ -41,10 +41,11 @@ type Props = {
 
 function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
   const status = repStatus(doc)
-  useImageOverrides()
+  const images = useImageOverrides()
   const rows = withImageOverrides(
     withDeliveredImages(candidateRows(doc), entry),
-    doc.num
+    doc.num,
+    images
   )
   const hasPicks = rows.some((row) => row.repRank > 0)
   // 代表が空なら、確定で入る既定の枠を薄く見せる
