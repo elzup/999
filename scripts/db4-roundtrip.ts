@@ -77,7 +77,7 @@ const diffs = [
     }
   }),
   ...ff.map((entry: any) => {
-    const id = `ff:${String(entry.hex).toUpperCase()}`
+    const id = `hex:${String(entry.hex).toUpperCase()}`
     return {
       id,
       want: canonicalJson(entry),

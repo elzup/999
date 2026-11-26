@@ -34,5 +34,5 @@ export const symbolIdOf = {
   num: (num) => `num:${pad3(num)}`,
   date: (key) => `date:${key}`,
   card: (suit, rank) => `card:${suit}${rank}`,
-  ff: (hex) => `ff:${String(hex).toUpperCase()}`,
+  hex: (hex) => `hex:${String(hex).toUpperCase()}`,
 }

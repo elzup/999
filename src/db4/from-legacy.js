@@ -127,8 +127,8 @@ function ffDraft(entry) {
   const { hex, word, kana, ...rest } = entry
   const links = draftLinks(word, 'word', 0, { kana: text(kana) })
   return {
-    id: symbolIdOf.ff(hex),
-    kind: 'ff',
+    id: symbolIdOf.hex(hex),
+    kind: 'hex',
     links,
     kanaOnly: [],
     extras: links.length ? rest : { ...rest, kana },

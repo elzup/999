@@ -197,4 +197,13 @@ describe('db4 checkIntegrity', () => {
     expect(errors).toEqual([])
     expect(notices.map((n) => n.rule)).toEqual(['C3'])
   })
+  it('C9: 同じ kind の記号 2 つから指される語', () => {
+    const db = fromLegacy({
+      numbers: [
+        numberDoc('143', '', '氷山', { wm1: slot('氷山') }),
+        numberDoc('843', '', '氷山', { wm1: slot('氷山') }),
+      ],
+    })
+    expect(rulesOf(db)).toEqual(['C9'])
+  })
 })

@@ -7,10 +7,10 @@ export const ROLES = Object.freeze({
   P: { label: '人', kinds: ['card'], family: 'person' },
   A: { label: '行動', kinds: ['card'], family: 'action' },
   O: { label: '物', kinds: ['card'], family: 'thing' },
-  word: { label: '語', kinds: ['ff'], family: 'word' },
+  word: { label: '語', kinds: ['hex'], family: 'word' },
 })
 
-export const KINDS = Object.freeze(['num', 'date', 'card', 'ff'])
+export const KINDS = Object.freeze(['num', 'date', 'card', 'hex'])
 
 export const roleLabel = (code) => ROLES[code]?.label ?? code
 
