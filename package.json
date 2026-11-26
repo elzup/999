@@ -60,8 +60,8 @@
     "sync:private": "mkdir -p functions/private && cp private/data.json functions/private/data.json && cp src/visualize-words.data.json functions/private/visualize-words.data.json && node scripts/bake-console-state.js",
     "sync:functions": "bash scripts/sync-functions-lib.sh",
     "deploy:legacy": "node scripts/deploy-guard.ts && npm run build:preview && firebase deploy --only hosting",
-    "deploy": "node scripts/deploy-guard.ts && npm run images:pull && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
-    "deploy:api": "node scripts/deploy-guard.ts && npm run images:pull && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync",
+    "deploy": "node scripts/deploy-guard.ts && npm run images:pull && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,functions:db4Check",
+    "deploy:api": "node scripts/deploy-guard.ts && npm run images:pull && npm run build:data && npm run sync:private && npm run sync:functions && firebase deploy --only functions:api,functions:sheetSync,functions:db4Check",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {

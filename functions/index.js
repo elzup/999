@@ -81,6 +81,41 @@ export const sheetSync = onSchedule(
   }
 )
 
+// 旧 DB (numbers) と新しい形 (symbols / words) の毎晩の検査 (DB 計画 P3-7・P5-4)。
+// 違反 (C1〜C9・形) と旧と新の食い違い (C7) を数え、meta/db4Check に残す。違反があれば error のログを出す。
+// 読み取りは 1 回で約 4,500 (番号 1000 + 記号 1308 + 語 2225)。無料枠 5 万/日に収まる
+export const db4Check = onSchedule(
+  {
+    schedule: 'every day 04:00',
+    timeZone: 'Asia/Tokyo',
+    region: REGION,
+    timeoutSeconds: 300,
+  },
+  async () => {
+    const [{ db }, { checkAll }] = await Promise.all([
+      loadFirestoreLib(),
+      import('./lib/db4/check-all.js'),
+    ])
+    const readAll = async (col) =>
+      (await db.raw.collection(col).get()).docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }))
+    const [numbers, symbols, words] = await Promise.all([
+      readAll('numbers'),
+      readAll('symbols'),
+      readAll('words'),
+    ])
+    const report = {
+      ...checkAll({ numbers, symbols, words }),
+      checkedAt: new Date().toISOString(),
+    }
+    await db.raw.collection('meta').doc('db4Check').set(report)
+    if (report.ok) console.log('db4Check ok', JSON.stringify(report.counts))
+    else console.error('db4Check NG', JSON.stringify(report))
+  }
+)
+
 export const api = onRequest(
   {
     region: REGION,
