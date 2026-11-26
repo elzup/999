@@ -6,7 +6,7 @@
 // - その語がこの記号に 1 回だけ出る (ID から項目を 1 つに戻せる)
 // 作り直せないものは文字列のまま残す (代表は picks に {k, w}、評価は looseRatings)。
 
-import { itemsOfSymbol } from './items.js'
+import { itemsOfSymbol, variantOf } from './items.js'
 
 const REF_KEYS = new Set(['k', 'w', 'v'])
 
@@ -19,9 +19,19 @@ function matcher(symbol, wordsById) {
     const hits = items.filter(
       (item) => item.notation === ref.w && item.kana === ref.k
     )
-    if (hits.length !== 1 || hits[0].links.length !== 1) return null
-    const { wordId } = hits[0].links[0]
-    return countOf(wordId) === 1 ? wordId : null
+    if (hits.length === 1 && hits[0].links.length === 1) {
+      const { wordId } = hits[0].links[0]
+      return countOf(wordId) === 1 ? wordId : null
+    }
+    // 出典 2 つの項目の 1 語分 (217 ニーナ#ｺｰﾄﾞｷﾞｱｽ: P7-4)。アプリは項目を出典ごとの語に分けて代表を選ぶ
+    const parts = items.flatMap((item) =>
+      item.kana === ref.k && item.links.length > 1
+        ? item.links.filter((l) => variantOf(item, l, wordsById) === ref.w)
+        : []
+    )
+    return parts.length === 1 && countOf(parts[0].wordId) === 1
+      ? parts[0].wordId
+      : null
   }
 }
 

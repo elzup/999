@@ -59,6 +59,7 @@ import {
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
 import GradeBadge from './GradeBadge'
+import { repMark as rankMark } from '../lib/repMark'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
@@ -68,8 +69,9 @@ import ImagePickerSheet from './ImagePickerSheet'
 import { useNumberContext } from '../lib/numberContext'
 import { tagNameOf, useTagNames } from '../lib/tagNames'
 
-const REP_RANKS = [1, 2] as const
-const REP_LABEL: Record<1 | 2, string> = { 1: '①', 2: '②' }
+/** 代表の順位のボタン。代表は上限なし (D-0170) なので、今の数 + 1 まで (最低 ①②) */
+const repRanksFor = (count: number) =>
+  Array.from({ length: Math.max(2, count + 1) }, (_, i) => i + 1)
 
 const RATING_LABEL: Record<number, string> = {
   [-1]: '−1',
@@ -231,6 +233,7 @@ export default function NumberDetailTab({
       )
     : []
   const picks = doc?.rep?.picks ?? []
+  const repRanks = repRanksFor(picks.length)
   const repState = doc ? repStatus(doc) : 'open'
   const notice = loading
     ? '読み込み中…'
@@ -355,6 +358,7 @@ export default function NumberDetailTab({
         return (
           <SlotCard
             key={card.key}
+            repRanks={repRanks}
             token={token}
             row={card}
             slotWord={row.word}
@@ -552,7 +556,7 @@ export default function NumberDetailTab({
             >
               {REP_STATUS_LABEL[repState]}
             </button>
-            {REP_RANKS.map((rank) => {
+            {repRanksFor(picks.length - 1).map((rank) => {
               const pick = picks[rank - 1]
               const live = pick && livePicks(doc).includes(pick)
               return (
@@ -565,7 +569,7 @@ export default function NumberDetailTab({
                   }
                   title={pick && !live ? '今の候補に無い語' : undefined}
                 >
-                  {REP_LABEL[rank]}{' '}
+                  {rankMark(rank)}{' '}
                   {pick ? parseWord(pick.w).base || pick.w : '—'}
                 </span>
               )
@@ -643,6 +647,7 @@ function SlotCard({
   onDelete,
   onPickRep,
   onRate,
+  repRanks,
 }: {
   /** 画像のピッカーを開く通行証 */
   token: string
@@ -679,7 +684,9 @@ function SlotCard({
   onDropAt: () => void
   onEdit: (patch: Partial<SlotRow>) => void
   onDelete: () => void
-  onPickRep: (rank: 1 | 2) => void
+  onPickRep: (rank: number) => void
+  /** 代表の順位のボタン (1 始まり) */
+  repRanks: number[]
   onRate: (value: number) => void
 }) {
   // 書き換え中・足しただけの枠は、代表と評価を付ける相手 (保存された語) と
@@ -879,16 +886,16 @@ function SlotCard({
               role="group"
               aria-label="代表"
             >
-              {REP_RANKS.map((rank) => (
+              {repRanks.map((rank) => (
                 <button
                   key={rank}
                   class={'nd-rank' + (row.repRank === rank ? ' on' : '')}
                   disabled={!row.word}
                   aria-pressed={row.repRank === rank}
                   onClick={() => onPickRep(rank)}
-                  title={`代表${REP_LABEL[rank]}にする / 外す`}
+                  title={`代表${rankMark(rank)}にする / 外す`}
                 >
-                  {REP_LABEL[rank]}
+                  {rankMark(rank)}
                 </button>
               ))}
             </div>

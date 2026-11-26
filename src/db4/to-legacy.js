@@ -1,7 +1,7 @@
 // v4 の記号 → 今の形 (numbers の文書・カード・FF)。移行中の写しと、往復の検査に使う。
 // 番号の一覧の文字列 (hito / mono) は保存せず、ここで毎回作る (db-design-v4.md J4)。
 
-import { itemsOfSymbol } from './items.js'
+import { itemsOfSymbol, variantOf } from './items.js'
 
 const SIDES = [
   { role: 'hito', prefix: 'wh' },
@@ -15,11 +15,19 @@ function joinItems(items) {
   return items.slice(0, end + 1).join(',')
 }
 
-function refOf(items, wordId) {
+function refOf(items, wordId, wordsById) {
   const item = items.find((i) => i.links.some((l) => l.wordId === wordId))
-  return item
-    ? { ...(item.kana !== undefined ? { k: item.kana } : {}), w: item.notation }
-    : null
+  if (!item) return null
+  // 出典 2 つの項目の 1 語を指す代表は、その 1 語分の表記で返す (P7-4)
+  const w =
+    item.links.length > 1
+      ? variantOf(
+          item,
+          item.links.find((l) => l.wordId === wordId),
+          wordsById
+        ) ?? item.notation
+      : item.notation
+  return { ...(item.kana !== undefined ? { k: item.kana } : {}), w }
 }
 
 /**
@@ -74,7 +82,7 @@ export function toNumberDoc(symbol, wordsById) {
     ? {
         ...symbol.rep,
         picks: symbol.rep.picks.map((p) =>
-          p.wordId ? refOf(items, p.wordId) : p
+          p.wordId ? refOf(items, p.wordId, wordsById) : p
         ),
       }
     : undefined
@@ -87,7 +95,10 @@ export function toNumberDoc(symbol, wordsById) {
     ...(symbol.looseRatings !== undefined
       ? {
           ratings: [
-            ...rated.map((l) => ({ ...refOf(items, l.wordId), v: l.rating })),
+            ...rated.map((l) => ({
+              ...refOf(items, l.wordId, wordsById),
+              v: l.rating,
+            })),
             ...symbol.looseRatings,
           ],
         }

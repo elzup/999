@@ -101,8 +101,8 @@ export function slotRows(doc: NumberDoc): SlotRow[] {
       imageUrl: value.imageUrl,
       imageStale: Boolean(
         value.imageUrl &&
-        value.confirmedFor &&
-        nameOf(value.confirmedFor) !== nameOf(value.word)
+          value.confirmedFor &&
+          nameOf(value.confirmedFor) !== nameOf(value.word)
       ),
       rankey: rankeyOf(value.kana, doc.num, value.word),
       pt: doc.derived?.ptBySlot?.[slot],
@@ -218,7 +218,7 @@ export function nextRatingValue(
 export function setRepPick(
   doc: NumberDoc,
   slot: string,
-  rank: 1 | 2,
+  rank: number,
   /** タグ違いで分けた行の語 (美咲#bang)。無ければ枠の語そのもの */
   word?: string
 ): RepPick[] {
@@ -230,10 +230,9 @@ export function setRepPick(
   if (picks[rank - 1] && sameValue(picks[rank - 1], target)) {
     return picks.filter((_, i) => i !== rank - 1)
   }
+  // その順位にいた代表と入れ替える。代表は上限なし (D-0170)、他の代表は残す
   const others = picks.filter((pick) => !sameValue(pick, target))
-  const next =
-    rank === 1 ? [target, ...others.slice(1, 2)] : [others[0], target]
-  return next.filter(Boolean)
+  return [...others.slice(0, rank - 1), target, ...others.slice(rank)]
 }
 
 /**
@@ -243,7 +242,7 @@ export function setRepPick(
 export function repPickOp(
   doc: NumberDoc,
   slot: string,
-  rank: 1 | 2,
+  rank: number,
   word?: string
 ): { op: 'rep'; picks: RepPick[]; confirmed: boolean } {
   const picks = setRepPick(doc, slot, rank, word)
