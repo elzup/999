@@ -105,8 +105,9 @@ export const db4Check = onSchedule(
         id: d.id,
         ...d.data(),
       }))
-    const [numbers, symbols, words, tags] = await Promise.all([
-      readAll('numbers'),
+    // 旧 DB (numbers) は廃止したので読まない。旧と新の突き合わせ (C7) もしない
+    const numbers = []
+    const [symbols, words, tags] = await Promise.all([
       readAll('symbols'),
       readAll('words'),
       readAll('tags'),
@@ -118,7 +119,7 @@ export const db4Check = onSchedule(
     }
     // 読んだついでにバックアップ (P0-3)。非公開バケット、30 日で消える (lifecycle)。
     // 検査より先に書く: 検査で何か見つかった日こそ、その時点の中身が要る
-    await backupNightly({ numbers, symbols, words, tags, checkedAt })
+    await backupNightly({ symbols, words, tags, checkedAt })
     await db.raw.collection('meta').doc('db4Check').set(report)
     if (report.ok) console.log('db4Check ok', JSON.stringify(report.counts))
     else console.error('db4Check NG', JSON.stringify(report))
@@ -601,7 +602,8 @@ let numberDocs = null
 
 async function readNumberDocs() {
   const now = new Date().toISOString()
-  const { store } = await loadSheetSync()
+  // 正本 (新しい形) から読む。旧 DB (numbers) は読まない (D-0174 の片付け)
+  const { db: store } = await loadFirestoreLib()
   if (!numberDocs) {
     numberDocs = { docs: await store.readChangedSince(null), pulledAt: now }
     return numberDocs.docs
@@ -686,11 +688,11 @@ async function liveNumberEntry(num) {
     (entry) => entry.num === num
   )
   if (!delivered) return null
-  const [{ store }, lib] = await Promise.all([
-    loadSheetSync(),
+  const [{ db }, lib] = await Promise.all([
+    loadFirestoreLib(),
     loadAppEntryLib(),
   ])
-  const doc = (await store.readNumbers([num]))[num]
+  const doc = (await db.readNumberMap([num]))[num]
   if (doc && numberDocs) numberDocs.docs = { ...numberDocs.docs, [num]: doc }
   return lib.entryWithDoc(delivered, doc)
 }
