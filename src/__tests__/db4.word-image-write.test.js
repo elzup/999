@@ -17,9 +17,22 @@ function fakeFirestore(built) {
     exists: data.has(r.path),
     data: () => data.get(r.path),
   })
-  const store = { collection: (col) => ({ doc: (id) => ref(col, id) }) }
+  const store = {
+    collection: (col) => ({
+      col,
+      isCollection: true,
+      doc: (id) => ref(col, id),
+    }),
+  }
   const tx = {
-    get: async (r) => snapOf(r),
+    get: async (r) =>
+      r.isCollection
+        ? {
+            docs: [...data.keys()]
+              .filter((k) => k.startsWith(`${r.col}/`))
+              .map((k) => snapOf({ path: k, id: k.split('/')[1] })),
+          }
+        : snapOf(r),
     getAll: async (...refs) => refs.map(snapOf),
     set: (r, value, opts) =>
       data.set(r.path, opts?.merge ? { ...data.get(r.path), ...value } : value),

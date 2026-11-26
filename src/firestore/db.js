@@ -12,6 +12,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { createDb4Reader } from '../db4/reader.js'
+import { TAGS as DB4_TAGS } from '../db4/tag-codec.js'
 import {
   commitNumberWrite,
   isDb4WriteOn,
@@ -116,6 +117,11 @@ export function connect({
         s.exists ? { id: s.id, ...s.data() } : undefined
       )
     },
+    listTags: async () =>
+      (await tx.get(store.collection(DB4_TAGS))).docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })),
     findSymbolsUsing: async (wordIds) => {
       const chunks = Array.from(
         { length: Math.ceil(wordIds.length / ANY_LIMIT) },

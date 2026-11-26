@@ -95,25 +95,30 @@ export const db4Check = onSchedule(
     timeoutSeconds: 300,
   },
   async () => {
-    const [{ db }, { checkAll }] = await Promise.all([
+    const [{ db }, { checkAll }, { decodeWords }] = await Promise.all([
       loadFirestoreLib(),
       import('./lib/db4/check-all.js'),
+      import('./lib/db4/tag-codec.js'),
     ])
     const readAll = async (col) =>
       (await db.raw.collection(col).get()).docs.map((d) => ({
         id: d.id,
         ...d.data(),
       }))
-    const [numbers, symbols, words] = await Promise.all([
+    const [numbers, symbols, words, tags] = await Promise.all([
       readAll('numbers'),
       readAll('symbols'),
       readAll('words'),
+      readAll('tags'),
     ])
     const checkedAt = new Date().toISOString()
-    const report = { ...checkAll({ numbers, symbols, words }), checkedAt }
+    const report = {
+      ...checkAll({ numbers, symbols, words: decodeWords(words, tags), tags }),
+      checkedAt,
+    }
     // 読んだついでにバックアップ (P0-3)。非公開バケット、30 日で消える (lifecycle)。
     // 検査より先に書く: 検査で何か見つかった日こそ、その時点の中身が要る
-    await backupNightly({ numbers, symbols, words, checkedAt })
+    await backupNightly({ numbers, symbols, words, tags, checkedAt })
     await db.raw.collection('meta').doc('db4Check').set(report)
     if (report.ok) console.log('db4Check ok', JSON.stringify(report.counts))
     else console.error('db4Check NG', JSON.stringify(report))
@@ -694,18 +699,26 @@ async function liveNumberEntry(num) {
 async function withLiveTagNames(data) {
   try {
     const lib = await loadSheetSync()
-    const doc = await lib.tagNamesStore.read()
-    if (!doc) return data
+    // 出典タグの表 (tags、D-0176)。コード → { title, short }
+    const { db } = await loadFirestoreLib()
+    const snap = await db.raw.collection('tags').get()
+    if (snap.empty) return data
+    const names = Object.fromEntries(
+      snap.docs.map((d) => {
+        const t = d.data()
+        return [t.code, { title: t.title ?? '', short: t.short ?? '' }]
+      })
+    )
     return {
       ...data,
       // 表示用 (略称 → 正式名) と、検索・グループの見出し用 (正式名) の 2 つを最新にする
       tagNames: {
         ...(data.tagNames ?? {}),
-        ...lib.tagNames.displayNamesOf(doc.names),
+        ...lib.tagNames.displayNamesOf(names),
       },
       tagTitles: {
         ...(data.tagTitles ?? {}),
-        ...lib.tagNames.searchNamesOf(doc.names),
+        ...lib.tagNames.searchNamesOf(names),
       },
     }
   } catch (error) {

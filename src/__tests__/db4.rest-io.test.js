@@ -20,6 +20,8 @@ function fakeFirestore(docs) {
     if (path === ':beginTransaction') return json(200, { transaction: 'tx1' })
     if (path === ':commit') return json(200, {})
     if (path === ':runQuery') {
+      // タグの表 (条件なし) は空で返す
+      if (!body.structuredQuery.where) return json(200, [{ readTime: 't' }])
       const values =
         body.structuredQuery.where.fieldFilter.value.arrayValue.values.map(
           (v) => v.stringValue

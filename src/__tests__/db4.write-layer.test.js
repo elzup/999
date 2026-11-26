@@ -11,7 +11,12 @@ import { writeNumber } from '../firestore/write.js'
 
 /** メモリ上の Firestore。transaction は書きを溜めて最後にまとめて反映し、投げたら捨てる */
 function memoryDb() {
-  const cols = { numbers: new Map(), [SYMBOLS]: new Map(), [WORDS]: new Map() }
+  const cols = {
+    numbers: new Map(),
+    [SYMBOLS]: new Map(),
+    [WORDS]: new Map(),
+    tags: new Map(),
+  }
   const db = {
     cols,
     async runTransaction(fn) {
@@ -21,6 +26,8 @@ function memoryDb() {
           ids.map((id) =>
             cols[col].has(id) ? { id, ...cols[col].get(id) } : undefined
           ),
+        listTags: async () =>
+          [...(cols.tags ?? new Map())].map(([id, t]) => ({ id, ...t })),
         findSymbolsUsing: async (wordIds) =>
           [...cols[SYMBOLS]]
             .filter(([, s]) => s.wordIds.some((id) => wordIds.includes(id)))

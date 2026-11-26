@@ -28,6 +28,15 @@ export const migrationWordId = (seed) =>
 export const issueWordId = (random = randomBytes) =>
   `w_${encodeBits(random(ID_CHARS))}`
 
+export const TAG_ID_RE = /^t_[2-9a-km-np-z]{10}$/
+
+/** 出典タグの ID。移行のときはコード (ｺｰﾄﾞｷﾞｱｽ など) から作り、以後は固定 (コードを変えても ID は変わらない) */
+export const migrationTagId = (code) =>
+  `t_${encodeBits(createHash('sha1').update(`tag|${code}`).digest())}`
+
+export const issueTagId = (random = randomBytes) =>
+  `t_${encodeBits(random(ID_CHARS))}`
+
 const pad3 = (num) => String(num).padStart(3, '0')
 
 export const symbolIdOf = {

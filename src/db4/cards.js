@@ -1,5 +1,6 @@
 // カードの読み書き (正本は DB の card:* 記号。D-0174: スプレッドシートは廃止の方向)
 import { z } from 'zod'
+import { decodeWords, TAGS } from './tag-codec.js'
 import { toCard } from './to-legacy.js'
 import {
   commitSymbolWrite,
@@ -36,10 +37,15 @@ export async function readCards(store) {
   const wordSnaps = ids.length
     ? await store.getAll(...ids.map((id) => store.collection(WORDS).doc(id)))
     : []
+  const tags = (await store.collection(TAGS).get()).docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }))
   const wordsById = Object.fromEntries(
-    wordSnaps
-      .filter((w) => w.exists)
-      .map((w) => [w.id, { id: w.id, ...w.data() }])
+    decodeWords(
+      wordSnaps.filter((w) => w.exists).map((w) => ({ id: w.id, ...w.data() })),
+      tags
+    ).map((w) => [w.id, w])
   )
   return symbols.map((s) => toCard(s, wordsById))
 }
