@@ -65,21 +65,8 @@ const PATCH_ALIASES = {
 
 const REGION = process.env.FUNCTION_REGION || 'asia-northeast1'
 
-// シートで直した分を Firestore へ、アプリで直した分をシートへ流す (D-0022)。
-// 数分の遅れは個人用途で許容できる。アプリ保存は PATCH の直後に即時でも流す
-export const sheetSync = onSchedule(
-  {
-    schedule: 'every 5 minutes',
-    region: REGION,
-    secrets: [GOOGLE_SERVICE_ACCOUNT_JSON],
-    // 初回と 1 日 1 回の全件読みは 1000 件を読むので既定の 60 秒では心許ない
-    timeoutSeconds: 300,
-  },
-  async () => {
-    const result = await runSheetSync()
-    console.log('sheetSync', JSON.stringify(result.counts))
-  }
-)
+// スプレッドシートとの同期 (sheetSync) は止めた (D-0174: スプレッドシート廃止、正本は DB、編集はアプリ)。
+// 同期のコード (runSheetSync 等) は片付けまで残す
 
 const BACKUP_BUCKET = 'anoz-memosupo-db-backup'
 
@@ -263,6 +250,23 @@ export const api = onRequest(
         return
       }
 
+      // タグ 1 つの名前 (title / short) を直す (D-0174)
+      const tagMatch = path.match(/^\/tags\/([^/]+)$/)
+      if (tagMatch && req.method === 'PATCH') {
+        const [{ db }, tagNamesLib] = await Promise.all([
+          loadFirestoreLib(),
+          import('./lib/firestore/tag-names.js'),
+        ])
+        const result = await tagNamesLib.saveTagName(
+          db,
+          decodeURIComponent(tagMatch[1]),
+          req.body || {},
+          new Date().toISOString()
+        )
+        res.status(result.ok ? 200 : 400).json(result)
+        return
+      }
+
       // カード 1 枚を直す (正本は DB の card:*。D-0174)。本文は直す欄だけ
       const cardMatch = path.match(/^\/cards\/([SHCD](?:A|[2-9]|10|J|Q|K))$/)
       if (cardMatch && req.method === 'PATCH') {
@@ -301,12 +305,7 @@ export const api = onRequest(
           writes,
           now: new Date().toISOString(),
         })
-        // 保存が通ったらその番号だけ即時にシートへ流す。失敗しても保存は
-        // 巻き戻さない (Firestore が正本の 1 つなので、定期の回が拾い直す)
         if (req.method === 'PATCH' && status === 200) {
-          await runSheetSync({ only: [numberMatch[1]] }).catch((error) =>
-            console.error('sheetSync(only)', numberMatch[1], error)
-          )
           // 語を消すと即時反映が枠を詰めて文書を書き直し、updatedAt が進む。
           // 書き直す前の文書を返すと、画面が古い updatedAt で次の保存をして 409 になる
           const latest = await handleNumbersRequest({

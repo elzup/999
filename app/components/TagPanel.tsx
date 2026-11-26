@@ -3,6 +3,7 @@ import type { NumberEntry } from '../data/schema'
 import { collectNumberTags } from '../lib/tags'
 import Screen, { DockBar } from './Screen'
 import { tagNameOf, useTagNames } from '../lib/tagNames'
+import TagNameForm from './TagNameForm'
 
 type Props = {
   numbers: NumberEntry[]
@@ -64,6 +65,7 @@ function TagPanel({ numbers }: Props) {
             </span>
             <span class="tag-detail-sub">{selectedTag.nums.length}番号</span>
           </div>
+          <TagNameForm key={selectedTag.tag} tag={selectedTag.tag} />
           <div class="tag-num-list">
             {selectedTag.nums.map((num) => (
               <span key={num} class="tag-num-chip">
