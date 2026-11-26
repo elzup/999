@@ -36,54 +36,9 @@ const doc = {
   source: 'console',
 }
 
-describe('rest: symbols 読みのとき、保存は symbols / words にも同じ commit で書く', () => {
-  it('numbers と symbols / words が 1 つの commit に入る', async () => {
-    const { fetchImpl, commits } = fakeFetch({ num: '051', updatedAt: 't0' })
-    const db = connectRest({
-      projectId: 'p',
-      token: 't',
-      fetchImpl,
-      source: 'symbols',
-    })
-    const result = await writeNumber(db, {
-      num: '051',
-      doc,
-      expectedUpdatedAt: 't0',
-    })
-    expect(result.ok).toBe(true)
-    expect(commits).toHaveLength(1)
-    const names = commits[0].writes.map(
-      (w) => w.update.name.split('/documents/')[1]
-    )
-    expect(names).toContain('numbers/051')
-    expect(names).toContain('symbols/n:051')
-    expect(
-      names.filter((n) => n.startsWith('words/w_')).length
-    ).toBeGreaterThan(0)
-    expect(commits[0].transaction).toBe('tx1')
-  })
-
-  it('語は merge (updateMask 付き)、記号は丸ごと置き換え', async () => {
-    const { fetchImpl, commits } = fakeFetch({ num: '051', updatedAt: 't0' })
-    const db = connectRest({
-      projectId: 'p',
-      token: 't',
-      fetchImpl,
-      source: 'symbols',
-    })
-    await writeNumber(db, { num: '051', doc, expectedUpdatedAt: 't0' })
-    const writes = commits[0].writes
-    const word = writes.find((w) => w.update.name.includes('/words/'))
-    const symbol = writes.find((w) => w.update.name.includes('/symbols/'))
-    expect(word.updateMask.fieldPaths.sort()).toEqual([
-      'category',
-      'key',
-      'source',
-      'text',
-    ])
-    expect(symbol.updateMask).toBeUndefined()
-  })
-
+// 新しい形 (v4) への書き込みは src/__tests__/db4.rest-io.test.js (DB4_WRITE=on)。
+// 11/26 の hash ID の写し (symbols/n:051) は P5 で捨てたので、その試験も消した
+describe('rest: 競合', () => {
   it('競合したら何も書かない', async () => {
     const { fetchImpl, commits } = fakeFetch({ num: '051', updatedAt: 'other' })
     const db = connectRest({
