@@ -114,8 +114,8 @@ describe('syncNumber: 語の ID の引き継ぎ', () => {
     )
     const byRole = (r, role) =>
       r.symbol.links.find((l) => l.role === role && l.order === 0).wordId
-    expect(byRole(b, 'hito')).toBe(byRole(a, 'hito'))
-    expect(byRole(b, 'mono')).toBe(byRole(a, 'mono'))
+    expect(byRole(b, 'person')).toBe(byRole(a, 'person'))
+    expect(byRole(b, 'thing')).toBe(byRole(a, 'thing'))
   })
 
   it('代表は引き継いだ ID を指す', () => {

@@ -36,6 +36,7 @@ const { values: args } = parseArgs({
     repair: { type: 'boolean', default: false },
     'word-images': { type: 'boolean', default: false },
     cards: { type: 'boolean', default: false },
+    'rename-roles': { type: 'boolean', default: false },
     apply: { type: 'boolean', default: false },
   },
 })
@@ -54,8 +55,13 @@ const TARGETS = {
 const target = TARGETS[args.target as keyof typeof TARGETS]
 if (!target) throw new Error('--target emulator か --target prod を付ける')
 if (
-  [args.build, args.repair, args['word-images'], args.cards].filter(Boolean)
-    .length !== 1
+  [
+    args.build,
+    args.repair,
+    args['word-images'],
+    args.cards,
+    args['rename-roles'],
+  ].filter(Boolean).length !== 1
 )
   throw new Error('--build / --repair / --word-images / --cards のどれか 1 つ')
 if (!target.token) throw new Error('FIRESTORE_ACCESS_TOKEN が無い')
@@ -271,6 +277,48 @@ if (args.cards) {
       `書いた後: DB と違う ${differs(s2, w2).length} 枚 / 違反 ${
         checkIntegrity({ symbols: s2, words: w2 }).errors.length
       }`
+    )
+  }
+}
+
+// --rename-roles: role のコードを person / thing / action に (D-0175)。1 回だけ使う
+if (args['rename-roles']) {
+  const RENAME: Record<string, string> = {
+    hito: 'person',
+    mono: 'thing',
+    P: 'person',
+    O: 'thing',
+    A: 'action',
+  }
+  const renamed = oldSymbols.flatMap(({ id, ...s }: any) => {
+    const links = (s.links ?? []).map((l: any) => ({
+      ...l,
+      role: RENAME[l.role] ?? l.role,
+    }))
+    const kanaOnly = (s.kanaOnly ?? []).map((k: any) => ({
+      ...k,
+      role: RENAME[k.role] ?? k.role,
+    }))
+    const same =
+      JSON.stringify(links) === JSON.stringify(s.links) &&
+      JSON.stringify(kanaOnly) === JSON.stringify(s.kanaOnly ?? [])
+    return same ? [] : [{ id, ...s, links, kanaOnly }]
+  })
+  console.log(`role を書き換える記号 ${renamed.length}`)
+  if (args.apply && renamed.length) {
+    await commitAll(
+      renamed.map(({ id, ...s }: any) => ({
+        update: {
+          name: `${root}/${SYMBOLS}/${id}`,
+          fields: toFields(JSON.parse(JSON.stringify(s))),
+        },
+      }))
+    )
+    const s2 = await listAll(SYMBOLS)
+    console.log(
+      `書いた後: 違反 ${
+        checkIntegrity({ symbols: s2, words: oldWords }).errors.length
+      } / 食い違う番号 ${driftedNums(numbers, s2, oldWords).length}`
     )
   }
 }

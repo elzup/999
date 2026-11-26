@@ -12,7 +12,8 @@ import { formatNotation, parseNotation } from '../symbols/model.js'
 const ATTRIBUTE_TAGS = new Set(['g', 'i'])
 
 /** 表記の並び (人の側は «語#タグ -ラベル»、物の側は «語 -ラベル#タグ») */
-const styleOf = (role) => (role === 'mono' || role === 'O' ? 'mono' : 'hito')
+// 表記の書き方は旧の人 / 物の流儀 (物はラベルをタグより先に書く)
+const styleOf = (role) => (role === 'thing' ? 'mono' : 'hito')
 
 /** 部品 → 項目の綴り。parts は同じ項目の語 (出典の順) */
 export function formatItem(parts, role) {

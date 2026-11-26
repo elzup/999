@@ -1,12 +1,11 @@
 // 区分 (role) の enum 表。DB にはコードだけを書き、表示名はここ 1 か所で引く (D-0161)。
 // spec: .metarc/db-design-v4.md §2
 
+// 番号とカードで同じコード (D-0175)。記号の種類は kind で見分ける
 export const ROLES = Object.freeze({
-  hito: { label: '人', kinds: ['num', 'date'], family: 'person' },
-  mono: { label: '物', kinds: ['num', 'date'], family: 'thing' },
-  P: { label: '人', kinds: ['card'], family: 'person' },
-  A: { label: '行動', kinds: ['card'], family: 'action' },
-  O: { label: '物', kinds: ['card'], family: 'thing' },
+  person: { label: '人', kinds: ['num', 'date', 'card'], family: 'person' },
+  thing: { label: '物', kinds: ['num', 'date', 'card'], family: 'thing' },
+  action: { label: '行動', kinds: ['card'], family: 'action' },
   hex: { label: '語', kinds: ['hex'], family: 'hex' },
 })
 

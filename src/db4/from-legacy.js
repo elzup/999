@@ -10,8 +10,9 @@ import { resolveRefs } from './refs.js'
 import { roleFamily } from './roles.js'
 
 const SIDES = [
-  { role: 'hito', prefix: 'wh' },
-  { role: 'mono', prefix: 'wm' },
+  // field は旧の形の一覧の欄名 (hito / mono)。DB の role は person / thing (D-0175)
+  { role: 'person', prefix: 'wh', field: 'hito' },
+  { role: 'thing', prefix: 'wm', field: 'mono' },
 ]
 const SLOTS_PER_SIDE = 3
 const NUMBER_STRUCTURED = new Set([
@@ -26,9 +27,9 @@ const NUMBER_STRUCTURED = new Set([
   'derived',
 ])
 const CARD_FIELDS = [
-  { role: 'P', word: 'person', act: 'actionP', score: 'personScore' },
-  { role: 'O', word: 'object', act: 'actionO', score: 'objectScore' },
-  { role: 'A', word: 'action', score: 'actionScore' },
+  { role: 'person', word: 'person', act: 'actionP', score: 'personScore' },
+  { role: 'thing', word: 'object', act: 'actionO', score: 'objectScore' },
+  { role: 'action', word: 'action', score: 'actionScore' },
 ]
 
 const groupBy = (list, keyOf) =>
@@ -69,7 +70,7 @@ function slotExtrasOf(slot, withImage = false) {
   return Object.keys(extras).length ? { slotExtras: extras } : {}
 }
 
-function numberSideLinks(doc, { role, prefix }) {
+function numberSideLinks(doc, { role, prefix, field }) {
   // 枠は詰めて読む (sheet-bisync の packGroup と同じ)。本番の中抜けは 0 件 (2026-11-26)
   const filled = Array.from(
     { length: SLOTS_PER_SIDE },
@@ -87,7 +88,7 @@ function numberSideLinks(doc, { role, prefix }) {
       ? [{ role, order, kana: text(slot.kana), ...slotExtrasOf(slot, true) }]
       : []
   )
-  const listLinks = itemsOfList(doc[role])
+  const listLinks = itemsOfList(doc[field])
     .slice(SLOTS_PER_SIDE)
     .flatMap((raw, i) => draftLinks(raw, role, SLOTS_PER_SIDE + i))
   return { links: [...slotLinks, ...listLinks], kanaOnly }

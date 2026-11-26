@@ -4,8 +4,8 @@
 import { itemsOfSymbol, variantOf } from './items.js'
 
 const SIDES = [
-  { role: 'hito', prefix: 'wh' },
-  { role: 'mono', prefix: 'wm' },
+  { role: 'person', prefix: 'wh' },
+  { role: 'thing', prefix: 'wm' },
 ]
 const SLOTS_PER_SIDE = 3
 
@@ -110,9 +110,9 @@ export function toNumberDoc(symbol, wordsById) {
 }
 
 const CARD_FIELDS = [
-  { role: 'P', word: 'person', act: 'actionP', score: 'personScore' },
-  { role: 'O', word: 'object', act: 'actionO', score: 'objectScore' },
-  { role: 'A', word: 'action', score: 'actionScore' },
+  { role: 'person', word: 'person', act: 'actionP', score: 'personScore' },
+  { role: 'thing', word: 'object', act: 'actionO', score: 'objectScore' },
+  { role: 'action', word: 'action', score: 'actionScore' },
 ]
 
 export function toCard(symbol, wordsById) {

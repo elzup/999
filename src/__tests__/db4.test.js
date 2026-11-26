@@ -18,8 +18,8 @@ describe('db4 ids', () => {
     expect(issueWordId()).toMatch(WORD_ID_RE)
   })
   it('区分の表示名は表から引く', () => {
-    expect(roleLabel('mono')).toBe('物')
-    expect(roleLabel('A')).toBe('行動')
+    expect(roleLabel('thing')).toBe('物')
+    expect(roleLabel('action')).toBe('行動')
   })
 })
 
@@ -132,7 +132,7 @@ describe('db4 checkIntegrity', () => {
         symbols: [
           {
             ...s,
-            links: s.links.map((l, i) => (i === 0 ? { ...l, role: 'P' } : l)),
+            links: s.links.map((l, i) => (i === 0 ? { ...l, role: 'action' } : l)),
           },
         ],
       })
@@ -160,7 +160,7 @@ describe('db4 checkIntegrity', () => {
           {
             id: 'num:002',
             kind: 'num',
-            links: [{ wordId: stray.id, role: 'hito', order: 0 }],
+            links: [{ wordId: stray.id, role: 'person', order: 0 }],
             wordIds: [stray.id],
             kanaOnly: [],
             extras: {},
