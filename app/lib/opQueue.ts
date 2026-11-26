@@ -401,9 +401,11 @@ export class NumberOpQueue {
           // 捨てない。黄のまま積んでおき、間隔を空けて送り直す
           this.attempts.set(num, (this.attempts.get(num) ?? 0) + 1)
           this.persist()
-          this.deps.onChange()
           this.lanes.delete(num)
+          // 通知より先に送り直しを予約する。画面は通知の時点の写し (snapshot) を読むので、
+          // 逆順だと «通信待ち» (retrying) が立たないまま描かれる
           this.retryLater()
+          this.deps.onChange()
           return
         }
         // 送り直しても通らない (409 など)。読み直して、すでにそのとおりなら成功とみなす
