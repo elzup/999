@@ -24,9 +24,9 @@ const BUNDLES = 'bundles'
 
 /**
  * 番号の文書をどこから読むか。
- * - numbers (既定): 表示用の読みも numbers から
- * - symbols: 表示用の読み (readNumber / readNumbers / readChangedSince) を新しい形 (v4) から組み立てる (DB 計画 P6)。
- *   保存 (競合検出の読みと書き込み) は numbers が正本のまま。DB4_WRITE=on が要る
+ * - numbers (既定): numbers を正本として読む
+ * - symbols: 新しい形 (v4) を正本として読む (保存の競合検出も、表示の読みも)。numbers は同じ transaction で書く写し (DB 計画 P6・P7)。
+ *   DB4_WRITE=on が要る
  * 新しい形への書き込みは NUMBERS_SOURCE と別に DB4_WRITE で決める (src/db4/write-layer.js)
  * 設定を変えたら `gcloud functions describe` で環境変数を確かめる (.env を消しても消えない)
  */
@@ -146,8 +146,9 @@ export function connect({
     async runTransaction(fn) {
       return store.runTransaction(async (tx) => {
         return fn({
-          // 保存の前の読み (競合検出) は正本の numbers から。新しい形から読むのは表示用だけ (P7 で移す)
+          // 保存の前の読み (競合検出) は正本から。symbols のときは新しい形が正本 (P7)、numbers はその写し
           get: async (num) => {
+            if (symbols) return symbols.readInTransaction(tx, num)
             const snap = await tx.get(store.collection(NUMBERS).doc(num))
             return snap.exists ? snap.data() : undefined
           },

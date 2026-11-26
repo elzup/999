@@ -51,6 +51,25 @@ export function createDb4Reader(store) {
   }
 
   return {
+    /** 保存の transaction の中で 1 件 (競合検出のため記号も語も tx で読む) */
+    async readInTransaction(tx, num) {
+      const snap = await tx.get(symbols.doc(symbolIdOf.num(num)))
+      if (!snap.exists) return undefined
+      const symbol = { id: snap.id, ...snap.data() }
+      const ids = [...new Set(symbol.wordIds ?? [])]
+      const wordSnaps = ids.length
+        ? await tx.getAll(...ids.map((id) => words.doc(id)))
+        : []
+      const wordsById = Object.fromEntries(
+        wordSnaps
+          .filter((w) => w.exists)
+          .map((w) => [w.id, { id: w.id, ...w.data() }])
+      )
+      if (Object.keys(wordsById).length !== ids.length)
+        throw new Error(`words にない語を指している: num:${num}`)
+      return withDerived(toNumberDoc(symbol, wordsById))
+    },
+
     async readNumbers(nums) {
       const out = {}
       for (const part of chunks(nums, READ_BATCH)) {

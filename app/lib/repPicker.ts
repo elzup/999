@@ -49,7 +49,7 @@ export function isStale(doc: NumberDoc): boolean {
 /**
  * 1 回のタップで代表がどう変わるか。key は候補行の key (candidateRows。
  * 分けていない行はスロット名なので、従来どおりスロット名でも引ける)。
- * 選ばれていない候補 → 空いている方 (① → ②) に入る。①② が埋まっていれば ② を置き換える。
+ * 選ばれていない候補 → 列の後ろに足す (①②③…、上限なし: D-0170)。
  * 選ばれている候補 → 外す。① を外すと ② が ① に繰り上がる
  */
 export function togglePick(doc: NumberDoc, key: string): RepPick[] {
@@ -60,7 +60,8 @@ export function togglePick(doc: NumberDoc, key: string): RepPick[] {
   if (picks.some((pick) => sameValue(pick, target))) {
     return picks.filter((pick) => !sameValue(pick, target))
   }
-  return picks.length >= MAX_PICKS ? [picks[0], target] : [...picks, target]
+  // 代表は上限なし (D-0170)。後ろに足す
+  return [...picks, target]
 }
 
 export function matchesFilter(doc: NumberDoc, filter: RepFilter): boolean {

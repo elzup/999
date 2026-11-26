@@ -21,8 +21,8 @@ import { IconEdit } from './Icons'
 import type { SaveMark } from '../lib/opQueue'
 import { wordImage } from '../lib/wordImage'
 import { useImageOverrides, withImageOverrides } from '../lib/imagePicker'
+import { repMark } from '../lib/repMark'
 
-const MARK = ['', '①', '②']
 const SAVE_LABEL: Record<SaveMark, string> = {
   pending: '保存待ち',
   saved: '保存済み',
@@ -100,10 +100,10 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
                   </span>
                 </span>
                 {row.repRank ? (
-                  <span class={'wl-rep ' + status}>{MARK[row.repRank]}</span>
+                  <span class={'wl-rep ' + status}>{repMark(row.repRank)}</span>
                 ) : ghostRank ? (
                   <span class="wl-rep ghost" title="確定で入る既定">
-                    {MARK[ghostRank]}
+                    {repMark(ghostRank)}
                   </span>
                 ) : null}
                 {row.rankey ? (
@@ -131,8 +131,8 @@ function RepCard({ doc, entry, mark, onPick, onConfirm, onOpen }: Props) {
               {status === 'confirmed'
                 ? '確定済み'
                 : hasPicks
-                  ? 'この代表で確定'
-                  : '既定 (①②) で確定'}
+                ? 'この代表で確定'
+                : '既定 (①②) で確定'}
             </span>
           </button>
         )}

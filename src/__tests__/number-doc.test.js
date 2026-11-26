@@ -85,7 +85,7 @@ describe('firestore number document', () => {
     }
   })
 
-  it('REQ-FS-004: rejects three or more representative picks', () => {
+  it('代表は 3 つ以上でもよい (上限なし: D-0170)', () => {
     const doc = build({
       rep: {
         picks: [
@@ -97,9 +97,7 @@ describe('firestore number document', () => {
       },
     })
 
-    expect(validateNumberDoc('051', doc)).toMatchObject({
-      error: 'too many picks',
-    })
+    expect(validateNumberDoc('051', doc).error).toBeUndefined()
   })
 
   it('REQ-FS-005: the mandatory gate itself rejects derived', () => {
