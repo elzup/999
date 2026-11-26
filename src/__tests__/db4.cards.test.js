@@ -25,6 +25,8 @@ function memory() {
     [SYMBOLS]: new Map(built.symbols.map(({ id, ...s }) => [id, s])),
     [WORDS]: new Map(built.words.map(({ id, ...w }) => [id, w])),
     tags: new Map(),
+    snapshots: new Map(),
+    meta: new Map(),
   }
   const run = async (fn) => {
     const writes = []

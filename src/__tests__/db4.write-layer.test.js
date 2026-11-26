@@ -16,6 +16,8 @@ function memoryDb() {
     [SYMBOLS]: new Map(),
     [WORDS]: new Map(),
     tags: new Map(),
+    snapshots: new Map(),
+    meta: new Map(),
   }
   const db = {
     cols,

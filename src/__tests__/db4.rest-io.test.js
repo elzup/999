@@ -114,6 +114,9 @@ describe('REST の経路 + 新しい形 (DB4_WRITE=on)', () => {
       `${ROOT}/numbers/106`,
       `${ROOT}/symbols/num:106`,
       `delete ${ROOT}/words/${wMai}`,
+      // 読む形の写しと «最後に書いた時刻» も同じ commit で
+      `${ROOT}/snapshots/num_1`,
+      `${ROOT}/meta/dbChange`,
     ])
   })
 })

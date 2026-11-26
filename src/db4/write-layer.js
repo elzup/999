@@ -13,6 +13,12 @@
 import { symbolIdOf } from './ids.js'
 import { checkIntegrity } from './integrity.js'
 import { shapeErrors } from './schema.js'
+import {
+  CHANGE_DOC,
+  SNAPSHOTS,
+  snapshotEntryOf,
+  snapshotIdOf,
+} from './snapshot.js'
 import { syncNumber } from './sync-number.js'
 import { decodeWords, encodeWords, TAGS } from './tag-codec.js'
 
@@ -50,8 +56,15 @@ export async function prepareSymbolWrite(io, symbolId) {
     ? (await io.findSymbolsUsing(prevIds)).filter((s) => s.id !== symbolId)
     : []
   const sharedIds = new Set(others.flatMap((s) => s.wordIds ?? []))
+  // 読む形の写し (100 番号ずつ / カード)。この記号の行だけ書き換えるので、今の中身を読む
+  const snapshotId = snapshotIdOf(symbolId)
+  const [snapshot] = snapshotId
+    ? await io.getDocs(SNAPSHOTS, [snapshotId])
+    : [null]
   return {
     symbolId,
+    snapshotId,
+    snapshot: snapshot ?? null,
     prevSymbol: prevSymbol ?? null,
     prevWords,
     sharedIds,
@@ -94,5 +107,16 @@ export function commitNumberWrite(io, plan, nextDoc, legacy) {
   for (const word of encoded.docs)
     io.set(WORDS, word.id, clean(withoutId(word)))
   for (const id of result.deleteWordIds) io.remove(WORDS, id)
+  const entry =
+    plan.snapshotId &&
+    snapshotEntryOf(
+      result.symbol,
+      Object.fromEntries(linkedWords.filter(Boolean).map((w) => [w.id, w]))
+    )
+  if (entry) {
+    const docs = { ...(plan.snapshot?.docs ?? {}), [entry[0]]: entry[1] }
+    io.set(SNAPSHOTS, plan.snapshotId, clean({ docs }))
+  }
+  io.set(CHANGE_DOC.col, CHANGE_DOC.id, { at: new Date().toISOString() })
   return result
 }
