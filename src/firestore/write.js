@@ -8,6 +8,7 @@
 //   db.runTransaction(fn) / tx.get(num) -> doc|undefined / tx.set(num, doc)
 // こうしないとテストで «読んだ後に他の面が書いた» 状況を作れない。
 
+import { Db4WriteError } from '../db4/write-layer.js'
 import { withDerived } from './derived.js'
 import { assertPreserves, validateNumberDoc } from './number-doc.js'
 
@@ -27,8 +28,22 @@ export async function writeNumber(
   const valid = validateNumberDoc(num, doc)
   if (valid.error) return valid
 
+  try {
+    return await runWrite(db, { num, doc, expectedUpdatedAt, intent })
+  } catch (error) {
+    // 新しい形が作れない (形・整合の違反)。transaction ごと止まったので numbers にも書いていない
+    if (error instanceof Db4WriteError) {
+      return { error: 'db4_invalid', problems: error.problems }
+    }
+    throw error
+  }
+}
+
+function runWrite(db, { num, doc, expectedUpdatedAt, intent }) {
   return db.runTransaction(async (tx) => {
     const current = await tx.get(num)
+    // 新しい形 (symbols / words) の今の値。transaction は読みを全部先に済ませる決まりなので、ここで読む
+    const mirrorPlan = await tx.prepareMirror?.(num)
 
     // REQ-FS-012: 読んでから書くまでに他の面が触っていたら諦める。
     // これが無いと、同期の最中に入ったコンソールの編集を巻き戻してしまう
@@ -47,7 +62,7 @@ export async function writeNumber(
     await tx.set(num, next)
     // 新しいコレクション (symbols / words) への写し。同じ transaction で書くので、numbers とずれない。
     // 口を持たない db (テスト・REST の CLI) では書かない
-    await tx.mirror?.(num, next)
+    await tx.mirror?.(num, next, mirrorPlan)
     return { ok: true, doc: next }
   })
 }

@@ -9,6 +9,12 @@
 // NUMBERS_SOURCE=symbols のときだけ、保存を同じ commit で symbols / words にも書く (db.js の mirror と同じ
 // mirrorWrites)。numbers のとき (既定) は numbers だけを書く (db.js の numbersSource の説明を参照)
 
+import {
+  commitNumberWrite,
+  isDb4WriteOn,
+  prepareNumberWrite,
+  SYMBOLS as DB4_SYMBOLS,
+} from '../db4/write-layer.js'
 import { mirrorWrites } from '../symbols/mirror.js'
 
 const NUMBERS = 'numbers'
@@ -91,9 +97,61 @@ export function connectRest({
     const query = transaction
       ? `?transaction=${encodeURIComponent(transaction)}`
       : ''
-    const doc = await call(`/${col}/${id}${query}`)
+    // 記号の ID は num:106 の形。: をそのまま置くと REST のメソッド (:commit など) と紛れる
+    const doc = await call(`/${col}/${encodeURIComponent(id)}${query}`)
     return doc?.fields ? fromFields(doc.fields) : undefined
   }
+
+  // array-contains-any は 1 回 30 値まで (Firestore の上限)
+  const ANY_LIMIT = 30
+  const restIo = (transaction, writes) => ({
+    getDocs: (col, ids) =>
+      Promise.all(
+        ids.map(async (id) => {
+          const doc = await readDoc(col, id, transaction)
+          return doc ? { id, ...doc } : undefined
+        })
+      ),
+    findSymbolsUsing: async (wordIds) => {
+      const chunks = Array.from(
+        { length: Math.ceil(wordIds.length / ANY_LIMIT) },
+        (_, i) => wordIds.slice(i * ANY_LIMIT, (i + 1) * ANY_LIMIT)
+      )
+      const rows = await Promise.all(
+        chunks.map((chunk) =>
+          call(':runQuery', {
+            method: 'POST',
+            body: {
+              transaction,
+              structuredQuery: {
+                from: [{ collectionId: DB4_SYMBOLS }],
+                where: {
+                  fieldFilter: {
+                    field: { fieldPath: 'wordIds' },
+                    op: 'ARRAY_CONTAINS_ANY',
+                    value: toValue(chunk),
+                  },
+                },
+              },
+            },
+          })
+        )
+      )
+      const docs = rows
+        .flat()
+        .filter((row) => row.document)
+        .map((row) => ({
+          id: decodeURIComponent(row.document.name.split('/').at(-1)),
+          ...fromFields(row.document.fields ?? {}),
+        }))
+      return [...new Map(docs.map((d) => [d.id, d])).values()]
+    },
+    set: (col, id, data) =>
+      writes.push({
+        update: { name: docName(col, id), fields: toFields(data) },
+      }),
+    remove: (col, id) => writes.push({ delete: docName(col, id) }),
+  })
 
   return {
     async runTransaction(fn) {
@@ -111,8 +169,18 @@ export function connectRest({
             update: { name: docName(NUMBERS, num), fields: toFields(doc) },
           })
         },
+        // 新しい形 (v4) への書き込み。db.js と同じ口 (DB4_WRITE=on のときだけ)
+        ...(isDb4WriteOn()
+          ? {
+              prepareMirror: (num) =>
+                prepareNumberWrite(restIo(transaction, writes), num),
+              mirror: async (_num, doc, plan) => {
+                commitNumberWrite(restIo(transaction, writes), plan, doc)
+              },
+            }
+          : {}),
         // 写しが作れなければ投げて commit しない (symbols が正本なので、numbers だけ進めない)
-        ...(source === 'symbols'
+        ...(source === 'symbols' && !isDb4WriteOn()
           ? {
               mirror: async (_num, doc) => {
                 for (const write of mirrorWrites(
