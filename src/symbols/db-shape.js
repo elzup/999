@@ -57,7 +57,8 @@ function exactLink(symbol, wordsById, ref, wordIds) {
   const link = symbol.links.find((l) => l.wordId === wordIds[0])
   const word = wordsById[wordIds[0]]
   if (!link || !word) return null
-  const sameKana = String(link.kana ?? '') === String(ref.k ?? '')
+  // '' と欄なしを同じに扱うと、戻したとき k が '' ⇄ 欄なし に変わる (枠の外の語はかなを持たない)
+  const sameKana = link.kana === ref.k
   return sameKana && notationOf(link, word) === ref.w ? link : null
 }
 
