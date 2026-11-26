@@ -16,7 +16,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 lib="$root/functions/lib"
 
 rm -rf "$lib"
-mkdir -p "$lib/firestore" "$lib/data" "$lib/images"
+mkdir -p "$lib/firestore" "$lib/data" "$lib/images" "$lib/symbols"
 
 for name in number-doc write derived console-writes db \
   sheet-bisync sheet-bisync-run sheet-io bisync-store sync-status fingerprint tag-names app-entry; do
@@ -34,6 +34,11 @@ done
 # web 版の画像コンソール (console-route.js / index.js が読む)。印と、その場の取り直し (検索 → DL → webp → GCS)
 # targets / tag-variants / live-targets は /console/state に DB の最新の語を重ねるのに使う
 # slot-moves は番号の語を並べ替え・移動したときに画像を語に付いて回らせる (/numbers/:num の slots)
+# DB 作り直し: numbers を書くとき symbols / words にも写す (db.js → symbols/mirror.js)
+for name in model db-shape mirror symbol-source; do
+  cp "$root/src/symbols/$name.js" "$lib/symbols/$name.js"
+done
+
 for name in slot-docs slot-store uploader fetch-one search ddg bing download process query \
   targets tag-variants live-targets slot-moves; do
   cp "$root/src/images/$name.js" "$lib/images/$name.js"

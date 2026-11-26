@@ -44,11 +44,14 @@ export function createBisyncStore(db) {
 
     /** iso が null なら全件。updatedAt は ISO 文字列なので文字列比較で順序が合う */
     async readChangedSince(iso) {
+      // 読む先 (numbers / symbols) は db が決める (NUMBERS_SOURCE)。口を持たない db (テスト) は numbers を直に読む
+      if (db.readChangedSince) return db.readChangedSince(iso)
       const query = iso ? numbers.where('updatedAt', '>', iso) : numbers
       return dataOf((await query.get()).docs)
     },
 
     async readNumbers(nums) {
+      if (db.readNumberMap) return db.readNumberMap(nums)
       const out = {}
       for (let i = 0; i < nums.length; i += READ_BATCH) {
         const refs = nums.slice(i, i + READ_BATCH).map((n) => numbers.doc(n))
