@@ -15,6 +15,7 @@ import {
 } from './data/storage'
 import type { AppData, CardEntry } from './data/schema'
 import { CARD_SAVED_EVENT } from './lib/cardApi'
+import { TAG_SAVED_EVENT, type TagName } from './lib/tagApi'
 import type { TabId } from './data/constants'
 import { BAR_TAB_LABELS, VALID_TABS } from './data/constants'
 import type { TabVisibility } from './data/storage'
@@ -233,8 +234,32 @@ export function App() {
       saveAppDataCache(JSON.stringify(next))
       setData(next)
     }
+    // タグの名前: 表示用 (略称 → 正式名) と正式名の表を差し替える (サーバの withLiveTagNames と同じ規則)
+    const onTagSaved = (event: Event) => {
+      const saved = (event as CustomEvent<TagName>).detail
+      const current = dataRef.current
+      if (!current || !saved) return
+      const { [saved.tag]: _n, ...names } = current.tagNames ?? {}
+      const { [saved.tag]: _t, ...titles } = current.tagTitles ?? {}
+      const display = saved.short || (saved.title === '?' ? '' : saved.title)
+      const next = {
+        ...current,
+        tagNames: display ? { ...names, [saved.tag]: display } : names,
+        tagTitles:
+          saved.title && saved.title !== '?'
+            ? { ...titles, [saved.tag]: saved.title }
+            : titles,
+      }
+      dataRef.current = next
+      saveAppDataCache(JSON.stringify(next))
+      setData(next)
+    }
     window.addEventListener(CARD_SAVED_EVENT, onSaved)
-    return () => window.removeEventListener(CARD_SAVED_EVENT, onSaved)
+    window.addEventListener(TAG_SAVED_EVENT, onTagSaved)
+    return () => {
+      window.removeEventListener(CARD_SAVED_EVENT, onSaved)
+      window.removeEventListener(TAG_SAVED_EVENT, onTagSaved)
+    }
   }, [])
 
   useEffect(() => {

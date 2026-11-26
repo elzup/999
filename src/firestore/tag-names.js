@@ -76,3 +76,24 @@ export async function syncTagNames({ readValues, store, now, apply = true }) {
   if (apply && changed.length) await store.write({ names, updatedAt: now })
   return { count: Object.keys(names).length, changed }
 }
+
+/** アプリから 1 タグの名前を直す (D-0174: スプレッドシートの代わり)。両方空ならそのタグを消す */
+export async function saveTagName(db, tag, { title, short }, now) {
+  const clean = (v) => String(v ?? '').trim()
+  const key = clean(tag)
+  const isValid =
+    key &&
+    key.length <= 40 &&
+    clean(title).length <= 100 &&
+    clean(short).length <= 40
+  if (!isValid) return { error: 'invalid_tag' }
+  const ref = db.raw.collection(COLLECTION).doc(DOC_ID)
+  return db.raw.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    const { [key]: _old, ...rest } = snap.exists ? snap.data().names ?? {} : {}
+    const entry = { title: clean(title), short: clean(short) }
+    const names = entry.title || entry.short ? { ...rest, [key]: entry } : rest
+    tx.set(ref, { names, updatedAt: now })
+    return { ok: true, tag: key, ...entry }
+  })
+}
