@@ -17,10 +17,10 @@ import {
 } from '../lib/worstRank'
 import TaggedWord from './TaggedWord'
 import TierCover from './TierCover'
+import { repMark } from '../lib/repMark'
 
 /** 出す番号の数。直す相手を探す画面なので、悪い方から少しだけ */
 const SHOWN = 30
-const REP_MARK = ['', '①', '②']
 
 const worstOf = (g: Graded) => patternName(g.ids[g.ids.length - 1] ?? 'double')
 
@@ -31,7 +31,7 @@ function GradeLine({ g, word }: { g: Graded; word?: GradedWord }) {
       {word ? (
         <>
           {word.repRank ? (
-            <span class="wr-rep">{REP_MARK[word.repRank]}</span>
+            <span class="wr-rep">{repMark(word.repRank)}</span>
           ) : null}
           <TaggedWord word={word.word} />
           {word.rating === -1 ? <span class="wr-rate">-1</span> : null}
@@ -100,7 +100,7 @@ function Summary({ row }: { row: WorstRow }) {
   return (
     <span class="wr-best">
       <span class="wr-word">
-        {row.fromRep ? REP_MARK[basis.repRank] : '代表なし'}{' '}
+        {row.fromRep ? repMark(basis.repRank) : '代表なし'}{' '}
         <TaggedWord word={basis.word} />
       </span>
       <span class="wr-pat">{worstOf(basis)}</span>

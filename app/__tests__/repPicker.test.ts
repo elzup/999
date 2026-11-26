@@ -34,7 +34,7 @@ describe('togglePick', () => {
     expect(second).toEqual([pick('こい', '鯉'), pick('こい', '鯉太郎')])
   })
 
-  it('①② が埋まっていれば ② を置き換える', () => {
+  it('①② が埋まっていても後ろに足す (上限なし: D-0170)', () => {
     const d = doc({
       rep: {
         picks: [pick('こい', '鯉'), pick('こい', '鯉太郎')],
@@ -43,6 +43,7 @@ describe('togglePick', () => {
     })
     expect(togglePick(d, 'wh2')).toEqual([
       pick('こい', '鯉'),
+      pick('こい', '鯉太郎'),
       pick('こいん', '小犬丸'),
     ])
   })

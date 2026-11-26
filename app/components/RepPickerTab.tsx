@@ -54,6 +54,7 @@ import {
 import TaggedWord from './TaggedWord'
 import WorstRankView from './WorstRankView'
 import Rankey from './Rankey'
+import { repMark } from '../lib/repMark'
 import GradeBadge from './GradeBadge'
 import { byGrade, decadeGrades, gradeColor } from '../lib/gradeColor'
 import { gradeWords, type GradedWord } from '../lib/worstRank'
@@ -69,7 +70,6 @@ const VIEW_LABELS: Record<View, string> = {
 }
 /** 百の位・状態で絞らず、1000 番号まとめて見る表示 */
 const isWholeView = (view: View) => view === 'stats' || view === 'worst'
-const MARK = ['', '①', '②']
 
 type Props = {
   token: string
@@ -132,7 +132,7 @@ function PickChip({
           </span>
         </span>
       </span>
-      {row.repRank ? <span class="rp-mark">{MARK[row.repRank]}</span> : null}
+      {row.repRank ? <span class="rp-mark">{repMark(row.repRank)}</span> : null}
     </button>
   )
 }
