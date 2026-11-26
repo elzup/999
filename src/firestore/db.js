@@ -11,6 +11,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { mirrorWrites } from '../symbols/mirror.js'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
@@ -91,6 +92,22 @@ export function connect({ projectId = defaultProjectId() } = {}) {
           },
           set: async (num, doc) => {
             tx.set(store.collection(NUMBERS).doc(num), doc)
+          },
+          mirror: async (num, doc) => {
+            let writes
+            try {
+              writes = mirrorWrites(doc, new Date().toISOString())
+            } catch (error) {
+              // 写しが作れなくても保存は止めない。正本はまだ numbers で、写しのずれは
+              // scripts/migrate-symbols.ts --verify が拾い、--apply で作り直せる
+              console.error('mirror(symbols)', num, error)
+              return
+            }
+            for (const write of writes) {
+              tx.set(store.collection(write.col).doc(write.id), write.data, {
+                merge: write.merge,
+              })
+            }
           },
         })
       })

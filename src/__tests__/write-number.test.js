@@ -201,3 +201,45 @@ describe('writeNumber — the single write gate', () => {
     expect(db.docs['052']).toBeUndefined()
   })
 })
+
+describe('writeNumber: 新しいコレクションへの写し (DB 作り直しの段 2)', () => {
+  it('numbers に書いた中身と同じものを、同じ transaction の mirror に渡す', async () => {
+    const mirrored = []
+    const db = {
+      async runTransaction(fn) {
+        return fn({
+          get: async () => stored,
+          set: async () => {},
+          mirror: async (num, doc) => mirrored.push({ num, doc }),
+        })
+      },
+    }
+    const result = await writeNumber(db, {
+      num: '051',
+      doc: { ...stored, mono: '鯉' },
+      intent: ['mono'],
+    })
+    expect(result.ok).toBe(true)
+    expect(mirrored).toEqual([{ num: '051', doc: result.doc }])
+  })
+
+  it('衝突で書かなかったときは写さない', async () => {
+    const mirrored = []
+    const db = {
+      async runTransaction(fn) {
+        return fn({
+          get: async () => stored,
+          set: async () => {},
+          mirror: async (num) => mirrored.push(num),
+        })
+      },
+    }
+    const result = await writeNumber(db, {
+      num: '051',
+      doc: stored,
+      expectedUpdatedAt: 'old',
+    })
+    expect(result.error).toBe('conflict')
+    expect(mirrored).toEqual([])
+  })
+})

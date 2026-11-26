@@ -12,13 +12,13 @@
 // 代表・評価はまだ «かな + 表記» で語を指している。語の id に置き換えるのは次の段 (人が決める 4 件が要る)。
 // 違いは 2 つだけ: 結び付きの配列の名前を DB の設計どおり `words` にする (model.js では links)、
 // 語の文書 ID を発番する (w_ + 鍵の hash。表記を直しても ID は変えない。鍵は key 欄に持つ)。
-import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore, type Firestore } from 'firebase-admin/firestore'
 import { canonicalJson } from '../src/firestore/number-doc.js'
 import { fromDbSymbol, toDbSymbol } from '../src/symbols/db-shape.js'
+import { SYMBOLS, WORDS, wordDoc, wordDocId } from '../src/symbols/mirror.js'
 import {
   fromCard,
   fromNumberDoc,
@@ -37,8 +37,6 @@ const { values: args } = parseArgs({
 })
 
 const NUMBERS = 'numbers'
-const SYMBOLS = 'symbols'
-const WORDS = 'words'
 // Firestore の 1 batch の上限は 500 書き込み
 const BATCH_SIZE = 400
 
@@ -61,10 +59,6 @@ function guard() {
   }
   return project
 }
-
-/** 語の文書 ID。鍵 (種別|本体|出典) から 1 回だけ作り、以後は表記が変わっても変えない */
-const wordDocId = (key: string) =>
-  'w_' + createHash('sha1').update(key).digest('hex').slice(0, 12)
 
 // Firestore は undefined を受け付けない。値の無い欄は落とす (往復の比較も同じ扱い)
 const clean = <T>(value: T): T => JSON.parse(JSON.stringify(value))
@@ -219,13 +213,7 @@ async function main() {
     ...Object.values(words).map((w) => ({
       col: WORDS,
       id: wordDocId(w.id),
-      data: {
-        category: w.category,
-        text: w.text,
-        source: w.source,
-        key: w.id,
-        updatedAt: now,
-      },
+      data: { ...wordDoc(w), updatedAt: now },
     })),
     ...converted.map((c) => ({
       col: SYMBOLS,

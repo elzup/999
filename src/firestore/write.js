@@ -45,6 +45,9 @@ export async function writeNumber(
 
     const next = withDerived(doc)
     await tx.set(num, next)
+    // 新しいコレクション (symbols / words) への写し。同じ transaction で書くので、numbers とずれない。
+    // 口を持たない db (テスト・REST の CLI) では書かない
+    await tx.mirror?.(num, next)
     return { ok: true, doc: next }
   })
 }
