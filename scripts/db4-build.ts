@@ -16,6 +16,7 @@ import { parseCardsTsv } from '../src/cards-tsv.js'
 import { fromLegacy } from '../src/db4/from-legacy.js'
 import { driftedNums } from '../src/db4/check-all.js'
 import { migrationTagId } from '../src/db4/ids.js'
+import { migrateMarks } from '../src/db4/marks.js'
 import { decodeWords, encodeWords, TAGS } from '../src/db4/tag-codec.js'
 import { linkImagesFromSlots, wordImagePlan } from '../src/db4/word-image.js'
 import { checkIntegrity } from '../src/db4/integrity.js'
@@ -40,6 +41,7 @@ const { values: args } = parseArgs({
     cards: { type: 'boolean', default: false },
     'rename-roles': { type: 'boolean', default: false },
     tags: { type: 'boolean', default: false },
+    marks: { type: 'boolean', default: false },
     apply: { type: 'boolean', default: false },
   },
 })
@@ -65,6 +67,7 @@ if (
     args.cards,
     args['rename-roles'],
     args.tags,
+    args.marks,
   ].filter(Boolean).length !== 1
 )
   throw new Error('--build / --repair / --word-images / --cards のどれか 1 つ')
@@ -379,6 +382,50 @@ if (args.tags) {
       } / 違反 ${
         checkIntegrity({ symbols: oldSymbols, words: decoded }).errors.length
       } / 食い違う番号 ${driftedNums(numbers, oldSymbols, decoded).length}`
+    )
+  }
+}
+
+// --marks: 属性・ラベルを置き場所ごとに分ける (D-0177)。1 回だけ使う
+if (args.marks) {
+  const next = migrateMarks({ symbols: oldSymbols, words: oldWords })
+  const symbolsChanged = next.symbols.filter(
+    (s: any, i: number) => JSON.stringify(s) !== JSON.stringify(oldSymbols[i])
+  )
+  const encoded = encodeWords(next.words, oldTags).docs
+  const wordsChanged = encoded.filter(
+    (w: any, i: number) => JSON.stringify(w) !== JSON.stringify(rawWords[i])
+  )
+  const shape = shapeErrors({
+    symbols: next.symbols,
+    words: encoded,
+    tags: oldTags,
+  })
+  const { errors } = checkIntegrity(next)
+  console.log(
+    `書き換える記号 ${symbolsChanged.length} / 語 ${wordsChanged.length} / 形の誤り ${shape.length} / 違反 ${errors.length}`
+  )
+  for (const e of shape.slice(0, 5)) console.log('   ', e)
+  if (shape.length || errors.length) throw new Error('誤りがあるので書かない')
+  if (args.apply) {
+    const clean = (v: unknown) => JSON.parse(JSON.stringify(v))
+    await commitAll([
+      ...symbolsChanged.map(({ id, ...s }: any) => ({
+        update: {
+          name: `${root}/${SYMBOLS}/${id}`,
+          fields: toFields(clean(s)),
+        },
+      })),
+      ...wordsChanged.map(({ id, ...w }: any) => ({
+        update: { name: `${root}/${WORDS}/${id}`, fields: toFields(clean(w)) },
+      })),
+    ])
+    const [s2, w2] = await Promise.all([listAll(SYMBOLS), listAll(WORDS)])
+    const after = { symbols: s2, words: decodeWords(w2, oldTags) }
+    console.log(
+      `書いた後: 違反 ${checkIntegrity(after).errors.length} / 形の誤り ${
+        shapeErrors({ symbols: s2, words: w2, tags: oldTags }).length
+      }`
     )
   }
 }

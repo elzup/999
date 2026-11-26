@@ -104,16 +104,24 @@ export function syncNumber({
   const upsertWords = [...tempWords.values()].flatMap((word) => {
     const id = remap(word.id)
     const prev = prevById.get(id)
+    // 語の性質 (属性・語のラベル) もこの記号の表記から決める (D-0177)。変わったら語を書き直す
+    const marksOf = (w) => JSON.stringify([w?.attrs ?? [], w?.labels ?? []])
     const isSame =
-      prev && prev.text === word.text && prev.source === word.source
+      prev &&
+      prev.text === word.text &&
+      prev.source === word.source &&
+      marksOf(prev) === marksOf(word)
+    const { attrs: _a, labels: _l, ...keep } = prev ?? {}
     return isSame
       ? []
       : [
           {
-            ...(prev ?? { labels: [] }),
+            ...keep,
             id,
             text: word.text,
             source: word.source,
+            labels: word.labels ?? [],
+            ...(word.attrs?.length ? { attrs: word.attrs } : {}),
           },
         ]
   })

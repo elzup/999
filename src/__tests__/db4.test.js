@@ -57,8 +57,8 @@ describe('db4 語の寄せ方 (D-0163)', () => {
   })
 
   it('出典 2 つの項目は語 2 つ (同じ role + order)、戻すと元の綴り', () => {
-    const doc = numberDoc('500', '黄泉#ｽﾀﾚ#tri -n', '', {
-      wh1: slot('黄泉#ｽﾀﾚ#tri -n', 'よみ'),
+    const doc = numberDoc('500', '黄泉#ｽﾀﾚ#tri -x', '', {
+      wh1: slot('黄泉#ｽﾀﾚ#tri -x', 'よみ'),
     })
     const { symbols, words } = fromLegacy({ numbers: [doc] })
     expect(symbols[0].links).toHaveLength(2)
@@ -67,7 +67,7 @@ describe('db4 語の寄せ方 (D-0163)', () => {
       symbols[0],
       Object.fromEntries(words.map((w) => [w.id, w]))
     )
-    expect(back.hito).toBe('黄泉#ｽﾀﾚ#tri -n')
+    expect(back.hito).toBe('黄泉#ｽﾀﾚ#tri -x')
   })
 
   it('カードは往復で元に戻る', () => {
