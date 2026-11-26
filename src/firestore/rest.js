@@ -5,6 +5,13 @@
 // 取ったアクセストークンでは使えない。ADC (application-default) と gcloud のログインは
 // 別物で、ADC だけ別プロジェクトのアカウントを指していることがある。
 // REST なら Bearer トークンをそのまま渡せる。
+//
+// 本番は番号の文書を symbols / words から読む (NUMBERS_SOURCE=symbols、2026-11-26)。この口から numbers だけを
+// 書くと、アプリに出ないうえ次の保存で symbols の古い値に戻される。なので保存は同じ commit で symbols / words にも書く
+// (db.js の mirror と同じ mirrorWrites)。読みは numbers のままでよい: 書き手が全部両方に同じものを書くので一致する
+// (scripts/compare-number-sources.ts で確かめられる)
+
+import { mirrorWrites } from '../symbols/mirror.js'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
@@ -100,6 +107,23 @@ export function connectRest({ projectId, token, fetchImpl = fetch }) {
           writes.push({
             update: { name: docName(NUMBERS, num), fields: toFields(doc) },
           })
+        },
+        // 写しが作れなければ投げて commit しない (symbols が正本なので、numbers だけ進めない)
+        mirror: async (_num, doc) => {
+          for (const write of mirrorWrites(doc, new Date().toISOString())) {
+            const update = {
+              name: docName(write.col, write.id),
+              fields: toFields(write.data),
+            }
+            writes.push(
+              write.merge
+                ? {
+                    update,
+                    updateMask: { fieldPaths: Object.keys(write.data) },
+                  }
+                : { update }
+            )
+          }
         },
       })
 
