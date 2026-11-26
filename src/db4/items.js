@@ -1,7 +1,14 @@
 // 記号の結び付きを «一覧の項目» (同じ role + order の語のまとまり) に戻す。
 // 出典 2 つの項目は語 2 つ = 結び付き 2 つなので、表示・シート・代表の照合はこの単位で見る。
 
+import { sourceTags, splitVariants } from '../images/tag-variants.js'
 import { formatItem } from './notation.js'
+
+/** 出典 2 つの項目のうち 1 語分の表記 (アプリの splitVariants と同じ: 他の出典タグを外す) */
+export function variantOf(item, link, wordsById) {
+  const source = wordsById[link.wordId]?.source
+  return splitVariants(item.notation).find((v) => sourceTags(v)[0] === source)
+}
 
 /** @returns [{ role, order, links, notation, kana }] (結び付きの並び順) */
 export function itemsOfSymbol(symbol, wordsById) {
