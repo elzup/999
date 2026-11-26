@@ -67,8 +67,8 @@ describe('REST の経路 + 新しい形 (DB4_WRITE=on)', () => {
       '/symbols/num:106': {
         kind: 'num',
         links: [
-          { wordId: wTro, role: 'hito', order: 0, kana: '' },
-          { wordId: wMai, role: 'hito', order: 1, kana: '' },
+          { wordId: wTro, role: 'person', order: 0, kana: '' },
+          { wordId: wMai, role: 'person', order: 1, kana: '' },
         ],
         wordIds: [wTro, wMai],
         kanaOnly: [],

@@ -4,12 +4,12 @@
 
 // 画像の正本 imageSlots の枠名 (旧称) → 役と順番。src/images/tag-images.js の MANIFEST_SLOT と同じ対応
 const IMAGE_SLOT = {
-  w1: ['hito', 0],
-  w1_2: ['hito', 1],
-  wh3: ['hito', 2],
-  w2: ['mono', 0],
-  w2_2: ['mono', 1],
-  wm3: ['mono', 2],
+  w1: ['person', 0],
+  w1_2: ['person', 1],
+  wh3: ['person', 2],
+  w2: ['thing', 0],
+  w2_2: ['thing', 1],
+  wm3: ['thing', 2],
 }
 
 /**
