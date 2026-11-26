@@ -213,7 +213,9 @@ export const api = onRequest(
       // 辞書本体 (私的連想 + 画像URL)。認証済みブラウザだけが取得できる。
       if (req.method === 'GET' && path === '/app/data') {
         // 配信データは deploy のときの写し。アプリ・シートで直した語とタグ名は DB の最新を重ねる
-        const data = await withLiveNumbers(readPrivateJson('data.json'))
+        const data = await withLiveCards(
+          await withLiveNumbers(readPrivateJson('data.json'))
+        )
         res.json(await withLiveTagNames(data))
         return
       }
@@ -258,6 +260,23 @@ export const api = onRequest(
           db,
         })
         res.status(status).json(payload)
+        return
+      }
+
+      // カード 1 枚を直す (正本は DB の card:*。D-0174)。本文は直す欄だけ
+      const cardMatch = path.match(/^\/cards\/([SHCD](?:A|[2-9]|10|J|Q|K))$/)
+      if (cardMatch && req.method === 'PATCH') {
+        const [{ db }, cards] = await Promise.all([
+          loadFirestoreLib(),
+          loadCardsLib(),
+        ])
+        const result = await cards.saveCard(
+          db.runDb4Transaction,
+          cardMatch[1],
+          req.body || {}
+        )
+        liveCards = null
+        res.status(result.ok ? 200 : 400).json(result)
         return
       }
 
@@ -611,6 +630,32 @@ async function withLiveTargets(state) {
   } catch (error) {
     console.error('console(targets)', error)
     return state
+  }
+}
+
+let cardsLib = null
+const loadCardsLib = async () =>
+  (cardsLib ??= await import('./lib/db4/cards.js'))
+// DB のカード (52 枚)。保存で捨てる。インスタンスが生きている間は読み直さない
+let liveCards = null
+
+/** 配信データのカードに、DB の最新の欄を重ねる (画像の欄は配信データのまま)。DB が読めなければ配信データのまま */
+async function withLiveCards(data) {
+  try {
+    const [{ db }, lib] = await Promise.all([
+      loadFirestoreLib(),
+      loadCardsLib(),
+    ])
+    liveCards ??= await lib.readCards(db.raw)
+    const byId = new Map(liveCards.map((c) => [c.suit + c.rank, c]))
+    const cards = (data.cards ?? []).map((card) => ({
+      ...card,
+      ...(byId.get(card.suit + card.rank) ?? {}),
+    }))
+    return { ...data, cards }
+  } catch (error) {
+    console.error('app/data(cards)', error)
+    return data
   }
 }
 

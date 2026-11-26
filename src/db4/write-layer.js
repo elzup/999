@@ -32,8 +32,11 @@ export class Db4WriteError extends Error {
 const clean = (value) => JSON.parse(JSON.stringify(value))
 const withoutId = ({ id: _id, ...rest }) => rest
 
-export async function prepareNumberWrite(io, num) {
-  const symbolId = symbolIdOf.num(num)
+export const prepareNumberWrite = (io, num) =>
+  prepareSymbolWrite(io, symbolIdOf.num(num))
+
+/** 記号 1 つの今の値 (番号・カード共通) */
+export async function prepareSymbolWrite(io, symbolId) {
   const [prevSymbol] = await io.getDocs(SYMBOLS, [symbolId])
   const prevIds = prevSymbol?.wordIds ?? []
   const prevWords = (await io.getDocs(WORDS, prevIds)).filter(Boolean)
@@ -45,12 +48,17 @@ export async function prepareNumberWrite(io, num) {
 }
 
 /** @returns {{ symbol, upsertWords, deleteWordIds }} 書いた中身 */
-export function commitNumberWrite(io, plan, nextDoc) {
+/** カードなど番号以外: legacy は fromLegacy の入力 ({ cards: [card] }) */
+export const commitSymbolWrite = (io, plan, legacy) =>
+  commitNumberWrite(io, plan, undefined, legacy)
+
+export function commitNumberWrite(io, plan, nextDoc, legacy) {
   const result = syncNumber({
     prevSymbol: plan.prevSymbol,
     prevWords: plan.prevWords,
     sharedIds: plan.sharedIds,
     nextDoc,
+    legacy,
   })
   const upserted = new Map(result.upsertWords.map((w) => [w.id, w]))
   const linkedWords = result.symbol.wordIds.map(

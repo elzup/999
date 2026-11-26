@@ -7877,3 +7877,59 @@ img[data-concept] {
   font-size: 12px;
   color: var(--text2);
 }
+
+/* カードの編集フォーム (CardEditForm、D-0174)。暗い地に読める色だけを使う */
+.card-edit {
+  display: grid;
+  gap: 6px;
+  padding: 8px 0;
+}
+.card-edit-row {
+  display: grid;
+  grid-template-columns: 5em 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.card-edit-label {
+  color: var(--text2);
+  font-size: 12px;
+}
+.card-edit-row input {
+  min-width: 0;
+  padding: 6px 8px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 16px;
+}
+.card-edit-status {
+  color: var(--bad);
+  font-size: 12px;
+}
+.card-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.card-edit-actions button,
+.card-edit-open {
+  padding: 6px 14px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.card-edit-actions button[type='submit'] {
+  background: var(--accent2);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.card-edit-actions button:hover,
+.card-edit-open:hover {
+  background: var(--border);
+  color: var(--text);
+}
+.card-edit-actions button:disabled {
+  opacity: 0.5;
+}

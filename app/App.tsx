@@ -13,7 +13,8 @@ import {
   saveAppDataCache,
   clearAppDataCache,
 } from './data/storage'
-import type { AppData } from './data/schema'
+import type { AppData, CardEntry } from './data/schema'
+import { CARD_SAVED_EVENT } from './lib/cardApi'
 import type { TabId } from './data/constants'
 import { BAR_TAB_LABELS, VALID_TABS } from './data/constants'
 import type { TabVisibility } from './data/storage'
@@ -216,6 +217,26 @@ export function App() {
 
   // 保存が済んだ番号は、読み込み済みの辞書データ (一覧・詳細・テストが読む) も差し替える。
   // 辞書データは deploy のときの写しなので、差し替えないと次の起動まで古い語のまま出る
+  // カードを保存したら、配信データのカードをその場で差し替える (画像の欄は残す)
+  useEffect(() => {
+    const onSaved = (event: Event) => {
+      const card = (event as CustomEvent<CardEntry>).detail
+      const current = dataRef.current
+      if (!current || !card) return
+      const next = {
+        ...current,
+        cards: current.cards.map((c) =>
+          c.suit === card.suit && c.rank === card.rank ? { ...c, ...card } : c
+        ),
+      }
+      dataRef.current = next
+      saveAppDataCache(JSON.stringify(next))
+      setData(next)
+    }
+    window.addEventListener(CARD_SAVED_EVENT, onSaved)
+    return () => window.removeEventListener(CARD_SAVED_EVENT, onSaved)
+  }, [])
+
   useEffect(() => {
     if (!token) return
     // 画像の正本 (imageSlots) も読み込み、どの画面も同じ画像を出す (imageStore.ts)

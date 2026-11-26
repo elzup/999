@@ -74,9 +74,11 @@ export function syncNumber({
   prevWords = [],
   sharedIds = new Set(),
   nextDoc,
+  /** 番号以外 (カード) のときは fromLegacy の入力 ({ cards: [card] }) を渡す */
+  legacy,
   issue = issueWordId,
 }) {
-  const draft = fromLegacy({ numbers: [nextDoc] })
+  const draft = fromLegacy(legacy ?? { numbers: [nextDoc] })
   const [temp] = draft.symbols
   const tempWords = new Map(draft.words.map((w) => [w.id, w]))
   const prevById = new Map(prevWords.map((w) => [w.id, w]))

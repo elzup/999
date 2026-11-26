@@ -18,7 +18,14 @@ import { driftedNums } from '../src/db4/check-all.js'
 import { linkImagesFromSlots, wordImagePlan } from '../src/db4/word-image.js'
 import { checkIntegrity } from '../src/db4/integrity.js'
 import { shapeErrors } from '../src/db4/schema.js'
-import { SYMBOLS, WORDS } from '../src/db4/write-layer.js'
+import {
+  commitSymbolWrite,
+  prepareSymbolWrite,
+  SYMBOLS,
+  WORDS,
+} from '../src/db4/write-layer.js'
+import { toCard } from '../src/db4/to-legacy.js'
+import { canonicalJson } from '../src/firestore/number-doc.js'
 import { connectRest, fromFields, toFields } from '../src/firestore/rest.js'
 import { writeNumber } from '../src/firestore/write.js'
 
@@ -28,6 +35,7 @@ const { values: args } = parseArgs({
     build: { type: 'boolean', default: false },
     repair: { type: 'boolean', default: false },
     'word-images': { type: 'boolean', default: false },
+    cards: { type: 'boolean', default: false },
     apply: { type: 'boolean', default: false },
   },
 })
@@ -45,8 +53,11 @@ const TARGETS = {
 } as const
 const target = TARGETS[args.target as keyof typeof TARGETS]
 if (!target) throw new Error('--target emulator か --target prod を付ける')
-if ([args.build, args.repair, args['word-images']].filter(Boolean).length !== 1)
-  throw new Error('--build / --repair / --word-images のどれか 1 つ')
+if (
+  [args.build, args.repair, args['word-images'], args.cards].filter(Boolean)
+    .length !== 1
+)
+  throw new Error('--build / --repair / --word-images / --cards のどれか 1 つ')
 if (!target.token) throw new Error('FIRESTORE_ACCESS_TOKEN が無い')
 if (args.apply && args.repair && process.env.DB4_WRITE !== 'on')
   throw new Error('--repair --apply は DB4_WRITE=on で動かす')
@@ -212,6 +223,53 @@ if (args['word-images']) {
         after.filter((w) => w.imageUrl).length
       } / 違反 ${
         checkIntegrity({ symbols: oldSymbols, words: after }).errors.length
+      }`
+    )
+  }
+}
+
+// --cards: シートから取った src/data/cards.tsv を DB のカードの記号へ書く (カードの正本は DB)。
+// 番号と同じ保存の口 (語の ID の引き継ぎ・形と整合の検査) を 1 枚ずつ transaction で通す
+if (args.cards) {
+  const cards = parseCardsTsv(readFileSync('src/data/cards.tsv', 'utf8'))
+  const differs = (list: any[], words: any[]) => {
+    const wordsById = Object.fromEntries(words.map((w) => [w.id, w]))
+    const byId = new Map(list.map((s) => [s.id, s]))
+    return cards.filter((card) => {
+      const symbol = byId.get(`card:${card.suit}${card.rank}`)
+      return (
+        !symbol ||
+        canonicalJson(toCard(symbol, wordsById)) !== canonicalJson(card)
+      )
+    })
+  }
+  const changed = differs(oldSymbols, oldWords)
+  console.log(
+    `cards.tsv ${cards.length} 枚 / DB と違う ${changed.length} 枚${
+      changed.length
+        ? ' (' + changed.map((c) => c.suit + c.rank).join(' ') + ')'
+        : ''
+    }`
+  )
+  if (args.apply && changed.length) {
+    const rest = connectRest({
+      projectId: target.project,
+      token: target.token,
+      fetchImpl,
+    })
+    for (const card of changed) {
+      await rest.runDb4Transaction(async (io: any) => {
+        const plan = await prepareSymbolWrite(
+          io,
+          `card:${card.suit}${card.rank}`
+        )
+        commitSymbolWrite(io, plan, { cards: [card] })
+      })
+    }
+    const [s2, w2] = await Promise.all([listAll(SYMBOLS), listAll(WORDS)])
+    console.log(
+      `書いた後: DB と違う ${differs(s2, w2).length} 枚 / 違反 ${
+        checkIntegrity({ symbols: s2, words: w2 }).errors.length
       }`
     )
   }
