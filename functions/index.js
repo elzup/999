@@ -81,6 +81,22 @@ export const sheetSync = onSchedule(
   }
 )
 
+const BACKUP_BUCKET = 'anoz-memosupo-db-backup'
+
+/** gs://anoz-memosupo-db-backup/nightly/<日時>/{numbers,symbols,words}.json */
+async function backupNightly({ checkedAt, ...collections }) {
+  const { getStorage } = await import('firebase-admin/storage')
+  const bucket = getStorage().bucket(BACKUP_BUCKET)
+  const dir = `nightly/${checkedAt.replace(/[:.]/g, '-')}`
+  await Promise.all(
+    Object.entries(collections).map(([name, docs]) =>
+      bucket
+        .file(`${dir}/${name}.json`)
+        .save(JSON.stringify(docs), { contentType: 'application/json' })
+    )
+  )
+}
+
 // 旧 DB (numbers) と新しい形 (symbols / words) の毎晩の検査 (DB 計画 P3-7・P5-4)。
 // 違反 (C1〜C9・形) と旧と新の食い違い (C7) を数え、meta/db4Check に残す。違反があれば error のログを出す。
 // 読み取りは 1 回で約 4,500 (番号 1000 + 記号 1308 + 語 2225)。無料枠 5 万/日に収まる
@@ -106,10 +122,11 @@ export const db4Check = onSchedule(
       readAll('symbols'),
       readAll('words'),
     ])
-    const report = {
-      ...checkAll({ numbers, symbols, words }),
-      checkedAt: new Date().toISOString(),
-    }
+    const checkedAt = new Date().toISOString()
+    const report = { ...checkAll({ numbers, symbols, words }), checkedAt }
+    // 読んだついでにバックアップ (P0-3)。非公開バケット、30 日で消える (lifecycle)。
+    // 検査より先に書く: 検査で何か見つかった日こそ、その時点の中身が要る
+    await backupNightly({ numbers, symbols, words, checkedAt })
     await db.raw.collection('meta').doc('db4Check').set(report)
     if (report.ok) console.log('db4Check ok', JSON.stringify(report.counts))
     else console.error('db4Check NG', JSON.stringify(report))
