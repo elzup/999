@@ -6537,6 +6537,63 @@ button.is-failed {
 .rp-decade-bar .lv2 {
   background: var(--rep-lv2);
 }
+/* 十の位の格の内訳 (D-0171)。語なしは地のまま、-1 だけは暗い赤 */
+.rp-decade-bar .is-empty {
+  background: transparent;
+}
+.rp-decade-bar .is-bad {
+  background: #7f1d1d;
+}
+/* 候補チップの 3 行目: 格・rankey・評価 */
+.rp-grade-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.rp-grade-line .rk {
+  padding: 0 4px;
+  font-size: 10px;
+}
+.rp-grade {
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 4px;
+  color: #111;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rp-rating {
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rp-rating.is-none {
+  color: #666;
+  border: 1px dashed #444;
+}
+.rp-rating.is-v2 {
+  background: #14532d;
+  color: #86efac;
+}
+.rp-rating.is-v1 {
+  background: #1e3a2a;
+  color: #a7f3d0;
+}
+.rp-rating.is-v0 {
+  background: var(--border);
+  color: var(--text2);
+}
+.rp-rating.is-v-1 {
+  background: #4c1d1d;
+  color: #fca5a5;
+}
 /* 全部確定した十の位は枠と文字も色を変える */
 .rp-decade.is-done1 {
   border-color: var(--rep-lv1);

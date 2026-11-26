@@ -53,6 +53,9 @@ import {
 } from '../lib/pickPosition'
 import TaggedWord from './TaggedWord'
 import WorstRankView from './WorstRankView'
+import Rankey from './Rankey'
+import { byGrade, decadeGrades, gradeColor } from '../lib/gradeColor'
+import { gradeWords, patternName, type GradedWord } from '../lib/worstRank'
 
 const VIEW_KEY = 'rep.view'
 type View = 'rows' | 'cards' | 'stats' | 'worst'
@@ -76,7 +79,22 @@ type Props = {
   anchor?: string | null
 }
 
-function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
+const RATING_LABEL: Record<string, string> = {
+  '-1': '-1',
+  '0': '0',
+  '1': '+1',
+  '2': '+2',
+}
+
+function PickChip({
+  row,
+  graded,
+  onPick,
+}: {
+  row: SlotRow
+  graded?: GradedWord
+  onPick: () => void
+}) {
   return (
     <button
       class={
@@ -100,6 +118,26 @@ function PickChip({ row, onPick }: { row: SlotRow; onPick: () => void }) {
       <span class="rp-word">
         <Yomi class="rp-kana" kana={row.kana} />
         <TaggedWord word={row.word} short />
+        <span class="rp-grade-line">
+          {graded ? (
+            <span
+              class="rp-grade"
+              style={{ background: gradeColor(graded.worst) }}
+              title={patternName(graded.ids[graded.ids.length - 1] ?? 'double')}
+            >
+              {graded.worst}
+            </span>
+          ) : null}
+          {graded ? <Rankey value={graded.rankey} /> : null}
+          <span
+            class={
+              'rp-rating' +
+              (row.rating === null ? ' is-none' : ' is-v' + row.rating)
+            }
+          >
+            {row.rating === null ? '未' : RATING_LABEL[String(row.rating)]}
+          </span>
+        </span>
       </span>
       {row.repRank ? <span class="rp-mark">{MARK[row.repRank]}</span> : null}
     </button>
@@ -126,10 +164,14 @@ function RepRow({
     doc.num,
     images
   )
-  const kinds = [
-    rows.filter((row) => row.slot.startsWith('wh')),
-    rows.filter((row) => row.slot.startsWith('wm')),
-  ]
+  // 人と物を混ぜて格の順 (悪い順と同じ判定)。採点できない語 (よみ無し) は後ろ
+  const gradedByKey = new Map(gradeWords(doc).map((g) => [g.key, g]))
+  const sorted = [...rows].sort((a, b) => {
+    const ga = gradedByKey.get(a.key)
+    const gb = gradedByKey.get(b.key)
+    if (!ga || !gb) return Number(!ga) - Number(!gb)
+    return byGrade(ga, gb)
+  })
   return (
     <li
       class={
@@ -144,19 +186,18 @@ function RepRow({
         {isStale(doc) ? <span class="rp-stale">⚠</span> : null}
       </button>
       <div class="rp-kinds">
-        {kinds.map((list, i) =>
-          list.length ? (
-            <div class="rp-chips" key={i}>
-              {list.map((row) => (
-                <PickChip
-                  key={row.key}
-                  row={row}
-                  onPick={() => onPick(row.key)}
-                />
-              ))}
-            </div>
-          ) : null
-        )}
+        {sorted.length ? (
+          <div class="rp-chips">
+            {sorted.map((row) => (
+              <PickChip
+                key={row.key}
+                row={row}
+                graded={gradedByKey.get(row.key)}
+                onPick={() => onPick(row.key)}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
     </li>
   )
@@ -267,6 +308,7 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
     matchesFilter(doc, filter) || kept.has(doc.num)
   const visible = docs.filter(isVisible)
   const progress = decadeBreakdown(docs)
+  const grades = decadeGrades(docs, hundred)
   const doneCount = docs.filter((doc) => doc.rep?.confirmed).length
 
   // 押した瞬間にキューへ積む (画面はキューの文書を出すので、その場で変わって黄)
@@ -447,9 +489,11 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
           <div class="rp-digits">
             {progress.map(({ total, counts }, decade) => {
               const [none, one, two] = counts
-              const pct = (n: number) => (total ? (n / total) * 100 : 0)
               // 全部確定したら枠ごと色を変える (①② まで揃えば青、① だけの番号が残れば緑)
               const done = total > 0 && none === 0
+              const decadeGrade = grades[decade]
+              const bad = decadeGrade.filter((g) => g === 'bad').length
+              const empty = decadeGrade.filter((g) => g === null).length
               return (
                 <button
                   key={decade}
@@ -458,16 +502,25 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
                     (done ? (one === 0 ? ' is-done2' : ' is-done1') : '')
                   }
                   onClick={() => jumpTo(decade)}
-                  aria-label={`${hundred}${decade}0 へ (①② ${two} · ① だけ ${one} · 未確定 ${none} / ${total})`}
+                  aria-label={`${hundred}${decade}0 へ (①② ${two} · ① だけ ${one} · 未確定 ${none} / ${total}。格の内訳: -1 だけ ${bad} · 語なし ${empty})`}
                 >
                   {decade}0
-                  {total ? (
-                    <span class="rp-decade-bar" aria-hidden="true">
-                      <i class="lv2" style={{ width: `${pct(two)}%` }} />
-                      <i class="lv1" style={{ width: `${pct(one)}%` }} />
-                      <i class="lv0" style={{ width: `${pct(none)}%` }} />
-                    </span>
-                  ) : null}
+                  {/* 10 番号の格を良い順に並べた内訳 (D-5)。語なしは地の色、-1 だけは暗い赤 */}
+                  <span class="rp-decade-bar" aria-hidden="true">
+                    {decadeGrade.map((g, i) => (
+                      <i
+                        key={i}
+                        class={
+                          g === null ? 'is-empty' : g === 'bad' ? 'is-bad' : ''
+                        }
+                        style={
+                          typeof g === 'number'
+                            ? { flex: 1, background: gradeColor(g) }
+                            : { flex: 1 }
+                        }
+                      />
+                    ))}
+                  </span>
                 </button>
               )
             })}
