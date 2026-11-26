@@ -153,6 +153,21 @@ export function connectRest({
   })
 
   return {
+    /** 新しい形だけを 1 transaction で読み書きする (カードの保存など)。fn(io) は write-layer の口を受け取る */
+    async runDb4Transaction(fn) {
+      const begun = await call(':beginTransaction', {
+        method: 'POST',
+        body: {},
+      })
+      const writes = []
+      const result = await fn(restIo(begun.transaction, writes))
+      await call(':commit', {
+        method: 'POST',
+        body: { writes, transaction: begun.transaction },
+      })
+      return result
+    },
+
     async runTransaction(fn) {
       const begun = await call(':beginTransaction', {
         method: 'POST',

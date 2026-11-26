@@ -143,6 +143,9 @@ export function connect({
     raw: store,
     source,
 
+    /** 新しい形だけを 1 transaction で読み書きする (カードの保存など)。fn(io) は write-layer の口を受け取る */
+    runDb4Transaction: (fn) => store.runTransaction((tx) => fn(adminIo(tx))),
+
     async runTransaction(fn) {
       return store.runTransaction(async (tx) => {
         return fn({

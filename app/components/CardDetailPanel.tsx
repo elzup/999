@@ -1,6 +1,8 @@
 import type { CardEntry } from '../data/schema'
 import { cardValues, formatCardId, suitColor } from '../data/cards'
+import { useState } from 'preact/hooks'
 import { BookmarkButton } from './Screen'
+import CardEditForm from './CardEditForm'
 
 type Props = {
   c: CardEntry
@@ -12,12 +14,13 @@ type CardValueItem = [
   label: string,
   val: string,
   score: number,
-  img: string | undefined,
+  img: string | undefined
 ]
 
 function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {
   const bmKey = 'c:' + c.suit + c.rank
   const isBm = bookmarks.has(bmKey)
+  const [editing, setEditing] = useState(false)
 
   const items: CardValueItem[] = cardValues(c)
   const maxScore = items.length > 0 ? Math.max(...items.map(([, , s]) => s)) : 0
@@ -29,7 +32,8 @@ function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {
           {formatCardId(c)}
         </span>
       </div>
-      <div class="card-detail-body">
+      {editing ? <CardEditForm c={c} onDone={() => setEditing(false)} /> : null}
+      <div class="card-detail-body" hidden={editing}>
         {items.map(([label, val, score, img]) => {
           const isBest = score === maxScore
           const scoreWidth = `${(Math.max(0, Math.min(3, score)) / 3) * 100}%`
@@ -61,6 +65,11 @@ function CardDetailPanel({ c, bookmarks, onToggleBm }: Props) {
       </div>
       {/* カードの操作は ★ だけ (NumDetailPanel と同じ)。閉じる・前後は DetailSheet */}
       <div class="detail-foot-actions">
+        {editing ? null : (
+          <button class="card-edit-open" onClick={() => setEditing(true)}>
+            編集
+          </button>
+        )}
         <BookmarkButton on={isBm} onToggle={() => onToggleBm(bmKey)} />
       </div>
     </div>
