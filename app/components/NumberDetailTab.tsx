@@ -58,6 +58,7 @@ import {
 } from '../lib/symbolStore'
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
+import GradeBadge from './GradeBadge'
 import Screen, { DockBar, QuitButton } from './Screen'
 import { IconStar, IconStarOutline } from './Icons'
 import { wordImage } from '../lib/wordImage'
@@ -856,8 +857,14 @@ function SlotCard({
 
       <div class="nd-card-foot">
         {row.rankey && !pending ? <Rankey value={row.rankey} /> : null}
-        {row.pt != null && !pending ? (
-          <span class="nd-pt">{row.pt.toFixed(1)}</span>
+        {/* 格 (悪い順と同じ判定: D-0171)。pt は画面に出さない */}
+        {row.rankey && !pending ? (
+          <GradeBadge
+            num={num}
+            kana={row.kana}
+            rankey={row.rankey}
+            word={row.word}
+          />
         ) : null}
         {pending ? (
           <span class="nd-pending-note">

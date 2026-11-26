@@ -5544,11 +5544,6 @@ button.activate-link {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
-.nd-pt {
-  color: var(--text2);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
 .nd-rate {
   display: flex;
   gap: 3px;
@@ -6556,7 +6551,7 @@ button.is-failed {
   padding: 0 4px;
   font-size: 10px;
 }
-.rp-grade {
+.grade-badge {
   min-width: 18px;
   padding: 0 4px;
   border-radius: 4px;
