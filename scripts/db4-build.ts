@@ -15,6 +15,7 @@ import { parseArgs } from 'node:util'
 import { parseCardsTsv } from '../src/cards-tsv.js'
 import { fromLegacy } from '../src/db4/from-legacy.js'
 import { driftedNums } from '../src/db4/check-all.js'
+import { linkImagesFromSlots, wordImagePlan } from '../src/db4/word-image.js'
 import { checkIntegrity } from '../src/db4/integrity.js'
 import { shapeErrors } from '../src/db4/schema.js'
 import { SYMBOLS, WORDS } from '../src/db4/write-layer.js'
@@ -26,6 +27,7 @@ const { values: args } = parseArgs({
     target: { type: 'string' },
     build: { type: 'boolean', default: false },
     repair: { type: 'boolean', default: false },
+    'word-images': { type: 'boolean', default: false },
     apply: { type: 'boolean', default: false },
   },
 })
@@ -43,8 +45,8 @@ const TARGETS = {
 } as const
 const target = TARGETS[args.target as keyof typeof TARGETS]
 if (!target) throw new Error('--target emulator か --target prod を付ける')
-if (args.build === args.repair)
-  throw new Error('--build か --repair のどちらか 1 つ')
+if ([args.build, args.repair, args['word-images']].filter(Boolean).length !== 1)
+  throw new Error('--build / --repair / --word-images のどれか 1 つ')
 if (!target.token) throw new Error('FIRESTORE_ACCESS_TOKEN が無い')
 if (args.apply && args.repair && process.env.DB4_WRITE !== 'on')
   throw new Error('--repair --apply は DB4_WRITE=on で動かす')
@@ -84,8 +86,9 @@ async function listAll(col: string) {
     )
     for (const d of page.documents ?? []) {
       docs.push({
-        id: decodeURIComponent(d.name.split('/').at(-1)),
+        // 文書のキーを後に置く (imageSlots は中身にも id 欄を持つ)
         ...fromFields(d.fields ?? {}),
+        id: decodeURIComponent(d.name.split('/').at(-1)),
       })
     }
     pageToken = page.nextPageToken ?? ''
@@ -157,6 +160,59 @@ if (args.build) {
       `書いた後: symbols ${s2.length} / words ${w2.length} / 違反 ${
         after.errors.length
       } / C7 差分 ${driftedNums(numbers, s2, w2).length}`
+    )
+  }
+}
+
+// --word-images: 記号ごとの画像から語の画像を決めて語に書く (P8)。食い違う語は保留し、一覧を .metarc に書く
+if (args['word-images']) {
+  const imageSlots = await listAll('imageSlots')
+  const linkImages = linkImagesFromSlots(imageSlots, oldSymbols, oldWords)
+  console.log(
+    `imageSlots ${imageSlots.length} / 画像のある枠 ${
+      imageSlots.filter((d) => d.image?.url).length
+    } / 語に当たった ${linkImages.length}`
+  )
+  const plan = wordImagePlan({
+    symbols: oldSymbols,
+    words: oldWords,
+    linkImages,
+  })
+  const textOf = new Map(
+    oldWords.map((w) => [w.id, `${w.text}${w.source ? '#' + w.source : ''}`])
+  )
+  console.log(
+    `語に載せる画像 ${plan.set.length} / 食い違って保留 ${plan.conflicts.length}`
+  )
+  const report = plan.conflicts
+    .map(
+      (c) =>
+        `- ${textOf.get(c.wordId)} (${c.wordId})\n${c.images
+          .map((u) => `  - ${u}`)
+          .join('\n')}`
+    )
+    .join('\n')
+  writeFileSync(
+    '.metarc/db4-image-conflicts.md',
+    `# 画像が食い違う語 (${plan.conflicts.length})\n\n語に載せる画像を 1 つ選ぶ。記号ごとの画像はそのまま残る\n\n${report}\n`
+  )
+  if (args.apply && plan.set.length) {
+    await commitAll(
+      plan.set.map((s) => ({
+        update: {
+          name: `${root}/${WORDS}/${s.wordId}`,
+          fields: toFields({ imageUrl: s.imageUrl }),
+        },
+        updateMask: { fieldPaths: ['imageUrl'] },
+      }))
+    )
+    const after = await listAll(WORDS)
+    console.log(
+      `書いた後: 画像のある語 ${
+        after.filter((w) => w.imageUrl).length
+      } / 違反 ${
+        checkIntegrity({ symbols: oldSymbols, words: after }).errors.length
+      }`
     )
   }
 }
