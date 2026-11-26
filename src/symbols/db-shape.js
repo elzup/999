@@ -20,6 +20,35 @@ const notationOf = (link, word) =>
     word.category
   )
 
+// 出典は語の source に持つので、結び付きの tags には属性タグ (g / i) だけを置く。
+// 表記での並び (`#i#grmk` と `#ｽﾌﾟﾗ#g` の両方が実データにある) は sourceAt で覚える。
+// 既定 (欄なし) は先頭
+const withSource = (attrs, source, at = 0) =>
+  source ? [...attrs.slice(0, at), source, ...attrs.slice(at)] : attrs
+
+const sameList = (a, b) =>
+  a.length === b.length && a.every((value, index) => value === b[index])
+
+/** 端末の結び付き → DB の結び付き (tags から出典を抜く) */
+function toDbTags(link, word) {
+  const source = word?.source ?? ''
+  const attrs = link.tags.filter((t) => t !== source)
+  const at = source ? link.tags.indexOf(source) : 0
+  if (sameList(withSource(attrs, source, at), link.tags)) {
+    return { ...link, tags: attrs, ...(at > 0 ? { sourceAt: at } : {}) }
+  }
+  // 出典が 2 回出る等で作り直せない並びは、元の並びを残す (取りこぼすより残す)
+  return { ...link, tags: attrs, rawTags: link.tags }
+}
+
+/** DB の結び付き → 端末の結び付き (tags に出典を戻す) */
+function fromDbTags(link, word) {
+  const { sourceAt, rawTags, ...rest } = link
+  const tags =
+    rawTags ?? withSource(link.tags ?? [], word?.source ?? '', sourceAt)
+  return { ...rest, tags }
+}
+
 /** 語の ID で指したとき、元の «かな + 表記» に戻せる結び付き。戻せなければ null */
 function exactLink(symbol, wordsById, ref, wordIds) {
   if (wordIds.length !== 1) return null
@@ -56,7 +85,7 @@ export function toDbSymbol(symbol, wordsById, docIdOf) {
   })
 
   const words = links.map((link) => ({
-    ...link,
+    ...toDbTags(link, wordsById[link.wordId]),
     wordId: docIdOf(link.wordId),
     ...(linkRating.has(link) ? { rating: linkRating.get(link) } : {}),
   }))
@@ -84,9 +113,10 @@ export function fromDbSymbol(id, doc, keyOf, wordsById) {
   const hasNumberRatings = Array.isArray(looseRatings)
   const links = (words ?? []).map((l) => {
     const { rating, ...link } = l
+    const wordId = keyOf(l.wordId)
     return {
-      ...link,
-      wordId: keyOf(l.wordId),
+      ...fromDbTags(link, wordsById[wordId]),
+      wordId,
       ...(hasNumberRatings ? {} : rating !== undefined ? { rating } : {}),
     }
   })

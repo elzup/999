@@ -65,6 +65,30 @@ describe('db-shape: DB に置く symbol の形', () => {
     expect(back.ratings).toHaveLength(doc.ratings.length)
   })
 
+  it('結び付きの tags には属性タグだけを置き、出典は語の source に任せる', () => {
+    const { db } = roundTrip(doc)
+    const mai = db.words.find((w) => w.wordId === 'w_hito|まい|日常')
+    expect(mai.tags).toEqual([])
+    expect(mai.sourceAt).toBeUndefined()
+  })
+
+  it('属性タグが出典より前の並び (#i#grmk) も表記に戻せる', () => {
+    const input = {
+      ...doc,
+      hito: '三田#i#grmk,ミタ#grmk#i',
+      slots: {},
+      rep: undefined,
+      ratings: undefined,
+    }
+    const { db, back } = roundTrip(input)
+    expect(db.words.map((w) => [w.tags, w.sourceAt])).toEqual([
+      [['i'], 1],
+      [['i'], undefined],
+      [[], undefined],
+    ])
+    expect(back.hito).toBe(input.hito)
+  })
+
   it('k / w / v 以外の欄を持つ評価は作り直せないので文字列のまま残す', () => {
     const stale = { ...doc, ratings: [{ k: 'ひ', w: '火', v: 2, stale: true }] }
     const { db } = roundTrip(stale)
