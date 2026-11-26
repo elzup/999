@@ -11,8 +11,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { mirrorWrites } from '../symbols/mirror.js'
-import { createSymbolReader } from '../symbols/symbol-source.js'
+import { createDb4Reader } from '../db4/reader.js'
 import {
   commitNumberWrite,
   isDb4WriteOn,
@@ -25,9 +24,10 @@ const BUNDLES = 'bundles'
 
 /**
  * 番号の文書をどこから読むか。
- * - numbers (既定): numbers だけを読み書きする。symbols / words には書かない
- *   (今の写しは語の ID を中身の hash で作る仮の形で、書き続けるほど作り直す量が増える。.metarc/db-plan.md P0)
- * - symbols: symbols / words から組み立てて読み、保存は numbers と両方に書く。写しが作れなければ保存ごと止める
+ * - numbers (既定): 表示用の読みも numbers から
+ * - symbols: 表示用の読み (readNumber / readNumbers / readChangedSince) を新しい形 (v4) から組み立てる (DB 計画 P6)。
+ *   保存 (競合検出の読みと書き込み) は numbers が正本のまま。DB4_WRITE=on が要る
+ * 新しい形への書き込みは NUMBERS_SOURCE と別に DB4_WRITE で決める (src/db4/write-layer.js)
  * 設定を変えたら `gcloud functions describe` で環境変数を確かめる (.env を消しても消えない)
  */
 export const numbersSource = () =>
@@ -99,7 +99,11 @@ export function connect({
   if (!projectId)
     throw new Error('project id が解決できない (.firebaserc を確認)')
   const store = openStore(projectId)
-  const symbols = source === 'symbols' ? createSymbolReader(store) : null
+  // 新しい形から読むなら、新しい形にも書いていないと古いものを読むことになる
+  if (source === 'symbols' && !isDb4WriteOn()) {
+    throw new Error('NUMBERS_SOURCE=symbols は DB4_WRITE=on と一緒に使う')
+  }
+  const symbols = source === 'symbols' ? createDb4Reader(store) : null
   // array-contains-any は 1 回 30 値まで (Firestore の上限)
   const ANY_LIMIT = 30
   const adminIo = (tx) => ({
@@ -142,35 +146,20 @@ export function connect({
     async runTransaction(fn) {
       return store.runTransaction(async (tx) => {
         return fn({
+          // 保存の前の読み (競合検出) は正本の numbers から。新しい形から読むのは表示用だけ (P7 で移す)
           get: async (num) => {
-            if (symbols) return symbols.readInTransaction(tx, num)
             const snap = await tx.get(store.collection(NUMBERS).doc(num))
             return snap.exists ? snap.data() : undefined
           },
           set: async (num, doc) => {
             tx.set(store.collection(NUMBERS).doc(num), doc)
           },
-          // 新しい形 (v4) への書き込み。P5 で本番に作るまでは DB4_WRITE=on のときだけ
+          // 新しい形 (v4) への書き込み。DB4_WRITE=on のときだけ (本番は P5 から on)
           ...(isDb4WriteOn()
             ? {
                 prepareMirror: (num) => prepareNumberWrite(adminIo(tx), num),
                 mirror: async (_num, doc, plan) => {
                   commitNumberWrite(adminIo(tx), plan, doc)
-                },
-              }
-            : symbols
-            ? {
-                mirror: async (_num, doc) => {
-                  for (const write of mirrorWrites(
-                    doc,
-                    new Date().toISOString()
-                  )) {
-                    tx.set(
-                      store.collection(write.col).doc(write.id),
-                      write.data,
-                      { merge: write.merge }
-                    )
-                  }
                 },
               }
             : {}),

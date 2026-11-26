@@ -6,8 +6,8 @@
 // 別物で、ADC だけ別プロジェクトのアカウントを指していることがある。
 // REST なら Bearer トークンをそのまま渡せる。
 //
-// NUMBERS_SOURCE=symbols のときだけ、保存を同じ commit で symbols / words にも書く (db.js の mirror と同じ
-// mirrorWrites)。numbers のとき (既定) は numbers だけを書く (db.js の numbersSource の説明を参照)
+// DB4_WRITE=on のとき、保存を同じ commit で新しい形 (symbols / words) にも書く (db.js と同じ src/db4/write-layer.js)。
+// 読みは numbers から (CLI 用。表示用の読みを新しい形にするのは Function 側の db.js)
 
 import {
   commitNumberWrite,
@@ -15,7 +15,6 @@ import {
   prepareNumberWrite,
   SYMBOLS as DB4_SYMBOLS,
 } from '../db4/write-layer.js'
-import { mirrorWrites } from '../symbols/mirror.js'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
@@ -176,30 +175,6 @@ export function connectRest({
                 prepareNumberWrite(restIo(transaction, writes), num),
               mirror: async (_num, doc, plan) => {
                 commitNumberWrite(restIo(transaction, writes), plan, doc)
-              },
-            }
-          : {}),
-        // 写しが作れなければ投げて commit しない (symbols が正本なので、numbers だけ進めない)
-        ...(source === 'symbols' && !isDb4WriteOn()
-          ? {
-              mirror: async (_num, doc) => {
-                for (const write of mirrorWrites(
-                  doc,
-                  new Date().toISOString()
-                )) {
-                  const update = {
-                    name: docName(write.col, write.id),
-                    fields: toFields(write.data),
-                  }
-                  writes.push(
-                    write.merge
-                      ? {
-                          update,
-                          updateMask: { fieldPaths: Object.keys(write.data) },
-                        }
-                      : { update }
-                  )
-                }
               },
             }
           : {}),
