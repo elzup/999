@@ -125,7 +125,7 @@ function cardDraft(card) {
 
 function ffDraft(entry) {
   const { hex, word, kana, ...rest } = entry
-  const links = draftLinks(word, 'word', 0, { kana: text(kana) })
+  const links = draftLinks(word, 'hex', 0, { kana: text(kana) })
   return {
     id: symbolIdOf.hex(hex),
     kind: 'hex',

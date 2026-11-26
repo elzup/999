@@ -7,7 +7,7 @@ export const ROLES = Object.freeze({
   P: { label: '人', kinds: ['card'], family: 'person' },
   A: { label: '行動', kinds: ['card'], family: 'action' },
   O: { label: '物', kinds: ['card'], family: 'thing' },
-  word: { label: '語', kinds: ['hex'], family: 'word' },
+  hex: { label: '語', kinds: ['hex'], family: 'hex' },
 })
 
 export const KINDS = Object.freeze(['num', 'date', 'card', 'hex'])
