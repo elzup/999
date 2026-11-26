@@ -108,7 +108,8 @@ export const db4Check = onSchedule(
     ])
     const changedAt = change.exists ? change.data().at : null
     const backedAt = state.exists ? state.data().at : null
-    if (changedAt && backedAt && changedAt <= backedAt) {
+    // 一度取ったあと、保存が無い (dbChange が無い) か、取った時刻より前の保存だけなら何もしない
+    if (backedAt && (!changedAt || changedAt <= backedAt)) {
       console.log('db4Check skip (変更なし)', backedAt)
       return
     }
