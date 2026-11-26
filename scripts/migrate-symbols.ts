@@ -18,6 +18,7 @@ import { parseArgs } from 'node:util'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore, type Firestore } from 'firebase-admin/firestore'
 import { canonicalJson } from '../src/firestore/number-doc.js'
+import { fromDbSymbol, toDbSymbol } from '../src/symbols/db-shape.js'
 import {
   fromCard,
   fromNumberDoc,
@@ -42,8 +43,7 @@ const WORDS = 'words'
 const BATCH_SIZE = 400
 
 type Word = { id: string; category: string; text: string; source: string }
-type Link = { wordId: string; [key: string]: unknown }
-type Sym = { id: string; links: Link[]; [key: string]: unknown }
+type Sym = { id: string; links: { wordId: string }[]; [key: string]: unknown }
 
 function guard() {
   const project = args.project
@@ -69,31 +69,16 @@ const wordDocId = (key: string) =>
 // Firestore は undefined を受け付けない。値の無い欄は落とす (往復の比較も同じ扱い)
 const clean = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
-function toDb(symbol: Sym) {
-  const { links, id: _id, ...rest } = symbol
-  const words = links.map((l) => ({ ...l, wordId: wordDocId(l.wordId) }))
-  return clean({
-    ...rest,
-    words,
-    wordIds: [...new Set(words.map((w) => w.wordId))],
-  })
-}
-
-function fromDb(
-  id: string,
-  data: Record<string, any>,
-  keyOf: Map<string, string>
-): Sym {
-  const { words, wordIds: _ids, ...rest } = data
-  return {
-    ...rest,
-    id,
-    links: (words ?? []).map((l: Link) => ({
-      ...l,
-      wordId: keyOf.get(l.wordId) ?? l.wordId,
-    })),
-  }
-}
+/** 比べるときは評価の並びを見ない (並びに意味は無い。find / filter でしか引かない: numberDetail.ts) */
+const sortRatings = (doc: Record<string, any>) =>
+  Array.isArray(doc.ratings)
+    ? {
+        ...doc,
+        ratings: [...doc.ratings].sort((x, y) =>
+          canonicalJson(x).localeCompare(canonicalJson(y))
+        ),
+      }
+    : doc
 
 async function readAll(db: Firestore, name: string) {
   const snap = await db.collection(name).get()
@@ -148,13 +133,24 @@ async function verify(
     ])
   )
   const symbols = new Map(
-    (await readAll(db, SYMBOLS)).map((s) => [s.id, fromDb(s.id, s.data, keyOf)])
+    (await readAll(db, SYMBOLS)).map((s) => [
+      s.id,
+      fromDbSymbol(
+        s.id,
+        s.data,
+        (id: string) => keyOf.get(id) ?? id,
+        wordsByKey
+      ) as Sym,
+    ])
   )
   const diffs: { id: string; reason: string }[] = []
   const compare = (id: string, before: object, back: (s: Sym) => object) => {
     const symbol = symbols.get(id)
     if (!symbol) return diffs.push({ id, reason: 'missing' })
-    if (canonicalJson(clean(before)) !== canonicalJson(clean(back(symbol))))
+    if (
+      canonicalJson(sortRatings(clean(before))) !==
+      canonicalJson(sortRatings(clean(back(symbol))))
+    )
       diffs.push({ id, reason: 'differs' })
   }
   for (const doc of numberDocs) {
@@ -194,6 +190,31 @@ async function main() {
   if (conflicts.length)
     throw new Error(`語の id の食い違い ${conflicts.length} 件。書かない`)
   const now = new Date().toISOString()
+  const converted = symbols.map((symbol) => {
+    const { doc, stats } = toDbSymbol(symbol, words, wordDocId)
+    return { id: symbol.id, doc: clean(doc), stats }
+  })
+  const refStats = converted.reduce<Record<string, number>>(
+    (sum, c) =>
+      Object.fromEntries(
+        Object.entries(c.stats).map(([k, v]) => [
+          k,
+          (sum[k] ?? 0) + (v as number),
+        ])
+      ),
+    {}
+  )
+  const loose = converted.flatMap((c) =>
+    c.stats.loosePicks || c.stats.looseRatings
+      ? [
+          {
+            id: c.id,
+            picks: c.doc.rep?.picks?.filter((p: any) => !p.wordId),
+            looseRatings: c.doc.looseRatings,
+          },
+        ]
+      : []
+  )
   const writes = [
     ...Object.values(words).map((w) => ({
       col: WORDS,
@@ -206,10 +227,10 @@ async function main() {
         updatedAt: now,
       },
     })),
-    ...symbols.map((s) => ({
+    ...converted.map((c) => ({
       col: SYMBOLS,
-      id: s.id,
-      data: { ...toDb(s), migratedAt: now },
+      id: c.id,
+      data: { ...c.doc, migratedAt: now },
     })),
   ]
   const ids = new Set(writes.map((w) => `${w.col}/${w.id}`))
@@ -223,6 +244,8 @@ async function main() {
         apply: args.apply,
         source: { numbers: numberDocs.length, cards: cards.length },
         writes: { symbols: symbols.length, words: Object.keys(words).length },
+        refs: refStats,
+        loose,
       },
       null,
       1
