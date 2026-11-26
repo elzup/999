@@ -31,11 +31,17 @@ const notationArb = (role) =>
 const sideArb = (role) =>
   fc.record({
     slots: fc.array(
-      fc.record({
-        word: notationArb(role),
-        kana: kanaArb,
-        imageUrl: fc.constantFrom('', 'u1'),
-      }),
+      fc.record(
+        {
+          word: notationArb(role),
+          kana: kanaArb,
+          imageUrl: fc.constantFrom('', 'u1'),
+          // 画像を確定すると付く欄 (console-writes の confirmImage)
+          confirmedFor: textArb,
+          tagImages: fc.constant({ a: 'u2' }),
+        },
+        { requiredKeys: ['word', 'kana', 'imageUrl'] }
+      ),
       { maxLength: 3 }
     ),
     // 一覧の 1〜3 番目は枠と食い違ってよい (アプリは枠だけを書く)

@@ -58,6 +58,17 @@ function draftLinks(raw, role, order, values = {}) {
   }))
 }
 
+/**
+ * 枠の word / kana / imageUrl 以外の欄 (画像を確定した時点の語 confirmedFor、タグ違いの画像 tagImages)。
+ * 画像は P8 で語へ移すまで枠のものなので、中身を解釈せずそのまま持つ (旧と新の一致: C7)
+ */
+function slotExtrasOf(slot, withImage = false) {
+  const { word: _w, kana: _k, imageUrl, ...rest } = slot
+  const extras =
+    withImage && imageUrl !== undefined ? { ...rest, imageUrl } : rest
+  return Object.keys(extras).length ? { slotExtras: extras } : {}
+}
+
 function numberSideLinks(doc, { role, prefix }) {
   // 枠は詰めて読む (sheet-bisync の packGroup と同じ)。本番の中抜けは 0 件 (2026-11-26)
   const filled = Array.from(
@@ -68,10 +79,13 @@ function numberSideLinks(doc, { role, prefix }) {
     draftLinks(slot.word, role, order, {
       kana: text(slot.kana),
       ...('imageUrl' in slot ? { imageUrl: slot.imageUrl } : {}),
+      ...slotExtrasOf(slot),
     })
   )
   const kanaOnly = filled.flatMap((slot, order) =>
-    text(slot.word) === '' ? [{ role, order, kana: text(slot.kana) }] : []
+    text(slot.word) === ''
+      ? [{ role, order, kana: text(slot.kana), ...slotExtrasOf(slot, true) }]
+      : []
   )
   const listLinks = itemsOfList(doc[role])
     .slice(SLOTS_PER_SIDE)

@@ -13,6 +13,12 @@ import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { mirrorWrites } from '../symbols/mirror.js'
 import { createSymbolReader } from '../symbols/symbol-source.js'
+import {
+  commitNumberWrite,
+  isDb4WriteOn,
+  prepareNumberWrite,
+  SYMBOLS as DB4_SYMBOLS,
+} from '../db4/write-layer.js'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
@@ -94,6 +100,40 @@ export function connect({
     throw new Error('project id が解決できない (.firebaserc を確認)')
   const store = openStore(projectId)
   const symbols = source === 'symbols' ? createSymbolReader(store) : null
+  // array-contains-any は 1 回 30 値まで (Firestore の上限)
+  const ANY_LIMIT = 30
+  const adminIo = (tx) => ({
+    getDocs: async (col, ids) => {
+      if (!ids.length) return []
+      const snaps = await tx.getAll(
+        ...ids.map((id) => store.collection(col).doc(id))
+      )
+      return snaps.map((s) =>
+        s.exists ? { id: s.id, ...s.data() } : undefined
+      )
+    },
+    findSymbolsUsing: async (wordIds) => {
+      const chunks = Array.from(
+        { length: Math.ceil(wordIds.length / ANY_LIMIT) },
+        (_, i) => wordIds.slice(i * ANY_LIMIT, (i + 1) * ANY_LIMIT)
+      )
+      const snaps = await Promise.all(
+        chunks.map((chunk) =>
+          tx.get(
+            store
+              .collection(DB4_SYMBOLS)
+              .where('wordIds', 'array-contains-any', chunk)
+          )
+        )
+      )
+      const docs = snaps.flatMap((snap) =>
+        snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      )
+      return [...new Map(docs.map((d) => [d.id, d])).values()]
+    },
+    set: (col, id, data) => tx.set(store.collection(col).doc(id), data),
+    remove: (col, id) => tx.delete(store.collection(col).doc(id)),
+  })
 
   return {
     raw: store,
@@ -110,7 +150,15 @@ export function connect({
           set: async (num, doc) => {
             tx.set(store.collection(NUMBERS).doc(num), doc)
           },
-          ...(symbols
+          // 新しい形 (v4) への書き込み。P5 で本番に作るまでは DB4_WRITE=on のときだけ
+          ...(isDb4WriteOn()
+            ? {
+                prepareMirror: (num) => prepareNumberWrite(adminIo(tx), num),
+                mirror: async (_num, doc, plan) => {
+                  commitNumberWrite(adminIo(tx), plan, doc)
+                },
+              }
+            : symbols
             ? {
                 mirror: async (_num, doc) => {
                   for (const write of mirrorWrites(

@@ -46,6 +46,7 @@ function sideOf(symbol, items, { role, prefix }) {
           word: item?.notation ?? '',
           kana: item?.kana ?? kana?.kana ?? '',
           ...(first && 'imageUrl' in first ? { imageUrl: first.imageUrl } : {}),
+          ...(first?.slotExtras ?? kana?.slotExtras ?? {}),
         },
       ],
     ]

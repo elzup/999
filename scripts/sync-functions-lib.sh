@@ -16,7 +16,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 lib="$root/functions/lib"
 
 rm -rf "$lib"
-mkdir -p "$lib/firestore" "$lib/data" "$lib/images" "$lib/symbols"
+mkdir -p "$lib/firestore" "$lib/data" "$lib/images" "$lib/symbols" "$lib/db4"
 
 for name in number-doc write derived console-writes db \
   sheet-bisync sheet-bisync-run sheet-io bisync-store sync-status fingerprint tag-names app-entry; do
@@ -37,6 +37,11 @@ done
 # DB 作り直し: numbers を書くとき symbols / words にも写す (db.js → symbols/mirror.js)
 for name in model db-shape mirror symbol-source; do
   cp "$root/src/symbols/$name.js" "$lib/symbols/$name.js"
+done
+
+# DB 作り直し v4: numbers を書く transaction で symbols / words も書く (db.js → db4/write-layer.js。DB4_WRITE=on のときだけ)
+for name in roles ids notation items refs from-legacy integrity schema sync-number write-layer; do
+  cp "$root/src/db4/$name.js" "$lib/db4/$name.js"
 done
 
 for name in slot-docs slot-store uploader fetch-one search ddg bing download process query \
