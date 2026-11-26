@@ -35,10 +35,13 @@ function symbolErrors(symbol, wordsById) {
     }
   }
   const linked = new Set(symbol.links.map((l) => l.wordId))
-  for (const pick of symbol.rep?.picks ?? []) {
-    if (pick.wordId && !linked.has(pick.wordId))
-      add('C6', `代表の語が結び付きに無い: ${pick.wordId}`)
+  const picked = (symbol.rep?.picks ?? []).map((p) => p.wordId).filter(Boolean)
+  for (const id of picked) {
+    if (!linked.has(id)) add('C6', `代表の語が結び付きに無い: ${id}`)
   }
+  // 代表は順序付きで数の上限なし。ただし同じ語を 2 回並べるのは誤り (D-0170)
+  if (new Set(picked).size !== picked.length)
+    add('C6', '代表に同じ語が 2 回ある')
   const wordIds = [...linked].sort().join(',')
   if ((symbol.wordIds ?? []).toSorted().join(',') !== wordIds)
     add('wordIds', 'wordIds が links と合わない')

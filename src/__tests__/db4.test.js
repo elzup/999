@@ -170,6 +170,19 @@ describe('db4 checkIntegrity', () => {
       })
     ).toContain('C6')
   })
+  it('C6: 代表は結び付きの語を全部並べてもよいが、同じ語を 2 回は誤り', () => {
+    const db = base()
+    const [s] = db.symbols
+    const ids = s.links.map((l) => l.wordId)
+    const withPicks = (picks) => ({
+      ...db,
+      symbols: [{ ...s, rep: { picks, confirmed: true } }],
+    })
+    expect(rulesOf(withPicks(ids.map((wordId) => ({ wordId }))))).toEqual([])
+    expect(
+      rulesOf(withPicks([{ wordId: ids[0] }, { wordId: ids[0] }]))
+    ).toContain('C6')
+  })
   it('C8: 語の ID の形', () => {
     const db = base()
     const bad = { ...db.words[0], id: 'w_hash' }

@@ -48,10 +48,13 @@ export function resolveRefs(symbol, legacy = {}, wordList = []) {
   const rep = legacy.rep
     ? {
         ...legacy.rep,
-        picks: (legacy.rep.picks ?? []).map((pick) => {
+        // 同じ語の 2 回目は ID にしない (C6: 代表に同じ語は 1 回)。文字列のまま残して人が直す
+        picks: (legacy.rep.picks ?? []).reduce((acc, pick) => {
           const wordId = match(pick)
-          return wordId && !('v' in pick) ? { wordId } : pick
-        }),
+          const isFree =
+            wordId && !('v' in pick) && !acc.some((p) => p.wordId === wordId)
+          return [...acc, isFree ? { wordId } : pick]
+        }, []),
       }
     : undefined
   return {
