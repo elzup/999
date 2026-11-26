@@ -356,14 +356,22 @@ let imageSlots = null
 // (slot-store.js)。numbers と違い writeNumber の不変条件は無いので、1 枠ずつ transaction で書く
 async function loadImageSlots() {
   if (!imageSlots) {
-    const [{ db }, store, docs] = await Promise.all([
+    const [{ db }, store, docs, wordImage] = await Promise.all([
       loadFirestoreLib(),
       import('./lib/images/slot-store.js'),
       import('./lib/images/slot-docs.js'),
+      import('./lib/db4/word-image-write.js'),
     ])
     const slots = store.createSlotStore({
       col: db.raw.collection(docs.IMAGE_SLOTS),
       runTransaction: (fn) => db.raw.runTransaction(fn),
+      // 画像を確定したら語の画像も同じ transaction で書く (DB 計画 P8)
+      wordImage: {
+        prepare: (tx, id, slot) =>
+          wordImage.prepareWordImage(db.raw, tx, id, slot),
+        commit: (tx, plan, url) =>
+          wordImage.commitWordImage(db.raw, tx, plan, url),
+      },
     })
     imageSlots = { slots, docs, fetcher: createImageFetcher() }
   }

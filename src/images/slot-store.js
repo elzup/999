@@ -13,7 +13,10 @@ const PULL_OVERLAP_MS = 5 * 60 * 1000
 const toMap = (snap) =>
   Object.fromEntries(snap.docs.map((d) => [d.id, d.data()]))
 
-export function createSlotStore({ col, runTransaction }) {
+/**
+ * @param wordImage 省略可。{ prepare(tx, id, slot), commit(tx, plan, url) } を渡すと、画像を確定したとき語の画像も書く
+ */
+export function createSlotStore({ col, runTransaction, wordImage }) {
   let docs = null
   let pulledAt = null
 
@@ -38,8 +41,14 @@ export function createSlotStore({ col, runTransaction }) {
     const ref = col.doc(key)
     const result = await runTransaction(async (tx) => {
       const snap = await tx.get(ref)
-      const applied = fn(snap.exists ? snap.data() : null)
+      // 語の画像 (DB 計画 P8) を同じ transaction で書くための読み。読みは書く前に済ませる決まり
+      const wordPlan = await wordImage?.prepare(tx, id, slot)
+      const before = snap.exists ? snap.data() : null
+      const applied = fn(before)
       if (applied.doc) tx.set(ref, applied.doc)
+      const url = applied.doc?.image?.url
+      if (url && url !== before?.image?.url)
+        wordImage?.commit(tx, wordPlan, url)
       return applied
     })
     if (result.doc && docs) docs = { ...docs, [key]: result.doc }
