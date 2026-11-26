@@ -10,16 +10,24 @@ import { sheetFormOfDoc } from '../firestore/sheet-bisync.js'
 
 // 少ない字種: 同じ綴り・人と物の同綴り・出典 2 つ をよく出す
 const textArb = fc.constantFrom('火', 'まい', '南', '三田', 'ミタ')
-const tagArb = fc.constantFrom('a', 'b', 'g', 'i')
+const sourceArb = fc.constantFrom('a', 'b')
+// 属性と語のラベルは語の性質 (D-0177)。同じ語ならどこでも同じなので、本体の綴りで決める
+const ATTRS_OF = { 火: ['g'], 南: ['i'], 三田: ['g', 'i'] }
+const WORD_LABELS_OF = { まい: ['j'] }
 const kanaArb = fc.constantFrom('', 'まい', 'ひ', 'みなみ')
 
 const notationArb = (role) =>
   fc
     .record({
       text: textArb,
-      tags: fc.uniqueArray(tagArb, { maxLength: 3 }),
-      labels: fc.array(fc.constantFrom('n', 'x'), { maxLength: 1 }),
+      sources: fc.uniqueArray(sourceArb, { maxLength: 2 }),
+      isForced: fc.boolean(),
     })
+    .map(({ text, sources, isForced }) => ({
+      text,
+      tags: [...sources, ...(ATTRS_OF[text] ?? [])],
+      labels: [...(WORD_LABELS_OF[text] ?? []), ...(isForced ? ['x'] : [])],
+    }))
     .map(({ text, tags, labels }) => {
       const tagPart = tags.map((t) => `#${t}`).join('')
       const labelPart = labels.map((l) => ` -${l}`).join('')

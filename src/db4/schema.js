@@ -2,6 +2,7 @@
 // spec: .metarc/db-design-v4.md。値の中身の整合 (C1〜C9) は integrity.js が見る
 import { z } from 'zod'
 import { TAG_ID_RE, WORD_ID_RE } from './ids.js'
+import { ATTRS, LINK_LABELS, WORD_LABELS } from './marks.js'
 import { KINDS, ROLES } from './roles.js'
 
 const wordId = z.string().regex(WORD_ID_RE)
@@ -13,9 +14,9 @@ export const linkSchema = z
     role: z.enum(Object.keys(ROLES)),
     order: z.number().int().min(0),
     kana: z.string().optional(),
-    attrs: strings.optional(),
     sourceAt: z.number().int().min(0).optional(),
-    labels: strings.optional(),
+    // その記号での当てはまり (-x 語呂強引 / -r 連想) だけ。語の性質は語へ (D-0177)
+    labels: z.array(z.enum(Object.keys(LINK_LABELS))).optional(),
     rating: z.number().optional(),
     imageUrl: z.string().optional(),
     // 枠のその他の欄 (confirmedFor / tagImages)。P8 で語へ移すまで中身を解釈しない
@@ -64,7 +65,9 @@ export const wordSchema = z
     imageUrl: z.string().optional(),
     // 出典タグ (tags コレクション) の ID。出典が無い語は持たない (D-0176)
     sourceId: z.string().regex(TAG_ID_RE).optional(),
-    labels: strings,
+    // 語の性質: 属性 (g 概念 / i 身内) とラベル (-j 熟語 / -u 愛称 / -f お気に入り)
+    attrs: z.array(z.enum(Object.keys(ATTRS))).optional(),
+    labels: z.array(z.enum(Object.keys(WORD_LABELS))),
   })
   .strict()
 

@@ -7,6 +7,7 @@
 import { migrationWordId, symbolIdOf } from './ids.js'
 import { parseItem } from './notation.js'
 import { resolveRefs } from './refs.js'
+import { splitMarks, unionMarks } from './marks.js'
 import { roleFamily } from './roles.js'
 
 const SIDES = [
@@ -209,15 +210,30 @@ export function fromLegacy({ numbers = [], cards = [], ff = [] }) {
       if (seen && (seen.text !== part.text || seen.source !== part.source)) {
         throw new Error(`語の ID が重なった: ${wordId}`)
       }
-      if (!seen)
-        words.set(wordId, {
-          id: wordId,
-          text: part.text,
-          source: part.source,
-          labels: [],
-        })
-      const { text: _t, source: _s, ...layout } = part
-      return { wordId, ...rest, ...layout }
+      // 属性と語のラベルは語へ、記号ごとのラベルは結び付きへ、-n は評価 -1 へ (D-0177)
+      const marks = splitMarks(part)
+      const base = seen ?? {
+        id: wordId,
+        text: part.text,
+        source: part.source,
+        labels: [],
+      }
+      const attrs = unionMarks(base.attrs, marks.wordAttrs)
+      words.set(wordId, {
+        ...base,
+        labels: unionMarks(base.labels, marks.wordLabels),
+        ...(attrs.length ? { attrs } : {}),
+      })
+      const { text: _t, source: _s, attrs: _a, labels: _l, ...layout } = part
+      return {
+        wordId,
+        ...rest,
+        ...layout,
+        ...(marks.linkLabels.length ? { labels: marks.linkLabels } : {}),
+        ...(marks.rating !== undefined && rest.rating === undefined
+          ? { rating: marks.rating }
+          : {}),
+      }
     })
     const { legacyRefs, ...symbol } = { ...draft, links }
     const resolved = resolveRefs(symbol, legacyRefs, [...words.values()])

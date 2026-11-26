@@ -1,3 +1,9 @@
+import {
+  ATTRS,
+  DROPPED_LABELS,
+  LINK_LABELS,
+  WORD_LABELS,
+} from '../../src/db4/marks.js'
 // 語の文字列に埋め込まれたタグ (#xxx) とラベル (-a 等) の読み書き。
 //
 // シートでは 1 つのセルに «本体(注)#タグ#タグ -ラベル» と連結して書く
@@ -98,24 +104,21 @@ export function removeLabel(word: string, label: string): string {
     .trim()
 }
 
-/** docs/num-actions.md §6 のラベル一覧 */
 /**
- * retired: 新しくは付けないラベル。付いている語では表示と取り外しだけできる。
- * -n (馴染みがない) は主観評価 -1 と同じものなので評価のほうで付ける (nr label:n で移行済み)
+ * ラベルの一覧。表は src/db4/marks.js (DB と共通、D-0177)。
+ * retired: 新しくは付けないラベル (旧データの表示と取り外しだけ)。-n は評価 -1、-s は廃止、-m / -p / -a はよみから計算
  */
 export const LABELS: Array<{ id: string; meaning: string; retired?: boolean }> =
   [
-    { id: 'x', meaning: '語呂強引' },
-    { id: 'r', meaning: '連想' },
-    { id: 'n', meaning: '馴染みがない', retired: true },
-    { id: 'u', meaning: '愛称・ユニーク' },
-    { id: 'a', meaning: '余りあり' },
-    { id: 'm', meaning: '同数異音混在' },
-    // -s は廃止 (D-0143)。scorer.js の減点は旧データの採点を変えないため残す
-    { id: 's', meaning: 'サンド・中抜き', retired: true },
-    { id: 'p', meaning: '0xx' },
-    { id: 'j', meaning: '熟語' },
-    { id: 'f', meaning: 'お気に入り' },
+    ...Object.entries({ ...LINK_LABELS, ...WORD_LABELS }).map(([id, v]) => ({
+      id,
+      meaning: v.label,
+    })),
+    ...Object.entries(DROPPED_LABELS).map(([id, v]) => ({
+      id,
+      meaning: v.label,
+      retired: true,
+    })),
   ]
 
 /** name はシートの tags タブの表示名 (res → アトリエ)。無いタグもある */
@@ -148,10 +151,9 @@ export function suggestTags(
 }
 
 /** タグの意味。表に無いタグはそのまま «#tri» と出す */
-export const TAG_MEANINGS: Record<string, string> = {
-  g: '概念',
-  i: '身内',
-}
+export const TAG_MEANINGS: Record<string, string> = Object.fromEntries(
+  Object.entries(ATTRS).map(([id, v]) => [id, v.label])
+)
 
 /** «#g 概念» «-n 馴染みがない» のような意味の一覧 (詳細カードで語をタップしたとき) */
 export function marksMeaning(

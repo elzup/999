@@ -24,11 +24,12 @@ export function itemsOfSymbol(symbol, wordsById) {
       return {
         text: word.text,
         source: word.source,
+        // 属性と語のラベルは語から、記号ごとのラベルは結び付きから (D-0177)。並びは語 → 記号
         ...(i === 0
           ? {
-              attrs: link.attrs,
+              attrs: word.attrs,
               sourceAt: link.sourceAt,
-              labels: link.labels,
+              labels: [...(word.labels ?? []), ...(link.labels ?? [])],
               ...(link.raw !== undefined ? { raw: link.raw } : {}),
             }
           : {}),
