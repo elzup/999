@@ -49,6 +49,13 @@ import {
   type TagSuggestion,
 } from '../lib/wordTags'
 import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
+import {
+  saveMarkOf,
+  useNumberDoc,
+  usePendingCount,
+  useRetrying,
+  useSaveMarks,
+} from '../lib/symbolStore'
 import type { SaveMark } from '../lib/opQueue'
 import Rankey from './Rankey'
 import Screen, { DockBar, QuitButton } from './Screen'
@@ -104,14 +111,17 @@ export default function NumberDetailTab({
   // 保存は待たせない: 押した瞬間に画面へ出し (黄)、裏で順に送る (緑)。
   // 送っている間も他のボタンは押せる。キューはアプリで 1 つ (閉じて開き直しても
   // 読んだ文書と保存待ちが残る)
-  const [, bump] = useState(0)
+  // 書き込み (積む・読み直す) はキュー、画面に出す値はストア (symbolStore.ts) から読む
   const queue = writeQueue()
+  const doc = useNumberDoc(num)
+  const pendingCount = usePendingCount(num)
+  const marks = useSaveMarks()
+  const retrying = useRetrying()
   const numRef = useRef(num)
   numRef.current = num
   useEffect(
     () =>
       listenWriteQueue({
-        onChange: () => bump((v) => v + 1),
         onSettled: (target, message) => {
           if (target === numRef.current)
             setNote({ status: message ?? '保存しました' })
@@ -206,7 +216,6 @@ export default function NumberDetailTab({
     [sendAll]
   )
 
-  const doc = queue.view(num)
   // 表示行 = 保存済みの内容に、未保存の編集を重ねたもの
   const entry = numbers?.find((item) => item.num === doc?.num)
   const rows: SlotRow[] = doc
@@ -222,14 +231,15 @@ export default function NumberDetailTab({
     : []
   const picks = doc?.rep?.picks ?? []
   const repState = doc ? repStatus(doc) : 'open'
-  const pendingCount = queue.pendingCount(num)
   const notice = loading
     ? '読み込み中…'
     : note.failed
-      ? note.status
-      : pendingCount
-        ? `保存待ち ${pendingCount}${queue.retrying ? ' ・通信待ち (つながったら送ります)' : ''}`
-        : note.status
+    ? note.status
+    : pendingCount
+    ? `保存待ち ${pendingCount}${
+        retrying ? ' ・通信待ち (つながったら送ります)' : ''
+      }`
+    : note.status
   const changed = doc ? changedSlots(doc, drafts) : []
   const dirty = changed.length > 0
 
@@ -360,10 +370,14 @@ export default function NumberDetailTab({
               card.slot === focusSlot &&
               cards.find((c) => c.slot === card.slot) === card
             }
-            repMark={queue.mark(doc.num, 'rep')}
-            rateMark={queue.mark(doc.num, `rating:${card.kana}|${card.word}`)}
+            repMark={saveMarkOf({ marks }, doc.num, 'rep')}
+            rateMark={saveMarkOf(
+              { marks },
+              doc.num,
+              `rating:${card.kana}|${card.word}`
+            )}
             isSaved={Boolean(doc.slots?.[row.slot])}
-            settling={queue.pendingCount(doc.num) > 0}
+            settling={pendingCount > 0}
             imageBusy={imageBusy}
             changed={changed.includes(row.slot)}
             dragging={dragFrom === index}
@@ -509,7 +523,11 @@ export default function NumberDetailTab({
               代表はあるのに未確定 (確定を別操作にしていた頃のデータ) のときだけ、
               バッジを押して確定できる */}
           <section
-            class={'nd-rep ' + repState + saveClass(queue.mark(doc.num, 'rep'))}
+            class={
+              'nd-rep ' +
+              repState +
+              saveClass(saveMarkOf({ marks }, doc.num, 'rep'))
+            }
             aria-label="代表"
           >
             <button
@@ -519,10 +537,10 @@ export default function NumberDetailTab({
                 repState === 'stale'
                   ? '代表にした語が今の候補にありません。①② で選び直してください'
                   : repState === 'held'
-                    ? '押すと今の代表で確定します'
-                    : repState === 'open'
-                      ? '候補の ①② を押すと代表に決まります'
-                      : '①② を押すと代表を変更・解除できます'
+                  ? '押すと今の代表で確定します'
+                  : repState === 'open'
+                  ? '候補の ①② を押すと代表に決まります'
+                  : '①② を押すと代表を変更・解除できます'
               }
               onClick={() =>
                 send(
@@ -745,8 +763,8 @@ function SlotCard({
                 ? '確定時点の語と違う画像 (押すと選び直す)'
                 : '画像を選び直す'
               : settling
-                ? '保存待ちの変更を送り終えると画像を選べます'
-                : '保存すると画像を選べます'
+              ? '保存待ちの変更を送り終えると画像を選べます'
+              : '保存すると画像を選べます'
           }
         >
           {imageUrl ? (
@@ -802,10 +820,10 @@ function SlotCard({
             row.variant
               ? 'タグ違いの語は移せません (枠ごと移すと他のタグの語も動く)'
               : imageBusy
-                ? '画像の保存を送り終えると移せます'
-                : pending
-                  ? '保存してから移せます'
-                  : '別の番号へ移す'
+              ? '画像の保存を送り終えると移せます'
+              : pending
+              ? '保存してから移せます'
+              : '別の番号へ移す'
           }
         >
           ⇄

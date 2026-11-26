@@ -13,11 +13,6 @@ export type NumberContextValue = {
   /** 編集をオーバーレイで開く。今のタブ (テストの結果ビュー) は閉じない */
   /** slot を渡すとその枠のカードに入力を当てて開く (画像のピッカーの «✎ 語» から) */
   openEditor: (num: string, slot?: string) => void
-  /**
-   * 編集を閉じるたびに 1 増える。配信データに無い値 (マップの代表①) を
-   * API から読んでいる画面が、これを見て読み直す
-   */
-  editVersion: number
   /** タグの表示名 (res → アトリエ)。シートの tags タブから配信データに載せる */
   tagNames?: Record<string, string>
   /** タグの正式名 (title)。略称でなく正式名で見せたい所 (グループ画面) 用 */

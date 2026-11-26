@@ -74,6 +74,25 @@ describe('NumberOpQueue: 待たせない・捨てない保存', () => {
     expect(q.mark('051', 'rep')).toBe('saved')
   })
 
+  it('圏外で失敗を知らせる時点の写しで、すでに «通信待ち» が立っている', async () => {
+    const seen: boolean[] = []
+    const send = vi.fn().mockRejectedValue(offline())
+    const q: NumberOpQueue = new NumberOpQueue({
+      send,
+      read: async () => base(),
+      onChange: () => seen.push(q?.snapshot().retrying ?? false),
+      onSettled: () => {},
+      onError: () => {},
+      storage: { load: () => null, save: () => {} },
+      // 送り直しが走ると retrying が下りるので、確かめる間は来ない長さにする
+      backoffMs: () => 60_000,
+    })
+    q.setBase(base())
+    q.enqueue('051', [rep('鯉')])
+    await until(() => send.mock.calls.length >= 1 && q.retrying)
+    expect(seen.at(-1)).toBe(true)
+  })
+
   it('送り直しを待っている間に押した変更も積み続け、最後の状態を送る', async () => {
     const { q, send, server } = setup()
     q.setBase(base())

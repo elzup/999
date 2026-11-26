@@ -6,6 +6,7 @@
 import { fetchNumber, patchNumber } from './numberApi'
 import { loadEditorToken } from './editorAuth'
 import { NumberOpQueue } from './opQueue'
+import { symbolStore } from './symbolStore'
 
 const STORAGE_KEY = 'writeQueue999'
 
@@ -24,7 +25,11 @@ export function writeQueue(): NumberOpQueue {
       send: (num, op, expectedUpdatedAt) =>
         patchNumber({ num, token: loadEditorToken(), op, expectedUpdatedAt }),
       read: (num) => fetchNumber(num, loadEditorToken()),
-      onChange: () => listeners.forEach((l) => l.onChange?.()),
+      onChange: () => {
+        // 画面はストアを読む (symbolStore.ts)。キューの状態が変わるたびに写す
+        if (shared) symbolStore.getState().syncQueue(shared.snapshot())
+        listeners.forEach((l) => l.onChange?.())
+      },
       onSettled: (num, message) =>
         listeners.forEach((l) => l.onSettled?.(num, message)),
       onError: (num, message) =>
@@ -34,6 +39,8 @@ export function writeQueue(): NumberOpQueue {
         save: (text) => localStorage.setItem(STORAGE_KEY, text),
       },
     })
+    // 作る途中 (端末に残った操作の読み込み) の変化は shared が無いので写せていない
+    symbolStore.getState().syncQueue(shared.snapshot())
   }
   return shared
 }

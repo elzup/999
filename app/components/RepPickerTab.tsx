@@ -11,9 +11,18 @@ import { loadSubTab, saveSubTab } from '../data/storage'
 import { fetchHundred, type NumberDoc } from '../lib/numberApi'
 import type { SaveMark } from '../lib/opQueue'
 import { listenWriteQueue, writeQueue } from '../lib/writeQueue'
+import {
+  saveMarkOf,
+  useNumberDocs,
+  usePendingCount,
+  useRetrying,
+  useSaveMarks,
+} from '../lib/symbolStore'
 import type { RepPick } from '../lib/numberApi'
 
 type RepChange = { picks: RepPick[]; confirmed: boolean }
+// 統計・悪い順を開いていないときの番号の一覧 (毎回新しい [] を作ると購読側が描き直す)
+const NO_NUMS: string[] = []
 import {
   candidateRows,
   withDeliveredImages,
@@ -172,12 +181,11 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
 
   // 書き込みはアプリで 1 本の保存キューに積む (編集画面と同じ)。押した瞬間に黄、
   // 保存できたら緑。通信できなくても捨てずに送り直す。どのボタンもロックしない
+  // 画面に出す文書・印・保存待ちはストア (symbolStore.ts) から読む。積むのはキュー
   const queue = writeQueue()
-  const [, bump] = useState(0)
   useEffect(
     () =>
       listenWriteQueue({
-        onChange: () => bump((v) => v + 1),
         onError: (num, message) => setStatus(`${num}: ${message}`),
       }),
     []
@@ -195,7 +203,7 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
     const read = (h: string) =>
       fetchHundred(Number(h), token).then((list) => {
         // 保存待ちの番号は、押した後の値 (と前提の時刻) をキューが残す
-        for (const doc of list) queue.setBase(doc)
+        queue.setBases(list)
         const order = list.map((doc) => doc.num).sort()
         hundredCache.current.set(h, order)
         return order
@@ -222,7 +230,7 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
     for (const h of missing) {
       fetchHundred(Number(h), token)
         .then((list) => {
-          for (const doc of list) queue.setBase(doc)
+          queue.setBases(list)
           hundredCache.current.set(h, list.map((doc) => doc.num).sort())
           if (alive) setStatsLoaded((n) => n + 1)
         })
@@ -232,15 +240,17 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
       alive = false
     }
   }, [view, token])
-  const statsDocs = isWholeView(view)
-    ? DIGITS.flatMap((h) => hundredCache.current.get(h) ?? [])
-        .map((num) => queue.view(num))
-        .filter((doc): doc is NumberDoc => doc !== null)
-    : []
+  const statsDocs = useNumberDocs(
+    isWholeView(view)
+      ? DIGITS.flatMap((h) => hundredCache.current.get(h) ?? [])
+      : NO_NUMS
+  )
 
-  const docs = nums
-    .map((num) => queue.view(num))
-    .filter((doc): doc is NumberDoc => doc !== null)
+  const docs = useNumberDocs(nums)
+  const saveMarks = useSaveMarks()
+  const retrying = useRetrying()
+  // 保存待ちはアプリ全体 (他の百の位・編集画面の分も) を出す
+  const pendingCount = usePendingCount()
 
   const entries = useMemo(
     () => new Map(numbers.map((entry) => [entry.num, entry])),
@@ -308,10 +318,11 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
   }
 
   const marks = Object.fromEntries(
-    docs.map((doc) => [doc.num, queue.mark(doc.num, 'rep')])
+    docs.map((doc) => [
+      doc.num,
+      saveMarkOf({ marks: saveMarks }, doc.num, 'rep'),
+    ])
   ) as Record<string, SaveMark | undefined>
-  // 保存待ちはアプリ全体 (他の百の位・編集画面の分も) を出す
-  const pendingCount = queue.pendingCount()
   const errorCount = Object.values(marks).filter(
     (mark) => mark === 'error'
   ).length
@@ -400,7 +411,7 @@ function RepPickerTab({ token, numbers, modeSwitch, anchor }: Props) {
             {pendingCount ? (
               <span class="rp-save pending">
                 保存待ち {pendingCount}
-                {queue.retrying ? ' ・通信待ち' : ''}
+                {retrying ? ' ・通信待ち' : ''}
               </span>
             ) : null}
             {errorCount ? (

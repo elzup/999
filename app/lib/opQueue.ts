@@ -116,7 +116,7 @@ const defaultBackoff = (attempt: number) =>
   Math.min(30_000, 1000 * 2 ** Math.max(0, attempt - 1))
 
 /** 移す操作を手元の文書に当てる (移動元から語を抜く) */
-function applyMoveLocally(doc: NumberDoc, move: MoveSpec): NumberDoc {
+export function applyMoveLocally(doc: NumberDoc, move: MoveSpec): NumberDoc {
   if (move.plan) {
     const moved = applyOpLocally(doc, {
       op: 'slots',
@@ -164,6 +164,18 @@ export function alreadyApplied(doc: NumberDoc, op: PatchOp): boolean {
   }
 }
 
+export type PendingOp = Pick<Entry, 'num' | 'key' | 'op' | 'move'>
+
+export type QueueSnapshot = {
+  /** サーバが返した最後の文書 */
+  base: NumberDoc[]
+  /** まだ送っていない操作 (積んだ順) */
+  pending: PendingOp[]
+  /** "num:key" → 黄 / 緑 / 赤 */
+  marks: Record<string, SaveMark>
+  retrying: boolean
+}
+
 type Persisted = {
   entries: Array<Omit<Entry, 'id' | 'sending'>>
   expected: Record<string, string | null>
@@ -192,6 +204,20 @@ export class NumberOpQueue {
 
   /** 読み込んだ文書を受け取る。送っていない操作がある番号は、その前提 (時刻) を変えない */
   setBase(doc: NumberDoc) {
+    this.putBase(doc)
+    this.deps.onChange()
+  }
+
+  /**
+   * まとめて読んだ文書 (百の位 1 つぶん) を入れる。変化の通知は最後に 1 回だけ
+   * (1 件ずつ通知すると、画面のストアが 100 回作り直される: symbolStore.ts)
+   */
+  setBases(docs: NumberDoc[]) {
+    for (const doc of docs) this.putBase(doc)
+    if (docs.length) this.deps.onChange()
+  }
+
+  private putBase(doc: NumberDoc) {
     // 読み込みが返るのが遅れて、送った後の文書より古い文書が届くことがある。古い方で上書きしない
     // (上書きすると画面が押す前に戻り、次の保存が古い時刻を前提に送られて 409 になる)
     const current = this.base.get(doc.num)
@@ -201,7 +227,6 @@ export class NumberOpQueue {
     if (!busy || !this.expected.has(doc.num)) {
       this.expected.set(doc.num, doc.updatedAt ?? null)
     }
-    this.deps.onChange()
   }
 
   /** 先読みした文書を入れる。まだ持っていない番号だけ */
@@ -249,6 +274,24 @@ export class NumberOpQueue {
   /** 送り直しを待っている (通信できていない) か */
   get retrying(): boolean {
     return this.retryTimer !== null
+  }
+
+  /**
+   * 今の状態の写し (読むだけ)。画面はこれを symbolStore 経由で読む (.metarc/state-design.md 段 2)。
+   * 送る順番・送り直し・端末への保存はこのクラスが持ち続ける
+   */
+  snapshot(): QueueSnapshot {
+    return {
+      base: [...this.base.values()],
+      pending: this.pending.map(({ num, key, op, move }) => ({
+        num,
+        key,
+        op,
+        move,
+      })),
+      marks: Object.fromEntries(this.marks),
+      retrying: this.retrying,
+    }
   }
 
   // ---- 積む ----
@@ -304,13 +347,10 @@ export class NumberOpQueue {
   private retryLater() {
     if (this.retryTimer) return
     const attempt = Math.max(1, ...this.attempts.values())
-    this.retryTimer = setTimeout(
-      () => {
-        this.retryTimer = null
-        this.kick()
-      },
-      (this.deps.backoffMs ?? defaultBackoff)(attempt)
-    )
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null
+      this.kick()
+    }, (this.deps.backoffMs ?? defaultBackoff)(attempt))
   }
 
   private accept(doc: NumberDoc) {
@@ -361,9 +401,11 @@ export class NumberOpQueue {
           // 捨てない。黄のまま積んでおき、間隔を空けて送り直す
           this.attempts.set(num, (this.attempts.get(num) ?? 0) + 1)
           this.persist()
-          this.deps.onChange()
           this.lanes.delete(num)
+          // 通知より先に送り直しを予約する。画面は通知の時点の写し (snapshot) を読むので、
+          // 逆順だと «通信待ち» (retrying) が立たないまま描かれる
           this.retryLater()
+          this.deps.onChange()
           return
         }
         // 送り直しても通らない (409 など)。読み直して、すでにそのとおりなら成功とみなす
