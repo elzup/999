@@ -84,9 +84,10 @@ async function backupNightly({ checkedAt, ...collections }) {
   )
 }
 
-// 旧 DB (numbers) と新しい形 (symbols / words) の毎晩の検査 (DB 計画 P3-7・P5-4)。
-// 違反 (C1〜C9・形) と旧と新の食い違い (C7) を数え、meta/db4Check に残す。違反があれば error のログを出す。
-// 読み取りは 1 回で約 4,500 (番号 1000 + 記号 1308 + 語 2225)。無料枠 5 万/日に収まる
+// 毎晩のバックアップと読む形の写しの作り直し (D-0174)。変更があった日だけ動く。
+// 保存のたびに meta/dbChange に時刻を書くので、変わっていない日は 1 回の読みで終わる。
+// 変わった日は全件 (約 3,700 回) を読み、非公開バケットへ書き出して、写し (snapshots) を作り直す
+// (共有している語の属性を変えたとき、他の記号の写しがずれるのを直す)。検査はしない (通知が無いので役に立たない)
 export const db4Check = onSchedule(
   {
     schedule: 'every day 04:00',
@@ -95,34 +96,52 @@ export const db4Check = onSchedule(
     timeoutSeconds: 300,
   },
   async () => {
-    const [{ db }, { checkAll }, { decodeWords }] = await Promise.all([
+    const [{ db }, { decodeWords }, snapshot] = await Promise.all([
       loadFirestoreLib(),
-      import('./lib/db4/check-all.js'),
       import('./lib/db4/tag-codec.js'),
+      import('./lib/db4/snapshot.js'),
     ])
+    const meta = db.raw.collection('meta')
+    const [change, state] = await Promise.all([
+      meta.doc('dbChange').get(),
+      meta.doc('backupState').get(),
+    ])
+    const changedAt = change.exists ? change.data().at : null
+    const backedAt = state.exists ? state.data().at : null
+    if (changedAt && backedAt && changedAt <= backedAt) {
+      console.log('db4Check skip (変更なし)', backedAt)
+      return
+    }
+    // 読み始める前の時刻を «ここまで取った» とする。途中で入った保存は翌晩に拾われる
+    const at = new Date().toISOString()
     const readAll = async (col) =>
       (await db.raw.collection(col).get()).docs.map((d) => ({
         id: d.id,
         ...d.data(),
       }))
-    // 旧 DB (numbers) は廃止したので読まない。旧と新の突き合わせ (C7) もしない
-    const numbers = []
     const [symbols, words, tags] = await Promise.all([
       readAll('symbols'),
       readAll('words'),
       readAll('tags'),
     ])
-    const checkedAt = new Date().toISOString()
-    const report = {
-      ...checkAll({ numbers, symbols, words: decodeWords(words, tags), tags }),
-      checkedAt,
+    await backupNightly({ symbols, words, tags, checkedAt: at })
+    const built = snapshot.buildSnapshots({
+      symbols,
+      words: decodeWords(words, tags),
+    })
+    const batch = db.raw.batch()
+    for (const [id, doc] of Object.entries(built)) {
+      batch.set(
+        db.raw.collection(snapshot.SNAPSHOTS).doc(id),
+        JSON.parse(JSON.stringify(doc))
+      )
     }
-    // 読んだついでにバックアップ (P0-3)。非公開バケット、30 日で消える (lifecycle)。
-    // 検査より先に書く: 検査で何か見つかった日こそ、その時点の中身が要る
-    await backupNightly({ symbols, words, tags, checkedAt })
-    await db.raw.collection('meta').doc('db4Check').set(report)
-    if (report.ok) console.log('db4Check ok', JSON.stringify(report.counts))
-    else console.error('db4Check NG', JSON.stringify(report))
+    batch.set(meta.doc('backupState'), { at })
+    await batch.commit()
+    console.log(
+      'db4Check backup',
+      JSON.stringify({ symbols: symbols.length, words: words.length, at })
+    )
   }
 )
 
@@ -595,27 +614,19 @@ async function withLiveSearchTagNames(state) {
   }
 }
 
-// 番号文書の写し。インスタンスが生きている間は全件をメモリに持ち、updatedAt が新しい文書だけ読み足す
-// (/app/data を開くたびに約 1000 件を読まないため)。時計のずれを吸収するため少し重ねて読み直す
-const NUMBER_PULL_OVERLAP_MS = 5 * 60 * 1000
-let numberDocs = null
-
 async function readNumberDocs() {
-  const now = new Date().toISOString()
-  // 正本 (新しい形) から読む。旧 DB (numbers) は読まない (D-0174 の片付け)
-  const { db: store } = await loadFirestoreLib()
-  if (!numberDocs) {
-    numberDocs = { docs: await store.readChangedSince(null), pulledAt: now }
-    return numberDocs.docs
-  }
-  const since = new Date(
-    Date.parse(numberDocs.pulledAt) - NUMBER_PULL_OVERLAP_MS
-  ).toISOString()
-  numberDocs = {
-    docs: { ...numberDocs.docs, ...(await store.readChangedSince(since)) },
-    pulledAt: now,
-  }
-  return numberDocs.docs
+  // 読む形の写し (snapshots/num_0〜9、10 回の読み)。保存のたびに同じ transaction で書き換わる。
+  // 写しがまだ無ければ (作る前) 正本を全部読む
+  const [{ db }, snapshot] = await Promise.all([
+    loadFirestoreLib(),
+    import('./lib/db4/snapshot.js'),
+  ])
+  const col = db.raw.collection(snapshot.SNAPSHOTS)
+  const snaps = await db.raw.getAll(
+    ...snapshot.NUMBER_SNAPSHOTS.map((id) => col.doc(id))
+  )
+  if (snaps.some((snap) => !snap.exists)) return db.readChangedSince(null)
+  return Object.assign({}, ...snaps.map((snap) => snap.data().docs ?? {}))
 }
 
 let liveTargetsLib = null
@@ -643,6 +654,7 @@ let cardsLib = null
 const loadCardsLib = async () =>
   (cardsLib ??= await import('./lib/db4/cards.js'))
 // DB のカード (52 枚)。保存で捨てる。インスタンスが生きている間は読み直さない
+// 保存の直後に読み直すための写し (インスタンスの間だけ)。保存で捨てる
 let liveCards = null
 
 /** 配信データのカードに、DB の最新の欄を重ねる (画像の欄は配信データのまま)。DB が読めなければ配信データのまま */
@@ -652,7 +664,11 @@ async function withLiveCards(data) {
       loadFirestoreLib(),
       loadCardsLib(),
     ])
-    liveCards ??= await lib.readCards(db.raw)
+    // 読む形の写し (snapshots/cards、1 回の読み)。無ければ正本から
+    const snap = await db.raw.collection('snapshots').doc('cards').get()
+    liveCards = snap.exists
+      ? Object.values(snap.data().docs ?? {})
+      : await lib.readCards(db.raw)
     const byId = new Map(liveCards.map((c) => [c.suit + c.rank, c]))
     const cards = (data.cards ?? []).map((card) => ({
       ...card,
@@ -693,7 +709,6 @@ async function liveNumberEntry(num) {
     loadAppEntryLib(),
   ])
   const doc = (await db.readNumberMap([num]))[num]
-  if (doc && numberDocs) numberDocs.docs = { ...numberDocs.docs, [num]: doc }
   return lib.entryWithDoc(delivered, doc)
 }
 
