@@ -15,6 +15,7 @@ function fakeStore(collections) {
     Object.keys(collections[col] ?? {}).map((id) => snapOf(col, id))
   return {
     collection: (col) => ({
+      get: async () => ({ docs: all(col) }),
       doc: (id) => ({ col, id }),
       where: (field, op, value) => ({
         get: async () => ({

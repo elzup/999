@@ -1,5 +1,6 @@
 // 画像を確定したとき (imageSlots の 1 枠を書くとき)、同じ transaction で語の画像も書き換える (DB 計画 P8)。
 // slot-store.js の update が呼ぶ。transaction は読みを先に済ませる決まりなので 2 段に分ける
+import { decodeWords, TAGS } from './tag-codec.js'
 import { linkImagesFromSlots } from './word-image.js'
 import { SYMBOLS, WORDS } from './write-layer.js'
 
@@ -14,9 +15,14 @@ export async function prepareWordImage(store, tx, id, slot) {
         ...ids.map((wordId) => store.collection(WORDS).doc(wordId))
       )
     : []
-  const words = wordSnaps
-    .filter((w) => w.exists)
-    .map((w) => ({ id: w.id, ...w.data() }))
+  const tags = (await tx.get(store.collection(TAGS))).docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }))
+  const words = decodeWords(
+    wordSnaps.filter((w) => w.exists).map((w) => ({ id: w.id, ...w.data() })),
+    tags
+  )
   return { symbol, words, key: `${id}:${slot}` }
 }
 

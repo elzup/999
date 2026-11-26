@@ -14,6 +14,7 @@ import { symbolIdOf } from './ids.js'
 import { checkIntegrity } from './integrity.js'
 import { shapeErrors } from './schema.js'
 import { syncNumber } from './sync-number.js'
+import { decodeWords, encodeWords, TAGS } from './tag-codec.js'
 
 export const SYMBOLS = 'symbols'
 export const WORDS = 'words'
@@ -39,12 +40,23 @@ export const prepareNumberWrite = (io, num) =>
 export async function prepareSymbolWrite(io, symbolId) {
   const [prevSymbol] = await io.getDocs(SYMBOLS, [symbolId])
   const prevIds = prevSymbol?.wordIds ?? []
-  const prevWords = (await io.getDocs(WORDS, prevIds)).filter(Boolean)
+  // 出典タグは全部読む (143 件ほど)。語の sourceId をコードに戻し、新しいコードのタグを作るため
+  const tags = await io.listTags()
+  const prevWords = decodeWords(
+    (await io.getDocs(WORDS, prevIds)).filter(Boolean),
+    tags
+  )
   const others = prevIds.length
     ? (await io.findSymbolsUsing(prevIds)).filter((s) => s.id !== symbolId)
     : []
   const sharedIds = new Set(others.flatMap((s) => s.wordIds ?? []))
-  return { symbolId, prevSymbol: prevSymbol ?? null, prevWords, sharedIds }
+  return {
+    symbolId,
+    prevSymbol: prevSymbol ?? null,
+    prevWords,
+    sharedIds,
+    tags,
+  }
 }
 
 /** @returns {{ symbol, upsertWords, deleteWordIds }} 書いた中身 */
@@ -64,9 +76,11 @@ export function commitNumberWrite(io, plan, nextDoc, legacy) {
   const linkedWords = result.symbol.wordIds.map(
     (id) => upserted.get(id) ?? plan.prevWords.find((w) => w.id === id)
   )
+  const encoded = encodeWords(result.upsertWords, plan.tags)
   const shape = shapeErrors({
     symbols: [result.symbol],
-    words: result.upsertWords,
+    words: encoded.docs,
+    tags: encoded.newTags,
   })
   // 記号 1 つと、その語だけで見る (C2 = 他の記号の語は見えないので数えない)
   const { errors } = checkIntegrity({
@@ -76,7 +90,8 @@ export function commitNumberWrite(io, plan, nextDoc, legacy) {
   const problems = [...shape, ...errors.map((e) => `${e.rule} ${e.detail}`)]
   if (problems.length) throw new Db4WriteError(problems)
   io.set(SYMBOLS, plan.symbolId, clean(withoutId(result.symbol)))
-  for (const word of result.upsertWords)
+  for (const tag of encoded.newTags) io.set(TAGS, tag.id, withoutId(tag))
+  for (const word of encoded.docs)
     io.set(WORDS, word.id, clean(withoutId(word)))
   for (const id of result.deleteWordIds) io.remove(WORDS, id)
   return result

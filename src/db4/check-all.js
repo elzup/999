@@ -2,6 +2,7 @@
 // 毎晩の Function (functions/index.js の db4Check) と scripts/db4-build.ts が使う
 import { checkIntegrity } from './integrity.js'
 import { shapeErrors } from './schema.js'
+import { encodeWords } from './tag-codec.js'
 import { toNumberDoc } from './to-legacy.js'
 import { sheetFormOfDoc } from '../firestore/sheet-bisync.js'
 
@@ -25,9 +26,15 @@ export function driftedNums(numbers, symbols, words) {
 }
 
 /** @returns {{ ok, counts, errors, drift }} errors と drift は先頭 50 件まで */
-export function checkAll({ numbers, symbols, words }) {
+/** words は中で使う形 (source = タグのコード)。tags は DB のタグ */
+export function checkAll({ numbers, symbols, words, tags = [] }) {
   const { errors, notices } = checkIntegrity({ symbols, words })
-  const shape = shapeErrors({ symbols, words })
+  // 形は DB に書く形 (sourceId) で見る
+  const shape = shapeErrors({
+    symbols,
+    words: encodeWords(words, tags).docs,
+    tags,
+  })
   const drift = driftedNums(numbers, symbols, words)
   const LIMIT = 50
   return {

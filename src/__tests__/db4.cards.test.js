@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { saveCard } from '../db4/cards.js'
 import { fromLegacy } from '../db4/from-legacy.js'
+import { decodeWords } from '../db4/tag-codec.js'
 import { toCard } from '../db4/to-legacy.js'
 import { SYMBOLS, WORDS } from '../db4/write-layer.js'
 
@@ -23,6 +24,7 @@ function memory() {
   const cols = {
     [SYMBOLS]: new Map(built.symbols.map(({ id, ...s }) => [id, s])),
     [WORDS]: new Map(built.words.map(({ id, ...w }) => [id, w])),
+    tags: new Map(),
   }
   const run = async (fn) => {
     const writes = []
@@ -32,6 +34,8 @@ function memory() {
           cols[col].has(id) ? { id, ...cols[col].get(id) } : undefined
         ),
       findSymbolsUsing: async () => [],
+      listTags: async () =>
+        [...(cols.tags ?? new Map())].map(([id, t]) => ({ id, ...t })),
       set: (col, id, data) => writes.push(() => cols[col].set(id, data)),
       remove: (col, id) => writes.push(() => cols[col].delete(id)),
     }
@@ -40,8 +44,12 @@ function memory() {
     return result
   }
   const read = () => {
+    const tags = [...cols.tags].map(([id, t]) => ({ id, ...t }))
     const words = Object.fromEntries(
-      [...cols[WORDS]].map(([id, w]) => [id, { id, ...w }])
+      decodeWords(
+        [...cols[WORDS]].map(([id, w]) => ({ id, ...w })),
+        tags
+      ).map((w) => [w.id, w])
     )
     return toCard({ id: 'card:SA', ...cols[SYMBOLS].get('card:SA') }, words)
   }

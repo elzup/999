@@ -5,6 +5,7 @@
 // 正本はまだ旧 DB なので、保存の transaction の読み (競合検出) は db.js が numbers を読む (P7 で移す)
 import { withDerived } from '../firestore/derived.js'
 import { symbolIdOf } from './ids.js'
+import { decodeWords, TAGS } from './tag-codec.js'
 import { toNumberDoc } from './to-legacy.js'
 import { SYMBOLS, WORDS } from './write-layer.js'
 
@@ -21,6 +22,17 @@ export function createDb4Reader(store) {
   const symbols = store.collection(SYMBOLS)
   const words = store.collection(WORDS)
 
+  // 出典タグ (143 件ほど)。コードはめったに変わらないので、1 分は読み直さない
+  const TAG_TTL_MS = 60 * 1000
+  let tagCache = null
+  async function loadTags() {
+    if (tagCache && Date.now() - tagCache.at < TAG_TTL_MS) return tagCache.tags
+    const snap = await store.collection(TAGS).get()
+    const tags = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    tagCache = { tags, at: Date.now() }
+    return tags
+  }
+
   async function loadWords(ids) {
     const unique = [...new Set(ids)]
     const found = new Map()
@@ -34,7 +46,10 @@ export function createDb4Reader(store) {
     // 指す語が無いまま組み立てると語が黙って消える。読み手には壊れた文書を渡さない
     if (absent.length)
       throw new Error(`words にない語を指している: ${absent.join(',')}`)
-    return Object.fromEntries(found)
+    const tags = await loadTags()
+    return Object.fromEntries(
+      decodeWords([...found.values()], tags).map((w) => [w.id, w])
+    )
   }
 
   async function docsOf(snaps) {
@@ -60,10 +75,17 @@ export function createDb4Reader(store) {
       const wordSnaps = ids.length
         ? await tx.getAll(...ids.map((id) => words.doc(id)))
         : []
+      const tags = (await tx.get(store.collection(TAGS))).docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }))
       const wordsById = Object.fromEntries(
-        wordSnaps
-          .filter((w) => w.exists)
-          .map((w) => [w.id, { id: w.id, ...w.data() }])
+        decodeWords(
+          wordSnaps
+            .filter((w) => w.exists)
+            .map((w) => ({ id: w.id, ...w.data() })),
+          tags
+        ).map((w) => [w.id, w])
       )
       if (Object.keys(wordsById).length !== ids.length)
         throw new Error(`words にない語を指している: num:${num}`)

@@ -15,6 +15,8 @@ import { parseArgs } from 'node:util'
 import { parseCardsTsv } from '../src/cards-tsv.js'
 import { fromLegacy } from '../src/db4/from-legacy.js'
 import { driftedNums } from '../src/db4/check-all.js'
+import { migrationTagId } from '../src/db4/ids.js'
+import { decodeWords, encodeWords, TAGS } from '../src/db4/tag-codec.js'
 import { linkImagesFromSlots, wordImagePlan } from '../src/db4/word-image.js'
 import { checkIntegrity } from '../src/db4/integrity.js'
 import { shapeErrors } from '../src/db4/schema.js'
@@ -37,6 +39,7 @@ const { values: args } = parseArgs({
     'word-images': { type: 'boolean', default: false },
     cards: { type: 'boolean', default: false },
     'rename-roles': { type: 'boolean', default: false },
+    tags: { type: 'boolean', default: false },
     apply: { type: 'boolean', default: false },
   },
 })
@@ -61,6 +64,7 @@ if (
     args['word-images'],
     args.cards,
     args['rename-roles'],
+    args.tags,
   ].filter(Boolean).length !== 1
 )
   throw new Error('--build / --repair / --word-images / --cards のどれか 1 つ')
@@ -123,11 +127,14 @@ async function commitAll(writes: any[]) {
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-const [numbers, oldSymbols, oldWords] = await Promise.all([
+const [numbers, oldSymbols, rawWords, oldTags] = await Promise.all([
   listAll('numbers'),
   listAll(SYMBOLS),
   listAll(WORDS),
+  listAll(TAGS),
 ])
+// 中の処理は source (タグのコード) で扱う。DB の語は sourceId (D-0176)
+const oldWords = decodeWords(rawWords, oldTags)
 console.log(
   `${args.target}: numbers ${numbers.length} / いまの symbols ${oldSymbols.length} / words ${oldWords.length}`
 )
@@ -319,6 +326,59 @@ if (args['rename-roles']) {
       `書いた後: 違反 ${
         checkIntegrity({ symbols: s2, words: oldWords }).errors.length
       } / 食い違う番号 ${driftedNums(numbers, s2, oldWords).length}`
+    )
+  }
+}
+
+// --tags: 出典タグを tags コレクションに分け、語は sourceId で指す (D-0176)。1 回だけ使う。
+// タグの名前は sync/tagNames (スプレッドシートから取っていたもの) から持ってくる
+if (args.tags) {
+  const names = (await call('/sync/tagNames').catch(() => null))?.fields
+  const nameOf = names ? fromFields(names).names ?? {} : {}
+  const codes = [
+    ...new Set([
+      ...oldWords.map((w) => w.source).filter(Boolean),
+      ...Object.keys(nameOf),
+    ]),
+  ].sort()
+  const known = new Set(oldTags.map((t: any) => t.code))
+  const newTags = codes
+    .filter((c) => !known.has(c))
+    .map((code) => ({
+      id: migrationTagId(code),
+      code,
+      title: nameOf[code]?.title ?? '',
+      short: nameOf[code]?.short ?? '',
+    }))
+  const tags = [...oldTags, ...newTags]
+  const { docs } = encodeWords(oldWords, tags)
+  const toRewrite = docs.filter(
+    (w: any, i: number) => JSON.stringify(w) !== JSON.stringify(rawWords[i])
+  )
+  const shape = shapeErrors({ words: docs, tags })
+  console.log(
+    `タグ ${codes.length} (新しく作る ${newTags.length}) / 書き換える語 ${toRewrite.length} / 形の誤り ${shape.length}`
+  )
+  for (const e of shape.slice(0, 5)) console.log('   ', e)
+  if (shape.length) throw new Error('形の誤りがあるので書かない')
+  if (args.apply) {
+    const clean = (v: unknown) => JSON.parse(JSON.stringify(v))
+    await commitAll([
+      ...newTags.map(({ id, ...t }) => ({
+        update: { name: `${root}/${TAGS}/${id}`, fields: toFields(t) },
+      })),
+      ...toRewrite.map(({ id, ...w }: any) => ({
+        update: { name: `${root}/${WORDS}/${id}`, fields: toFields(clean(w)) },
+      })),
+    ])
+    const [w2, t2] = await Promise.all([listAll(WORDS), listAll(TAGS)])
+    const decoded = decodeWords(w2, t2)
+    console.log(
+      `書いた後: タグ ${t2.length} / source を文字列で持つ語 ${
+        w2.filter((w: any) => w.source !== undefined).length
+      } / 違反 ${
+        checkIntegrity({ symbols: oldSymbols, words: decoded }).errors.length
+      } / 食い違う番号 ${driftedNums(numbers, oldSymbols, decoded).length}`
     )
   }
 }

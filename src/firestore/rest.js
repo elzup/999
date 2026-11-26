@@ -15,6 +15,7 @@ import {
   prepareNumberWrite,
   SYMBOLS as DB4_SYMBOLS,
 } from '../db4/write-layer.js'
+import { TAGS as DB4_TAGS } from '../db4/tag-codec.js'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
@@ -111,6 +112,21 @@ export function connectRest({
           return doc ? { id, ...doc } : undefined
         })
       ),
+    listTags: async () =>
+      (
+        await call(':runQuery', {
+          method: 'POST',
+          body: {
+            transaction,
+            structuredQuery: { from: [{ collectionId: DB4_TAGS }] },
+          },
+        })
+      )
+        .filter((row) => row.document)
+        .map((row) => ({
+          ...fromFields(row.document.fields ?? {}),
+          id: decodeURIComponent(row.document.name.split('/').at(-1)),
+        })),
     findSymbolsUsing: async (wordIds) => {
       const chunks = Array.from(
         { length: Math.ceil(wordIds.length / ANY_LIMIT) },

@@ -132,7 +132,9 @@ describe('db4 checkIntegrity', () => {
         symbols: [
           {
             ...s,
-            links: s.links.map((l, i) => (i === 0 ? { ...l, role: 'action' } : l)),
+            links: s.links.map((l, i) =>
+              i === 0 ? { ...l, role: 'action' } : l
+            ),
           },
         ],
       })
