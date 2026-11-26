@@ -110,7 +110,7 @@ export function toCard(symbol, wordsById) {
 export function toFf(symbol, wordsById) {
   const [item] = itemsOfSymbol(symbol, wordsById)
   return {
-    hex: symbol.id.slice('ff:'.length),
+    hex: symbol.id.slice('hex:'.length),
     ...(item ? { word: item.notation, kana: item.kana } : { word: '' }),
     ...symbol.extras,
   }

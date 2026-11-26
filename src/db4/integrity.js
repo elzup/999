@@ -5,7 +5,7 @@ import { WORD_ID_RE } from './ids.js'
 import { isRoleAllowed } from './roles.js'
 
 const SYMBOL_ID_RE =
-  /^(num:\d{3}|date:\d{3,4}|card:[SHCD](A|[2-9]|10|J|Q|K)|ff:[0-9A-F]{2})$/
+  /^(num:\d{3}|date:\d{3,4}|card:[SHCD](A|[2-9]|10|J|Q|K)|hex:[0-9A-F]{2})$/
 
 function symbolErrors(symbol, wordsById) {
   const errors = []
@@ -66,6 +66,24 @@ export function checkIntegrity({ symbols, words }) {
           ]),
     ]),
   ]
+  // C9: 1 語は同じ kind の記号に 1 回まで (番号とカードの両方は可、番号 2 つは登録のミス: D-0165)
+  const kindsOf = symbols.reduce((acc, s) => {
+    for (const id of new Set(s.links.map((l) => l.wordId))) {
+      acc.set(id, [...(acc.get(id) ?? []), s])
+    }
+    return acc
+  }, new Map())
+  const c9 = [...kindsOf].flatMap(([id, list]) =>
+    Object.entries(Object.groupBy(list, (s) => s.kind))
+      .filter(([, same]) => same.length > 1)
+      .map(([kind, same]) => ({
+        rule: 'C9',
+        word: id,
+        detail: `同じ ${kind} の記号 ${same.length} つから指される: ${
+          wordsById[id]?.text
+        } (${same.map((s) => s.id).join(' ')})`,
+      }))
+  )
   const byKey = words.reduce((acc, w) => {
     const key = `${w.text}|${w.source}`
     return acc.set(key, [...(acc.get(key) ?? []), w.id])
@@ -77,5 +95,5 @@ export function checkIntegrity({ symbols, words }) {
       detail: `同じ綴りの語が ${ids.length} つ: ${key}`,
       words: ids,
     }))
-  return { errors, notices }
+  return { errors: [...errors, ...c9], notices }
 }

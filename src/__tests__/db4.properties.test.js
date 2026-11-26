@@ -141,9 +141,9 @@ describe('db4: 番号の文書 → v4 → 番号の文書', () => {
     fc.assert(
       fc.property(fc.array(numberDocArb, { maxLength: 4 }), (docs) => {
         const unique = [...new Map(docs.map((d) => [d.num, d])).values()]
-        expect(checkIntegrity(fromLegacy({ numbers: unique })).errors).toEqual(
-          []
-        )
+        // 入力が同じ語を 2 つの番号に置くのは登録のミス (C9) で、変換の誤りではない
+        const { errors } = checkIntegrity(fromLegacy({ numbers: unique }))
+        expect(errors.filter((e) => e.rule !== 'C9')).toEqual([])
       }),
       RUNS
     )
