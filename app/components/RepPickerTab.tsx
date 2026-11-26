@@ -54,8 +54,9 @@ import {
 import TaggedWord from './TaggedWord'
 import WorstRankView from './WorstRankView'
 import Rankey from './Rankey'
+import GradeBadge from './GradeBadge'
 import { byGrade, decadeGrades, gradeColor } from '../lib/gradeColor'
-import { gradeWords, patternName, type GradedWord } from '../lib/worstRank'
+import { gradeWords, type GradedWord } from '../lib/worstRank'
 
 const VIEW_KEY = 'rep.view'
 type View = 'rows' | 'cards' | 'stats' | 'worst'
@@ -119,15 +120,7 @@ function PickChip({
         <Yomi class="rp-kana" kana={row.kana} />
         <TaggedWord word={row.word} short />
         <span class="rp-grade-line">
-          {graded ? (
-            <span
-              class="rp-grade"
-              style={{ background: gradeColor(graded.worst) }}
-              title={patternName(graded.ids[graded.ids.length - 1] ?? 'double')}
-            >
-              {graded.worst}
-            </span>
-          ) : null}
+          {graded ? <GradeBadge graded={graded} /> : null}
           {graded ? <Rankey value={graded.rankey} /> : null}
           <span
             class={
