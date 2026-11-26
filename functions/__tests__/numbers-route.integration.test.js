@@ -115,7 +115,7 @@ describe('numbers API を実物の書き込み経路で通す', () => {
     expect(db.store.get('051').ratings).toEqual([])
   })
 
-  it('代表は 2 件を超えて保存できない (design:firestore-schema)', async () => {
+  it('代表は 3 件以上でも保存できる (上限なし: D-0170)', async () => {
     const db = fakeDb(seed())
     const res = await patch(db, {
       op: 'rep',
@@ -127,10 +127,8 @@ describe('numbers API を実物の書き込み経路で通す', () => {
       confirmed: false,
     })
 
-    expect(res.status).toBe(400)
-    expect(res.payload.error).toBe('too many picks')
-    // 拒否されたら 1 バイトも書かない
-    expect(db.store.get('051').rep.picks).toHaveLength(1)
+    expect(res.status).toBe(200)
+    expect(db.store.get('051').rep.picks).toHaveLength(3)
   })
 
   it('許容外の評価値は書き込まない', async () => {
