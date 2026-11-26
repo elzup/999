@@ -822,7 +822,7 @@ function DigitKanaAllocBar({ alloc, digit, label, colorMap }) {
               title=${kana + ' ' + cnt + ' (' + pct.toFixed(0) + '%)'}
             >
               <span className="da-seg-label"
-                >${pct >= 8 ? kana : ''}${pct >= 14 ? ' ' + cnt : ''}</span
+                >${pct >= 10 ? kana : ''}${pct >= 24 ? ' ' + cnt : ''}</span
               >
             </div>
           `

@@ -676,9 +676,10 @@ h2 {
 }
 .da-digit-bars {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 .da-digit-legend {
   display: flex;
@@ -703,11 +704,12 @@ h2 {
 .da-bar-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  min-width: 0;
 }
 .da-pos-label {
-  width: 56px;
-  text-align: right;
+  width: 16px;
+  text-align: center;
   color: #888;
   font-size: 13px;
   font-weight: bold;
@@ -715,6 +717,7 @@ h2 {
 }
 .da-stacked-bg {
   flex: 1;
+  min-width: 0;
   height: 32px;
   background: #15171e;
   border-radius: 4px;
@@ -744,7 +747,7 @@ h2 {
 .da-bar-total {
   color: #888;
   font-size: 12px;
-  width: 36px;
+  width: 28px;
   flex-shrink: 0;
 }
 .da-empty {
@@ -881,5 +884,10 @@ h2 {
   }
   .rule-columns {
     gap: 16px;
+  }
+  /* 3本横並びだとバーが細すぎるので縦積みに戻す */
+  .da-digit-bars {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
   }
 }
