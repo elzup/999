@@ -18,10 +18,11 @@ const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
 
 /**
- * 番号の文書をどこから読むか (DB 作り直しの段 5)。書き込みはどちらでも numbers と symbols / words の両方に書く。
- * - numbers (既定): 今まで通り。symbols への写しが作れなくても保存は止めない
- * - symbols: symbols / words から組み立てて読む。写しが正本なので、作れなければ保存ごと止める
- * 戻すときは NUMBERS_SOURCE を外すだけでよい (numbers も毎回書いているので古くならない)
+ * 番号の文書をどこから読むか。
+ * - numbers (既定): numbers だけを読み書きする。symbols / words には書かない
+ *   (今の写しは語の ID を中身の hash で作る仮の形で、書き続けるほど作り直す量が増える。.metarc/db-plan.md P0)
+ * - symbols: symbols / words から組み立てて読み、保存は numbers と両方に書く。写しが作れなければ保存ごと止める
+ * 設定を変えたら `gcloud functions describe` で環境変数を確かめる (.env を消しても消えない)
  */
 export const numbersSource = () =>
   process.env.NUMBERS_SOURCE === 'symbols' ? 'symbols' : 'numbers'
@@ -109,23 +110,22 @@ export function connect({
           set: async (num, doc) => {
             tx.set(store.collection(NUMBERS).doc(num), doc)
           },
-          mirror: async (num, doc) => {
-            let writes
-            try {
-              writes = mirrorWrites(doc, new Date().toISOString())
-            } catch (error) {
-              if (symbols) throw error
-              // 写しが作れなくても保存は止めない。正本はまだ numbers で、写しのずれは
-              // scripts/migrate-symbols.ts --verify が拾い、--apply で作り直せる
-              console.error('mirror(symbols)', num, error)
-              return
-            }
-            for (const write of writes) {
-              tx.set(store.collection(write.col).doc(write.id), write.data, {
-                merge: write.merge,
-              })
-            }
-          },
+          ...(symbols
+            ? {
+                mirror: async (_num, doc) => {
+                  for (const write of mirrorWrites(
+                    doc,
+                    new Date().toISOString()
+                  )) {
+                    tx.set(
+                      store.collection(write.col).doc(write.id),
+                      write.data,
+                      { merge: write.merge }
+                    )
+                  }
+                },
+              }
+            : {}),
         })
       })
     },
