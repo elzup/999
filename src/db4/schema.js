@@ -60,6 +60,8 @@ export const wordSchema = z
   .object({
     id: wordId,
     text: z.string().min(1),
+    // 語の画像 (P8)。記号ごとの画像 (link.imageUrl) が空のときに使う
+    imageUrl: z.string().optional(),
     source: z.string(),
     labels: strings,
   })

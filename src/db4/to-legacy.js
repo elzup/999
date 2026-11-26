@@ -22,7 +22,16 @@ function refOf(items, wordId) {
     : null
 }
 
-function sideOf(symbol, items, { role, prefix }) {
+/**
+ * 枠の画像。記号側 (link.imageUrl) にあればそれ、空なら語の画像 (P8: 画像は語に付け、記号ごとに上書きできる)
+ */
+function imageOf(link, wordsById) {
+  const own = link.imageUrl
+  const shared = wordsById?.[link.wordId]?.imageUrl
+  return own || !shared ? own : shared
+}
+
+function sideOf(symbol, items, { role, prefix }, wordsById) {
   const own = items.filter((i) => i.role === role)
   const kanaOnly = (symbol.kanaOnly ?? []).filter((k) => k.role === role)
   const length = Math.max(
@@ -45,7 +54,10 @@ function sideOf(symbol, items, { role, prefix }) {
         {
           word: item?.notation ?? '',
           kana: item?.kana ?? kana?.kana ?? '',
-          ...(first && 'imageUrl' in first ? { imageUrl: first.imageUrl } : {}),
+          ...(first &&
+          ('imageUrl' in first || wordsById?.[first.wordId]?.imageUrl)
+            ? { imageUrl: imageOf(first, wordsById) }
+            : {}),
           ...(first?.slotExtras ?? kana?.slotExtras ?? {}),
         },
       ],
@@ -56,7 +68,7 @@ function sideOf(symbol, items, { role, prefix }) {
 
 export function toNumberDoc(symbol, wordsById) {
   const items = itemsOfSymbol(symbol, wordsById)
-  const sides = SIDES.map((side) => sideOf(symbol, items, side))
+  const sides = SIDES.map((side) => sideOf(symbol, items, side, wordsById))
   const rated = symbol.links.filter((l) => l.rating !== undefined)
   const rep = symbol.rep
     ? {
