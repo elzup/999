@@ -161,7 +161,9 @@ export function connect({
             const snap = await tx.get(store.collection(NUMBERS).doc(num))
             return snap.exists ? snap.data() : undefined
           },
+          // 新しい形が正本のときは旧 DB (numbers) に書かない (写しは廃止: D-0174)。新しい形は mirror が書く
           set: async (num, doc) => {
+            if (symbols) return
             tx.set(store.collection(NUMBERS).doc(num), doc)
           },
           // 新しい形 (v4) への書き込み。DB4_WRITE=on のときだけ (本番は P5 から on)
