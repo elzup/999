@@ -35,7 +35,7 @@ done
 # targets / tag-variants / live-targets は /console/state に DB の最新の語を重ねるのに使う
 # slot-moves は番号の語を並べ替え・移動したときに画像を語に付いて回らせる (/numbers/:num の slots)
 # DB 作り直し: numbers を書くとき symbols / words にも写す (db.js → symbols/mirror.js)
-for name in model db-shape mirror; do
+for name in model db-shape mirror symbol-source; do
   cp "$root/src/symbols/$name.js" "$lib/symbols/$name.js"
 done
 

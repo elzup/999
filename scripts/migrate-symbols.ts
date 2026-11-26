@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore, type Firestore } from 'firebase-admin/firestore'
+import { connect } from '../src/firestore/db.js'
 import { canonicalJson } from '../src/firestore/number-doc.js'
 import { fromDbSymbol, toDbSymbol } from '../src/symbols/db-shape.js'
 import { SYMBOLS, WORDS, wordDoc, wordDocId } from '../src/symbols/mirror.js'
@@ -160,7 +161,13 @@ async function verify(
 
 async function main() {
   const projectId = guard()
-  const db = getFirestore(initializeApp({ projectId }))
+  // 本番は db.js と同じ認証の順 (FIRESTORE_KEY → FIRESTORE_ACCESS_TOKEN → ADC) で繋ぐ。
+  // ADC は gcloud の既定 (別アカウント) を指していることがあり、そのまま使うと別の権限で動く
+  const db = (
+    args.prod
+      ? connect({ projectId, source: 'numbers' }).raw
+      : getFirestore(initializeApp({ projectId }))
+  ) as Firestore
   db.settings({ ignoreUndefinedProperties: true })
 
   const numberDocs = (await readAll(db, NUMBERS))

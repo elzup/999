@@ -12,9 +12,19 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { mirrorWrites } from '../symbols/mirror.js'
+import { createSymbolReader } from '../symbols/symbol-source.js'
 
 const NUMBERS = 'numbers'
 const BUNDLES = 'bundles'
+
+/**
+ * 番号の文書をどこから読むか (DB 作り直しの段 5)。書き込みはどちらでも numbers と symbols / words の両方に書く。
+ * - numbers (既定): 今まで通り。symbols への写しが作れなくても保存は止めない
+ * - symbols: symbols / words から組み立てて読む。写しが正本なので、作れなければ保存ごと止める
+ * 戻すときは NUMBERS_SOURCE を外すだけでよい (numbers も毎回書いているので古くならない)
+ */
+export const numbersSource = () =>
+  process.env.NUMBERS_SOURCE === 'symbols' ? 'symbols' : 'numbers'
 
 /**
  * 認証情報を解決する。GOOGLE_SERVICE_ACCOUNT_PATH は画像アップロードと
@@ -75,18 +85,24 @@ function defaultProjectId() {
   }
 }
 
-export function connect({ projectId = defaultProjectId() } = {}) {
+export function connect({
+  projectId = defaultProjectId(),
+  source = numbersSource(),
+} = {}) {
   if (!projectId)
     throw new Error('project id が解決できない (.firebaserc を確認)')
   const store = openStore(projectId)
+  const symbols = source === 'symbols' ? createSymbolReader(store) : null
 
   return {
     raw: store,
+    source,
 
     async runTransaction(fn) {
       return store.runTransaction(async (tx) => {
         return fn({
           get: async (num) => {
+            if (symbols) return symbols.readInTransaction(tx, num)
             const snap = await tx.get(store.collection(NUMBERS).doc(num))
             return snap.exists ? snap.data() : undefined
           },
@@ -98,6 +114,7 @@ export function connect({ projectId = defaultProjectId() } = {}) {
             try {
               writes = mirrorWrites(doc, new Date().toISOString())
             } catch (error) {
+              if (symbols) throw error
               // 写しが作れなくても保存は止めない。正本はまだ numbers で、写しのずれは
               // scripts/migrate-symbols.ts --verify が拾い、--apply で作り直せる
               console.error('mirror(symbols)', num, error)
@@ -115,6 +132,7 @@ export function connect({ projectId = defaultProjectId() } = {}) {
 
     /** 1 件だけ読む。書き込み前の現在値取得と統合ビューの表示に使う */
     async readNumber(num) {
+      if (symbols) return (await symbols.readNumbers([num]))[num]
       const snap = await store.collection(NUMBERS).doc(num).get()
       return snap.exists ? snap.data() : undefined
     },
@@ -122,6 +140,7 @@ export function connect({ projectId = defaultProjectId() } = {}) {
     /** 指定した番号をまとめて読む。無い番号は結果に含めない */
     async readNumbers(nums) {
       if (!nums.length) return []
+      if (symbols) return Object.values(await symbols.readNumbers(nums))
       const refs = nums.map((num) => store.collection(NUMBERS).doc(num))
       const snaps = await store.getAll(...refs)
       return snaps.filter((snap) => snap.exists).map((snap) => snap.data())
@@ -129,8 +148,31 @@ export function connect({ projectId = defaultProjectId() } = {}) {
 
     /** 既存の numbers を全部読む (同期・移行のプラン作成用) */
     async readAllNumbers() {
+      if (symbols) return symbols.readChangedSince(null)
       const snap = await store.collection(NUMBERS).get()
       return Object.fromEntries(snap.docs.map((d) => [d.id, d.data()]))
+    },
+
+    /** 番号 → 文書。iso が null なら全件、あれば updatedAt がそれより新しいものだけ */
+    async readChangedSince(iso) {
+      if (symbols) return symbols.readChangedSince(iso)
+      const numbers = store.collection(NUMBERS)
+      const query = iso ? numbers.where('updatedAt', '>', iso) : numbers
+      const snap = await query.get()
+      return Object.fromEntries(snap.docs.map((d) => [d.id, d.data()]))
+    },
+
+    /** 番号 → 文書。無い番号は含めない */
+    async readNumberMap(nums) {
+      if (symbols) return symbols.readNumbers(nums)
+      if (!nums.length) return {}
+      const refs = nums.map((num) => store.collection(NUMBERS).doc(num))
+      const snaps = await store.getAll(...refs)
+      return Object.fromEntries(
+        snaps
+          .filter((snap) => snap.exists)
+          .map((snap) => [snap.id, snap.data()])
+      )
     },
 
     async readChunk(id) {
