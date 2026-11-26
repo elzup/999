@@ -14,12 +14,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { parseCardsTsv } from '../src/cards-tsv.js'
 import { fromLegacy } from '../src/db4/from-legacy.js'
+import { driftedNums } from '../src/db4/check-all.js'
 import { checkIntegrity } from '../src/db4/integrity.js'
 import { shapeErrors } from '../src/db4/schema.js'
-import { toNumberDoc } from '../src/db4/to-legacy.js'
 import { SYMBOLS, WORDS } from '../src/db4/write-layer.js'
 import { connectRest, fromFields, toFields } from '../src/firestore/rest.js'
-import { sheetFormOfDoc } from '../src/firestore/sheet-bisync.js'
 import { writeNumber } from '../src/firestore/write.js'
 
 const { values: args } = parseArgs({
@@ -101,19 +100,6 @@ async function commitAll(writes: any[]) {
       body: { writes: writes.slice(i, i + BATCH) },
     })
   }
-}
-
-/** 旧と新の値が食い違う番号 (C7)。枠は詰めて比べる (シート同期と同じ) */
-function driftedNums(numbers: any[], symbols: any[], words: any[]) {
-  const wordsById = Object.fromEntries(words.map((w) => [w.id, w]))
-  const symbolsById = new Map(symbols.map((s) => [s.id, s]))
-  return numbers.flatMap((doc) => {
-    const symbol = symbolsById.get(`num:${doc.num}`)
-    if (!symbol) return [doc.num]
-    const back = toNumberDoc(symbol, wordsById)
-    const form = sheetFormOfDoc(doc)
-    return back.hito === form.hito && back.mono === form.mono ? [] : [doc.num]
-  })
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-')
