@@ -36,10 +36,15 @@ const doc = {
   source: 'console',
 }
 
-describe('rest: 保存は symbols / words にも同じ commit で書く', () => {
+describe('rest: symbols 読みのとき、保存は symbols / words にも同じ commit で書く', () => {
   it('numbers と symbols / words が 1 つの commit に入る', async () => {
     const { fetchImpl, commits } = fakeFetch({ num: '051', updatedAt: 't0' })
-    const db = connectRest({ projectId: 'p', token: 't', fetchImpl })
+    const db = connectRest({
+      projectId: 'p',
+      token: 't',
+      fetchImpl,
+      source: 'symbols',
+    })
     const result = await writeNumber(db, {
       num: '051',
       doc,
@@ -60,7 +65,12 @@ describe('rest: 保存は symbols / words にも同じ commit で書く', () => 
 
   it('語は merge (updateMask 付き)、記号は丸ごと置き換え', async () => {
     const { fetchImpl, commits } = fakeFetch({ num: '051', updatedAt: 't0' })
-    const db = connectRest({ projectId: 'p', token: 't', fetchImpl })
+    const db = connectRest({
+      projectId: 'p',
+      token: 't',
+      fetchImpl,
+      source: 'symbols',
+    })
     await writeNumber(db, { num: '051', doc, expectedUpdatedAt: 't0' })
     const writes = commits[0].writes
     const word = writes.find((w) => w.update.name.includes('/words/'))
@@ -76,7 +86,12 @@ describe('rest: 保存は symbols / words にも同じ commit で書く', () => 
 
   it('競合したら何も書かない', async () => {
     const { fetchImpl, commits } = fakeFetch({ num: '051', updatedAt: 'other' })
-    const db = connectRest({ projectId: 'p', token: 't', fetchImpl })
+    const db = connectRest({
+      projectId: 'p',
+      token: 't',
+      fetchImpl,
+      source: 'symbols',
+    })
     const result = await writeNumber(db, {
       num: '051',
       doc,
@@ -84,5 +99,27 @@ describe('rest: 保存は symbols / words にも同じ commit で書く', () => 
     })
     expect(result.error).toBe('conflict')
     expect(commits.every((c) => c.writes.length === 0)).toBe(true)
+  })
+})
+
+describe('rest: numbers 読み (既定) のとき', () => {
+  it('numbers だけを書く (symbols / words に書かない)', async () => {
+    const { fetchImpl, commits } = fakeFetch({ num: '051', updatedAt: 't0' })
+    const db = connectRest({
+      projectId: 'p',
+      token: 't',
+      fetchImpl,
+      source: 'numbers',
+    })
+    const result = await writeNumber(db, {
+      num: '051',
+      doc,
+      expectedUpdatedAt: 't0',
+    })
+    expect(result.ok).toBe(true)
+    const names = commits[0].writes.map(
+      (w) => w.update.name.split('/documents/')[1]
+    )
+    expect(names).toEqual(['numbers/051'])
   })
 })
