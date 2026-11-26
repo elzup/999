@@ -34,8 +34,8 @@ done
 # web 版の画像コンソール (console-route.js / index.js が読む)。印と、その場の取り直し (検索 → DL → webp → GCS)
 # targets / tag-variants / live-targets は /console/state に DB の最新の語を重ねるのに使う
 # slot-moves は番号の語を並べ替え・移動したときに画像を語に付いて回らせる (/numbers/:num の slots)
-# DB 作り直し: numbers を書くとき symbols / words にも写す (db.js → symbols/mirror.js)
-for name in model db-shape mirror symbol-source; do
+# model は db4/notation.js が表記の分解に使う
+for name in model; do
   cp "$root/src/symbols/$name.js" "$lib/symbols/$name.js"
 done
 
