@@ -12,8 +12,10 @@ const fold = (text: string) => kataToHiraText(text).toLowerCase()
 
 // 名前の無いタグは id (#ml 等) を出さず «名前未設定» と出す (id は検索でだけ当てる)
 const UNNAMED = '名前未設定'
+// 英字だけのキー (#ml 等) は読めないので隠す。日本語のキー (#ジブリ) はそのまま名前として読める
+const isReadableKey = (tag: string) => /[^\x00-\x7F]/.test(tag)
 const nameOf = (tag: string, names: Record<string, string>) =>
-  names[tag] || TAG_MEANINGS[tag] || UNNAMED
+  names[tag] || TAG_MEANINGS[tag] || (isReadableKey(tag) ? tag : UNNAMED)
 
 type Props = {
   numbers: NumberEntry[]
