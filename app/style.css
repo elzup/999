@@ -1398,6 +1398,54 @@ body {
   font-size: 11px;
   color: var(--text2);
 }
+/* 設定 > タグ (TagPanel)。.tag-row はグループ > タグ一覧と名前を共有しているので
+   tp- で上書きして、指で押しやすく読みやすい大きさにする */
+.tp-list .tag-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.tp-list .tag-row.active {
+  border-color: var(--accent);
+  background: var(--accent2);
+}
+.tp-list .tag-name {
+  font-size: 17px;
+}
+.tp-list .tag-count {
+  font-size: 15px;
+}
+.tp-list .tag-meta {
+  font-size: 13px;
+}
+.tp-detail .tag-detail-title {
+  font-size: 22px;
+}
+.tp-detail .tag-detail-sub {
+  font-size: 14px;
+}
+.tp-detail .card-edit-label {
+  font-size: 14px;
+}
+.tp-detail .card-edit-row input {
+  font-size: 16px;
+  padding: 10px 12px;
+}
+.tp-detail .tag-num-chip {
+  font-size: 14px;
+  padding: 5px 10px;
+}
+.tp-detail .tag-occ-row {
+  grid-template-columns: 48px 32px 1fr;
+  font-size: 15px;
+}
+.tp-detail .tag-occ-cat {
+  font-size: 12px;
+}
 
 /* D3 (3桁テスト) */
 .d3-grid {
