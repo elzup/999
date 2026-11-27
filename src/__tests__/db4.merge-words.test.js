@@ -78,6 +78,23 @@ describe('syncNumber: 他の記号の同じ表記の語に結び付ける', () =
     expect(result.upsertWords).toEqual([])
   })
 
+  it('消した語の位置に足した語は、前の語の画像を引き継がない', () => {
+    const prevSymbol = sym('num:419', 'num', [link('w_old', 'person')])
+    const prevWords = [{ ...w('w_old', 'エレン'), imageUrl: 'https://x/old' }]
+    const result = syncNumber({
+      prevSymbol,
+      prevWords,
+      nextDoc: {
+        num: '419',
+        slots: { wh1: { word: 'ジーク', kana: 'じーく' } },
+      },
+      issue: () => 'w_new0000000',
+    })
+    expect(result.upsertWords).toHaveLength(1)
+    expect(result.upsertWords[0].text).toBe('ジーク')
+    expect(result.upsertWords[0].imageUrl).toBeUndefined()
+  })
+
   it('同じ kind の別の記号の語には結び付けない (C9)', () => {
     const near = [w('w_other', 'ジーク')]
     const nearUsage = new Map([
