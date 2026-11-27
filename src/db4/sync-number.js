@@ -8,12 +8,16 @@
 //   2. 無ければ、同じ位置 (role + order + 出典の順) にいた語の ID (表記の修正で ID が変わらない)
 //      ただしその語を他の記号も指しているなら引き継がない。旧 DB では他の記号の綴りは変わらないので、
 //      語の文書を書き換えると旧と新がずれる。この記号だけ新しい語に分ける
-//   3. どちらも無ければ新しい ID
+//   3. 無ければ、他の記号にある同じ表記の語 (D-0178 / D-0179: hex・カードと番号で同じ語を共有する)
+//   4. どれも無ければ新しい ID
 // 2 は «消して同じ位置に別の語を足した» と区別できない。保存の形 (枠の最終形) に操作の種類が無いため。
 
 import { fromLegacy } from './from-legacy.js'
 import { issueWordId } from './ids.js'
+import { nearMatch } from './merge-words.js'
 import { roleFamily } from './roles.js'
+
+const union = (a = [], b = []) => [...new Set([...a, ...b])]
 
 const familyOf = (links, wordId) =>
   roleFamily(links.find((l) => l.wordId === wordId)?.role)
@@ -77,13 +81,38 @@ export function syncNumber({
   /** 番号以外 (カード) のときは fromLegacy の入力 ({ cards: [card] }) を渡す */
   legacy,
   issue = issueWordId,
+  /** この記号の外にある、足した語と同じ表記の語 (prepareSymbolWrite が読む) */
+  near = [],
+  /** near の語 → それを指す記号の [{ id, kind, roles }] */
+  nearUsage = new Map(),
 }) {
   const draft = fromLegacy(legacy ?? { numbers: [nextDoc] })
   const [temp] = draft.symbols
   const tempWords = new Map(draft.words.map((w) => [w.id, w]))
   const prevById = new Map(prevWords.map((w) => [w.id, w]))
   const prevLinks = prevSymbol?.links ?? []
-  const claimed = claimIds({ temp, tempWords, prevLinks, prevById, sharedIds })
+  const ownClaimed = claimIds({
+    temp,
+    tempWords,
+    prevLinks,
+    prevById,
+    sharedIds,
+  })
+  const claimed = [...tempWords.keys()]
+    .filter((tid) => !ownClaimed.has(tid))
+    .reduce((acc, tid) => {
+      const used = new Set(acc.values())
+      const match = nearMatch({
+        word: tempWords.get(tid),
+        role: temp.links.find((l) => l.wordId === tid)?.role,
+        symbol: temp,
+        near: near.filter((w) => !used.has(w.id)),
+        usageOf: nearUsage,
+      })
+      return match ? new Map([...acc, [tid, match.id]]) : acc
+    }, ownClaimed)
+  // 語の文書を書き直すときに今の中身 (画像など) を引き継ぐため、結び付けた外の語も引けるようにする
+  const knownById = new Map([...near.map((w) => [w.id, w]), ...prevById])
   const idMap = new Map(
     [...tempWords.keys()].map((tid) => [tid, claimed.get(tid) ?? issue()])
   )
@@ -103,14 +132,20 @@ export function syncNumber({
   }
   const upsertWords = [...tempWords.values()].flatMap((word) => {
     const id = remap(word.id)
-    const prev = prevById.get(id)
+    const prev = knownById.get(id)
+    // 他の記号の語に結び付けたときは、その語のタグと性質を消さない (足し合わせる)。
+    // この記号の語の書き換え (タグを外す等) はそのまま反映する
+    const isNear = !prevById.has(id) && Boolean(prev)
+    const source = isNear ? word.source || prev.source : word.source
+    const labels = isNear ? union(prev.labels, word.labels) : word.labels ?? []
+    const attrs = isNear ? union(prev.attrs, word.attrs) : word.attrs ?? []
     // 語の性質 (属性・語のラベル) もこの記号の表記から決める (D-0177)。変わったら語を書き直す
     const marksOf = (w) => JSON.stringify([w?.attrs ?? [], w?.labels ?? []])
     const isSame =
       prev &&
       prev.text === word.text &&
-      prev.source === word.source &&
-      marksOf(prev) === marksOf(word)
+      prev.source === source &&
+      marksOf(prev) === marksOf({ attrs, labels })
     const { attrs: _a, labels: _l, ...keep } = prev ?? {}
     return isSame
       ? []
@@ -119,9 +154,9 @@ export function syncNumber({
             ...keep,
             id,
             text: word.text,
-            source: word.source,
-            labels: word.labels ?? [],
-            ...(word.attrs?.length ? { attrs: word.attrs } : {}),
+            source,
+            labels,
+            ...(attrs.length ? { attrs } : {}),
           },
         ]
   })

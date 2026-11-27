@@ -40,7 +40,7 @@ for name in model; do
 done
 
 # DB 作り直し v4: numbers を書く transaction で symbols / words も書く (db.js → db4/write-layer.js。DB4_WRITE=on のときだけ)
-for name in roles ids notation items refs from-legacy integrity schema sync-number write-layer check-all to-legacy reader word-image word-image-write cards tag-codec marks snapshot; do
+for name in roles ids notation items refs from-legacy integrity schema sync-number write-layer check-all to-legacy reader word-image word-image-write cards tag-codec marks snapshot merge-words; do
   cp "$root/src/db4/$name.js" "$lib/db4/$name.js"
 done
 

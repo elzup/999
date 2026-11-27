@@ -17,6 +17,8 @@ import { fromLegacy } from '../src/db4/from-legacy.js'
 import { driftedNums } from '../src/db4/check-all.js'
 import { migrationTagId } from '../src/db4/ids.js'
 import { migrateMarks } from '../src/db4/marks.js'
+import { applyMerge, mergePlan } from '../src/db4/merge-words.js'
+import { buildSnapshots, CHANGE_DOC, SNAPSHOTS } from '../src/db4/snapshot.js'
 import { decodeWords, encodeWords, TAGS } from '../src/db4/tag-codec.js'
 import { linkImagesFromSlots, wordImagePlan } from '../src/db4/word-image.js'
 import { checkIntegrity } from '../src/db4/integrity.js'
@@ -42,6 +44,7 @@ const { values: args } = parseArgs({
     'rename-roles': { type: 'boolean', default: false },
     tags: { type: 'boolean', default: false },
     marks: { type: 'boolean', default: false },
+    'merge-words': { type: 'boolean', default: false },
     apply: { type: 'boolean', default: false },
   },
 })
@@ -68,6 +71,7 @@ if (
     args['rename-roles'],
     args.tags,
     args.marks,
+    args['merge-words'],
   ].filter(Boolean).length !== 1
 )
   throw new Error('--build / --repair / --word-images / --cards のどれか 1 つ')
@@ -426,6 +430,66 @@ if (args.marks) {
       `書いた後: 違反 ${checkIntegrity(after).errors.length} / 形の誤り ${
         shapeErrors({ symbols: s2, words: w2, tags: oldTags }).length
       }`
+    )
+  }
+}
+
+// --merge-words: 同じ表記の語を 1 つにまとめる (D-0178 / D-0179)。写しも作り直す
+if (args['merge-words']) {
+  const plan = mergePlan({ symbols: oldSymbols, words: oldWords })
+  const next = applyMerge({ symbols: oldSymbols, words: oldWords }, plan)
+  const symbolsChanged = next.symbols.filter(
+    (s: any, i: number) => JSON.stringify(s) !== JSON.stringify(oldSymbols[i])
+  )
+  const changedIds = new Set(next.changedWordIds)
+  const encoded = encodeWords(
+    next.words.filter((w: any) => changedIds.has(w.id)),
+    oldTags
+  )
+  const shape = shapeErrors({
+    symbols: next.symbols,
+    words: encodeWords(next.words, oldTags).docs,
+    tags: oldTags,
+  })
+  const { errors } = checkIntegrity(next)
+  console.log(
+    `まとめる語 ${plan.size} / 書き換える記号 ${symbolsChanged.length} / 語 ${encoded.docs.length} / 形の誤り ${shape.length} / 違反 ${errors.length}`
+  )
+  for (const e of [...shape, ...errors].slice(0, 5)) console.log('   ', e)
+  if (shape.length || errors.length) throw new Error('誤りがあるので書かない')
+  if (args.apply) {
+    const clean = (v: unknown) => JSON.parse(JSON.stringify(v))
+    const snapshots = buildSnapshots(next)
+    await commitAll([
+      ...symbolsChanged.map(({ id, ...s }: any) => ({
+        update: {
+          name: `${root}/${SYMBOLS}/${id}`,
+          fields: toFields(clean(s)),
+        },
+      })),
+      ...encoded.docs.map(({ id, ...w }: any) => ({
+        update: { name: `${root}/${WORDS}/${id}`, fields: toFields(clean(w)) },
+      })),
+      ...next.removedIds.map((id: string) => ({
+        delete: `${root}/${WORDS}/${id}`,
+      })),
+      ...Object.entries(snapshots).map(([id, doc]) => ({
+        update: {
+          name: `${root}/${SNAPSHOTS}/${id}`,
+          fields: toFields(clean(doc)),
+        },
+      })),
+      {
+        update: {
+          name: `${root}/${CHANGE_DOC.col}/${CHANGE_DOC.id}`,
+          fields: toFields({ at: new Date().toISOString() }),
+        },
+      },
+    ])
+    const [s2, w2] = await Promise.all([listAll(SYMBOLS), listAll(WORDS)])
+    const after = { symbols: s2, words: decodeWords(w2, oldTags) }
+    console.log(
+      `書いた後: 語 ${w2.length} / 違反 ${checkIntegrity(after).errors.length}`
     )
   }
 }
