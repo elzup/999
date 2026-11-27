@@ -101,12 +101,49 @@ function DigitFilterPads({
 }
 
 // 語の編集へ入るとタブが «編集» に切り替わり、この画面は一度消える。
-// 閉じて戻るたびに番号の絞り込みを打ち直さずに済むよう、アプリを開いている間だけ覚えておく
-let remembered: {
+// 閉じて戻るたびに番号の絞り込みを打ち直さずに済むよう覚えておく。
+// メモリだけだと、起動直後の新しい版への入れ替え (main.tsx の再読み込み) で消えるので、
+// タブを閉じるまで残る sessionStorage にも置く
+type Remembered = {
   selected: string | null
   df: DigitFilter
   filterMode: FilterMode
-} = { selected: null, df: [null, null, null], filterMode: 'rows' }
+}
+const REMEMBER_KEY = 'numberTab.filter'
+const EMPTY_REMEMBERED: Remembered = {
+  selected: null,
+  df: [null, null, null],
+  filterMode: 'rows',
+}
+const isDigitOrNull = (v: unknown) =>
+  v === null || (typeof v === 'string' && /^\d$/.test(v))
+
+function loadRemembered(): Remembered {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(REMEMBER_KEY) ?? 'null')
+    const isValid =
+      raw &&
+      Array.isArray(raw.df) &&
+      raw.df.length === 3 &&
+      raw.df.every(isDigitOrNull) &&
+      (raw.filterMode === 'rows' || raw.filterMode === 'pads') &&
+      (raw.selected === null || typeof raw.selected === 'string')
+    return isValid ? raw : EMPTY_REMEMBERED
+  } catch {
+    // 読めない (プライベートモード等) ときは絞り込み無しで始めればよい
+    return EMPTY_REMEMBERED
+  }
+}
+
+function saveRemembered(next: Remembered) {
+  try {
+    sessionStorage.setItem(REMEMBER_KEY, JSON.stringify(next))
+  } catch {
+    // 書けなくてもメモリには残る (再読み込みで消えるだけ)
+  }
+}
+
+let remembered: Remembered = loadRemembered()
 
 function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
   const [df, setDf] = useState<DigitFilter>(remembered.df)
@@ -134,6 +171,7 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
 
   useEffect(() => {
     remembered = { selected, df, filterMode }
+    saveRemembered(remembered)
   }, [selected, df, filterMode])
 
   const selectedData = useMemo(() => {
