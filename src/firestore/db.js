@@ -18,6 +18,7 @@ import {
   isDb4WriteOn,
   prepareNumberWrite,
   SYMBOLS as DB4_SYMBOLS,
+  WORDS as DB4_WORDS,
 } from '../db4/write-layer.js'
 
 const NUMBERS = 'numbers'
@@ -122,6 +123,20 @@ export function connect({
         id: d.id,
         ...d.data(),
       })),
+    findWordsByText: async (texts) => {
+      const chunks = Array.from(
+        { length: Math.ceil(texts.length / ANY_LIMIT) },
+        (_, i) => texts.slice(i * ANY_LIMIT, (i + 1) * ANY_LIMIT)
+      )
+      const snaps = await Promise.all(
+        chunks.map((chunk) =>
+          tx.get(store.collection(DB4_WORDS).where('text', 'in', chunk))
+        )
+      )
+      return snaps.flatMap((snap) =>
+        snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      )
+    },
     findSymbolsUsing: async (wordIds) => {
       const chunks = Array.from(
         { length: Math.ceil(wordIds.length / ANY_LIMIT) },
@@ -169,7 +184,8 @@ export function connect({
           // 新しい形 (v4) への書き込み。DB4_WRITE=on のときだけ (本番は P5 から on)
           ...(isDb4WriteOn()
             ? {
-                prepareMirror: (num) => prepareNumberWrite(adminIo(tx), num),
+                prepareMirror: (num, doc) =>
+                  prepareNumberWrite(adminIo(tx), num, doc),
                 mirror: async (_num, doc, plan) => {
                   commitNumberWrite(adminIo(tx), plan, doc)
                 },

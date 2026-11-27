@@ -43,7 +43,7 @@ function runWrite(db, { num, doc, expectedUpdatedAt, intent }) {
   return db.runTransaction(async (tx) => {
     const current = await tx.get(num)
     // 新しい形 (symbols / words) の今の値。transaction は読みを全部先に済ませる決まりなので、ここで読む
-    const mirrorPlan = await tx.prepareMirror?.(num)
+    const mirrorPlan = await tx.prepareMirror?.(num, doc)
 
     // REQ-FS-012: 読んでから書くまでに他の面が触っていたら諦める。
     // これが無いと、同期の最中に入ったコンソールの編集を巻き戻してしまう

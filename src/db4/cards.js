@@ -62,7 +62,9 @@ export async function saveCard(runDb4Transaction, cardId, patch) {
   const [, suit, rank] = match
   try {
     return await runDb4Transaction(async (io) => {
-      const plan = await prepareSymbolWrite(io, `card:${suit}${rank}`)
+      const plan = await prepareSymbolWrite(io, `card:${suit}${rank}`, {
+        cards: [{ suit, rank, ...parsed.data }],
+      })
       const wordsById = Object.fromEntries(plan.prevWords.map((w) => [w.id, w]))
       const current = plan.prevSymbol
         ? toCard(plan.prevSymbol, wordsById)

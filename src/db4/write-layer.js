@@ -19,6 +19,7 @@ import {
   snapshotEntryOf,
   snapshotIdOf,
 } from './snapshot.js'
+import { fromLegacy } from './from-legacy.js'
 import { syncNumber } from './sync-number.js'
 import { decodeWords, encodeWords, TAGS } from './tag-codec.js'
 
@@ -39,11 +40,14 @@ export class Db4WriteError extends Error {
 const clean = (value) => JSON.parse(JSON.stringify(value))
 const withoutId = ({ id: _id, ...rest }) => rest
 
-export const prepareNumberWrite = (io, num) =>
-  prepareSymbolWrite(io, symbolIdOf.num(num))
+export const prepareNumberWrite = (io, num, doc) =>
+  prepareSymbolWrite(io, symbolIdOf.num(num), doc && { numbers: [doc] })
 
-/** 記号 1 つの今の値 (番号・カード共通) */
-export async function prepareSymbolWrite(io, symbolId) {
+/**
+ * 記号 1 つの今の値 (番号・カード共通)。
+ * legacy (保存する中身。fromLegacy の入力) を渡すと、その語と同じ表記の、他の記号の語も読む (D-0178)
+ */
+export async function prepareSymbolWrite(io, symbolId, legacy) {
   const [prevSymbol] = await io.getDocs(SYMBOLS, [symbolId])
   const prevIds = prevSymbol?.wordIds ?? []
   // 出典タグは全部読む (143 件ほど)。語の sourceId をコードに戻し、新しいコードのタグを作るため
@@ -56,6 +60,7 @@ export async function prepareSymbolWrite(io, symbolId) {
     ? (await io.findSymbolsUsing(prevIds)).filter((s) => s.id !== symbolId)
     : []
   const sharedIds = new Set(others.flatMap((s) => s.wordIds ?? []))
+  const { near, nearUsage } = await readNear(io, legacy, prevIds, tags)
   // 読む形の写し (100 番号ずつ / カード)。この記号の行だけ書き換えるので、今の中身を読む
   const snapshotId = snapshotIdOf(symbolId)
   const [snapshot] = snapshotId
@@ -69,7 +74,37 @@ export async function prepareSymbolWrite(io, symbolId) {
     prevWords,
     sharedIds,
     tags,
+    near,
+    nearUsage,
   }
+}
+
+/** 保存する語と同じ表記の、他の記号の語と、それを指す記号 (語の ID → [{ id, kind, roles }]) */
+async function readNear(io, legacy, prevIds, tags) {
+  const empty = { near: [], nearUsage: new Map() }
+  if (!legacy || !io.findWordsByText) return empty
+  const texts = [...new Set(fromLegacy(legacy).words.map((w) => w.text))]
+  if (!texts.length) return empty
+  const own = new Set(prevIds)
+  const near = decodeWords(
+    (await io.findWordsByText(texts)).filter((w) => !own.has(w.id)),
+    tags
+  )
+  if (!near.length) return empty
+  const users = await io.findSymbolsUsing(near.map((w) => w.id))
+  const nearUsage = new Map(
+    near.map((w) => [
+      w.id,
+      users
+        .filter((s) => (s.wordIds ?? []).includes(w.id))
+        .map((s) => ({
+          id: s.id,
+          kind: s.kind,
+          roles: s.links.filter((l) => l.wordId === w.id).map((l) => l.role),
+        })),
+    ])
+  )
+  return { near, nearUsage }
 }
 
 /** @returns {{ symbol, upsertWords, deleteWordIds }} 書いた中身 */
@@ -84,10 +119,15 @@ export function commitNumberWrite(io, plan, nextDoc, legacy) {
     sharedIds: plan.sharedIds,
     nextDoc,
     legacy,
+    near: plan.near,
+    nearUsage: plan.nearUsage,
   })
   const upserted = new Map(result.upsertWords.map((w) => [w.id, w]))
   const linkedWords = result.symbol.wordIds.map(
-    (id) => upserted.get(id) ?? plan.prevWords.find((w) => w.id === id)
+    (id) =>
+      upserted.get(id) ??
+      plan.prevWords.find((w) => w.id === id) ??
+      plan.near?.find((w) => w.id === id)
   )
   const encoded = encodeWords(result.upsertWords, plan.tags)
   const shape = shapeErrors({

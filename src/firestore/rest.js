@@ -14,6 +14,7 @@ import {
   isDb4WriteOn,
   prepareNumberWrite,
   SYMBOLS as DB4_SYMBOLS,
+  WORDS as DB4_WORDS,
 } from '../db4/write-layer.js'
 import { TAGS as DB4_TAGS } from '../db4/tag-codec.js'
 
@@ -161,6 +162,39 @@ export function connectRest({
         }))
       return [...new Map(docs.map((d) => [d.id, d])).values()]
     },
+    findWordsByText: async (texts) => {
+      const chunks = Array.from(
+        { length: Math.ceil(texts.length / ANY_LIMIT) },
+        (_, i) => texts.slice(i * ANY_LIMIT, (i + 1) * ANY_LIMIT)
+      )
+      const rows = await Promise.all(
+        chunks.map((chunk) =>
+          call(':runQuery', {
+            method: 'POST',
+            body: {
+              transaction,
+              structuredQuery: {
+                from: [{ collectionId: DB4_WORDS }],
+                where: {
+                  fieldFilter: {
+                    field: { fieldPath: 'text' },
+                    op: 'IN',
+                    value: toValue(chunk),
+                  },
+                },
+              },
+            },
+          })
+        )
+      )
+      return rows
+        .flat()
+        .filter((row) => row.document)
+        .map((row) => ({
+          ...fromFields(row.document.fields ?? {}),
+          id: decodeURIComponent(row.document.name.split('/').at(-1)),
+        }))
+    },
     set: (col, id, data) =>
       writes.push({
         update: { name: docName(col, id), fields: toFields(data) },
@@ -202,8 +236,8 @@ export function connectRest({
         // 新しい形 (v4) への書き込み。db.js と同じ口 (DB4_WRITE=on のときだけ)
         ...(isDb4WriteOn()
           ? {
-              prepareMirror: (num) =>
-                prepareNumberWrite(restIo(transaction, writes), num),
+              prepareMirror: (num, doc) =>
+                prepareNumberWrite(restIo(transaction, writes), num, doc),
               mirror: async (_num, doc, plan) => {
                 commitNumberWrite(restIo(transaction, writes), plan, doc)
               },
