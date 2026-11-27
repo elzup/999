@@ -2,26 +2,36 @@ import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { collectNumberTags } from '../lib/tags'
 import Screen, { DockBar } from './Screen'
-import { tagNameOf, useTagNames } from '../lib/tagNames'
+import { useLongTagNames } from '../lib/tagNames'
+import { kataToHiraText } from '../lib/kanaNotation'
+import { TAG_MEANINGS } from '../lib/wordTags'
 import TagNameForm from './TagNameForm'
+
+// ひらがなで打ってもカタカナの語・名前に当たるよう、比べる前にそろえる
+const fold = (text: string) => kataToHiraText(text).toLowerCase()
+
+// 名前の無いタグは id (#ml 等) を出さず «名前未設定» と出す (id は検索でだけ当てる)
+const UNNAMED = '名前未設定'
+const nameOf = (tag: string, names: Record<string, string>) =>
+  names[tag] || TAG_MEANINGS[tag] || UNNAMED
 
 type Props = {
   numbers: NumberEntry[]
 }
 
 function TagPanel({ numbers }: Props) {
-  const names = useTagNames()
+  const names = useLongTagNames()
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
   const tags = useMemo(() => collectNumberTags(numbers), [numbers])
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = fold(query.trim())
     if (!q) return tags
     return tags.filter((entry) => {
-      if (entry.tag.toLowerCase().includes(q)) return true
-      if (tagNameOf(entry.tag, names).toLowerCase().includes(q)) return true
-      return entry.occurrences.some((occ) => occ.base.toLowerCase().includes(q))
+      if (fold(entry.tag).includes(q)) return true
+      if (fold(nameOf(entry.tag, names)).includes(q)) return true
+      return entry.occurrences.some((occ) => fold(occ.base).includes(q))
     })
   }, [tags, query, names])
 
@@ -35,7 +45,7 @@ function TagPanel({ numbers }: Props) {
     filtered.length === 0 ? (
       <div class="tag-empty">該当タグなし</div>
     ) : (
-      <div class="tag-list stack-up" style={{ '--stack-gap': '6px' }}>
+      <div class="tag-list tp-list stack-up" style={{ '--stack-gap': '6px' }}>
         {filtered.map((entry) => (
           <button
             key={entry.tag}
@@ -44,7 +54,7 @@ function TagPanel({ numbers }: Props) {
             }
             onClick={() => setSelected(entry.tag)}
           >
-            <span class="tag-name">{tagNameOf(entry.tag, names)}</span>
+            <span class="tag-name">{nameOf(entry.tag, names)}</span>
             <span class="tag-count">{entry.count}</span>
             <span class="tag-meta">
               人{entry.categories.hito} 物{entry.categories.mono} 念
@@ -57,11 +67,11 @@ function TagPanel({ numbers }: Props) {
 
   const panel =
     filtered.length > 0 && selectedTag ? (
-      <div class="tag-panel-detail">
+      <div class="tag-panel-detail tp-detail">
         <div class="tag-detail-card">
           <div class="tag-detail-head">
             <span class="tag-detail-title">
-              {tagNameOf(selectedTag.tag, names)}
+              {nameOf(selectedTag.tag, names)}
             </span>
             <span class="tag-detail-sub">{selectedTag.nums.length}番号</span>
           </div>
@@ -84,7 +94,6 @@ function TagPanel({ numbers }: Props) {
                   {labelForCategory(occ.category)}
                 </span>
                 <span class="tag-occ-base">{occ.base || occ.value}</span>
-                <span class="tag-occ-raw">{occ.value}</span>
               </div>
             ))}
           </div>
@@ -95,7 +104,7 @@ function TagPanel({ numbers }: Props) {
   const dock = (
     <>
       <DockBar
-        title={`${tags.length} tags`}
+        title={`タグ ${tags.length}`}
         sub={
           filtered.length === tags.length
             ? `${filtered.length}件`
@@ -105,7 +114,7 @@ function TagPanel({ numbers }: Props) {
       <input
         class="search-input"
         type="text"
-        placeholder="tag or label で検索"
+        placeholder="名前・語で検索 (ひらがな可)"
         value={query}
         onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
       />
