@@ -12,14 +12,14 @@ import { IconEdit } from './Icons'
 import { BookmarkButton } from './Screen'
 import { parseTaggedItems } from '../lib/tags'
 import { nameOf, REP_STATUS_LABEL } from '../lib/numberDetail'
-import { candidateAt } from '../lib/choice'
+import { candidateAt, slotOfPick } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
 import { useNumberDoc, usePendingCount } from '../lib/symbolStore'
 import { baseWord, imageStore, slotKeyOf } from '../lib/imageStore'
 import { marksMeaning, parseWord } from '../lib/wordTags'
 import TaggedWord, { hasMarks } from './TaggedWord'
 import { useLongTagNames } from '../lib/tagNames'
-import { repRankOf, useRepInfo } from '../lib/useRepSlots'
+import { repRankOf, useRepInfo, type RepInfo } from '../lib/useRepSlots'
 import { wordImage } from '../lib/wordImage'
 import { rankeyOf } from '../lib/rankey'
 import {
@@ -91,6 +91,36 @@ function wordRows(d: NumberEntry): WordRow[] {
     rows.push({ slot: 'wm2', word: wm2.word, img: wm2.img, dim: true })
   }
   return rows
+}
+
+/** 行に出す数 (1 番手 + 2 枠目)。代表があってもこの数は増やさない */
+const SHOWN_ROWS = 2
+
+/**
+ * 代表 (①②) を先に出し、足りない分を枠の順 (wordRows) で埋める。
+ * 以前は枠の位置 (人の 1 つ目・物の 1 つ目) だけで選び、wh2 や wm3 を代表にしても出なかった
+ */
+function shownRows(d: NumberEntry, rep: RepInfo | null): WordRow[] {
+  const repRows = (rep?.picks ?? []).map((pick): WordRow => {
+    const slot = slotOfPick(d, pick)
+    const cand = candidateAt(d, slot)
+    return {
+      slot: slot ?? `rep:${pick.w}`,
+      word: pick.w,
+      kana: pick.k,
+      img: cand?.img,
+      rk: rankeyOf(pick.k, d.num, pick.w),
+    }
+  })
+  const seen = new Set<string>()
+  return [...repRows, ...wordRows(d)]
+    .filter((row) => {
+      if (seen.has(row.word)) return false
+      seen.add(row.word)
+      return true
+    })
+    .slice(0, SHOWN_ROWS)
+    .map((row, i) => ({ ...row, dim: i > 0 }))
 }
 
 /**
@@ -208,9 +238,9 @@ function NumDetailPanel(props: Props) {
   const onEdit = props.onEdit ?? (ctx ? () => ctx.openEditor(d.num) : undefined)
   const bmKey = 'n:' + d.num
   const isBm = bookmarks ? bookmarks.has(bmKey) : false
-  const rows = wordRows(d)
-  // 代表①② と確定状態 (編集画面で選ぶもの)。読めるまでは出さない
+  // 代表①② と確定状態 (編集画面で選ぶもの)。読めるまでは枠の順で出す
   const rep = useRepInfo(d.num)
+  const rows = shownRows(d, rep)
   // 語の行にはタグ込みの語 (鯉#g) がそのまま出ている。同じものを
   // タグ行にもう一度出すと、1 枚のカードに同じ語が 2 回並ぶ
   const shownNames = new Set(rows.map((row) => nameOf(row.word)))
