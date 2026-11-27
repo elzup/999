@@ -49,6 +49,7 @@ import {
   type TagSuggestion,
 } from '../lib/wordTags'
 import { writeQueue, listenWriteQueue } from '../lib/writeQueue'
+import { loadKeptDrafts, saveKeptDrafts, splitDrafts } from '../lib/editorDraft'
 import {
   saveMarkOf,
   useNumberDoc,
@@ -176,7 +177,8 @@ export default function NumberDetailTab({
       if (!token) return
       const cached = queue.has(target)
       if (!cached) setLoading(true)
-      setDrafts({})
+      // 前に離れたとき送れずに残した下書き (語かよみが空の枠) を戻す
+      setDrafts(loadKeptDrafts(target))
       setMoving(null)
       fetchNumber(target, token)
         .then((doc) => {
@@ -209,7 +211,10 @@ export default function NumberDetailTab({
       if (!current || !ops.length) return
       setNote(EMPTY_NOTE)
       // 候補 (slots) を積んだら、下書きはもう画面の文書に入っている
-      if (ops.some((op) => op.op === 'slots')) setDrafts({})
+      if (ops.some((op) => op.op === 'slots')) {
+        setDrafts({})
+        saveKeptDrafts(current.num, {})
+      }
       queue.enqueue(current.num, ops, message)
     },
     [num, queue]
@@ -247,13 +252,32 @@ export default function NumberDetailTab({
   const changed = doc ? changedSlots(doc, drafts) : []
   const dirty = changed.length > 0
 
-  // 番号を移る・読み直す・閉じると下書きは消える。黙って捨てない
+  // 番号を移る・読み直す・閉じる・戻るジェスチャー・タブ切り替えのどれでも、変更は黙って捨てない。
+  // 語とよみが揃った枠は保存し、揃っていない枠は端末に残して次に開いたときに戻す
+  const autoSavedDrafts = useRef<Record<string, SlotRow> | null>(null)
+  const autoSave = () => {
+    if (!doc || !dirty) return
+    // «閉じる» は leave で保存した直後に画面が消え、消えるときの保存がまだ古い下書きで
+    // もう一度走る。同じ下書きは 2 度送らない
+    if (autoSavedDrafts.current === drafts) return
+    autoSavedDrafts.current = drafts
+    const { send, keep } = splitDrafts(drafts, changed)
+    if (Object.keys(send).length) {
+      saveSlots(
+        withDeliveredImages(mergeDraftRows(slotRows(doc), send), entry),
+        '離れる前に保存しました'
+      )
+    }
+    // 保存 (sendAll) が端末の下書きを消すので、残す分はその後に書く
+    saveKeptDrafts(doc.num, keep)
+  }
+  const autoSaveRef = useRef(autoSave)
+  autoSaveRef.current = autoSave
+  // 画面ごと消える (戻るジェスチャー・タブ切り替え) ときも同じく保存する
+  useEffect(() => () => autoSaveRef.current(), [])
+
   const leave = (go: () => void) => {
-    if (
-      dirty &&
-      !window.confirm('保存していない変更があります。破棄しますか？')
-    )
-      return false
+    autoSave()
     go()
     return true
   }
@@ -601,7 +625,13 @@ export default function NumberDetailTab({
                 >
                   ● 未保存 {changed.length}
                 </span>
-                <button class="nd-ghost" onClick={() => setDrafts({})}>
+                <button
+                  class="nd-ghost"
+                  onClick={() => {
+                    setDrafts({})
+                    if (doc) saveKeptDrafts(doc.num, {})
+                  }}
+                >
                   戻す
                 </button>
                 <button
