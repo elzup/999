@@ -146,7 +146,11 @@ export function syncNumber({
       prev.text === word.text &&
       prev.source === source &&
       marksOf(prev) === marksOf({ attrs, labels })
-    const { attrs: _a, labels: _l, ...keep } = prev ?? {}
+    const { attrs: _a, labels: _l, imageUrl, ...rest } = prev ?? {}
+    // 位置で ID を引き継いだ語 (手順 2) は表記が変わっている。画像は前の表記の語のもので、
+    // 残すと消した語の画像が新しい語に付く (to-legacy は枠の画像が空なら語の画像を出す)
+    const keep =
+      imageUrl && prev.text === word.text ? { ...rest, imageUrl } : rest
     return isSame
       ? []
       : [
