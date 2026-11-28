@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 852 324" width="852" height="324" font-family="system-ui, sans-serif">
+<rect width="852" height="324" fill="#ffffff"/>
+<rect x="40" y="8" width="12" height="12" rx="2" fill="#3b82f6" fill-opacity="0.18" stroke="#3b82f6" stroke-width="2"/><text x="58" y="18" font-size="12" fill="#1c1f26">999 (000〜999)</text>
+<rect x="270" y="8" width="12" height="12" rx="2" fill="#16a34a" fill-opacity="0.3" stroke="#16a34a" stroke-width="2"/><text x="288" y="18" font-size="12" fill="#1c1f26">日付 mdd (101〜1231)</text>
+<rect x="500" y="8" width="12" height="12" rx="2" fill="#ea8a1a" fill-opacity="0.14" stroke="#ea8a1a" stroke-width="2" stroke-dasharray="4 2"/><text x="518" y="18" font-size="12" fill="#1c1f26">時刻 hhmm (0000〜1259、12 時間制)</text>
+<line x1="40" y1="52" x2="840" y2="52" stroke="#e3e6ec"/>
+<line x1="40" y1="72" x2="840" y2="72" stroke="#e3e6ec"/>
+<line x1="40" y1="92" x2="840" y2="92" stroke="#e3e6ec"/>
+<line x1="40" y1="112" x2="840" y2="112" stroke="#e3e6ec"/>
+<line x1="40" y1="132" x2="840" y2="132" stroke="#e3e6ec"/>
+<line x1="40" y1="152" x2="840" y2="152" stroke="#e3e6ec"/>
+<line x1="40" y1="172" x2="840" y2="172" stroke="#e3e6ec"/>
+<line x1="40" y1="192" x2="840" y2="192" stroke="#e3e6ec"/>
+<line x1="40" y1="212" x2="840" y2="212" stroke="#e3e6ec"/>
+<line x1="40" y1="232" x2="840" y2="232" stroke="#e3e6ec"/>
+<line x1="40" y1="252" x2="840" y2="252" stroke="#e3e6ec"/>
+<line x1="40" y1="272" x2="840" y2="272" stroke="#e3e6ec"/>
+<line x1="40" y1="292" x2="840" y2="292" stroke="#e3e6ec"/>
+<line x1="40" y1="312" x2="840" y2="312" stroke="#e3e6ec"/>
+<line x1="40" y1="52" x2="40" y2="312" stroke="#e3e6ec"/>
+<line x1="120" y1="52" x2="120" y2="312" stroke="#e3e6ec"/>
+<line x1="200" y1="52" x2="200" y2="312" stroke="#e3e6ec"/>
+<line x1="280" y1="52" x2="280" y2="312" stroke="#e3e6ec"/>
+<line x1="360" y1="52" x2="360" y2="312" stroke="#e3e6ec"/>
+<line x1="440" y1="52" x2="440" y2="312" stroke="#e3e6ec"/>
+<line x1="520" y1="52" x2="520" y2="312" stroke="#e3e6ec"/>
+<line x1="600" y1="52" x2="600" y2="312" stroke="#e3e6ec"/>
+<line x1="680" y1="52" x2="680" y2="312" stroke="#e3e6ec"/>
+<line x1="760" y1="52" x2="760" y2="312" stroke="#e3e6ec"/>
+<line x1="840" y1="52" x2="840" y2="312" stroke="#e3e6ec"/>
+<text x="42" y="45" font-size="10" fill="#6a707c">00</text>
+<text x="122" y="45" font-size="10" fill="#6a707c">10</text>
+<text x="202" y="45" font-size="10" fill="#6a707c">20</text>
+<text x="282" y="45" font-size="10" fill="#6a707c">30</text>
+<text x="362" y="45" font-size="10" fill="#6a707c">40</text>
+<text x="442" y="45" font-size="10" fill="#6a707c">50</text>
+<text x="522" y="45" font-size="10" fill="#6a707c">60</text>
+<text x="602" y="45" font-size="10" fill="#6a707c">70</text>
+<text x="682" y="45" font-size="10" fill="#6a707c">80</text>
+<text x="762" y="45" font-size="10" fill="#6a707c">90</text>
+<text x="296" y="31" font-size="10" font-weight="700" text-anchor="end" fill="#16a34a">〜31</text>
+<text x="520" y="31" font-size="10" font-weight="700" text-anchor="end" fill="#ea8a1a">〜59</text>
+<text x="34" y="66" font-size="10" text-anchor="end" fill="#6a707c">0xx</text>
+<text x="34" y="86" font-size="10" text-anchor="end" fill="#6a707c">1xx</text>
+<text x="34" y="106" font-size="10" text-anchor="end" fill="#6a707c">2xx</text>
+<text x="34" y="126" font-size="10" text-anchor="end" fill="#6a707c">3xx</text>
+<text x="34" y="146" font-size="10" text-anchor="end" fill="#6a707c">4xx</text>
+<text x="34" y="166" font-size="10" text-anchor="end" fill="#6a707c">5xx</text>
+<text x="34" y="186" font-size="10" text-anchor="end" fill="#6a707c">6xx</text>
+<text x="34" y="206" font-size="10" text-anchor="end" fill="#6a707c">7xx</text>
+<text x="34" y="226" font-size="10" text-anchor="end" fill="#6a707c">8xx</text>
+<text x="34" y="246" font-size="10" text-anchor="end" fill="#6a707c">9xx</text>
+<text x="34" y="266" font-size="10" text-anchor="end" fill="#6a707c">10xx</text>
+<text x="34" y="286" font-size="10" text-anchor="end" fill="#6a707c">11xx</text>
+<text x="34" y="306" font-size="10" text-anchor="end" fill="#6a707c">12xx</text>
+<rect x="40" y="52" width="480" height="260" fill="#ea8a1a" fill-opacity="0.14" stroke="#ea8a1a" stroke-width="2.5" stroke-dasharray="6 3"/>
+<rect x="40" y="52" width="800" height="200" fill="#3b82f6" fill-opacity="0.18" stroke="#3b82f6" stroke-width="2.5"/>
+<polygon points="48,72 296,72 296,92 272,92 272,112 296,112 296,132 288,132 288,152 296,152 296,172 288,172 288,192 296,192 296,212 296,212 296,232 288,232 288,252 296,252 296,272 288,272 288,292 296,292 296,312 48,312" fill="#16a34a" fill-opacity="0.3" stroke="#16a34a" stroke-width="2.5"/>
+<text x="828" y="66" font-size="12" font-weight="700" text-anchor="end" fill="#3b82f6">999</text>
+<text x="136" y="306" font-size="12" font-weight="700" fill="#16a34a">日付 (12xx まで)</text>
+<text x="508" y="306" font-size="12" font-weight="700" text-anchor="end" fill="#ea8a1a">時刻 hhmm (1259 まで)</text>
+</svg>
