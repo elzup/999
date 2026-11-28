@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { collectNumberTags } from '../lib/tags'
-import { TagMdCard } from './Cells'
-import { tagStats } from './TagFilterTab'
+import { TagList, tagStats } from './TagFilterTab'
 import Screen, { DockBar } from './Screen'
 import { useLongTagNames } from '../lib/tagNames'
 import { kataToHiraText } from '../lib/kanaNotation'
@@ -47,27 +46,20 @@ function TagPanel({ numbers }: Props) {
     ? tags.find((entry) => entry.tag === selected) || null
     : null
 
-  const main =
-    filtered.length === 0 ? (
-      <div class="tag-empty">該当タグなし</div>
-    ) : (
-      // グループ画面の一覧 (TagMdCard) の小さい版。名前と画像で探せる
-      <div class="grid-up md-grid tp-mini" style={{ '--gap': '4px' }}>
-        {filtered.map((entry) => (
-          <TagMdCard
-            key={entry.tag}
-            tag={entry.tag}
-            title={nameOf(entry.tag, names)}
-            count={entry.count}
-            cand={stats.get(entry.tag)?.cand}
-            selected={selectedTag?.tag === entry.tag}
-            onSelect={() =>
-              setSelected(selected === entry.tag ? null : entry.tag)
-            }
-          />
-        ))}
-      </div>
-    )
+  // グループ画面と同じ一覧のチップス (小さいカード)。名前と画像で探せる
+  const main = (
+    <TagList
+      isMini
+      rows={filtered.map((entry) => ({
+        tag: entry.tag,
+        title: nameOf(entry.tag, names),
+        count: entry.count,
+        cand: stats.get(entry.tag)?.cand,
+      }))}
+      selectedTag={selected}
+      onPick={(tag) => setSelected(selected === tag ? null : tag)}
+    />
+  )
 
   const panel = selectedTag ? (
     <DetailSheet onClose={() => setSelected(null)}>

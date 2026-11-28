@@ -11,19 +11,18 @@ import { useNumberContext } from '../lib/numberContext'
 import { parseWord, suggestTags, type TagSuggestion } from '../lib/wordTags'
 import { NumMdCard, TagMdCard } from './Cells'
 import NumDetailPanel from './NumDetailPanel'
-import Screen, { DockBar } from './Screen'
+import Screen, { DockBar, DockRow } from './Screen'
 import DetailSheet from './DetailSheet'
 import { useSelection } from '../lib/useSelection'
 import { useBackGuard } from '../lib/useBackGuard'
 import { useMdReveal } from '../lib/useMdReveal'
-import { MdRevealToggle } from './MdRevealToggle'
 import TagNameForm from './TagNameForm'
 
 type Props = {
   numbers: NumberEntry[]
 }
 
-type TagRow = TagSuggestion & {
+export type TagRow = TagSuggestion & {
   count: number
   /** 正式名 (title)。無ければ略称、それも無ければタグの id */
   title: string
@@ -60,14 +59,29 @@ export function tagStats(numbers: NumberEntry[]): Map<string, TagStat> {
   return stats
 }
 
-type TagListProps = { rows: TagRow[]; onPick: (tag: string) => void }
+type TagListProps = {
+  rows: TagRow[]
+  onPick: (tag: string) => void
+  isMini?: boolean
+  selectedTag?: string | null
+}
+
+// md カードの小さい版 (チップス)。設定 > タグ とタグ内の表示で共用する
+const gridClass = (isMini: boolean) =>
+  'grid-up md-grid' + (isMini ? ' md-mini' : '')
+const gridGap = (isMini: boolean) => ({ '--gap': isMini ? '4px' : '6px' })
 
 // 番号の md カードと同じ並べ方。語の多いタグほど下 (親指側)
-function TagList({ rows, onPick }: TagListProps) {
+export function TagList({
+  rows,
+  onPick,
+  isMini = false,
+  selectedTag = null,
+}: TagListProps) {
   if (rows.length === 0)
     return <div class="screen-empty">該当するタグがありません</div>
   return (
-    <div class="grid-up md-grid" style={{ '--gap': '6px' }}>
+    <div class={gridClass(isMini)} style={gridGap(isMini)}>
       {rows.map((row) => (
         <TagMdCard
           key={row.tag}
@@ -76,6 +90,7 @@ function TagList({ rows, onPick }: TagListProps) {
           short={row.name}
           count={row.count}
           cand={row.cand}
+          selected={selectedTag === row.tag}
           onSelect={() => onPick(row.tag)}
         />
       ))}
@@ -83,14 +98,22 @@ function TagList({ rows, onPick }: TagListProps) {
   )
 }
 
+// タグを開いた画面の表示。クイズ = 語を伏せる / 一覧 = 全部出す / チップス = 小さいカード
+type TagView = 'quiz' | 'list' | 'chips' | 'edit'
+const TAG_VIEWS: ReadonlyArray<[TagView, string]> = [
+  ['quiz', 'クイズ'],
+  ['list', '一覧'],
+  ['chips', 'チップス'],
+  ['edit', '編集'],
+]
+
 function TagFilterTab({ numbers }: Props) {
   const ctx = useNumberContext()
   const tagNames = ctx?.tagNames
   const tagTitles = ctx?.tagTitles
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState<string | null>(null)
-  // タグの名前 (正式名・略称) を直す欄。設定 > タグ まで行かずに直せるように
-  const [isEditing, setIsEditing] = useState(false)
+  const [view, setViewState] = useState<TagView>('quiz')
 
   const allRows = useMemo<TagRow[]>(
     () =>
@@ -121,10 +144,13 @@ function TagFilterTab({ numbers }: Props) {
   const selectedEntry = matched.find((d) => d.num === selected) ?? null
   const reveal = useMdReveal()
 
-  const pickTag = (next: string | null) => {
+  const setView = (next: TagView) => {
     clear()
-    reveal.setMode('num')
-    setIsEditing(false)
+    reveal.setMode(next === 'quiz' ? 'num' : 'all')
+    setViewState(next)
+  }
+  const pickTag = (next: string | null) => {
+    setView('quiz')
     setTag(next)
   }
   // タグを開いた画面で端末の «戻る» を押すとアプリごと閉じていた。
@@ -135,15 +161,16 @@ function TagFilterTab({ numbers }: Props) {
     <DetailSheet nav={nav} onClose={clear}>
       <NumDetailPanel d={selectedEntry} />
     </DetailSheet>
-  ) : current && isEditing ? (
-    <DetailSheet onClose={() => setIsEditing(false)}>
-      <TagNameForm key={current.tag} tag={current.tag} />
-    </DetailSheet>
   ) : null
 
-  const main = current ? (
+  const isMini = view === 'chips'
+  const main = !current ? (
+    <TagList rows={rows} onPick={pickTag} />
+  ) : view === 'edit' ? (
+    <TagNameForm key={current.tag} tag={current.tag} />
+  ) : (
     // md カードで、そのタグの語の画像を出す (人・物の先頭ではない)
-    <div class="grid-up md-grid" style={{ '--gap': '6px' }}>
+    <div class={gridClass(isMini)} style={gridGap(isMini)}>
       {matched.map((d) => (
         <NumMdCard
           key={d.num}
@@ -159,13 +186,22 @@ function TagFilterTab({ numbers }: Props) {
         />
       ))}
     </div>
-  ) : (
-    <TagList rows={rows} onPick={pickTag} />
   )
 
   const dock = current ? (
     <>
-      <MdRevealToggle mode={reveal.mode} onChange={reveal.setMode} />
+      <DockRow>
+        {TAG_VIEWS.map(([key, label]) => (
+          <button
+            key={key}
+            class={'filter-btn' + (view === key ? ' active' : '')}
+            aria-pressed={view === key}
+            onClick={() => setView(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </DockRow>
       <DockBar
         title={current.title}
         sub={`${
@@ -174,15 +210,6 @@ function TagFilterTab({ numbers }: Props) {
             : ''
         }${matched.length} 番号`}
       >
-        <button
-          class={'filter-btn' + (isEditing ? ' active' : '')}
-          onClick={() => {
-            clear()
-            setIsEditing((on) => !on)
-          }}
-        >
-          編集
-        </button>
         <button class="filter-btn" onClick={() => pickTag(null)}>
           タグ一覧へ
         </button>

@@ -7130,14 +7130,14 @@ img[data-concept] {
   text-align: left;
 }
 /* 設定 > タグ の一覧はグループ画面のカードの小さい版。スマホで 5 列、名前と件数も縮める */
-.grid-up.md-grid.tp-mini > * {
+.grid-up.md-grid.md-mini > * {
   flex-basis: min(96px, calc((100% - 4 * var(--gap)) / 5));
 }
-.tp-mini .md-card-num {
+.md-mini .md-card-num {
   font-size: 13px;
   padding: 0 4px;
 }
-.tp-mini .md-card-word {
+.md-mini .md-card-word {
   padding: 10px 3px 2px;
   font-size: 11px;
 }
