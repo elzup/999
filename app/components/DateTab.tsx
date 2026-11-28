@@ -20,6 +20,7 @@ type Day = DateDay & { entry: NumberEntry }
 
 // 4×4-2×2 ドーナッツ配置 (elzup のリング配置の 1 つ)。4×4 の外周に 12 か月を時計回りに置き、
 // 真ん中の 2×2 を穴にする。それを真ん中で切って左右 2 画面にする (プレビュー date-layouts の A)。
+// ほかの配置 (十字 / ジグザグ 4×3) は https://github.com/elzup/time/blob/main/docs/ring-layout.md
 //   3  4 |  5  6
 //   2  ◎ |  ◎  7
 //   1  ◎ |  ◎  8
