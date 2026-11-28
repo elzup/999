@@ -64,13 +64,13 @@ const DAKUTEN_MAP: Record<string, string> = {
   ゔ:'う', ヴ:'う',
 }
 
+// src/table.js と同じ。ジャ行・じぇ・ぢゃ行は濁点を外さずに 6 行で読む
+// prettier-ignore
 const DAKUTEN_YOUON_EXCEPTIONS = new Set([
-  'じゃ',
-  'じゅ',
-  'じょ',
-  'ジャ',
-  'ジュ',
-  'ジョ',
+  'じゃ', 'じゅ', 'じょ', 'じぇ',
+  'ジャ', 'ジュ', 'ジョ', 'ジェ',
+  'ぢゃ', 'ぢゅ', 'ぢょ', 'ぢぇ',
+  'ヂャ', 'ヂュ', 'ヂョ', 'ヂェ',
 ])
 
 // prettier-ignore

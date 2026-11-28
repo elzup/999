@@ -50,6 +50,18 @@ describe('encode', () => {
     expect(encode('じょ').digits).toBe('64')
   })
 
+  // 表に無いと濁点を外して しぇ=49 で読み、ジェシーが 494 で通っていた
+  it('じぇ・ぢゃ行もジャ行と同じく 6 行で読む', () => {
+    expect(encode('じぇ').digits).toBe('69')
+    expect(encode('じぇし+ー').digits).toBe('694')
+    expect(encode('ぢゃ').digits).toBe('68')
+    expect(encode('ぢゅ').digits).toBe('67')
+    expect(encode('ぢょ').digits).toBe('64')
+    expect(encode('ぢぇ').digits).toBe('69')
+    // 清音の しぇ は 4 行のまま
+    expect(encode('しぇ').digits).toBe('49')
+  })
+
   it('ん → 0 (core)', () => {
     expect(encode('ん').digits).toBe('0')
   })

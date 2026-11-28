@@ -24,7 +24,8 @@ describe('TWO_CHAR_YOMI', () => {
 describe('toYomiKey', () => {
   it('カタカナ・濁点を表のキーに寄せる', () => {
     expect(toYomiKey('チャ')).toBe('ちゃ')
-    expect(toYomiKey('ヂャ')).toBe('ちゃ')
+    // ぢゃ行はジャ行と同じく 6 行 (68) なので ちゃ (58) に潰さない
+    expect(toYomiKey('ヂャ')).toBe('ぢゃ')
     expect(toYomiKey('じゃ')).toBe('じゃ') // 濁音のまま別キー (68)
   })
 
