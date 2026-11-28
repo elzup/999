@@ -8096,90 +8096,44 @@ img[data-concept] {
   color: var(--text2);
 }
 
-/* ── 日付: 12 か月のカレンダーで年間の輪っかを囲む ── */
-.dt-ring svg {
-  height: auto;
+/* ── 日付: 4×4-2×2 ドーナッツ配置を左右 2 画面に切る ── */
+.dt-viewport {
+  overflow: hidden;
 }
-.dt-ring-seg {
-  cursor: pointer;
+.dt-track {
+  display: flex;
+  width: 200%;
+  transition: transform 0.3s ease;
 }
-.dt-ring-seg path {
-  /* 語の埋まり具合 (0〜1) で濃くする */
-  fill: color-mix(
-    in srgb,
-    var(--accent) calc(var(--fill) * 100%),
-    var(--surface2)
-  );
-  stroke: var(--bg);
-  stroke-width: 1;
-}
-.dt-ring-seg text {
-  font-size: 8px;
-  fill: var(--text);
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
-}
-/* 4×4 の外周に 12 か月、真ん中の 2×2 に輪っか。縦に長くなってよい */
-.dt-grid {
+.dt-page {
+  width: 50%;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 6px;
+  align-content: start;
 }
 .dt-cell {
   min-width: 0;
 }
-/* 左右の半円。左は右端 (中心側)、右は左端に寄せて、2 つで 1 つの輪に見せる */
-.dt-cell--ring {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-}
-.dt-cell--ring .dt-ring {
-  display: flex;
-  min-width: 0;
-}
-.dt-cell--ring .dt-ring:first-child {
-  justify-content: flex-end;
-}
-.dt-cell--ring .dt-ring:last-child {
-  justify-content: flex-start;
-}
-.dt-cell--ring .dt-ring svg {
-  width: 100%;
-  max-width: 110px;
-}
-.dt-month {
-  min-width: 0;
-}
-.dt-month-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 0 2px 2px;
-}
-.dt-month-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-.dt-month-sub {
-  font-size: 10px;
-  color: var(--text2);
-  font-variant-numeric: tabular-nums;
-}
+/* 名前 + 29〜31 日を 5 列 7 段に。段の数を揃えて左右・上下の高さを合わせる */
 .dt-cal {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(7, 22px);
+  gap: 2px;
 }
-/* mmdd の 4 桁がマス (375px 幅で約 20px) に収まる大きさ。正方形にすると縦に長すぎる */
+.dt-month-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
 .dt-day {
   min-width: 0;
-  height: 18px;
   padding: 0;
-  font-size: 7px;
-  letter-spacing: -0.02em;
-  overflow: hidden;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--surface);
@@ -8200,4 +8154,82 @@ img[data-concept] {
   color: var(--bg);
   background: var(--accent);
   border-color: var(--accent);
+}
+/* ドーナッツの穴。縁に月の帯、反対の画面側の端に切替ボタン */
+.dt-hole {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.dt-hole--left {
+  grid-template-columns: 18px 1fr 1fr 22px;
+  grid-template-rows: 18px 1fr 1fr 18px;
+  grid-template-areas:
+    '. b-t1 b-t2 sw'
+    'b-s1 c c sw'
+    'b-s2 c c sw'
+    '. b-b1 b-b2 sw';
+}
+.dt-hole--right {
+  grid-template-columns: 22px 1fr 1fr 18px;
+  grid-template-rows: 18px 1fr 1fr 18px;
+  grid-template-areas:
+    'sw b-t1 b-t2 .'
+    'sw c c b-s1'
+    'sw c c b-s2'
+    'sw b-b1 b-b2 .';
+}
+.dt-band {
+  min-width: 0;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.dt-band:hover,
+.dt-band:active {
+  color: var(--text);
+  background: var(--border);
+}
+.dt-band--v {
+  writing-mode: vertical-rl;
+}
+.dt-hole-body {
+  grid-area: c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text2);
+}
+.dt-hole-switch {
+  grid-area: sw;
+  padding: 0;
+  font-size: 16px;
+  color: var(--text2);
+  background: var(--surface2);
+  border: 0;
+  border-radius: 7px;
+}
+.dt-hole-switch:hover,
+.dt-hole-switch:active {
+  color: var(--text);
+  background: var(--border);
+}
+.dt-band:focus-visible,
+.dt-hole-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-track {
+    transition: none;
+  }
 }

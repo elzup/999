@@ -1,5 +1,5 @@
 import { h } from 'preact'
-import { useMemo, useRef } from 'preact/hooks'
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import NumDetailPanel from './NumDetailPanel'
 import { scoreColor } from './Cells'
@@ -18,38 +18,58 @@ type Props = {
 
 type Day = DateDay & { entry: NumberEntry }
 
-// 4×4 の外周に 12 か月を時計回りに置き、真ん中の 2×2 に年間の輪っかを置く。
-//   3  4  5  6
-//   2  輪 輪  7
-//   1  輪 輪  8
-//  12 11 10  9
-// 輪っかは左右に割り、左の列の側に 10〜3月、右の列の側に 4〜9月を置く
-const MONTH_GRID: ReadonlyArray<
-  readonly [month: number, row: number, col: number]
-> = [
-  [3, 1, 1],
-  [4, 1, 2],
-  [5, 1, 3],
-  [6, 1, 4],
-  [2, 2, 1],
-  [7, 2, 4],
-  [1, 3, 1],
-  [8, 3, 4],
-  [12, 4, 1],
-  [11, 4, 2],
-  [10, 4, 3],
-  [9, 4, 4],
+// 4×4-2×2 ドーナッツ配置 (elzup のリング配置の 1 つ)。4×4 の外周に 12 か月を時計回りに置き、
+// 真ん中の 2×2 を穴にする。それを真ん中で切って左右 2 画面にする (プレビュー date-layouts の A)。
+//   3  4 |  5  6
+//   2  ◎ |  ◎  7
+//   1  ◎ |  ◎  8
+//  12 11 | 10  9
+type Side = 'left' | 'right'
+type Page = {
+  side: Side
+  label: string
+  /** [月, 段, 列] */
+  months: ReadonlyArray<readonly [number, number, number]>
+}
+const PAGES: readonly [Page, Page] = [
+  {
+    side: 'left',
+    label: '10〜3月',
+    months: [
+      [3, 1, 1],
+      [4, 1, 2],
+      [2, 2, 1],
+      [1, 3, 1],
+      [12, 4, 1],
+      [11, 4, 2],
+    ],
+  },
+  {
+    side: 'right',
+    label: '4〜9月',
+    months: [
+      [5, 1, 1],
+      [6, 1, 2],
+      [7, 2, 2],
+      [8, 3, 2],
+      [10, 4, 1],
+      [9, 4, 2],
+    ],
+  },
 ]
+const pageOf = (month: number) =>
+  PAGES[0].months.some(([m]) => m === month) ? 0 : 1
 
-/** mmdd の 4 桁 (0105 等)。1〜9月も 0 を埋めて桁を揃える */
-const mmdd = (month: number, day: number) =>
-  String(month).padStart(2, '0') + String(day).padStart(2, '0')
+/** 日のマスの番号。1〜9月は 999 の 3 桁 (801)、10〜12月は 4 桁 (1001) */
+const dayLabel = (month: number, day: number) =>
+  `${month}${String(day).padStart(2, '0')}`
 
 const hasWord = (d: Day) => candidatesOf(d.entry).length > 0
 
 // 365 日分の日付 → 語。キーは「月 + 日(2桁)」で、1〜9月は num 辞書を共有する。
 function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
   const days = useMemo(() => buildDateEntries(numbers, dates), [numbers, dates])
+  const [page, setPage] = useState(0)
   const monthRefs = useRef<Record<number, HTMLElement | null>>({})
 
   const byMonth = useMemo(() => {
@@ -70,12 +90,21 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     () => (selected === null ? null : days.find((d) => d.key === selected)),
     [days, selected]
   )
+  // 詳細パネルで前へ / 次へ送って反対の画面の月に入ったら、その画面へ移る
+  useEffect(() => {
+    if (selectedDay) setPage(pageOf(selectedDay.month))
+  }, [selectedDay])
 
-  const jumpTo = (month: number) =>
-    monthRefs.current[month]?.scrollIntoView({
-      block: 'nearest',
-      behavior: 'smooth',
-    })
+  const jumpTo = (month: number) => {
+    setPage(pageOf(month))
+    // 画面の切り替え (transform) の後に、その月を画面に入れる
+    requestAnimationFrame(() =>
+      monthRefs.current[month]?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      })
+    )
+  }
 
   const panel = selectedDay ? (
     <DetailSheet nav={nav} onClose={() => setSelected(null)}>
@@ -87,40 +116,50 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     </DetailSheet>
   ) : null
 
-  const renderMonth = ([month, row, col]: typeof MONTH_GRID[number]) => (
-    <div key={month} class="dt-cell" style={{ gridArea: `${row} / ${col}` }}>
-      <MonthCalendar
-        month={month}
-        days={byMonth.get(month) ?? []}
-        selected={selected}
-        onSelect={(key) => setSelected(selected === key ? null : key)}
-        refOf={(el) => {
-          monthRefs.current[month] = el
-        }}
+  const renderPage = (p: Page, index: number) => (
+    <div key={p.side} class="dt-page" aria-hidden={index !== page}>
+      {p.months.map(([month, row, col]) => (
+        <div
+          key={month}
+          class="dt-cell"
+          style={{ gridArea: `${row} / ${col}` }}
+        >
+          <MonthCalendar
+            month={month}
+            days={byMonth.get(month) ?? []}
+            selected={selected}
+            onSelect={(key) => setSelected(selected === key ? null : key)}
+            refOf={(el) => {
+              monthRefs.current[month] = el
+            }}
+          />
+        </div>
+      ))}
+      <CenterBlock
+        page={p}
+        onJump={jumpTo}
+        onSwitch={() => setPage(index === 0 ? 1 : 0)}
       />
     </div>
   )
 
-  // 真ん中の 2×2 は左右に割り、輪っかの左半分 / 右半分をそれぞれの列の側に置く (UI 案 A-3)
   const main = (
-    <div class="dt-grid">
-      {MONTH_GRID.map(renderMonth)}
-      <div class="dt-cell dt-cell--ring" style={{ gridArea: '2 / 2 / 4 / 4' }}>
-        <HalfRing side="left" byMonth={byMonth} onJump={jumpTo} />
-        <HalfRing side="right" byMonth={byMonth} onJump={jumpTo} />
+    <div class="dt-viewport">
+      <div class="dt-track" style={{ transform: `translateX(${-50 * page}%)` }}>
+        {PAGES.map(renderPage)}
       </div>
     </div>
   )
 
-  const filled = days.filter(hasWord).length
-  const dock = <DockBar title="日付" sub={`${filled} / ${days.length} 日`} />
+  const dock = <DockBar title="日付" sub={PAGES[page].label} />
 
   return <Screen main={main} panel={panel} dock={dock} />
 }
 
 /**
- * 1 か月を 4 列で。1 日を左上に置く (曜日は年で変わるので合わせない)。
- * 4 か月を横に並べるので 7 列だとマスが小さすぎて読めない
+ * 1 か月を 5 列で。月の名前は見出しの行を作らず最初のマスに置く (縦の余白を減らす)。
+ * 名前 + 29〜31 日 = 30〜32 マスなので、どの月も 7 段に揃い左右・上下で高さがずれない。
+ * 1 日を名前の次に置く (曜日は年で変わるので合わせない)
  */
 function MonthCalendar({
   month,
@@ -135,19 +174,12 @@ function MonthCalendar({
   onSelect: (key: string) => void
   refOf: (el: HTMLElement | null) => void
 }) {
-  const filled = days.filter(hasWord).length
   return (
-    <section class="dt-month" ref={refOf}>
-      <div class="dt-month-head">
-        <span class="dt-month-name">{month}月</span>
-        <span class="dt-month-sub">
-          {filled}/{days.length}
-        </span>
-      </div>
+    <section class="dt-month" ref={refOf} aria-label={`${month}月`}>
       <div class="dt-cal">
+        <div class="dt-month-name">{month}月</div>
         {days.map((d) => {
-          const score = d.entry.w1Score ?? d.entry.w2Score
-          const color = scoreColor(score)
+          const color = scoreColor(d.entry.w1Score ?? d.entry.w2Score)
           return (
             <button
               key={d.key}
@@ -160,7 +192,7 @@ function MonthCalendar({
               aria-label={`${month}月${d.day}日`}
               onClick={() => onSelect(d.key)}
             >
-              {mmdd(month, d.day)}
+              {dayLabel(month, d.day)}
             </button>
           )
         })}
@@ -169,81 +201,62 @@ function MonthCalendar({
   )
 }
 
-// 輪っかの寸法 (viewBox の単位)。中の穴を大きめにして月の数字を輪の上に読ませる
-const RING_SIZE = 120
-const RING_OUTER = 56
-const RING_INNER = 36
-
-/** 角度 (12 時が 0、時計回り) → 座標 */
-const pointAt = (radius: number, deg: number) => {
-  const rad = ((deg - 90) * Math.PI) / 180
-  const center = RING_SIZE / 2
-  return [center + radius * Math.cos(rad), center + radius * Math.sin(rad)]
+// 穴のブロックの縁に置く月の帯。その月がある側の縁に置き、押すとその月へ飛ぶ。
+// 反対の画面側の縁は切替ボタンにするので帯を置かない
+const BANDS: Record<Side, ReadonlyArray<readonly [number, string]>> = {
+  left: [
+    [3, 'b-t1'],
+    [4, 'b-t2'],
+    [2, 'b-s1'],
+    [1, 'b-s2'],
+    [12, 'b-b1'],
+    [11, 'b-b2'],
+  ],
+  right: [
+    [5, 'b-t1'],
+    [6, 'b-t2'],
+    [7, 'b-s1'],
+    [8, 'b-s2'],
+    [10, 'b-b1'],
+    [9, 'b-b2'],
+  ],
 }
 
-/** 月の扇。3 と 4 の境目を 12 時に置き、左半分 (10〜3月) と右半分 (4〜9月) に割れるようにする */
-function monthArc(month: number) {
-  const start = (month - 4) * 30
-  const end = start + 30
-  const [x1, y1] = pointAt(RING_OUTER, start)
-  const [x2, y2] = pointAt(RING_OUTER, end)
-  const [x3, y3] = pointAt(RING_INNER, end)
-  const [x4, y4] = pointAt(RING_INNER, start)
-  return {
-    d: `M${x1} ${y1} A${RING_OUTER} ${RING_OUTER} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${RING_INNER} ${RING_INNER} 0 0 0 ${x4} ${y4}Z`,
-    label: pointAt((RING_OUTER + RING_INNER) / 2, start + 15),
-  }
-}
-
-const HALF_MONTHS = {
-  left: [10, 11, 12, 1, 2, 3],
-  right: [4, 5, 6, 7, 8, 9],
-} as const
-
-/**
- * 1 年の輪っかの半分。月ごとに語の埋まり具合で塗り、押すとその月へ飛ぶ。
- * viewBox で円の片側だけを切り出すので、縦長のマスにそのまま収まる
- */
-function HalfRing({
-  side,
-  byMonth,
+/** ドーナッツの穴。縁に 6 か月の帯、反対の画面に近い端に切替ボタン */
+function CenterBlock({
+  page,
   onJump,
+  onSwitch,
 }: {
-  side: 'left' | 'right'
-  byMonth: Map<number, Day[]>
+  page: Page
   onJump: (month: number) => void
+  onSwitch: () => void
 }) {
-  const months = HALF_MONTHS[side]
-  const half = RING_SIZE / 2
-  const viewBox =
-    side === 'left'
-      ? `0 0 ${half} ${RING_SIZE}`
-      : `${half} 0 ${half} ${RING_SIZE}`
+  const isLeft = page.side === 'left'
   return (
-    <div class="dt-ring">
-      <svg viewBox={viewBox} role="list">
-        {months.map((month) => {
-          const days = byMonth.get(month) ?? []
-          const ratio = days.length
-            ? days.filter(hasWord).length / days.length
-            : 0
-          const arc = monthArc(month)
-          return (
-            <g
-              key={month}
-              role="listitem"
-              class="dt-ring-seg"
-              onClick={() => onJump(month)}
-            >
-              <title>{`${month}月 ${Math.round(ratio * 100)}%`}</title>
-              <path d={arc.d} style={{ '--fill': String(ratio) }} />
-              <text x={arc.label[0]} y={arc.label[1]}>
-                {month}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
+    <div
+      class={'dt-hole dt-hole--' + page.side}
+      style={{ gridArea: isLeft ? '2 / 2 / 4 / 3' : '2 / 1 / 4 / 2' }}
+    >
+      {BANDS[page.side].map(([month, area]) => (
+        <button
+          key={month}
+          class={'dt-band' + (area.startsWith('b-s') ? ' dt-band--v' : '')}
+          style={{ gridArea: area }}
+          onClick={() => onJump(month)}
+        >
+          {month}月
+        </button>
+      ))}
+      {/* 中身は未定 (QA-0130 の続き)。今は範囲の名前だけ */}
+      <div class="dt-hole-body">{page.label}</div>
+      <button
+        class="dt-hole-switch"
+        aria-label={isLeft ? '4〜9月の画面へ' : '10〜3月の画面へ'}
+        onClick={onSwitch}
+      >
+        {isLeft ? '›' : '‹'}
+      </button>
     </div>
   )
 }
