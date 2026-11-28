@@ -8097,17 +8097,7 @@ img[data-concept] {
 }
 
 /* ── 日付: 12 か月のカレンダーで年間の輪っかを囲む ── */
-.dt-root {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.dt-ring {
-  display: flex;
-  justify-content: center;
-}
 .dt-ring svg {
-  width: min(160px, 45vw);
   height: auto;
 }
 .dt-ring-seg {
@@ -8122,10 +8112,6 @@ img[data-concept] {
   );
   stroke: var(--bg);
   stroke-width: 1;
-}
-.dt-ring-seg.off {
-  cursor: default;
-  opacity: 0.25;
 }
 .dt-ring-seg text {
   font-size: 8px;
@@ -8143,20 +8129,28 @@ img[data-concept] {
 .dt-cell {
   min-width: 0;
 }
+/* 左右の半円。左は右端 (中心側)、右は左端に寄せて、2 つで 1 つの輪に見せる */
 .dt-cell--ring {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
-  justify-content: center;
+}
+.dt-cell--ring .dt-ring {
+  display: flex;
+  min-width: 0;
+}
+.dt-cell--ring .dt-ring:first-child {
+  justify-content: flex-end;
+}
+.dt-cell--ring .dt-ring:last-child {
+  justify-content: flex-start;
 }
 .dt-cell--ring .dt-ring svg {
   width: 100%;
-  max-width: 220px;
+  max-width: 110px;
 }
 .dt-month {
   min-width: 0;
-}
-.dt-month--hidden {
-  visibility: hidden;
 }
 .dt-month-head {
   display: flex;
