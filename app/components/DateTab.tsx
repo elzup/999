@@ -19,10 +19,27 @@ type Props = {
 
 type Day = DateDay & { entry: NumberEntry }
 
-// 12 か月を 1 画面に 4 列 3 段で。1→12 が 1 本の道でつながる並び (プレビューで確定)。
-// 999 外 (10〜12月) は下の段にまとまる
-const MONTH_GRID: ReadonlyArray<number> = [
-  2, 3, 6, 7, 1, 4, 5, 8, 12, 11, 10, 9,
+// 4×4 の外周に 12 か月を時計回りに置き、真ん中の 2×2 に年間の輪っかを置く。
+//   3  4  5  6
+//   2  輪 輪  7
+//   1  輪 輪  8
+//  12 11 10  9
+// 外周の並びと輪っかの扇の向きを揃える (999 外の 10〜12月は下の段にまとまる)
+const MONTH_GRID: ReadonlyArray<
+  readonly [month: number, row: number, col: number]
+> = [
+  [3, 1, 1],
+  [4, 1, 2],
+  [5, 1, 3],
+  [6, 1, 4],
+  [2, 2, 1],
+  [7, 2, 4],
+  [1, 3, 1],
+  [8, 3, 4],
+  [12, 4, 1],
+  [11, 4, 2],
+  [10, 4, 3],
+  [9, 4, 4],
 ]
 
 /** mmdd の 4 桁 (0105 等)。1〜9月も 0 を埋めて桁を揃える */
@@ -81,27 +98,29 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     </DetailSheet>
   ) : null
 
-  // 隠す月も場所は残す (4 列 3 段の並びを崩さない)
-  const renderMonth = (month: number) =>
-    isShown(month) ? (
-      <MonthCalendar
-        key={month}
-        month={month}
-        days={byMonth.get(month) ?? []}
-        selected={selected}
-        onSelect={(key) => setSelected(selected === key ? null : key)}
-        refOf={(el) => {
-          monthRefs.current[month] = el
-        }}
-      />
-    ) : (
-      <div key={month} class="dt-month dt-month--hidden" />
-    )
+  // 隠す月は描かない (場所は grid の位置指定で決まるので並びは崩れない)
+  const renderMonth = ([month, row, col]: typeof MONTH_GRID[number]) => (
+    <div key={month} class="dt-cell" style={{ gridArea: `${row} / ${col}` }}>
+      {isShown(month) ? (
+        <MonthCalendar
+          month={month}
+          days={byMonth.get(month) ?? []}
+          selected={selected}
+          onSelect={(key) => setSelected(selected === key ? null : key)}
+          refOf={(el) => {
+            monthRefs.current[month] = el
+          }}
+        />
+      ) : null}
+    </div>
+  )
 
   const main = (
-    <div class="dt-root">
-      <YearRing byMonth={byMonth} isShown={isShown} onJump={jumpTo} />
-      <div class="dt-grid">{MONTH_GRID.map(renderMonth)}</div>
+    <div class="dt-grid">
+      {MONTH_GRID.map(renderMonth)}
+      <div class="dt-cell dt-cell--ring" style={{ gridArea: '2 / 2 / 4 / 4' }}>
+        <YearRing byMonth={byMonth} isShown={isShown} onJump={jumpTo} />
+      </div>
     </div>
   )
 
@@ -189,9 +208,9 @@ const pointAt = (radius: number, deg: number) => {
   return [center + radius * Math.cos(rad), center + radius * Math.sin(rad)]
 }
 
-/** 月の扇。3 と 4 の境目を 12 時に置く */
+/** 月の扇。4 と 5 の境目を 12 時に置く (外周の上の段 3 4 | 5 6 と同じ向き) */
 function monthArc(month: number) {
-  const start = (month - 4) * 30
+  const start = (month - 5) * 30
   const end = start + 30
   const [x1, y1] = pointAt(RING_OUTER, start)
   const [x2, y2] = pointAt(RING_OUTER, end)

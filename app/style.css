@@ -8096,7 +8096,7 @@ img[data-concept] {
   color: var(--text2);
 }
 
-/* ── 日付: 1 年の輪っか + 12 か月のカレンダー (4 列 3 段) ── */
+/* ── 日付: 12 か月のカレンダーで年間の輪っかを囲む ── */
 .dt-root {
   display: flex;
   flex-direction: column;
@@ -8134,11 +8134,23 @@ img[data-concept] {
   dominant-baseline: central;
   pointer-events: none;
 }
-/* 12 か月を 4 列 3 段 (2 3 6 7 / 1 4 5 8 / 12 11 10 9) */
+/* 4×4 の外周に 12 か月、真ん中の 2×2 に輪っか。縦に長くなってよい */
 .dt-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px 4px;
+}
+.dt-cell {
+  min-width: 0;
+}
+.dt-cell--ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dt-cell--ring .dt-ring svg {
+  width: 100%;
+  max-width: 220px;
 }
 .dt-month {
   min-width: 0;
