@@ -17,6 +17,7 @@ import { useSelection } from '../lib/useSelection'
 import { useBackGuard } from '../lib/useBackGuard'
 import { useMdReveal } from '../lib/useMdReveal'
 import { MdRevealToggle } from './MdRevealToggle'
+import TagNameForm from './TagNameForm'
 
 type Props = {
   numbers: NumberEntry[]
@@ -45,7 +46,7 @@ type TagStat = { count: number; cand: Candidate | undefined }
  * 語に付いたタグごとの語の数 (一覧の件数と、選んだあとに並ぶ語の数を揃える) と、
  * カードに出す画像の語 (画像のある語のうち番号がいちばん若いもの)
  */
-function tagStats(numbers: NumberEntry[]): Map<string, TagStat> {
+export function tagStats(numbers: NumberEntry[]): Map<string, TagStat> {
   const stats = new Map<string, TagStat>()
   for (const d of numbers)
     for (const cand of candidatesOf(d))
@@ -88,6 +89,8 @@ function TagFilterTab({ numbers }: Props) {
   const tagTitles = ctx?.tagTitles
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState<string | null>(null)
+  // タグの名前 (正式名・略称) を直す欄。設定 > タグ まで行かずに直せるように
+  const [isEditing, setIsEditing] = useState(false)
 
   const allRows = useMemo<TagRow[]>(
     () =>
@@ -121,6 +124,7 @@ function TagFilterTab({ numbers }: Props) {
   const pickTag = (next: string | null) => {
     clear()
     reveal.setMode('num')
+    setIsEditing(false)
     setTag(next)
   }
   // タグを開いた画面で端末の «戻る» を押すとアプリごと閉じていた。
@@ -130,6 +134,10 @@ function TagFilterTab({ numbers }: Props) {
   const panel = selectedEntry ? (
     <DetailSheet nav={nav} onClose={clear}>
       <NumDetailPanel d={selectedEntry} />
+    </DetailSheet>
+  ) : current && isEditing ? (
+    <DetailSheet onClose={() => setIsEditing(false)}>
+      <TagNameForm key={current.tag} tag={current.tag} />
     </DetailSheet>
   ) : null
 
@@ -166,6 +174,15 @@ function TagFilterTab({ numbers }: Props) {
             : ''
         }${matched.length} 番号`}
       >
+        <button
+          class={'filter-btn' + (isEditing ? ' active' : '')}
+          onClick={() => {
+            clear()
+            setIsEditing((on) => !on)
+          }}
+        >
+          編集
+        </button>
         <button class="filter-btn" onClick={() => pickTag(null)}>
           タグ一覧へ
         </button>

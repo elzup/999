@@ -181,10 +181,13 @@ export function TagMdCard({
   short,
   count,
   cand,
+  selected = false,
   onSelect,
 }: {
   tag: string
   title: string
+  /** タグ画面 (設定 > タグ) で選んでいるタグ */
+  selected?: boolean
   /** 略称 (short_title)。正式名と違うときだけ小さく添える (#id は出さない) */
   short?: string
   count: number
@@ -195,7 +198,7 @@ export function TagMdCard({
   return (
     <button
       type="button"
-      class="md-card tag-md-card"
+      class={'md-card tag-md-card' + (selected ? ' selected' : '')}
       onClick={onSelect}
       data-tag={tag}
     >

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { collectNumberTags } from '../lib/tags'
+import { TagMdCard } from './Cells'
+import { tagStats } from './TagFilterTab'
 import Screen, { DockBar } from './Screen'
 import { useLongTagNames } from '../lib/tagNames'
 import { kataToHiraText } from '../lib/kanaNotation'
@@ -27,6 +29,8 @@ function TagPanel({ numbers }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
 
   const tags = useMemo(() => collectNumberTags(numbers), [numbers])
+  // カードの画像 (グループ画面の一覧と同じ語の画像)
+  const stats = useMemo(() => tagStats(numbers), [numbers])
   const filtered = useMemo(() => {
     const q = fold(query.trim())
     if (!q) return tags
@@ -47,22 +51,18 @@ function TagPanel({ numbers }: Props) {
     filtered.length === 0 ? (
       <div class="tag-empty">該当タグなし</div>
     ) : (
-      <div class="tag-list tp-list stack-up" style={{ '--stack-gap': '6px' }}>
+      // グループ画面の一覧 (TagMdCard) の小さい版。名前と画像で探せる
+      <div class="grid-up md-grid tp-mini" style={{ '--gap': '4px' }}>
         {filtered.map((entry) => (
-          <button
+          <TagMdCard
             key={entry.tag}
-            class={
-              'tag-row' + (selectedTag?.tag === entry.tag ? ' active' : '')
-            }
-            onClick={() => setSelected(entry.tag)}
-          >
-            <span class="tag-name">{nameOf(entry.tag, names)}</span>
-            <span class="tag-count">{entry.count}</span>
-            <span class="tag-meta">
-              人{entry.categories.hito} 物{entry.categories.mono} 念
-              {entry.categories.gainen}
-            </span>
-          </button>
+            tag={entry.tag}
+            title={nameOf(entry.tag, names)}
+            count={entry.count}
+            cand={stats.get(entry.tag)?.cand}
+            selected={selectedTag?.tag === entry.tag}
+            onSelect={() => setSelected(entry.tag)}
+          />
         ))}
       </div>
     )

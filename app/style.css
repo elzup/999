@@ -7129,6 +7129,18 @@ img[data-concept] {
   font: inherit;
   text-align: left;
 }
+/* 設定 > タグ の一覧はグループ画面のカードの小さい版。スマホで 5 列、名前と件数も縮める */
+.grid-up.md-grid.tp-mini > * {
+  flex-basis: min(96px, calc((100% - 4 * var(--gap)) / 5));
+}
+.tp-mini .md-card-num {
+  font-size: 13px;
+  padding: 0 4px;
+}
+.tp-mini .md-card-word {
+  padding: 10px 3px 2px;
+  font-size: 11px;
+}
 /* 正式名の下に小さく #タグ (id でしか呼ばないタグもあるので消さない) */
 .tag-md-card-id {
   display: block;
