@@ -5805,6 +5805,28 @@ button.activate-link {
   color: var(--accent);
   border-color: var(--accent);
 }
+/* 属性・ラベルの on/off。毎回押すので小さく 1 行に詰める */
+.nd-mark-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.nd-mark {
+  padding: 1px 7px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text2);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.nd-mark.on,
+.nd-mark.on:hover {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
 /* 押したボタン自体の色で結果を返す: 保存中は黄、確定は緑、失敗は赤。
    保存中は他のボタンと同じく disabled になるので、薄くせずに塗る */
 button.is-saving,

@@ -15,7 +15,7 @@ export const ATTRS = Object.freeze({
 
 export const WORD_LABELS = Object.freeze({
   j: { label: '熟語' },
-  u: { label: '愛称・ユニーク' },
+  u: { label: '愛称' },
   f: { label: 'お気に入り' },
 })
 

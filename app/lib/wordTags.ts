@@ -155,6 +155,24 @@ export const TAG_MEANINGS: Record<string, string> = Object.fromEntries(
   Object.entries(ATTRS).map(([id, v]) => [id, v.label])
 )
 
+/**
+ * 編集画面で on/off だけを切り替える印 (D-0183)。属性 g / i は表記ではタグ (#g)、
+ * それ以外はラベル (-j) として書くが、使う側には違いが無いので 1 列に並べる。
+ * -x は評価 -1 に寄せたので新しくは付けない (付いている語でだけ外す用に出す)
+ */
+export type MarkToggle = { id: string; meaning: string; isAttr: boolean }
+export const MARK_TOGGLES: MarkToggle[] = [
+  ...Object.entries(ATTRS).map(([id, v]) => ({
+    id,
+    meaning: v.label,
+    isAttr: true,
+  })),
+  ...Object.entries({ ...WORD_LABELS, ...LINK_LABELS })
+    .filter(([id]) => id !== 'x')
+    .map(([id, v]) => ({ id, meaning: v.label, isAttr: false })),
+]
+export const isAttrTag = (tag: string) => Object.hasOwn(ATTRS, tag)
+
 /** «#g 概念» «-n 馴染みがない» のような意味の一覧 (詳細カードで語をタップしたとき) */
 export function marksMeaning(
   tags: string[],

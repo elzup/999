@@ -40,7 +40,10 @@ import {
   addLabel,
   addTag,
   baseText,
+  isAttrTag,
   LABELS,
+  MARK_TOGGLES,
+  type MarkToggle,
   parseWord,
   removeLabel,
   removeTag,
@@ -68,7 +71,7 @@ import { imageSlotOf, useImageOverride, useImageSave } from '../lib/imagePicker'
 import { useImageStore } from '../lib/imageStore'
 import ImagePickerSheet from './ImagePickerSheet'
 import { useNumberContext } from '../lib/numberContext'
-import { tagNameOf, useTagNames } from '../lib/tagNames'
+import { tagNameOf, useLongTagNames, useTagNames } from '../lib/tagNames'
 
 /** 代表の順位のボタン。代表は上限なし (D-0170) なので、今の数 + 1 まで (最低 ①②) */
 const repRanksFor = (count: number) =>
@@ -1039,6 +1042,7 @@ function TagRow({
   onApply: (change: (word: string) => string) => void
 }) {
   const names = useTagNames()
+  const longNames = useLongTagNames()
   const [adding, setAdding] = useState(false)
   const [query, setQuery] = useState('')
   const parsed = parseWord(word)
@@ -1062,33 +1066,22 @@ function TagRow({
             本体なし
           </span>
         ) : null}
-        {parsed.tags.map((tag) => (
-          <span key={'t' + tag} class="nd-tag" title={`#${tag}`}>
-            {tagNameOf(tag, names)}
-            {tag === lockedTag ? null : (
-              <button
-                class="nd-tag-x"
-                aria-label={`タグ ${tag} を外す`}
-                onClick={() => onApply((current) => removeTag(current, tag))}
-              >
-                ×
-              </button>
-            )}
-          </span>
-        ))}
-        {parsed.labels.map((label) => (
-          <span key={'l' + label} class="nd-tag label" title={meaning(label)}>
-            -{label}
-            <small>{meaning(label)}</small>
-            <button
-              class="nd-tag-x"
-              aria-label={`ラベル ${label} を外す`}
-              onClick={() => onApply((current) => removeLabel(current, label))}
-            >
-              ×
-            </button>
-          </span>
-        ))}
+        {parsed.tags
+          .filter((tag) => !isAttrTag(tag))
+          .map((tag) => (
+            <span key={'t' + tag} class="nd-tag" title={`#${tag}`}>
+              {tagNameOf(tag, names)}
+              {tag === lockedTag ? null : (
+                <button
+                  class="nd-tag-x"
+                  aria-label={`タグ ${tag} を外す`}
+                  onClick={() => onApply((current) => removeTag(current, tag))}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
         <button
           class={'nd-tag-add' + (adding ? ' on' : '')}
           aria-expanded={adding}
@@ -1118,10 +1111,8 @@ function TagRow({
                 class="nd-tag-cand"
                 onClick={() => commit(item.tag)}
               >
-                #{item.tag}
-                {item.name && item.name !== item.tag ? (
-                  <span class="nd-tag-name">{item.name}</span>
-                ) : null}
+                {/* id (#ml) は出さず名前だけ。検索は id でも当たる */}
+                {tagNameOf(item.tag, longNames)}
                 <small>{item.count}</small>
               </button>
             ))}
@@ -1132,34 +1123,55 @@ function TagRow({
               </button>
             ) : null}
           </div>
-          <div class="nd-tag-row">
-            <span class="nd-move-label">ラベル</span>
-            {LABELS.map((label) => {
-              const on = parsed.labels.includes(label.id)
-              // 引退したラベル (-n → 評価 -1) は付いている語でだけ出す (外す用)
-              if (label.retired && !on) return null
-              return (
-                <button
-                  key={label.id}
-                  class={'nd-tag-cand' + (on ? ' on' : '')}
-                  aria-pressed={on}
-                  title={label.meaning}
-                  onClick={() =>
-                    onApply((current) =>
-                      on
-                        ? removeLabel(current, label.id)
-                        : addLabel(current, label.id)
-                    )
-                  }
-                >
-                  -{label.id}
-                  <small>{label.meaning}</small>
-                </button>
-              )
-            })}
-          </div>
         </div>
       ) : null}
+      <MarkToggles parsed={parsed} meaning={meaning} onApply={onApply} />
+    </div>
+  )
+}
+
+/**
+ * 属性・ラベルの on/off (D-0183)。開かなくても押せるよう常に 1 行で出す。
+ * 表に無い印 (引退した -n / -x など) は付いている語でだけ出す (外す用)
+ */
+function MarkToggles({
+  parsed,
+  meaning,
+  onApply,
+}: {
+  parsed: ReturnType<typeof parseWord>
+  meaning: (id: string) => string
+  onApply: (change: (word: string) => string) => void
+}) {
+  const known = new Set(MARK_TOGGLES.map((mark) => mark.id))
+  const leftovers: MarkToggle[] = parsed.labels
+    .filter((id) => !known.has(id))
+    .map((id) => ({ id, meaning: meaning(id) || id, isAttr: false }))
+  return (
+    <div class="nd-mark-row">
+      {[...MARK_TOGGLES, ...leftovers].map((mark) => {
+        const isOn = mark.isAttr
+          ? parsed.tags.includes(mark.id)
+          : parsed.labels.includes(mark.id)
+        const change = (current: string) => {
+          if (mark.isAttr)
+            return isOn ? removeTag(current, mark.id) : addTag(current, mark.id)
+          return isOn
+            ? removeLabel(current, mark.id)
+            : addLabel(current, mark.id)
+        }
+        return (
+          <button
+            key={mark.id}
+            class={'nd-mark' + (isOn ? ' on' : '')}
+            aria-pressed={isOn}
+            title={mark.isAttr ? `#${mark.id}` : `-${mark.id}`}
+            onClick={() => onApply(change)}
+          >
+            {mark.meaning}
+          </button>
+        )
+      })}
     </div>
   )
 }
