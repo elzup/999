@@ -8147,8 +8147,9 @@ img[data-concept] {
 .dt-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 6px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-content: start;
   min-width: 0;
 }
 /* 切り替えの 1 列。カレンダーの 1 列ほどの幅で、上から下まで押せる */

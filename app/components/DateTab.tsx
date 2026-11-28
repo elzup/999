@@ -18,22 +18,14 @@ type Props = {
 
 type Day = DateDay & { entry: NumberEntry }
 
-// 1 年を時計のように 2 画面に割る。左の列は下から上 (1→3, 10→12)、右の列は上から下
-// (4→6, 7→9) に読むので、2 画面を縦につなぐと 1 年の輪になる (上の輪っかと同じ並び)
-const PAGES: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
-  [
-    [3, 4],
-    [2, 5],
-    [1, 6],
-  ],
-  [
-    [12, 7],
-    [11, 8],
-    [10, 9],
-  ],
+// 上の輪っかの左半分 (10〜3月) と右半分 (4〜9月) を 1 画面ずつ、1 列で縦に並べる。
+// 左は下から上 (10→3)、右は上から下 (4→9) に読むと輪を時計回りに回る (QA-0128 a)
+const PAGES: ReadonlyArray<ReadonlyArray<number>> = [
+  [3, 2, 1, 12, 11, 10],
+  [4, 5, 6, 7, 8, 9],
 ]
-const PAGE_LABELS = ['1〜6月', '7〜12月']
-const pageOf = (month: number) => (month <= 6 ? 0 : 1)
+const PAGE_LABELS = ['10〜3月', '4〜9月']
+const pageOf = (month: number) => (month >= 4 && month <= 9 ? 1 : 0)
 
 // 10〜12月は 4 桁 (1005 等) で 999 の番号に属さない。1〜9月は 3 桁で番号の辞書を共有する
 const isOutside999 = (month: number) => month >= 10
@@ -58,8 +50,8 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     for (const d of days) map.set(d.month, [...(map.get(d.month) ?? []), d])
     return map
   }, [days])
-  // 999 外だけのときは 1〜6 月の画面に何も無いので、7〜12 月に固定する
-  const shownPage = scope === 'outside' ? 1 : page
+  // 999 外 (10〜12月) は全部左半分にあるので、左の画面に固定する
+  const shownPage = scope === 'outside' ? 0 : page
 
   const order = useMemo(() => shownDays.map((d) => d.key), [shownDays])
   const {
@@ -96,6 +88,7 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     </DetailSheet>
   ) : null
 
+  // 1 列なので、隠す月は場所も取らない
   const renderMonth = (month: number) =>
     isShown(month) ? (
       <MonthCalendar
@@ -108,9 +101,7 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
           monthRefs.current[month] = el
         }}
       />
-    ) : (
-      <div key={month} class="dt-month dt-month--hidden" />
-    )
+    ) : null
 
   const main = (
     <div class="dt-root">
@@ -125,10 +116,10 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
           class="dt-track"
           style={{ transform: `translateX(${-50 * shownPage}%)` }}
         >
-          {PAGES.map((rows, index) => (
+          {PAGES.map((months, index) => (
             <div key={index} class="dt-page" aria-hidden={index !== shownPage}>
-              {/* 2 画面目へは右端、1 画面目へは左端の 1 列を押して切り替える */}
-              {index === 1 && scope === 'all' ? (
+              {/* 右半分へは右端、左半分へは左端の 1 列を押して切り替える */}
+              {index === 1 ? (
                 <button
                   class="dt-switch dt-switch--left"
                   aria-label={`${PAGE_LABELS[0]}へ`}
@@ -137,13 +128,8 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
                   ‹
                 </button>
               ) : null}
-              <div class="dt-grid">
-                {rows.flatMap(([left, right]) => [
-                  renderMonth(left),
-                  renderMonth(right),
-                ])}
-              </div>
-              {index === 0 ? (
+              <div class="dt-grid">{months.map(renderMonth)}</div>
+              {index === 0 && scope === 'all' ? (
                 <button
                   class="dt-switch dt-switch--right"
                   aria-label={`${PAGE_LABELS[1]}へ`}
