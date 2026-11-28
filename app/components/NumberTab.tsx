@@ -5,6 +5,7 @@ import NumDetailPanel from './NumDetailPanel'
 import { NumCell } from './Cells'
 import { useSelection } from '../lib/useSelection'
 import Screen, { DockRow } from './Screen'
+import { Segmented } from './Segmented'
 import DetailSheet from './DetailSheet'
 
 type Props = {
@@ -251,18 +252,6 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
   const dock = (
     <>
       <DockRow>
-        <button
-          class={'filter-btn' + (filterMode === 'rows' ? ' active' : '')}
-          onClick={() => setFilterMode('rows')}
-        >
-          3段
-        </button>
-        <button
-          class={'filter-btn' + (filterMode === 'pads' ? ' active' : '')}
-          onClick={() => setFilterMode('pads')}
-        >
-          テンキー
-        </button>
         {hasFilter ? (
           <>
             <span class="dock-row-label">
@@ -276,6 +265,15 @@ function NumberTab({ numbers, bookmarks, onToggleBm, onEditWord }: Props) {
         ) : (
           <span class="dock-row-label">番号を選択</span>
         )}
+        <Segmented
+          ariaLabel="絞り込みの入力"
+          options={[
+            { id: 'rows', label: '3段' },
+            { id: 'pads', label: 'テンキー' },
+          ]}
+          value={filterMode}
+          onChange={setFilterMode}
+        />
       </DockRow>
       {filterMode === 'rows' ? (
         <DigitFilterRows

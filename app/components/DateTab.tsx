@@ -6,6 +6,7 @@ import { scoreColor } from './Cells'
 import { buildDateEntries, type DateDay } from '../lib/dateKeys'
 import { candidatesOf } from '../lib/choice'
 import Screen, { DockBar, DockRow } from './Screen'
+import { Segmented } from './Segmented'
 import { useSelection } from '../lib/useSelection'
 import DetailSheet from './DetailSheet'
 
@@ -149,21 +150,15 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
   const dock = (
     <>
       <DockRow>
-        {(
-          [
-            ['all', '全部'],
-            ['outside', '999 外'],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            class={'filter-btn' + (scope === key ? ' active' : '')}
-            aria-pressed={scope === key}
-            onClick={() => setScope(key)}
-          >
-            {label}
-          </button>
-        ))}
+        <Segmented
+          ariaLabel="範囲"
+          options={[
+            { id: 'all', label: '全部' },
+            { id: 'outside', label: '999 外' },
+          ]}
+          value={scope}
+          onChange={setScope}
+        />
       </DockRow>
       <DockBar
         title={`日付 ${PAGE_LABELS[shownPage]}`}

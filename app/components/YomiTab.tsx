@@ -6,6 +6,7 @@ import ReviewPanel from './ReviewPanel'
 import RecordPanel from './RecordPanel'
 import TestFeatureList from './TestFeatureList'
 import Screen, { DockRow } from './Screen'
+import { Segmented } from './Segmented'
 import { useQuizRecords } from '../lib/useQuizRecords'
 import { makeRng } from '../lib/kukuQuiz'
 import {
@@ -253,15 +254,12 @@ function ChipRow({ label, options }: { label: string; options: ChipOption[] }) {
   return (
     <DockRow>
       <span class="dock-row-label">{label}</span>
-      {options.map((o) => (
-        <button
-          key={o.key}
-          class={'filter-btn' + (o.active ? ' active' : '')}
-          onClick={o.onSelect}
-        >
-          {o.label}
-        </button>
-      ))}
+      <Segmented
+        ariaLabel={label}
+        options={options.map((o) => ({ id: o.key, label: o.label }))}
+        value={options.find((o) => o.active)?.key ?? ''}
+        onChange={(key) => options.find((o) => o.key === key)?.onSelect()}
+      />
     </DockRow>
   )
 }

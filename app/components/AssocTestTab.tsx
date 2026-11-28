@@ -11,6 +11,7 @@ import { makeRng } from '../lib/kukuQuiz'
 import SlideLauncher from './SlideLauncher'
 import TestFeatureList from './TestFeatureList'
 import Screen, { DockRow } from './Screen'
+import { Segmented } from './Segmented'
 import { numberDeck } from './slideDecks'
 
 type Props = {
@@ -163,19 +164,16 @@ function AssocTestTab({ numbers, bookmarks, onToggleBm }: Props) {
   const dock = (
     <>
       <DockRow>
-        <button
-          class={'filter-btn' + (pool === 'all' ? ' active' : '')}
-          onClick={() => setPool('all')}
-        >
-          全体
-        </button>
-        <button
-          class={'filter-btn' + (pool === 'bm' ? ' active' : '')}
-          onClick={() => setPool('bm')}
-        >
-          ★のみ
-        </button>
         <span class="dock-row-label">{count}件</span>
+        <Segmented
+          ariaLabel="出題の範囲"
+          options={[
+            { id: 'all', label: '全体' },
+            { id: 'bm', label: '★のみ' },
+          ]}
+          value={pool}
+          onChange={setPool}
+        />
       </DockRow>
 
       <div class="assoc-block-grid">

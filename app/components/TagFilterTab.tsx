@@ -24,6 +24,7 @@ import { useBackGuard } from '../lib/useBackGuard'
 import { useMdReveal } from '../lib/useMdReveal'
 import TagNameForm from './TagNameForm'
 import TagTable from './TagTable'
+import { Segmented } from './Segmented'
 
 type Props = {
   numbers: NumberEntry[]
@@ -245,18 +246,14 @@ function TagFilterTab({ numbers }: Props) {
     <>
       <DockRow>
         {/* 属性・ラベルの名前はコードの定数 (D-0183) なので編集は出さない */}
-        {TAG_VIEWS.filter(
-          ([key]) => key !== 'edit' || !MARK_KEYS.has(current.tag)
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            class={'filter-btn' + (view === key ? ' active' : '')}
-            aria-pressed={view === key}
-            onClick={() => setView(key)}
-          >
-            {label}
-          </button>
-        ))}
+        <Segmented
+          ariaLabel="表示"
+          options={TAG_VIEWS.filter(
+            ([key]) => key !== 'edit' || !MARK_KEYS.has(current.tag)
+          ).map(([id, label]) => ({ id, label }))}
+          value={view}
+          onChange={setView}
+        />
       </DockRow>
       <DockBar
         title={current.title}
@@ -274,16 +271,12 @@ function TagFilterTab({ numbers }: Props) {
   ) : (
     <>
       <DockRow>
-        {INDEX_VIEWS.map(([key, label]) => (
-          <button
-            key={key}
-            class={'filter-btn' + (indexView === key ? ' active' : '')}
-            aria-pressed={indexView === key}
-            onClick={() => setIndexView(key)}
-          >
-            {label}
-          </button>
-        ))}
+        <Segmented
+          ariaLabel="一覧の見せ方"
+          options={INDEX_VIEWS.map(([id, label]) => ({ id, label }))}
+          value={indexView}
+          onChange={setIndexView}
+        />
       </DockRow>
       <DockBar title="タグ" sub={`${rows.length} / ${allRows.length}`} />
       <input

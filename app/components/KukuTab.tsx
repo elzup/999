@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'preact/hooks'
 import TestFeatureList from './TestFeatureList'
 import Screen, { DockBar, DockRow } from './Screen'
+import { Segmented } from './Segmented'
 import ChoiceQuiz, { type ChoiceQuestion, type QuizSummary } from './ChoiceQuiz'
 import RecordPanel from './RecordPanel'
 import ReviewPanel from './ReviewPanel'
@@ -50,7 +51,7 @@ const TIERS = [
   { key: 'hard', label: '難', desc: '足し算が繰り上がる +' },
 ] as const
 
-type TierKey = (typeof TIERS)[number]['key']
+type TierKey = typeof TIERS[number]['key']
 
 function groupByLabel(items: KukuItem[]) {
   const groups: { label: string; rows: KukuItem[] }[] = []
@@ -209,10 +210,10 @@ function KukuTab() {
             (ratio < 0
               ? ''
               : ratio >= 0.9
-                ? ' ok'
-                : ratio >= 0.6
-                  ? ' mid'
-                  : ' low')
+              ? ' ok'
+              : ratio >= 0.6
+              ? ' mid'
+              : ' low')
           return (
             <button key={ab} class={cls} onClick={() => startAbQuiz(ab)}>
               <span class="kuku-ab-num">{ab}</span>
@@ -224,15 +225,6 @@ function KukuTab() {
         })}
       </div>
     )
-
-  const viewButton = (id: typeof view, label: string) => (
-    <button
-      class={'filter-btn' + (view === id ? ' active' : '')}
-      onClick={() => setView(id)}
-    >
-      {label}
-    </button>
-  )
 
   const dock = (
     <>
@@ -258,20 +250,24 @@ function KukuTab() {
       />
       <DockRow>
         <span class="dock-row-label">{active.desc}</span>
-        {TIERS.map((t) => (
-          <button
-            key={t.key}
-            class={'filter-btn' + (t.key === tier ? ' active' : '')}
-            onClick={() => setTier(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+        <Segmented
+          ariaLabel="難しさ"
+          options={TIERS.map((t) => ({ id: t.key, label: t.label }))}
+          value={tier}
+          onChange={setTier}
+        />
       </DockRow>
       <DockRow>
-        {viewButton('list', '一覧')}
-        {viewButton('lyrics', '歌詞')}
-        {viewButton('ab', 'AB別')}
+        <Segmented
+          ariaLabel="表示"
+          options={[
+            { id: 'list', label: '一覧' },
+            { id: 'lyrics', label: '歌詞' },
+            { id: 'ab', label: 'AB別' },
+          ]}
+          value={view}
+          onChange={setView}
+        />
       </DockRow>
       <TestFeatureList
         features={[

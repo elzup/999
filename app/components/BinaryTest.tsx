@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { QuizSummary } from './ChoiceQuiz'
 import Screen, { DockBar, DockRow, QuitButton } from './Screen'
+import { Segmented } from './Segmented'
 import TestPad from './TestPad'
 import type { ReviewItem } from './ReviewPanel'
 import {
@@ -95,12 +96,12 @@ function MemoView({
         e.key === 'ArrowRight'
           ? 1
           : e.key === 'ArrowLeft'
-            ? -1
-            : e.key === 'ArrowDown'
-              ? rowStep
-              : e.key === 'ArrowUp'
-                ? -rowStep
-                : 0
+          ? -1
+          : e.key === 'ArrowDown'
+          ? rowStep
+          : e.key === 'ArrowUp'
+          ? -rowStep
+          : 0
       if (step === 0) return
       e.preventDefault()
       move(step)
@@ -342,8 +343,8 @@ function BinaryResult({
                 r.points === COLS
                   ? 'var(--green, #34d399)'
                   : r.points > 0
-                    ? 'var(--amber, #fbbf24)'
-                    : 'var(--text2)',
+                  ? 'var(--amber, #fbbf24)'
+                  : 'var(--text2)',
             }}
           >
             {r.index + 1}:{r.points}
@@ -375,18 +376,18 @@ function BinaryResult({
           </DockBar>
           {/* 2進 / HEX 切替 */}
           <DockRow>
-            {(['bin', 'hex'] as const).map((m) => (
-              <button
-                key={m}
-                class={'filter-btn' + (mode === m ? ' active' : '')}
-                onClick={() => setMode(m)}
-              >
-                {m === 'bin' ? '2進' : 'HEX'}
-              </button>
-            ))}
             <span class="dock-row-label">
               正解 / <span style={{ color: 'var(--red, #f87171)' }}>回答</span>
             </span>
+            <Segmented
+              ariaLabel="表記"
+              options={[
+                { id: 'bin', label: '2進' },
+                { id: 'hex', label: 'HEX' },
+              ]}
+              value={mode}
+              onChange={setMode}
+            />
           </DockRow>
         </>
       }
@@ -552,8 +553,8 @@ function BinaryTest({
                   color: ch
                     ? 'var(--text)'
                     : isCaret
-                      ? 'var(--accent)'
-                      : 'var(--muted, #6b7280)',
+                    ? 'var(--accent)'
+                    : 'var(--muted, #6b7280)',
                   borderBottom: isCaret
                     ? '2px solid var(--accent)'
                     : '2px solid transparent',

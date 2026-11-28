@@ -4,6 +4,7 @@ import TestFeatureList, {
   type TestFeatureAction,
 } from './TestFeatureList'
 import Screen, { DockRow } from './Screen'
+import { Segmented } from './Segmented'
 import SubTabGroup from './SubTabGroup'
 import SlideLauncher from './SlideLauncher'
 import { ffDeck } from './slideDecks'
@@ -32,7 +33,7 @@ import {
 } from '../lib/ffQuiz'
 
 const FF_SUB_TABS = ['ref', 'bin', 'test'] as const
-type Sub = (typeof FF_SUB_TABS)[number]
+type Sub = typeof FF_SUB_TABS[number]
 const FF_SUB_KEY = 'subtab.ff'
 export type FfRun =
   | { kind: 'ff'; dir: FfDir; questions: ChoiceQuestion[]; id: number }
@@ -333,41 +334,40 @@ function FFTab() {
       <TestFeatureSection label="バイナリー記憶（0/1を記憶→1行30桁で再現・行単位採点）">
         <>
           <DockRow>
-            {BINARY_MEMO_OPTIONS.map((o) => (
-              <button
-                key={o.sec}
-                class={'filter-btn' + (binMemoSec === o.sec ? ' active' : '')}
-                onClick={() => setBinMemoSec(o.sec)}
-              >
-                {o.label}
-              </button>
-            ))}
+            <span class="dock-row-label">記憶時間</span>
+            <Segmented
+              ariaLabel="記憶時間"
+              options={BINARY_MEMO_OPTIONS.map((o) => ({
+                id: String(o.sec),
+                label: o.label,
+              }))}
+              value={String(binMemoSec)}
+              onChange={(id) => setBinMemoSec(Number(id))}
+            />
           </DockRow>
           <DockRow>
-            {BINARY_ROW_OPTIONS.map((n) => (
-              <button
-                key={n}
-                class={'filter-btn' + (binRows === n ? ' active' : '')}
-                onClick={() => setBinRows(n)}
-              >
-                {n}行
-              </button>
-            ))}
+            <span class="dock-row-label">行数</span>
+            <Segmented
+              ariaLabel="行数"
+              options={BINARY_ROW_OPTIONS.map((n) => ({
+                id: String(n),
+                label: `${n}行`,
+              }))}
+              value={String(binRows)}
+              onChange={(id) => setBinRows(Number(id))}
+            />
           </DockRow>
           <DockRow>
             <span class="dock-row-label">記憶ハイライト(8bit)</span>
-            <button
-              class={'filter-btn' + (binHighlight ? ' active' : '')}
-              onClick={() => setBinHighlight(true)}
-            >
-              あり
-            </button>
-            <button
-              class={'filter-btn' + (!binHighlight ? ' active' : '')}
-              onClick={() => setBinHighlight(false)}
-            >
-              なし
-            </button>
+            <Segmented
+              ariaLabel="記憶ハイライト"
+              options={[
+                { id: 'on', label: 'あり' },
+                { id: 'off', label: 'なし' },
+              ]}
+              value={binHighlight ? 'on' : 'off'}
+              onChange={(id) => setBinHighlight(id === 'on')}
+            />
           </DockRow>
           <TestFeatureList
             features={[

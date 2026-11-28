@@ -6105,6 +6105,12 @@ button.is-failed {
   min-width: 0;
   padding: 9px 6px;
 }
+/* フィルタ・表示の切替は横いっぱいに伸ばさず、右 (親指側) に寄せた Segmented にする。
+   見出し (.dock-row-label) は左に残る */
+.dock-row > .seg {
+  margin-left: auto;
+  flex: 0 1 auto;
+}
 .dock-row-label {
   font-size: 11px;
   color: var(--text2);
