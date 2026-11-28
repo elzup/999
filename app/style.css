@@ -8015,3 +8015,133 @@ img[data-concept] {
 .card-edit-actions button:disabled {
   opacity: 0.5;
 }
+
+/* ── 日付: 1 年の輪っか + 2 画面 (1〜6月 / 7〜12月) のカレンダー ── */
+.dt-root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dt-ring {
+  display: flex;
+  justify-content: center;
+}
+.dt-ring svg {
+  width: min(160px, 45vw);
+  height: auto;
+}
+.dt-ring-seg {
+  cursor: pointer;
+}
+.dt-ring-seg path {
+  /* 語の埋まり具合 (0〜1) で濃くする */
+  fill: color-mix(
+    in srgb,
+    var(--accent) calc(var(--fill) * 100%),
+    var(--surface2)
+  );
+  stroke: var(--bg);
+  stroke-width: 1;
+}
+.dt-ring-seg.on-page path {
+  stroke: var(--text2);
+}
+.dt-ring-seg.off {
+  cursor: default;
+  opacity: 0.25;
+}
+.dt-ring-seg text {
+  font-size: 8px;
+  fill: var(--text);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+.dt-viewport {
+  overflow: hidden;
+}
+.dt-track {
+  display: flex;
+  width: 200%;
+  transition: transform 0.3s ease;
+}
+.dt-page {
+  display: flex;
+  gap: 4px;
+  width: 50%;
+}
+.dt-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 6px;
+  min-width: 0;
+}
+/* 切り替えの 1 列。カレンダーの 1 列ほどの幅で、上から下まで押せる */
+.dt-switch {
+  flex: 0 0 20px;
+  padding: 0;
+  font-size: 16px;
+  color: var(--text2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.dt-switch:hover,
+.dt-switch:active {
+  color: var(--text);
+  background: var(--surface2);
+}
+.dt-month--hidden {
+  visibility: hidden;
+}
+.dt-month-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px 2px;
+}
+.dt-month-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.dt-month-sub {
+  font-size: 10px;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+.dt-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.dt-day {
+  aspect-ratio: 1;
+  padding: 0;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.dt-day.empty {
+  color: var(--text2);
+  background: none;
+  border-style: dashed;
+}
+.dt-day:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+.dt-day.selected,
+.dt-day.selected:hover {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-track {
+    transition: none;
+  }
+}

@@ -9,7 +9,7 @@ import { nameOf } from '../lib/numberDetail'
 import { wordImage } from '../lib/wordImage'
 import { imageSlotOf, useImageOverride } from '../lib/imagePicker'
 
-function scoreColor(score: number | null): string | null {
+export function scoreColor(score: number | null): string | null {
   if (score === null || score === undefined) return null
   return score >= 3.5 ? '#4ade80' : score >= 2.5 ? '#fbbf24' : '#f87171'
 }
