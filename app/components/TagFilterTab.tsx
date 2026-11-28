@@ -23,6 +23,7 @@ import { useSelection } from '../lib/useSelection'
 import { useBackGuard } from '../lib/useBackGuard'
 import { useMdReveal } from '../lib/useMdReveal'
 import TagNameForm from './TagNameForm'
+import TagTable from './TagTable'
 
 type Props = {
   numbers: NumberEntry[]
@@ -121,6 +122,14 @@ export function TagList({
   )
 }
 
+// タグ一覧の見せ方。S = チップス (多くを一度に) / M = 画像を大きく / 表 = 名前を見比べて直す
+type IndexView = 's' | 'm' | 'table'
+const INDEX_VIEWS: ReadonlyArray<[IndexView, string]> = [
+  ['s', 'S'],
+  ['m', 'M'],
+  ['table', '表'],
+]
+
 // タグを開いた画面の表示。クイズ = 語を伏せる / 一覧 = 全部出す / チップス = 小さいカード
 type TagView = 'quiz' | 'list' | 'chips' | 'edit'
 const TAG_VIEWS: ReadonlyArray<[TagView, string]> = [
@@ -138,7 +147,7 @@ function TagFilterTab({ numbers }: Props) {
   const [tag, setTag] = useState<string | null>(null)
   const [view, setViewState] = useState<TagView>('quiz')
   // タグ一覧のカードの大きさ。S = チップス (多くを一度に見る) / M = 画像を大きく
-  const [isIndexMini, setIsIndexMini] = useState(false)
+  const [indexView, setIndexView] = useState<IndexView>('m')
 
   const allRows = useMemo<TagRow[]>(() => {
     const stats = tagStats(numbers)
@@ -201,7 +210,15 @@ function TagFilterTab({ numbers }: Props) {
 
   const isMini = view === 'chips'
   const main = !current ? (
-    <TagList rows={rows} onPick={pickTag} isMini={isIndexMini} />
+    indexView === 'table' ? (
+      <TagTable
+        rows={rows}
+        isReadOnly={(key) => MARK_KEYS.has(key)}
+        onPick={pickTag}
+      />
+    ) : (
+      <TagList rows={rows} onPick={pickTag} isMini={indexView === 's'} />
+    )
   ) : view === 'edit' ? (
     <TagNameForm key={current.tag} tag={current.tag} />
   ) : (
@@ -257,14 +274,14 @@ function TagFilterTab({ numbers }: Props) {
   ) : (
     <>
       <DockRow>
-        {([false, true] as const).map((isMini) => (
+        {INDEX_VIEWS.map(([key, label]) => (
           <button
-            key={String(isMini)}
-            class={'filter-btn' + (isIndexMini === isMini ? ' active' : '')}
-            aria-pressed={isIndexMini === isMini}
-            onClick={() => setIsIndexMini(isMini)}
+            key={key}
+            class={'filter-btn' + (indexView === key ? ' active' : '')}
+            aria-pressed={indexView === key}
+            onClick={() => setIndexView(key)}
           >
-            {isMini ? 'S' : 'M'}
+            {label}
           </button>
         ))}
       </DockRow>

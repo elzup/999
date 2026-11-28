@@ -4,7 +4,8 @@ import { loadEditorToken } from '../lib/editorAuth'
 import { patchTagName } from '../lib/tagApi'
 import { TagTitlesContext, useTagNames } from '../lib/tagNames'
 
-function TagNameForm({ tag }: { tag: string }) {
+/** 1 つのタグの正式名・略称の下書きと保存。フォームと表の行で同じものを使う */
+export function useTagNameDraft(tag: string) {
   const titles = useContext(TagTitlesContext)
   const names = useTagNames()
   const title0 = titles[tag] ?? ''
@@ -14,7 +15,9 @@ function TagNameForm({ tag }: { tag: string }) {
   const [short, setShort] = useState(short0)
   const [status, setStatus] = useState('')
   const [saving, setSaving] = useState(false)
-  const changed = title !== title0 || short !== short0
+  // 保存した値を基準にする (配信データは次のビルドまで古いまま)
+  const [saved, setSaved] = useState({ title: title0, short: short0 })
+  const changed = title !== saved.title || short !== saved.short
 
   const save = async () => {
     const token = loadEditorToken()
@@ -26,6 +29,7 @@ function TagNameForm({ tag }: { tag: string }) {
     setStatus('')
     try {
       await patchTagName({ tag, title, short }, token)
+      setSaved({ title, short })
       setStatus('保存しました')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error))
@@ -34,35 +38,40 @@ function TagNameForm({ tag }: { tag: string }) {
     }
   }
 
+  return { title, setTitle, short, setShort, status, saving, changed, save }
+}
+
+function TagNameForm({ tag }: { tag: string }) {
+  const draft = useTagNameDraft(tag)
   return (
     <form
       class="card-edit"
       key={tag}
       onSubmit={(event) => {
         event.preventDefault()
-        save()
+        draft.save()
       }}
     >
       <label class="card-edit-row">
         <span class="card-edit-label">正式名</span>
         <input
           id="tag-edit-title"
-          value={title}
-          onInput={(e) => setTitle((e.target as HTMLInputElement).value)}
+          value={draft.title}
+          onInput={(e) => draft.setTitle((e.target as HTMLInputElement).value)}
         />
       </label>
       <label class="card-edit-row">
         <span class="card-edit-label">略称</span>
         <input
           id="tag-edit-short"
-          value={short}
-          onInput={(e) => setShort((e.target as HTMLInputElement).value)}
+          value={draft.short}
+          onInput={(e) => draft.setShort((e.target as HTMLInputElement).value)}
         />
       </label>
-      {status ? <div class="card-edit-status">{status}</div> : null}
+      {draft.status ? <div class="card-edit-status">{draft.status}</div> : null}
       <div class="card-edit-actions">
-        <button type="submit" disabled={saving || !changed}>
-          {saving ? '保存中…' : '保存'}
+        <button type="submit" disabled={draft.saving || !draft.changed}>
+          {draft.saving ? '保存中…' : '保存'}
         </button>
       </div>
     </form>

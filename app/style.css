@@ -8016,6 +8016,80 @@ img[data-concept] {
   opacity: 0.5;
 }
 
+/* ── タグの表: 1 タグ 1 行で名前を見比べて直す ── */
+.tt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.tt th {
+  padding: 2px 4px;
+  font-weight: normal;
+  color: var(--text2);
+  text-align: left;
+}
+.tt td {
+  padding: 2px;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.tt-key {
+  max-width: 64px;
+  overflow: hidden;
+  color: var(--text2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tt-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tt-input {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.tt-input--short {
+  max-width: 72px;
+}
+.tt-count {
+  padding: 1px 6px;
+  font-size: 12px;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.tt-count:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+.tt-save,
+.tt-save:hover {
+  padding: 1px 6px;
+  font-size: 12px;
+  color: var(--bg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+}
+.tt-save:disabled {
+  opacity: 0.6;
+}
+.tt-error {
+  display: block;
+  font-size: 10px;
+  color: var(--bad);
+}
+.tt-fixed td {
+  color: var(--text2);
+}
+
 /* ── 日付: 1 年の輪っか + 2 画面 (1〜6月 / 7〜12月) のカレンダー ── */
 .dt-root {
   display: flex;
