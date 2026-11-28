@@ -114,6 +114,8 @@ function TagFilterTab({ numbers }: Props) {
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState<string | null>(null)
   const [view, setViewState] = useState<TagView>('quiz')
+  // タグ一覧のカードの大きさ。S = チップス (多くを一度に見る) / M = 画像を大きく
+  const [isIndexMini, setIsIndexMini] = useState(false)
 
   const allRows = useMemo<TagRow[]>(
     () =>
@@ -165,7 +167,7 @@ function TagFilterTab({ numbers }: Props) {
 
   const isMini = view === 'chips'
   const main = !current ? (
-    <TagList rows={rows} onPick={pickTag} />
+    <TagList rows={rows} onPick={pickTag} isMini={isIndexMini} />
   ) : view === 'edit' ? (
     <TagNameForm key={current.tag} tag={current.tag} />
   ) : (
@@ -217,6 +219,18 @@ function TagFilterTab({ numbers }: Props) {
     </>
   ) : (
     <>
+      <DockRow>
+        {([false, true] as const).map((isMini) => (
+          <button
+            key={String(isMini)}
+            class={'filter-btn' + (isIndexMini === isMini ? ' active' : '')}
+            aria-pressed={isIndexMini === isMini}
+            onClick={() => setIsIndexMini(isMini)}
+          >
+            {isMini ? 'S' : 'M'}
+          </button>
+        ))}
+      </DockRow>
       <DockBar title="タグ" sub={`${rows.length} / ${allRows.length}`} />
       <input
         class="search-input"
