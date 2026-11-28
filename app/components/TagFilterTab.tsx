@@ -8,7 +8,13 @@ import { useMemo, useState } from 'preact/hooks'
 import type { NumberEntry } from '../data/schema'
 import { candidatesOf, type Candidate } from '../lib/choice'
 import { useNumberContext } from '../lib/numberContext'
-import { parseWord, suggestTags, type TagSuggestion } from '../lib/wordTags'
+import {
+  isAttrTag,
+  MARK_TOGGLES,
+  parseWord,
+  suggestTags,
+  type TagSuggestion,
+} from '../lib/wordTags'
 import { NumMdCard, TagMdCard } from './Cells'
 import NumDetailPanel from './NumDetailPanel'
 import Screen, { DockBar, DockRow } from './Screen'
@@ -30,9 +36,26 @@ export type TagRow = TagSuggestion & {
   cand: Candidate | undefined
 }
 
+/**
+ * 語が属するグループのキー。出典タグと属性 (g / i) はそのまま、ラベルは «-j» のように
+ * - を付けて出典タグと分ける (属性・ラベルもタグと同じく語の集まりとして一覧に並べる。D-0183)
+ */
+const groupKeysOf = (word: string) => {
+  const { tags, labels } = parseWord(word)
+  return [...tags, ...labels.map((l) => '-' + l)]
+}
+
+/** 属性・ラベルのグループ。見つけやすいよう一覧の最後にまとめて並べる */
+const MARK_GROUPS = MARK_TOGGLES.map((mark) => ({
+  key: mark.isAttr ? mark.id : '-' + mark.id,
+  title: mark.meaning,
+}))
+const MARK_KEYS = new Set(MARK_GROUPS.map((group) => group.key))
+const isSourceKey = (key: string) => !key.startsWith('-') && !isAttrTag(key)
+
 /** その番号の、そのタグが付いた語 (複数あれば先頭) */
 const taggedCand = (d: NumberEntry, tag: string) =>
-  candidatesOf(d).find((cand) => parseWord(cand.word).tags.includes(tag))
+  candidatesOf(d).find((cand) => groupKeysOf(cand.word).includes(tag))
 
 /** そのタグの語を持つ番号 */
 function numbersWithTag(numbers: NumberEntry[], tag: string): NumberEntry[] {
@@ -49,7 +72,7 @@ export function tagStats(numbers: NumberEntry[]): Map<string, TagStat> {
   const stats = new Map<string, TagStat>()
   for (const d of numbers)
     for (const cand of candidatesOf(d))
-      for (const t of parseWord(cand.word).tags) {
+      for (const t of groupKeysOf(cand.word)) {
         const prev = stats.get(t)
         stats.set(t, {
           count: (prev?.count ?? 0) + 1,
@@ -117,19 +140,30 @@ function TagFilterTab({ numbers }: Props) {
   // タグ一覧のカードの大きさ。S = チップス (多くを一度に見る) / M = 画像を大きく
   const [isIndexMini, setIsIndexMini] = useState(false)
 
-  const allRows = useMemo<TagRow[]>(
-    () =>
-      [...tagStats(numbers)].map(([t, stat]) => ({
+  const allRows = useMemo<TagRow[]>(() => {
+    const stats = tagStats(numbers)
+    const sources = [...stats]
+      .filter(([t]) => isSourceKey(t))
+      .map(([t, stat]) => ({
         tag: t,
         name: tagNames?.[t],
         title: tagTitles?.[t] ?? tagNames?.[t] ?? t,
         count: stat.count,
         cand: stat.cand,
-      })),
-    [numbers, tagNames, tagTitles]
-  )
+      }))
+      .sort((a, b) => b.count - a.count)
+    // 属性・ラベルは数に関わらず出典タグの後ろ。name に名前を入れて «概念» でも検索で引けるようにする
+    const marks = MARK_GROUPS.map((group) => ({
+      tag: group.key,
+      name: group.title,
+      title: group.title,
+      count: stats.get(group.key)?.count ?? 0,
+      cand: stats.get(group.key)?.cand,
+    }))
+    return [...sources, ...marks]
+  }, [numbers, tagNames, tagTitles])
   const rows = useMemo(() => {
-    const sorted = [...allRows].sort((a, b) => b.count - a.count)
+    const sorted = allRows
     if (!query.trim()) return sorted
     // 作品名でも #タグ でも引ける (先頭一致を先に)
     const hits = suggestTags(sorted, query, [], sorted.length)
@@ -193,7 +227,10 @@ function TagFilterTab({ numbers }: Props) {
   const dock = current ? (
     <>
       <DockRow>
-        {TAG_VIEWS.map(([key, label]) => (
+        {/* 属性・ラベルの名前はコードの定数 (D-0183) なので編集は出さない */}
+        {TAG_VIEWS.filter(
+          ([key]) => key !== 'edit' || !MARK_KEYS.has(current.tag)
+        ).map(([key, label]) => (
           <button
             key={key}
             class={'filter-btn' + (view === key ? ' active' : '')}
