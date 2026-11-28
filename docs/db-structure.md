@@ -24,7 +24,7 @@ erDiagram
     SYMBOLS {
         string id PK "num:106 / card:SA / date:1001 / hex:2C"
         string kind "num | card | date | hex"
-        string_array wordIds "links の wordId (語 → 記号を引く)"
+        string[] wordIds "links の wordId (語 → 記号を引く)"
         object rep "picks[] + confirmed"
         string updatedAt "競合の検出"
         string source "保存した口"
@@ -34,7 +34,7 @@ erDiagram
         string role "person / thing / action / hex"
         int order "0〜2 = 枠、3〜 = 枠の外"
         string kana "この記号でのよみ"
-        string_array labels "x 語呂強引 / r 連想"
+        string[] labels "x 語呂強引 / r 連想"
         number rating "この記号での主観評価"
         string imageUrl "この記号だけの画像 (上書き)"
     }
@@ -42,8 +42,8 @@ erDiagram
         string id PK "w_ + 10 字 (発番。中身を変えても不変)"
         string text "語の本体だけ"
         string sourceId FK "→ TAGS (出典が無ければ持たない)"
-        string_array attrs "g 概念 / i 身内"
-        string_array labels "j 熟語 / u 愛称 / f お気に入り"
+        string[] attrs "g 概念 / i 身内"
+        string[] labels "j 熟語 / u 愛称 / f お気に入り"
         string imageUrl "語の画像"
     }
     TAGS {
