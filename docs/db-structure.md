@@ -15,35 +15,45 @@ Firestore は参照や一意性を守らないので、制約は書き込み口�
 ```mermaid
 erDiagram
     SYMBOLS ||--o{ LINKS : "links[] (文書に埋め込み)"
-    WORDS ||--|{ LINKS : "1 つ以上の記号から指される"
-    TAGS ||--o{ WORDS : "sourceId (出典)"
+    WORDS ||--|{ LINKS : "wordId"
+    SYMBOLS }o--o{ WORDS : "wordIds[] (links の wordId の索引)"
+    TAGS |o--o{ WORDS : "sourceId (出典)"
     SYMBOLS ||--o{ REP_PICKS : "rep.picks[] (順序付き)"
-    WORDS ||--o{ REP_PICKS : "代表の語"
+    WORDS |o--o{ REP_PICKS : "wordId"
     SYMBOLS ||--o| SNAPSHOTS : "読む形の写し (num_0〜9 / cards)"
+    ROLES ||--o{ LINKS : "role"
+    LINK_LABELS |o--o{ LINKS : "labels[]"
+    ATTRS |o--o{ WORDS : "attrs[]"
+    WORD_LABELS |o--o{ WORDS : "labels[]"
 
     SYMBOLS {
         string id PK "num:106 / card:SA / date:1001 / hex:2C"
         string kind "num | card | date | hex"
-        string[] wordIds "links の wordId (語 → 記号を引く)"
+        string[] wordIds FK "→ WORDS"
         object rep "picks[] + confirmed"
         string updatedAt "競合の検出"
         string source "保存した口"
     }
     LINKS {
         string wordId FK "→ WORDS"
-        string role "person / thing / action / hex"
+        string role FK "→ ROLES"
         int order "0〜2 = 枠、3〜 = 枠の外"
         string kana "この記号でのよみ"
-        string[] labels "x 語呂強引 / r 連想"
+        string[] labels FK "→ LINK_LABELS"
         number rating "この記号での主観評価"
         string imageUrl "この記号だけの画像 (上書き)"
+    }
+    REP_PICKS {
+        string wordId FK "→ WORDS (語に決まらない代表は持たない)"
+        string k "語に決まらない代表のかな"
+        string w "語に決まらない代表の表記"
     }
     WORDS {
         string id PK "w_ + 10 字 (発番。中身を変えても不変)"
         string text "語の本体だけ"
         string sourceId FK "→ TAGS (出典が無ければ持たない)"
-        string[] attrs "g 概念 / i 身内"
-        string[] labels "j 熟語 / u 愛称 / f お気に入り"
+        string[] attrs FK "→ ATTRS"
+        string[] labels FK "→ WORD_LABELS"
         string imageUrl "語の画像"
     }
     TAGS {
@@ -52,7 +62,22 @@ erDiagram
         string title "正式名"
         string short "短い名前"
     }
+    ROLES {
+        string code PK "person 人 / thing 物 / action 行動 / hex 語"
+        string[] kinds "使える記号の種類"
+    }
+    LINK_LABELS {
+        string code PK "x 語呂強引 / r 連想"
+    }
+    ATTRS {
+        string code PK "g 概念 / i 身内"
+    }
+    WORD_LABELS {
+        string code PK "j 熟語 / u 愛称 / f お気に入り"
+    }
 ```
+
+ROLES / LINK_LABELS / ATTRS / WORD_LABELS は Firestore のコレクションではなく、コードに置いた表 (`src/db4/roles.js` / `src/db4/marks.js`)。DB にはコードだけを書く。
 
 ## コレクション
 
