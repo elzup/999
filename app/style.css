@@ -8201,13 +8201,57 @@ img[data-concept] {
 .dt-band--v {
   writing-mode: vertical-rl;
 }
+/* 穴の中: 今日から 1 週間の番号と語 */
 .dt-hole-body {
   grid-area: c;
+  min-width: 0;
+  min-height: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  font-size: 11px;
+  gap: 2px;
+  padding: 2px;
+  overflow: hidden;
+}
+.dt-hole-tag {
+  font-size: 9px;
   color: var(--text2);
+}
+.dt-up {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 4px;
+  align-items: baseline;
+  min-width: 0;
+  padding: 2px 3px;
+  font-size: 11px;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+}
+.dt-up b {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.dt-up span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dt-up.empty,
+.dt-up.empty b {
+  color: var(--text2);
+}
+.dt-up:hover,
+.dt-up:active {
+  color: var(--text);
+  background: var(--surface2);
+}
+.dt-up:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .dt-hole-switch {
   grid-area: sw;

@@ -5,6 +5,7 @@ import NumDetailPanel from './NumDetailPanel'
 import { scoreColor } from './Cells'
 import { buildDateEntries, type DateDay } from '../lib/dateKeys'
 import { candidatesOf } from '../lib/choice'
+import { parseWord } from '../lib/wordTags'
 import Screen, { DockBar } from './Screen'
 import { useSelection } from '../lib/useSelection'
 import DetailSheet from './DetailSheet'
@@ -67,6 +68,29 @@ const dayLabel = (month: number, day: number) =>
 
 const hasWord = (d: Day) => candidatesOf(d.entry).length > 0
 
+/** 穴に出す «今日から先» の日数 (1 週間) */
+const UPCOMING_DAYS = 7
+
+/** 今日から UPCOMING_DAYS 日ぶん。年末は 1 月へ回る。2/29 は日付の一覧に無いので飛ばす */
+function upcomingDays(days: Day[], today: Date): Day[] {
+  const start = days.findIndex(
+    (d) =>
+      d.month > today.getMonth() + 1 ||
+      (d.month === today.getMonth() + 1 && d.day >= today.getDate())
+  )
+  const from = start < 0 ? 0 : start
+  return Array.from(
+    { length: Math.min(UPCOMING_DAYS, days.length) },
+    (_, i) => days[(from + i) % days.length]
+  )
+}
+
+/** 日の代表の語 (タグ・ラベルを除いた本体)。無ければ undefined */
+const wordOf = (d: Day) => {
+  const cand = candidatesOf(d.entry)[0]
+  return cand ? parseWord(cand.word).base : undefined
+}
+
 // 365 日分の日付 → 語。キーは「月 + 日(2桁)」で、1〜9月は num 辞書を共有する。
 function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
   const days = useMemo(() => buildDateEntries(numbers, dates), [numbers, dates])
@@ -79,6 +103,8 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     return map
   }, [days])
   const order = useMemo(() => days.map((d) => d.key), [days])
+  // 日付が変わるのは開いたまま日をまたいだときだけなので、開いた時点の今日で足りる
+  const upcoming = useMemo(() => upcomingDays(days, new Date()), [days])
   const {
     selected,
     select: setSelected,
@@ -138,7 +164,12 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
       ))}
       <CenterBlock
         page={p}
+        upcoming={upcoming}
         onJump={jumpTo}
+        onPickDay={(d) => {
+          setSelected(d.key)
+          jumpTo(d.month)
+        }}
         onSwitch={() => setPage(index === 0 ? 1 : 0)}
       />
     </div>
@@ -223,14 +254,21 @@ const BANDS: Record<Side, ReadonlyArray<readonly [number, string]>> = {
   ],
 }
 
-/** ドーナッツの穴。縁に 6 か月の帯、反対の画面に近い端に切替ボタン */
+/**
+ * ドーナッツの穴。縁に 6 か月の帯、反対の画面に近い端に切替ボタン、
+ * 中に今日から 1 週間の番号と語 (UI 案 G-2。押すとその日を開く)
+ */
 function CenterBlock({
   page,
+  upcoming,
   onJump,
+  onPickDay,
   onSwitch,
 }: {
   page: Page
+  upcoming: Day[]
   onJump: (month: number) => void
+  onPickDay: (day: Day) => void
   onSwitch: () => void
 }) {
   const isLeft = page.side === 'left'
@@ -249,8 +287,22 @@ function CenterBlock({
           {month}月
         </button>
       ))}
-      {/* 中身は未定 (QA-0130 の続き)。今は範囲の名前だけ */}
-      <div class="dt-hole-body">{page.label}</div>
+      <div class="dt-hole-body">
+        <span class="dt-hole-tag">今日から</span>
+        {upcoming.map((d) => {
+          const word = wordOf(d)
+          return (
+            <button
+              key={d.key}
+              class={'dt-up' + (word ? '' : ' empty')}
+              onClick={() => onPickDay(d)}
+            >
+              <b>{dayLabel(d.month, d.day)}</b>
+              <span>{word ?? '—'}</span>
+            </button>
+          )
+        })}
+      </div>
       <button
         class="dt-hole-switch"
         aria-label={isLeft ? '4〜9月の画面へ' : '10〜3月の画面へ'}
