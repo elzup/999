@@ -63,6 +63,7 @@ import {
   IconBook,
   IconStats,
   IconStar,
+  IconTag,
   IconSlide,
   IconHex,
   IconEdit,
@@ -85,12 +86,14 @@ const GogenTab = lazy(() => import('./components/GogenTab'))
 const BookmarkTab = lazy(() => import('./components/BookmarkTab'))
 const FFTab = lazy(() => import('./components/FFTab'))
 const PickTab = lazy(() => import('./components/PickTab'))
+const TagFilterTab = lazy(() => import('./components/TagFilterTab'))
 
 // 配信データにタグ名が無いとき用。毎描画で新しい {} を作ると context の購読側が全部描き直すので固定する
 const NO_TAG_NAMES: Record<string, string> = {}
 
 const TAB_ICONS: Record<TabId, preact.JSX.Element> = {
   num: <IconNum />,
+  tag: <IconTag />,
   date: <IconDate />,
   card: <IconCard />,
   pi: <IconPi />,
@@ -491,6 +494,7 @@ export function App() {
                   onView={recordBookmarkView}
                 />
               )}
+              {tab === 'tag' && <TagFilterTab numbers={data.numbers} />}
               {tab === 'hex' && <FFTab />}
               {tab === 'edit' && (
                 <NumberDetailTab

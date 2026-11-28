@@ -244,6 +244,8 @@ export type TabVisibility = Record<TabId, boolean>
 
 export const DEFAULT_TAB_VISIBILITY: TabVisibility = {
   num: true,
+  // 数字 > グループ から独立させたタブ (QA-0116)
+  tag: true,
   date: true,
   card: true,
   pi: true,

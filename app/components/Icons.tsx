@@ -50,6 +50,21 @@ export function IconStar() {
   )
 }
 
+export function IconTag() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linejoin="round"
+    >
+      <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9z" />
+      <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" />
+    </svg>
+  )
+}
+
 /** 未登録の星。塗りと同じ path を線画にするので、切り替えても形が動かない */
 export function IconStarOutline() {
   return (

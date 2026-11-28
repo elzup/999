@@ -1,7 +1,6 @@
 import { h } from 'preact'
 import type { NumberEntry, RulesData, YomiUse } from '../data/schema'
 import NumberTab from './NumberTab'
-import TagFilterTab from './TagFilterTab'
 import NumMapTab from './NumMapTab'
 import AssocTestTab from './AssocTestTab'
 import YomiTab from './YomiTab'
@@ -16,7 +15,8 @@ type Props = {
   onEditWord?: (num: string, slot?: string) => void
 }
 
-type SubTab = 'all' | 'd2' | 'yomi' | 'map' | 'test'
+// グループ (d2) は Tab Bar の «タグ» に移した (QA-0116)
+type SubTab = 'all' | 'yomi' | 'map' | 'test'
 
 function NumGroupTab({
   numbers,
@@ -41,12 +41,6 @@ function NumGroupTab({
               onEditWord={onEditWord}
             />
           ),
-        },
-        {
-          // id は保存済みの選択 (subtab.num) を活かすため d2 のまま
-          id: 'd2',
-          label: 'グループ',
-          render: () => <TagFilterTab numbers={numbers} />,
         },
         {
           id: 'yomi',
