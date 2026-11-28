@@ -19,14 +19,15 @@ type Props = {
 
 type Day = DateDay & { entry: NumberEntry }
 
-// 上の輪っかの左半分 (10〜3月) と右半分 (4〜9月) を 1 画面ずつ、1 列で縦に並べる。
-// 左は下から上 (10→3)、右は上から下 (4→9) に読むと輪を時計回りに回る (QA-0128 a)
-const PAGES: ReadonlyArray<ReadonlyArray<number>> = [
-  [3, 2, 1, 12, 11, 10],
-  [4, 5, 6, 7, 8, 9],
+// 12 か月を 1 画面に 4 列 3 段で。1→12 が 1 本の道でつながる並び (プレビューで確定)。
+// 999 外 (10〜12月) は下の段にまとまる
+const MONTH_GRID: ReadonlyArray<number> = [
+  2, 3, 6, 7, 1, 4, 5, 8, 12, 11, 10, 9,
 ]
-const PAGE_LABELS = ['10〜3月', '4〜9月']
-const pageOf = (month: number) => (month >= 4 && month <= 9 ? 1 : 0)
+
+/** mmdd の 4 桁 (0105 等)。1〜9月も 0 を埋めて桁を揃える */
+const mmdd = (month: number, day: number) =>
+  String(month).padStart(2, '0') + String(day).padStart(2, '0')
 
 // 10〜12月は 4 桁 (1005 等) で 999 の番号に属さない。1〜9月は 3 桁で番号の辞書を共有する
 const isOutside999 = (month: number) => month >= 10
@@ -38,7 +39,6 @@ const hasWord = (d: Day) => candidatesOf(d.entry).length > 0
 function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
   const days = useMemo(() => buildDateEntries(numbers, dates), [numbers, dates])
   const [scope, setScope] = useState<Scope>('all')
-  const [page, setPage] = useState(0)
   const monthRefs = useRef<Record<number, HTMLElement | null>>({})
 
   const isShown = (month: number) => scope === 'all' || isOutside999(month)
@@ -51,9 +51,6 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     for (const d of days) map.set(d.month, [...(map.get(d.month) ?? []), d])
     return map
   }, [days])
-  // 999 外 (10〜12月) は全部左半分にあるので、左の画面に固定する
-  const shownPage = scope === 'outside' ? 0 : page
-
   const order = useMemo(() => shownDays.map((d) => d.key), [shownDays])
   const {
     selected,
@@ -68,16 +65,11 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     [days, selected]
   )
 
-  const jumpTo = (month: number) => {
-    setPage(pageOf(month))
-    // ページの切り替え (transform) の後に、その月を画面に入れる
-    requestAnimationFrame(() =>
-      monthRefs.current[month]?.scrollIntoView({
-        block: 'nearest',
-        behavior: 'smooth',
-      })
-    )
-  }
+  const jumpTo = (month: number) =>
+    monthRefs.current[month]?.scrollIntoView({
+      block: 'nearest',
+      behavior: 'smooth',
+    })
 
   const panel = selectedDay ? (
     <DetailSheet nav={nav} onClose={() => setSelected(null)}>
@@ -89,7 +81,7 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
     </DetailSheet>
   ) : null
 
-  // 1 列なので、隠す月は場所も取らない
+  // 隠す月も場所は残す (4 列 3 段の並びを崩さない)
   const renderMonth = (month: number) =>
     isShown(month) ? (
       <MonthCalendar
@@ -102,47 +94,14 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
           monthRefs.current[month] = el
         }}
       />
-    ) : null
+    ) : (
+      <div key={month} class="dt-month dt-month--hidden" />
+    )
 
   const main = (
     <div class="dt-root">
-      <YearRing
-        byMonth={byMonth}
-        isShown={isShown}
-        page={shownPage}
-        onJump={jumpTo}
-      />
-      <div class="dt-viewport">
-        <div
-          class="dt-track"
-          style={{ transform: `translateX(${-50 * shownPage}%)` }}
-        >
-          {PAGES.map((months, index) => (
-            <div key={index} class="dt-page" aria-hidden={index !== shownPage}>
-              {/* 右半分へは右端、左半分へは左端の 1 列を押して切り替える */}
-              {index === 1 ? (
-                <button
-                  class="dt-switch dt-switch--left"
-                  aria-label={`${PAGE_LABELS[0]}へ`}
-                  onClick={() => setPage(0)}
-                >
-                  ‹
-                </button>
-              ) : null}
-              <div class="dt-grid">{months.map(renderMonth)}</div>
-              {index === 0 && scope === 'all' ? (
-                <button
-                  class="dt-switch dt-switch--right"
-                  aria-label={`${PAGE_LABELS[1]}へ`}
-                  onClick={() => setPage(1)}
-                >
-                  ›
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      </div>
+      <YearRing byMonth={byMonth} isShown={isShown} onJump={jumpTo} />
+      <div class="dt-grid">{MONTH_GRID.map(renderMonth)}</div>
     </div>
   )
 
@@ -160,17 +119,17 @@ function DateTab({ numbers, dates, bookmarks, onToggleBm }: Props) {
           onChange={setScope}
         />
       </DockRow>
-      <DockBar
-        title={`日付 ${PAGE_LABELS[shownPage]}`}
-        sub={`${filled} / ${shownDays.length} 日`}
-      />
+      <DockBar title="日付" sub={`${filled} / ${shownDays.length} 日`} />
     </>
   )
 
   return <Screen main={main} panel={panel} dock={dock} />
 }
 
-/** 1 か月をカレンダーのように 7 列で。1 日を左上に置く (曜日は年で変わるので合わせない) */
+/**
+ * 1 か月を 4 列で。1 日を左上に置く (曜日は年で変わるので合わせない)。
+ * 4 か月を横に並べるので 7 列だとマスが小さすぎて読めない
+ */
 function MonthCalendar({
   month,
   days,
@@ -209,7 +168,7 @@ function MonthCalendar({
               aria-label={`${month}月${d.day}日`}
               onClick={() => onSelect(d.key)}
             >
-              {d.day}
+              {mmdd(month, d.day)}
             </button>
           )
         })}
@@ -230,7 +189,7 @@ const pointAt = (radius: number, deg: number) => {
   return [center + radius * Math.cos(rad), center + radius * Math.sin(rad)]
 }
 
-/** 月の扇。3 と 4 の境目を 12 時に置く (2 画面を縦につないだ並びと同じ向き) */
+/** 月の扇。3 と 4 の境目を 12 時に置く */
 function monthArc(month: number) {
   const start = (month - 4) * 30
   const end = start + 30
@@ -248,12 +207,10 @@ function monthArc(month: number) {
 function YearRing({
   byMonth,
   isShown,
-  page,
   onJump,
 }: {
   byMonth: Map<number, Day[]>
   isShown: (month: number) => boolean
-  page: number
   onJump: (month: number) => void
 }) {
   const months = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -266,16 +223,11 @@ function YearRing({
             ? days.filter(hasWord).length / days.length
             : 0
           const arc = monthArc(month)
-          const isOnPage = pageOf(month) === page
           return (
             <g
               key={month}
               role="listitem"
-              class={
-                'dt-ring-seg' +
-                (isOnPage ? ' on-page' : '') +
-                (isShown(month) ? '' : ' off')
-              }
+              class={'dt-ring-seg' + (isShown(month) ? '' : ' off')}
               onClick={() => (isShown(month) ? onJump(month) : undefined)}
             >
               <title>{`${month}月 ${Math.round(ratio * 100)}%`}</title>

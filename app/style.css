@@ -8096,7 +8096,7 @@ img[data-concept] {
   color: var(--text2);
 }
 
-/* ── 日付: 1 年の輪っか + 2 画面 (1〜6月 / 7〜12月) のカレンダー ── */
+/* ── 日付: 1 年の輪っか + 12 か月のカレンダー (4 列 3 段) ── */
 .dt-root {
   display: flex;
   flex-direction: column;
@@ -8123,9 +8123,6 @@ img[data-concept] {
   stroke: var(--bg);
   stroke-width: 1;
 }
-.dt-ring-seg.on-page path {
-  stroke: var(--text2);
-}
 .dt-ring-seg.off {
   cursor: default;
   opacity: 0.25;
@@ -8137,41 +8134,14 @@ img[data-concept] {
   dominant-baseline: central;
   pointer-events: none;
 }
-.dt-viewport {
-  overflow: hidden;
-}
-.dt-track {
-  display: flex;
-  width: 200%;
-  transition: transform 0.3s ease;
-}
-.dt-page {
-  display: flex;
-  gap: 4px;
-  width: 50%;
-}
+/* 12 か月を 4 列 3 段 (2 3 6 7 / 1 4 5 8 / 12 11 10 9) */
 .dt-grid {
-  flex: 1;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  align-content: start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 4px;
+}
+.dt-month {
   min-width: 0;
-}
-/* 切り替えの 1 列。カレンダーの 1 列ほどの幅で、上から下まで押せる */
-.dt-switch {
-  flex: 0 0 20px;
-  padding: 0;
-  font-size: 16px;
-  color: var(--text2);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-.dt-switch:hover,
-.dt-switch:active {
-  color: var(--text);
-  background: var(--surface2);
 }
 .dt-month--hidden {
   visibility: hidden;
@@ -8193,13 +8163,17 @@ img[data-concept] {
 }
 .dt-cal {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
 }
+/* mmdd の 4 桁がマス (375px 幅で約 20px) に収まる大きさ。正方形にすると縦に長すぎる */
 .dt-day {
-  aspect-ratio: 1;
+  min-width: 0;
+  height: 18px;
   padding: 0;
-  font-size: 10px;
+  font-size: 7px;
+  letter-spacing: -0.02em;
+  overflow: hidden;
   font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--surface);
@@ -8220,9 +8194,4 @@ img[data-concept] {
   color: var(--bg);
   background: var(--accent);
   border-color: var(--accent);
-}
-@media (prefers-reduced-motion: reduce) {
-  .dt-track {
-    transition: none;
-  }
 }
