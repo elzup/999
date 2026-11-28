@@ -8,6 +8,7 @@ import { useLongTagNames } from '../lib/tagNames'
 import { kataToHiraText } from '../lib/kanaNotation'
 import { TAG_MEANINGS } from '../lib/wordTags'
 import TagNameForm from './TagNameForm'
+import DetailSheet from './DetailSheet'
 
 // ひらがなで打ってもカタカナの語・名前に当たるよう、比べる前にそろえる
 const fold = (text: string) => kataToHiraText(text).toLowerCase()
@@ -41,11 +42,10 @@ function TagPanel({ numbers }: Props) {
     })
   }, [tags, query, names])
 
-  const selectedTag =
-    filtered.find((entry) => entry.tag === selected) ||
-    (selected && tags.find((entry) => entry.tag === selected)) ||
-    filtered[0] ||
-    null
+  // 選ぶまでは何も開かない (一覧を隠さないため)。選んだらシートで編集する
+  const selectedTag = selected
+    ? tags.find((entry) => entry.tag === selected) || null
+    : null
 
   const main =
     filtered.length === 0 ? (
@@ -61,14 +61,16 @@ function TagPanel({ numbers }: Props) {
             count={entry.count}
             cand={stats.get(entry.tag)?.cand}
             selected={selectedTag?.tag === entry.tag}
-            onSelect={() => setSelected(entry.tag)}
+            onSelect={() =>
+              setSelected(selected === entry.tag ? null : entry.tag)
+            }
           />
         ))}
       </div>
     )
 
-  const panel =
-    filtered.length > 0 && selectedTag ? (
+  const panel = selectedTag ? (
+    <DetailSheet onClose={() => setSelected(null)}>
       <div class="tag-panel-detail tp-detail">
         <div class="tag-detail-card">
           <div class="tag-detail-head">
@@ -101,7 +103,8 @@ function TagPanel({ numbers }: Props) {
           </div>
         </div>
       </div>
-    ) : null
+    </DetailSheet>
+  ) : null
 
   const dock = (
     <>
